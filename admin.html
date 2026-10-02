@@ -1,0 +1,348 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Admin Absensi QR</title>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: system-ui, sans-serif; background: #0f172a; color: #e2e8f0; min-height: 100vh; }
+    .header { background: #1e293b; padding: 16px; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #334155; }
+    .header h1 { font-size: 1.2rem; }
+    .container { max-width: 900px; margin: 0 auto; padding: 16px; }
+    .tabs { display: flex; gap: 8px; margin-bottom: 20px; flex-wrap: wrap; }
+    .tab { padding: 10px 16px; background: #334155; border: none; border-radius: 8px; color: white; cursor: pointer; }
+    .tab.active { background: #3b82f6; }
+    .panel { display: none; }
+    .panel.active { display: block; }
+    .card { background: #1e293b; border-radius: 12px; padding: 20px; margin-bottom: 16px; }
+    label { display: block; margin-bottom: 4px; font-size: 0.85rem; color: #94a3b8; }
+    input, select { width: 100%; padding: 10px; border-radius: 8px; border: 1px solid #334155; background: #0f172a; color: white; margin-bottom: 12px; }
+    button.btn { padding: 12px 16px; border: none; border-radius: 8px; background: #3b82f6; color: white; font-weight: 600; cursor: pointer; }
+    button.btn-danger { background: #dc2626; }
+    .msg { padding: 10px; border-radius: 8px; margin-bottom: 12px; text-align: center; }
+    .success { background: #166534; }
+    .error { background: #991b1b; }
+    table { width: 100%; border-collapse: collapse; font-size: 0.9rem; }
+    th, td { padding: 8px; border-bottom: 1px solid #334155; text-align: left; }
+    .qr-box { margin-top: 10px; text-align: center; }
+    a { color: #60a5fa; }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <h1>⚙️ Admin Absensi</h1>
+    <div>
+      <span id="userInfo"></span>
+      <button class="btn" style="margin-left:10px;padding:6px 12px;font-size:0.85rem;" onclick="logout()">Logout</button>
+    </div>
+  </div>
+
+  <div class="container">
+    <div class="tabs">
+      <button class="tab active" onclick="showPanel('guru')">Guru</button>
+      <button class="tab" onclick="showPanel('siswa')">Siswa</button>
+      <button class="tab" onclick="showPanel('sesi')">Sesi Hari Ini</button>
+      <button class="tab" onclick="showPanel('rekap')">Rekap Absensi</button>
+    </div>
+
+    <!-- PANEL GURU -->
+    <div id="panel-guru" class="panel active">
+      <div class="card">
+        <h3 style="margin-bottom:16px;">Tambah Guru</h3>
+        <div id="msgGuru"></div>
+        <form id="formGuru">
+          <label>NIP (18 digit)</label>
+          <input type="text" id="g_nip" maxlength="18" required pattern="\d{18}" />
+          <label>Nama</label>
+          <input type="text" id="g_nama" required />
+          <label>L/P</label>
+          <select id="g_jk" required><option value="L">Laki-laki</option><option value="P">Perempuan</option></select>
+          <label>Gol/Pangkat</label>
+          <input type="text" id="g_gol" placeholder="III/a" />
+          <label>No HP</label>
+          <input type="text" id="g_hp" />
+          <label>PIN Login</label>
+          <input type="text" id="g_pin" required maxlength="10" />
+          <button type="submit" class="btn">Simpan Guru</button>
+        </form>
+      </div>
+      <div class="card">
+        <h3 style="margin-bottom:12px;">Daftar Guru</h3>
+        <div id="listGuru">Memuat...</div>
+      </div>
+    </div>
+
+    <!-- PANEL SISWA -->
+    <div id="panel-siswa" class="panel">
+      <div class="card">
+        <h3 style="margin-bottom:16px;">Tambah Siswa</h3>
+        <div id="msgSiswa"></div>
+        <form id="formSiswa">
+          <label>NISN (10 digit)</label>
+          <input type="text" id="s_nisn" maxlength="10" required pattern="\d{10}" />
+          <label>Nama</label>
+          <input type="text" id="s_nama" required />
+          <label>L/P</label>
+          <select id="s_jk" required><option value="L">Laki-laki</option><option value="P">Perempuan</option></select>
+          <label>Kelas</label>
+          <input type="text" id="s_kelas" required placeholder="VII A" />
+          <label>Tempat Lahir</label>
+          <input type="text" id="s_tmp" />
+          <label>Tanggal Lahir</label>
+          <input type="date" id="s_tgl_lahir" />
+          <label>Tanggal Mulai Sekolah</label>
+          <input type="date" id="s_tgl_mulai" />
+          <label>Status Awal</label>
+          <input type="text" id="s_status" placeholder="Baru / Pindahan" />
+          <label>Asal Sekolah</label>
+          <input type="text" id="s_asal" />
+          <label>Nama Ayah</label>
+          <input type="text" id="s_ayah" />
+          <label>Nama Ibu</label>
+          <input type="text" id="s_ibu" />
+          <label>No HP</label>
+          <input type="text" id="s_hp" />
+          <button type="submit" class="btn">Simpan Siswa</button>
+        </form>
+      </div>
+      <div class="card">
+        <h3 style="margin-bottom:12px;">Daftar Siswa</h3>
+        <div id="listSiswa">Memuat...</div>
+      </div>
+    </div>
+
+    <!-- PANEL SESI -->
+    <div id="panel-sesi" class="panel">
+      <div class="card">
+        <h3 style="margin-bottom:16px;">Buat Sesi Hari Ini</h3>
+        <div id="msgSesi"></div>
+        <form id="formSesi">
+          <label>Tanggal</label>
+          <input type="date" id="sesi_tanggal" required />
+          <label>Nomor Sesi</label>
+          <input type="number" id="sesi_nomor" min="1" value="1" required />
+          <label>Nama Sesi</label>
+          <input type="text" id="sesi_nama" placeholder="Sesi 1 Pagi" required />
+          <label>Jam Mulai</label>
+          <input type="time" id="sesi_start" required />
+          <label>Batas TL (Terlambat)</label>
+          <input type="time" id="sesi_late" required />
+          <label>Jam Selesai</label>
+          <input type="time" id="sesi_end" required />
+          <button type="submit" class="btn">Tambah Sesi</button>
+        </form>
+      </div>
+      <div class="card">
+        <h3 style="margin-bottom:12px;">Sesi Hari Ini</h3>
+        <div id="listSesi">Memuat...</div>
+      </div>
+    </div>
+
+    <!-- PANEL REKAP -->
+    <div id="panel-rekap" class="panel">
+      <div class="card">
+        <h3 style="margin-bottom:12px;">Rekap Absensi Hari Ini</h3>
+        <div id="listRekap">Memuat...</div>
+      </div>
+    </div>
+
+    <p style="text-align:center; margin-top:20px;">
+      <a href="scanner.html">→ Buka Halaman Scanner</a>
+    </p>
+  </div>
+
+  <script>
+    // ====== GANTI DENGAN DATA SUPABASE ANDA ======
+    const SUPABASE_URL = 'ISI_PROJECT_URL_ANDA';
+    const SUPABASE_ANON_KEY = 'ISI_ANON_KEY_ANDA';
+    // =============================================
+
+    const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+    // Cek login
+    const user = JSON.parse(localStorage.getItem('absensi_user') || 'null');
+    if (!user || user.type !== 'admin') {
+      alert('Hanya Admin yang boleh masuk halaman ini');
+      window.location.href = 'login.html';
+    }
+    document.getElementById('userInfo').textContent = user.nama;
+
+    function logout() {
+      localStorage.removeItem('absensi_user');
+      window.location.href = 'login.html';
+    }
+
+    function showPanel(name) {
+      document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+      document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+      document.getElementById('panel-' + name).classList.add('active');
+      event.target.classList.add('active');
+      if (name === 'guru') loadGuru();
+      if (name === 'siswa') loadSiswa();
+      if (name === 'sesi') loadSesi();
+      if (name === 'rekap') loadRekap();
+    }
+
+    // ========== GURU ==========
+    document.getElementById('formGuru').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const msg = document.getElementById('msgGuru');
+      const nip = document.getElementById('g_nip').value.trim();
+      if (!/^\d{18}$/.test(nip)) {
+        msg.innerHTML = '<div class="msg error">NIP harus 18 digit</div>';
+        return;
+      }
+      const { error } = await supabase.from('guru').insert({
+        nip,
+        nama: document.getElementById('g_nama').value.trim(),
+        jenis_kelamin: document.getElementById('g_jk').value,
+        gol_pangkat: document.getElementById('g_gol').value.trim() || null,
+        no_hp: document.getElementById('g_hp').value.trim() || null,
+        pin: document.getElementById('g_pin').value.trim()
+      });
+      if (error) {
+        msg.innerHTML = `<div class="msg error">${error.message.includes('duplicate') ? 'NIP sudah terdaftar' : error.message}</div>`;
+      } else {
+        msg.innerHTML = '<div class="msg success">Guru berhasil ditambahkan</div>';
+        e.target.reset();
+        loadGuru();
+      }
+    });
+
+    async function loadGuru() {
+      const { data } = await supabase.from('guru').select('*').order('nama');
+      const el = document.getElementById('listGuru');
+      if (!data || data.length === 0) { el.textContent = 'Belum ada data'; return; }
+      el.innerHTML = `<table><tr><th>NIP</th><th>Nama</th><th>L/P</th><th>Aksi</th></tr>` +
+        data.map(g => `<tr>
+          <td>${g.nip}</td><td>${g.nama}</td><td>${g.jenis_kelamin}</td>
+          <td><button class="btn" style="padding:4px 8px;font-size:0.8rem;" onclick="showQR('guru','${g.id}','${g.nama}')">QR</button></td>
+        </tr><tr><td colspan="4"><div id="qr-guru-${g.id}" class="qr-box" style="display:none;"></div></td></tr>`).join('') + `</table>`;
+    }
+
+    // ========== SISWA ==========
+    document.getElementById('formSiswa').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const msg = document.getElementById('msgSiswa');
+      const nisn = document.getElementById('s_nisn').value.trim();
+      if (!/^\d{10}$/.test(nisn)) {
+        msg.innerHTML = '<div class="msg error">NISN harus 10 digit</div>';
+        return;
+      }
+      const { error } = await supabase.from('siswa').insert({
+        nisn,
+        nama: document.getElementById('s_nama').value.trim(),
+        jenis_kelamin: document.getElementById('s_jk').value,
+        kelas: document.getElementById('s_kelas').value.trim(),
+        tmp_lahir: document.getElementById('s_tmp').value.trim() || null,
+        tgl_lahir: document.getElementById('s_tgl_lahir').value || null,
+        tgl_mulai_sekolah: document.getElementById('s_tgl_mulai').value || null,
+        status_awal: document.getElementById('s_status').value.trim() || null,
+        asal_sekolah: document.getElementById('s_asal').value.trim() || null,
+        nama_ayah: document.getElementById('s_ayah').value.trim() || null,
+        nama_ibu: document.getElementById('s_ibu').value.trim() || null,
+        no_hp: document.getElementById('s_hp').value.trim() || null
+      });
+      if (error) {
+        msg.innerHTML = `<div class="msg error">${error.message.includes('duplicate') ? 'NISN sudah terdaftar' : error.message}</div>`;
+      } else {
+        msg.innerHTML = '<div class="msg success">Siswa berhasil ditambahkan</div>';
+        e.target.reset();
+        loadSiswa();
+      }
+    });
+
+    async function loadSiswa() {
+      const { data } = await supabase.from('siswa').select('*').order('kelas, nama');
+      const el = document.getElementById('listSiswa');
+      if (!data || data.length === 0) { el.textContent = 'Belum ada data'; return; }
+      el.innerHTML = `<table><tr><th>NISN</th><th>Nama</th><th>Kelas</th><th>Aksi</th></tr>` +
+        data.map(s => `<tr>
+          <td>${s.nisn}</td><td>${s.nama}</td><td>${s.kelas}</td>
+          <td><button class="btn" style="padding:4px 8px;font-size:0.8rem;" onclick="showQR('siswa','${s.id}','${s.nama}')">QR</button></td>
+        </tr><tr><td colspan="4"><div id="qr-siswa-${s.id}" class="qr-box" style="display:none;"></div></td></tr>`).join('') + `</table>`;
+    }
+
+    function showQR(type, id, nama) {
+      const box = document.getElementById(`qr-${type}-${id}`);
+      if (box.style.display === 'block') { box.style.display = 'none'; return; }
+      box.style.display = 'block';
+      box.innerHTML = `<p>QR: <strong>${nama}</strong></p><div id="qrcode-${type}-${id}"></div>`;
+      new QRCode(document.getElementById(`qrcode-${type}-${id}`), {
+        text: `${type}:${id}`,
+        width: 160,
+        height: 160
+      });
+    }
+
+    // ========== SESI ==========
+    document.getElementById('sesi_tanggal').valueAsDate = new Date();
+
+    document.getElementById('formSesi').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const msg = document.getElementById('msgSesi');
+      const { error } = await supabase.from('sessions').insert({
+        session_date: document.getElementById('sesi_tanggal').value,
+        session_number: parseInt(document.getElementById('sesi_nomor').value),
+        nama_sesi: document.getElementById('sesi_nama').value.trim(),
+        start_time: document.getElementById('sesi_start').value,
+        late_time: document.getElementById('sesi_late').value,
+        end_time: document.getElementById('sesi_end').value
+      });
+      if (error) {
+        msg.innerHTML = `<div class="msg error">${error.message}</div>`;
+      } else {
+        msg.innerHTML = '<div class="msg success">Sesi berhasil ditambahkan</div>';
+        e.target.reset();
+        document.getElementById('sesi_tanggal').valueAsDate = new Date();
+        loadSesi();
+      }
+    });
+
+    async function loadSesi() {
+      const today = new Date().toISOString().split('T')[0];
+      const { data } = await supabase.from('sessions').select('*').eq('session_date', today).order('session_number');
+      const el = document.getElementById('listSesi');
+      if (!data || data.length === 0) { el.textContent = 'Belum ada sesi hari ini'; return; }
+      el.innerHTML = data.map(s => `
+        <div style="padding:10px 0;border-bottom:1px solid #334155;">
+          <strong>Sesi ${s.session_number}: ${s.nama_sesi}</strong><br>
+          <small>${s.start_time} – TL: ${s.late_time} – Selesai: ${s.end_time}</small>
+        </div>
+      `).join('');
+    }
+
+    // ========== REKAP ==========
+    async function loadRekap() {
+      const today = new Date().toISOString().split('T')[0];
+      const { data: sessions } = await supabase.from('sessions').select('*').eq('session_date', today).order('session_number');
+      const el = document.getElementById('listRekap');
+      if (!sessions || sessions.length === 0) { el.textContent = 'Belum ada sesi'; return; }
+
+      // Ambil absensi hari ini
+      const { data: att } = await supabase.from('attendance').select('*').in('session_id', sessions.map(s => s.id));
+
+      let html = '';
+      for (const s of sessions) {
+        html += `<h4 style="margin:16px 0 8px;">Sesi ${s.session_number} - ${s.nama_sesi}</h4>`;
+        const list = (att || []).filter(a => a.session_id === s.id);
+        if (list.length === 0) html += '<p>Belum ada absensi</p>';
+        else {
+          html += '<table><tr><th>Tipe</th><th>Status</th><th>Waktu</th></tr>';
+          for (const a of list) {
+            html += `<tr><td>${a.person_type}</td><td><strong>${a.status}</strong></td><td>${a.scanned_at ? new Date(a.scanned_at).toLocaleTimeString('id-ID') : '-'}</td></tr>`;
+          }
+          html += '</table>';
+        }
+      }
+      el.innerHTML = html;
+    }
+
+    // Load awal
+    loadGuru();
+  </script>
+</body>
+</html>
