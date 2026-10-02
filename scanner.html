@@ -1,0 +1,308 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>Scanner Absensi QR</title>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: system-ui, sans-serif; background: #0f172a; color: #e2e8f0; min-height: 100vh; }
+    .header { background: #1e293b; padding: 14px 16px; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #334155; }
+    .header h1 { font-size: 1.1rem; }
+    .container { max-width: 480px; margin: 0 auto; padding: 16px; }
+    #reader { width: 100%; border-radius: 12px; overflow: hidden; margin-bottom: 12px; }
+    .status { padding: 12px; border-radius: 8px; margin-bottom: 12px; text-align: center; font-weight: 500; }
+    .success { background: #166534; }
+    .error { background: #991b1b; }
+    .info { background: #1e40af; }
+    .btn { display: block; width: 100%; padding: 14px; border: none; border-radius: 8px; font-size: 1rem; font-weight: 600; cursor: pointer; margin-bottom: 10px; }
+    .btn-primary { background: #3b82f6; color: white; }
+    .btn-secondary { background: #475569; color: white; }
+    .card { background: #1e293b; border-radius: 12px; padding: 16px; margin-top: 12px; }
+    .card h3 { margin-bottom: 8px; font-size: 1rem; }
+    select { width: 100%; padding: 10px; border-radius: 8px; border: 1px solid #334155; background: #0f172a; color: white; margin-bottom: 12px; }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <h1>📱 Scanner Absensi</h1>
+    <div>
+      <span id="userInfo" style="font-size:0.85rem;"></span>
+      <button onclick="logout()" style="margin-left:8px;padding:4px 10px;font-size:0.8rem;background:#475569;color:white;border:none;border-radius:6px;">Logout</button>
+    </div>
+  </div>
+
+  <div class="container">
+    <div id="status" class="status info">Pilih sesi terlebih dahulu</div>
+
+    <div class="card">
+      <label style="font-size:0.85rem;color:#94a3b8;">Pilih Sesi Aktif</label>
+      <select id="sessionSelect">
+        <option value="">-- Memuat sesi --</option>
+      </select>
+    </div>
+
+    <div id="reader"></div>
+
+    <button id="btnStart" class="btn btn-primary" onclick="startScanner()">Mulai Kamera</button>
+    <button id="btnStop" class="btn btn-secondary" onclick="stopScanner()" style="display:none;">Stop Kamera</button>
+
+    <div class="card">
+      <h3>Absensi Sesi Ini</h3>
+      <div id="todayList">Pilih sesi dulu</div>
+    </div>
+
+    <p style="text-align:center;margin-top:16px;font-size:0.85rem;">
+      <a href="admin.html" style="color:#60a5fa;" id="linkAdmin">Halaman Admin</a>
+    </p>
+  </div>
+
+  <script>
+    // ====== GANTI DENGAN DATA SUPABASE ANDA ======
+    const SUPABASE_URL = 'ISI_PROJECT_URL_ANDA';
+    const SUPABASE_ANON_KEY = 'ISI_ANON_KEY_ANDA';
+    // =============================================
+
+    const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+    const user = JSON.parse(localStorage.getItem('absensi_user') || 'null');
+    if (!user) {
+      window.location.href = 'login.html';
+    }
+    document.getElementById('userInfo').textContent = `${user.nama} (${user.type})`;
+    if (user.type !== 'admin') {
+      document.getElementById('linkAdmin').style.display = 'none';
+    }
+
+    function logout() {
+      localStorage.removeItem('absensi_user');
+      window.location.href = 'login.html';
+    }
+
+    let html5QrCode = null;
+    let isScanning = false;
+    let currentSession = null;
+
+    // Load sesi hari ini
+    async function loadSessions() {
+      const today = new Date().toISOString().split('T')[0];
+      const { data } = await supabase
+        .from('sessions')
+        .select('*')
+        .eq('session_date', today)
+        .order('session_number');
+
+      const select = document.getElementById('sessionSelect');
+      if (!data || data.length === 0) {
+        select.innerHTML = '<option value="">Belum ada sesi hari ini</option>';
+        return;
+      }
+      select.innerHTML = data.map(s => 
+        `<option value="${s.id}">Sesi ${s.session_number}: ${s.nama_sesi} (${s.start_time}-${s.end_time})</option>`
+      ).join('');
+      select.dispatchEvent(new Event('change'));
+    }
+
+    document.getElementById('sessionSelect').addEventListener('change', async (e) => {
+      const id = e.target.value;
+      if (!id) { currentSession = null; return; }
+      const { data } = await supabase.from('sessions').select('*').eq('id', id).single();
+      currentSession = data;
+      document.getElementById('status').textContent = `Sesi aktif: ${data.nama_sesi}`;
+      document.getElementById('status').className = 'status info';
+      loadAttendance();
+    });
+
+    async function startScanner() {
+      if (!currentSession) {
+        alert('Pilih sesi terlebih dahulu');
+        return;
+      }
+      if (isScanning) return;
+
+      html5QrCode = new Html5Qrcode("reader");
+      try {
+        await html5QrCode.start(
+          { facingMode: "environment" },
+          { fps: 10, qrbox: { width: 250, height: 250 } },
+          onScanSuccess,
+          () => {}
+        );
+        isScanning = true;
+        document.getElementById('btnStart').style.display = 'none';
+        document.getElementById('btnStop').style.display = 'block';
+        document.getElementById('status').textContent = 'Kamera aktif. Arahkan ke QR.';
+        document.getElementById('status').className = 'status info';
+      } catch (err) {
+        document.getElementById('status').textContent = 'Gagal buka kamera: ' + err;
+        document.getElementById('status').className = 'status error';
+      }
+    }
+
+    async function stopScanner() {
+      if (html5QrCode && isScanning) {
+        await html5QrCode.stop();
+        isScanning = false;
+        document.getElementById('btnStart').style.display = 'block';
+        document.getElementById('btnStop').style.display = 'none';
+      }
+    }
+
+    async function onScanSuccess(decodedText) {
+      if (html5QrCode) await html5QrCode.pause(true);
+      const statusEl = document.getElementById('status');
+      statusEl.className = 'status info';
+      statusEl.textContent = 'Memproses...';
+
+      try {
+        // Format QR: "siswa:uuid" atau "guru:uuid"
+        const parts = decodedText.trim().split(':');
+        if (parts.length !== 2) throw new Error('QR tidak valid');
+
+        const personType = parts[0]; // siswa / guru
+        const personId = parts[1];
+
+        // Validasi role
+        if (user.type === 'guru' && personType === 'guru') {
+          throw new Error('Guru tidak boleh scan sesama guru');
+        }
+
+        // Ambil data orang
+        let person = null;
+        if (personType === 'siswa') {
+          const { data } = await supabase.from('siswa').select('*').eq('id', personId).eq('is_active', true).maybeSingle();
+          person = data;
+        } else if (personType === 'guru') {
+          const { data } = await supabase.from('guru').select('*').eq('id', personId).eq('is_active', true).maybeSingle();
+          person = data;
+        }
+        if (!person) throw new Error('Data tidak ditemukan');
+
+        // Cek apakah sudah ada absensi di sesi ini
+        const { data: existing } = await supabase
+          .from('attendance')
+          .select('*')
+          .eq('person_type', personType)
+          .eq('person_id', personId)
+          .eq('session_id', currentSession.id)
+          .maybeSingle();
+
+        if (existing) {
+          statusEl.className = 'status error';
+          statusEl.textContent = `${person.nama} sudah absen (${existing.status})`;
+          setTimeout(() => html5QrCode.resume(), 2500);
+          return;
+        }
+
+        // === LOGIKA STATUS A / B PERMANEN ===
+        const finalStatus = await determineStatus(personType, personId, currentSession);
+
+        // Tentukan TW atau TL berdasarkan waktu sekarang
+        let status = finalStatus;
+        if (status === null) {
+          const now = new Date();
+          const lateTime = new Date(`${currentSession.session_date}T${currentSession.late_time}`);
+          status = now <= lateTime ? 'TW' : 'TL';
+        }
+
+        // Simpan
+        const { error } = await supabase.from('attendance').insert({
+          person_type: personType,
+          person_id: personId,
+          session_id: currentSession.id,
+          status: status,
+          scanned_at: new Date().toISOString(),
+          scanned_by_type: user.type,
+          scanned_by_id: user.id
+        });
+
+        if (error) throw error;
+
+        statusEl.className = 'status success';
+        statusEl.textContent = `✅ ${person.nama} → ${status}`;
+        loadAttendance();
+
+      } catch (err) {
+        statusEl.className = 'status error';
+        statusEl.textContent = err.message || 'Error';
+      }
+
+      setTimeout(() => {
+        if (html5QrCode && isScanning) html5QrCode.resume();
+      }, 2500);
+    }
+
+    // Fungsi inti logika A / B
+    async function determineStatus(personType, personId, session) {
+      // Ambil semua sesi hari ini yang nomornya lebih kecil
+      const { data: prevSessions } = await supabase
+        .from('sessions')
+        .select('*')
+        .eq('session_date', session.session_date)
+        .lt('session_number', session.session_number)
+        .order('session_number');
+
+      if (!prevSessions || prevSessions.length === 0) return null; // sesi pertama
+
+      // Ambil absensi sebelumnya
+      const { data: prevAtt } = await supabase
+        .from('attendance')
+        .select('*')
+        .eq('person_type', personType)
+        .eq('person_id', personId)
+        .in('session_id', prevSessions.map(s => s.id));
+
+      // Jika sudah pernah A → tetap A
+      if (prevAtt && prevAtt.some(a => a.status === 'A')) {
+        return 'A';
+      }
+
+      // Cek apakah ada sesi sebelumnya yang tidak ada absensi sama sekali
+      // (berarti bolos / alpa)
+      for (const ps of prevSessions) {
+        const hasRecord = prevAtt && prevAtt.find(a => a.session_id === ps.id);
+        if (!hasRecord) {
+          // Tidak absen di sesi sebelumnya
+          // Jika itu sesi 1 → A, selain itu → B
+          if (ps.session_number === 1) return 'A';
+          return 'B';
+        }
+      }
+
+      // Jika ada yang statusnya B sebelumnya → tetap B
+      if (prevAtt && prevAtt.some(a => a.status === 'B')) {
+        return 'B';
+      }
+
+      return null; // boleh TW / TL normal
+    }
+
+    async function loadAttendance() {
+      if (!currentSession) return;
+      const { data } = await supabase
+        .from('attendance')
+        .select('*')
+        .eq('session_id', currentSession.id)
+        .order('scanned_at', { ascending: false });
+
+      const el = document.getElementById('todayList');
+      if (!data || data.length === 0) {
+        el.textContent = 'Belum ada absensi di sesi ini';
+        return;
+      }
+      el.innerHTML = data.map(a => {
+        const time = a.scanned_at ? new Date(a.scanned_at).toLocaleTimeString('id-ID', {hour:'2-digit',minute:'2-digit'}) : '-';
+        return `<div style="padding:8px 0;border-bottom:1px solid #334155;">
+          <strong>${a.person_type.toUpperCase()}</strong> → <span style="color:#4ade80">${a.status}</span><br>
+          <small>${time}</small>
+        </div>`;
+      }).join('');
+    }
+
+    // Init
+    loadSessions();
+  </script>
+</body>
+</html>
