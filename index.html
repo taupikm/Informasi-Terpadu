@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>Absensi QR - Scanner</title>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: system-ui, -apple-system, sans-serif; background: #0f172a; color: #e2e8f0; min-height: 100vh; }
+    .header { background: #1e293b; padding: 16px; text-align: center; border-bottom: 1px solid #334155; }
+    .header h1 { font-size: 1.25rem; }
+    .container { max-width: 480px; margin: 0 auto; padding: 16px; }
+    #reader { width: 100%; border-radius: 12px; overflow: hidden; margin-bottom: 16px; }
+    .status { padding: 12px; border-radius: 8px; margin-bottom: 12px; text-align: center; font-weight: 500; }
+    .success { background: #166534; color: #bbf7d0; }
+    .error { background: #991b1b; color: #fecaca; }
+    .info { background: #1e40af; color: #bfdbfe; }
+    .btn { display: block; width: 100%; padding: 14px; border: none; border-radius: 8px; font-size: 1rem; font-weight: 600; cursor: pointer; margin-bottom: 10px; }
+    .btn-primary { background: #3b82f6; color: white; }
+    .btn-secondary { background: #475569; color: white; }
+    .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+    .card { background: #1e293b; border-radius: 12px; padding: 16px; margin-top: 12px; }
+    .card h3 { margin-bottom: 8px; font-size: 1rem; }
+    .list { max-height: 200px; overflow-y: auto; }
+    .list-item { padding: 8px 0; border-bottom: 1px solid #334155; font-size: 0.9rem; }
+    a { color: #60a5fa; text-decoration: none; }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <h1>📱 Absensi QR Scanner</h1>
+  </div>
+
+  <div class="container">
+    <div id="status" class="status info">Siap scan. Arahkan kamera ke QR Code.</div>
+
+    <div id="reader"></div>
+
+    <button id="btnStart" class="btn btn-primary" onclick="startScanner()">Mulai Kamera</button>
+    <button id="btnStop" class="btn btn-secondary" onclick="stopScanner()" style="display:none;">Stop Kamera</button>
+
+    <div class="card">
+      <h3>Absensi Hari Ini</h3>
+      <div id="todayList" class="list">Memuat...</div>
+    </div>
+
+    <p style="text-align:center; margin-top:20px; font-size:0.85rem;">
+      <a href="admin.html">→ Halaman Admin (Tambah Data & Generate QR)</a>
+    </p>
+  </div>
+
+  <script>
+    // ====== GANTI DENGAN DATA SUPABASE ANDA ======
+    const SUPABASE_URL = 'ISI_PROJECT_URL_ANDA';
+    const SUPABASE_ANON_KEY = 'ISI_ANON_KEY_ANDA';
+    // =============================================
+
+    const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+    let html5QrCode = null;
+    let isScanning = false;
+
+    async function startScanner() {
+      if (isScanning) return;
+      const statusEl = document.getElementById('status');
+      statusEl.className = 'status info';
+      statusEl.textContent = 'Membuka kamera...';
+
+      html5QrCode = new Html5Qrcode("reader");
+      const config = { fps: 10, qrbox: { width: 250, height: 250 } };
+
+      try {
+        await html5QrCode.start(
+          { facingMode: "environment" }, // kamera belakang
+          config,
+          onScanSuccess,
+          () => {} // ignore continuous fail
+        );
+        isScanning = true;
+        document.getElementById('btnStart').style.display = 'none';
+        document.getElementById('btnStop').style.display = 'block';
+        statusEl.textContent = 'Kamera aktif. Arahkan ke QR Code.';
+      } catch (err) {
+        statusEl.className = 'status error';
+        statusEl.textContent = 'Gagal buka kamera: ' + err;
+      }
+    }
+
+    async function stopScanner() {
+      if (html5QrCode && isScanning) {
+        await html5QrCode.stop();
+        isScanning = false;
+        document.getElementById('btnStart').style.display = 'block';
+        document.getElementById('btnStop').style.display = 'none';
+        document.getElementById('status').textContent = 'Kamera dimatikan.';
+      }
+    }
+
+    async function onScanSuccess(decodedText) {
+      // Pause sebentar biar tidak spam
+      if (html5QrCode) await html5QrCode.pause(true);
+
+      const statusEl = document.getElementById('status');
+      statusEl.className = 'status info';
+      statusEl.textContent = 'Memproses...';
+
+      try {
+        // decodedText diharapkan berisi UUID member atau "NISN:xxxxxxxxxx" / "NIP:xxxxxxxxxxxxxxxxxx"
+        let memberId = decodedText.trim();
+
+        // Coba cari member
+        let { data: member, error } = await supabase
+          .from('members')
+          .select('*')
+          .or(`id.eq.${memberId},nisn.eq.${memberId},nip.eq.${memberId}`)
+          .maybeSingle();
+
+        if (error) throw error;
+        if (!member) {
+          statusEl.className = 'status error';
+          statusEl.textContent = '❌ QR tidak dikenali / data tidak ditemukan';
+          setTimeout(() => html5QrCode.resume(), 2000);
+          return;
+        }
+
+        // Cek apakah sudah absen hari ini
+        const today = new Date().toISOString().split('T')[0];
+        const { data: existing } = await supabase
+          .from('attendance')
+          .select('id')
+          .eq('member_id', member.id)
+          .eq('attendance_date', today)
+          .maybeSingle();
+
+        if (existing) {
+          statusEl.className = 'status error';
+          statusEl.textContent = `⚠️ ${member.name} sudah absen hari ini`;
+          setTimeout(() => html5QrCode.resume(), 2500);
+          return;
+        }
+
+        // Insert absensi
+        const { error: insertError } = await supabase
+          .from('attendance')
+          .insert({ member_id: member.id });
+
+        if (insertError) {
+          if (insertError.code === '23505') { // unique violation
+            statusEl.className = 'status error';
+            statusEl.textContent = `⚠️ ${member.name} sudah absen hari ini`;
+          } else {
+            throw insertError;
+          }
+        } else {
+          statusEl.className = 'status success';
+          statusEl.textContent = `✅ Berhasil: ${member.name} (${member.role})`;
+          loadTodayAttendance();
+        }
+      } catch (err) {
+        console.error(err);
+        statusEl.className = 'status error';
+        statusEl.textContent = 'Error: ' + (err.message || err);
+      }
+
+      setTimeout(() => {
+        if (html5QrCode && isScanning) html5QrCode.resume();
+      }, 2500);
+    }
+
+    async function loadTodayAttendance() {
+      const today = new Date().toISOString().split('T')[0];
+      const { data, error } = await supabase
+        .from('attendance')
+        .select(`
+          scanned_at,
+          members (name, role, nisn, nip)
+        `)
+        .eq('attendance_date', today)
+        .order('scanned_at', { ascending: false });
+
+      const listEl = document.getElementById('todayList');
+      if (error) {
+        listEl.textContent = 'Gagal memuat data';
+        return;
+      }
+      if (!data || data.length === 0) {
+        listEl.textContent = 'Belum ada absensi hari ini';
+        return;
+      }
+
+      listEl.innerHTML = data.map(item => {
+        const m = item.members;
+        const time = new Date(item.scanned_at).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' });
+        const id = m.nisn || m.nip || '-';
+        return `<div class="list-item"><strong>${m.name}</strong> (${m.role}) • ${id}<br><small>${time}</small></div>`;
+      }).join('');
+    }
+
+    // Load saat halaman dibuka
+    loadTodayAttendance();
+  </script>
+</body>
+</html>
