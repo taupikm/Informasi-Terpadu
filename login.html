@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Login Absensi QR</title>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: system-ui, sans-serif; background: #0f172a; color: #e2e8f0; min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 16px; }
+    .card { background: #1e293b; border-radius: 16px; padding: 32px; width: 100%; max-width: 400px; }
+    h1 { text-align: center; margin-bottom: 8px; font-size: 1.5rem; }
+    p.subtitle { text-align: center; color: #94a3b8; margin-bottom: 24px; font-size: 0.9rem; }
+    label { display: block; margin-bottom: 6px; font-size: 0.9rem; color: #94a3b8; }
+    input, select { width: 100%; padding: 12px; border-radius: 8px; border: 1px solid #334155; background: #0f172a; color: white; margin-bottom: 16px; font-size: 1rem; }
+    button { width: 100%; padding: 14px; border: none; border-radius: 8px; background: #3b82f6; color: white; font-weight: 600; font-size: 1rem; cursor: pointer; }
+    button:disabled { opacity: 0.6; }
+    .msg { padding: 12px; border-radius: 8px; margin-bottom: 16px; text-align: center; display: none; }
+    .error { background: #991b1b; display: block; }
+    .success { background: #166534; display: block; }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <h1>Absensi QR</h1>
+    <p class="subtitle">Login Admin / Guru</p>
+
+    <div id="msg" class="msg"></div>
+
+    <form id="loginForm">
+      <label>Jenis Login</label>
+      <select id="loginType" required>
+        <option value="admin">Admin</option>
+        <option value="guru">Guru</option>
+      </select>
+
+      <label id="labelId">Username</label>
+      <input type="text" id="loginId" required placeholder="admin" />
+
+      <label>PIN</label>
+      <input type="password" id="pin" required placeholder="Masukkan PIN" maxlength="10" />
+
+      <button type="submit">Masuk</button>
+    </form>
+  </div>
+
+  <script>
+    // ====== GANTI DENGAN DATA SUPABASE ANDA ======
+    const SUPABASE_URL = 'ISI_PROJECT_URL_ANDA';
+    const SUPABASE_ANON_KEY = 'ISI_ANON_KEY_ANDA';
+    // =============================================
+
+    const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+    const loginType = document.getElementById('loginType');
+    const labelId = document.getElementById('labelId');
+    const loginId = document.getElementById('loginId');
+
+    loginType.addEventListener('change', () => {
+      if (loginType.value === 'admin') {
+        labelId.textContent = 'Username';
+        loginId.placeholder = 'admin';
+      } else {
+        labelId.textContent = 'NIP (18 digit)';
+        loginId.placeholder = '198001012005011001';
+      }
+    });
+
+    document.getElementById('loginForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const msg = document.getElementById('msg');
+      msg.className = 'msg';
+      msg.style.display = 'none';
+
+      const type = loginType.value;
+      const id = loginId.value.trim();
+      const pin = document.getElementById('pin').value.trim();
+
+      try {
+        let user = null;
+
+        if (type === 'admin') {
+          const { data, error } = await supabase
+            .from('admin')
+            .select('*')
+            .eq('username', id)
+            .eq('pin', pin)
+            .maybeSingle();
+          if (error) throw error;
+          if (!data) throw new Error('Username atau PIN salah');
+          user = { id: data.id, nama: data.nama, type: 'admin' };
+        } else {
+          if (!/^\d{18}$/.test(id)) throw new Error('NIP harus 18 digit angka');
+          const { data, error } = await supabase
+            .from('guru')
+            .select('*')
+            .eq('nip', id)
+            .eq('pin', pin)
+            .eq('is_active', true)
+            .maybeSingle();
+          if (error) throw error;
+          if (!data) throw new Error('NIP atau PIN salah');
+          user = { id: data.id, nama: data.nama, type: 'guru', nip: data.nip };
+        }
+
+        // Simpan ke localStorage
+        localStorage.setItem('absensi_user', JSON.stringify(user));
+
+        msg.className = 'msg success';
+        msg.textContent = `Selamat datang, ${user.nama}`;
+        msg.style.display = 'block';
+
+        setTimeout(() => {
+          window.location.href = 'scanner.html';
+        }, 800);
+
+      } catch (err) {
+        msg.className = 'msg error';
+        msg.textContent = err.message || 'Login gagal';
+        msg.style.display = 'block';
+      }
+    });
+  </script>
+</body>
+</html>
