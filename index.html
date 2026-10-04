@@ -1,0 +1,838 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>SMPN PANTANG MUNDUR</title>
+  <style>
+    :root {
+      --primary: #1a56db;
+      --primary-dark: #1e40af;
+      --secondary: #0d9488;
+      --bg: #f1f5f9;
+      --card: #ffffff;
+      --text: #1e293b;
+      --text-muted: #64748b;
+      --border: #e2e8f0;
+      --danger: #ef4444;
+      --success: #22c55e;
+      --warning: #f59e0b;
+      --topbar-h: 64px;
+      --footer-h: 40px;
+    }
+
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      padding-top: var(--topbar-h);
+      padding-bottom: var(--footer-h);
+      overflow-x: hidden;
+    }
+
+    /* ========== TOPBAR ========== */
+    .topbar {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: var(--topbar-h);
+      background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+      color: white;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 12px;
+      z-index: 1000;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.15);
+    }
+
+    .topbar-left {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      min-width: 70px;
+    }
+
+    .btn-toggle {
+      background: rgba(255,255,255,0.15);
+      border: none;
+      color: white;
+      width: 38px;
+      height: 38px;
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      font-size: 20px;
+      transition: background 0.2s;
+    }
+    .btn-toggle:active { background: rgba(255,255,255,0.3); }
+
+    .logo {
+      width: 36px;
+      height: 36px;
+      background: white;
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 800;
+      color: var(--primary);
+      font-size: 14px;
+    }
+
+    .topbar-center {
+      flex: 1;
+      text-align: center;
+      line-height: 1.25;
+      padding: 0 4px;
+    }
+    .topbar-center .school-name {
+      font-size: 13px;
+      font-weight: 700;
+      letter-spacing: 0.3px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .topbar-center .realtime {
+      font-size: 11px;
+      opacity: 0.9;
+      font-variant-numeric: tabular-nums;
+    }
+    .topbar-center .username {
+      font-size: 10px;
+      opacity: 0.75;
+      margin-top: 1px;
+    }
+
+    .topbar-right {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      min-width: 70px;
+      justify-content: flex-end;
+    }
+
+    .btn-icon {
+      background: rgba(255,255,255,0.15);
+      border: none;
+      color: white;
+      width: 36px;
+      height: 36px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      font-size: 16px;
+      position: relative;
+    }
+    .btn-icon .badge {
+      position: absolute;
+      top: -2px;
+      right: -2px;
+      background: var(--danger);
+      color: white;
+      font-size: 9px;
+      width: 16px;
+      height: 16px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 700;
+    }
+
+    .profile-wrap {
+      position: relative;
+    }
+    .profile-photo {
+      width: 36px;
+      height: 36px;
+      border-radius: 50%;
+      background: #e0e7ff;
+      border: 2px solid white;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 700;
+      color: var(--primary);
+      font-size: 14px;
+      cursor: pointer;
+      overflow: hidden;
+    }
+    .profile-menu {
+      display: none;
+      position: absolute;
+      top: 44px;
+      right: 0;
+      background: white;
+      border-radius: 10px;
+      box-shadow: 0 8px 24px rgba(0,0,0,0.15);
+      min-width: 150px;
+      overflow: hidden;
+      z-index: 1100;
+    }
+    .profile-menu.show { display: block; }
+    .profile-menu a {
+      display: block;
+      padding: 12px 16px;
+      color: var(--text);
+      text-decoration: none;
+      font-size: 13px;
+      border-bottom: 1px solid var(--border);
+    }
+    .profile-menu a:last-child { border-bottom: none; }
+    .profile-menu a:hover, .profile-menu a:active {
+      background: #f1f5f9;
+    }
+
+    /* ========== SIDEBAR OVERLAY ========== */
+    .sidebar-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.45);
+      z-index: 2000;
+      opacity: 0;
+      visibility: hidden;
+      transition: opacity 0.25s, visibility 0.25s;
+    }
+    .sidebar-overlay.open {
+      opacity: 1;
+      visibility: visible;
+    }
+
+    .sidebar {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 280px;
+      max-width: 85vw;
+      height: 100%;
+      background: white;
+      z-index: 2100;
+      transform: translateX(-100%);
+      transition: transform 0.28s cubic-bezier(0.4, 0, 0.2, 1);
+      display: flex;
+      flex-direction: column;
+      box-shadow: 4px 0 20px rgba(0,0,0,0.12);
+    }
+    .sidebar.open {
+      transform: translateX(0);
+    }
+
+    .sidebar-header {
+      background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+      color: white;
+      padding: 20px 16px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    .sidebar-header .avatar {
+      width: 48px;
+      height: 48px;
+      border-radius: 50%;
+      background: white;
+      color: var(--primary);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 800;
+      font-size: 18px;
+    }
+    .sidebar-header .info h3 {
+      font-size: 15px;
+      font-weight: 700;
+    }
+    .sidebar-header .info p {
+      font-size: 12px;
+      opacity: 0.85;
+    }
+
+    .sidebar-menu {
+      flex: 1;
+      overflow-y: auto;
+      padding: 8px 0;
+    }
+
+    .menu-group {
+      margin-bottom: 4px;
+    }
+    .menu-group-title {
+      padding: 10px 16px 6px;
+      font-size: 11px;
+      font-weight: 700;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+    .menu-item {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 12px 16px;
+      color: var(--text);
+      text-decoration: none;
+      font-size: 14px;
+      transition: background 0.15s;
+      cursor: pointer;
+      border: none;
+      background: none;
+      width: 100%;
+      text-align: left;
+    }
+    .menu-item:hover, .menu-item:active {
+      background: #eff6ff;
+      color: var(--primary);
+    }
+    .menu-item.active {
+      background: #dbeafe;
+      color: var(--primary);
+      font-weight: 600;
+    }
+    .menu-item .icon {
+      width: 22px;
+      text-align: center;
+      font-size: 16px;
+    }
+
+    /* ========== MAIN CONTENT ========== */
+    .main {
+      padding: 12px;
+      min-height: calc(100vh - var(--topbar-h) - var(--footer-h));
+    }
+
+    .page {
+      display: none;
+    }
+    .page.active {
+      display: block;
+    }
+
+    .page-title {
+      font-size: 18px;
+      font-weight: 700;
+      margin-bottom: 14px;
+      color: var(--text);
+    }
+
+    /* Dashboard cards */
+    .stats-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+      margin-bottom: 12px;
+    }
+
+    .stat-card {
+      background: var(--card);
+      border-radius: 12px;
+      padding: 14px;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+    }
+    .stat-card .label {
+      font-size: 11px;
+      color: var(--text-muted);
+      margin-bottom: 4px;
+    }
+    .stat-card .value {
+      font-size: 22px;
+      font-weight: 800;
+      color: var(--primary);
+    }
+    .stat-card.guru .value { color: var(--secondary); }
+
+    .boxes-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 8px;
+      margin-top: 10px;
+    }
+    .mini-box {
+      background: #f8fafc;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 8px 4px;
+      text-align: center;
+    }
+    .mini-box .num {
+      font-size: 15px;
+      font-weight: 700;
+      color: var(--text);
+    }
+    .mini-box .lbl {
+      font-size: 9px;
+      color: var(--text-muted);
+      margin-top: 2px;
+      line-height: 1.2;
+    }
+
+    .session-bar {
+      background: linear-gradient(90deg, #0d9488, #14b8a6);
+      color: white;
+      border-radius: 10px;
+      padding: 12px 14px;
+      font-size: 13px;
+      font-weight: 600;
+      margin-bottom: 14px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .session-bar .dot {
+      width: 8px;
+      height: 8px;
+      background: #4ade80;
+      border-radius: 50%;
+      animation: pulse 1.5s infinite;
+    }
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.4; }
+    }
+
+    .section-title {
+      font-size: 14px;
+      font-weight: 700;
+      margin: 16px 0 8px;
+      color: var(--text);
+    }
+
+    .table-wrap {
+      background: var(--card);
+      border-radius: 12px;
+      overflow: hidden;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+      margin-bottom: 14px;
+      overflow-x: auto;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 12px;
+      min-width: 480px;
+    }
+    th {
+      background: #f1f5f9;
+      padding: 10px 8px;
+      text-align: left;
+      font-weight: 600;
+      color: var(--text-muted);
+      white-space: nowrap;
+    }
+    td {
+      padding: 10px 8px;
+      border-top: 1px solid var(--border);
+      white-space: nowrap;
+    }
+    tr:hover td { background: #f8fafc; }
+
+    .badge-status {
+      display: inline-block;
+      padding: 3px 8px;
+      border-radius: 20px;
+      font-size: 10px;
+      font-weight: 600;
+    }
+    .badge-hadir { background: #dcfce7; color: #166534; }
+    .badge-izin { background: #fef3c7; color: #92400e; }
+    .badge-sakit { background: #fee2e2; color: #991b1b; }
+    .badge-alpha { background: #f1f5f9; color: #475569; }
+
+    /* Generic page content */
+    .card {
+      background: var(--card);
+      border-radius: 12px;
+      padding: 16px;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+      margin-bottom: 12px;
+    }
+    .card p {
+      font-size: 13px;
+      color: var(--text-muted);
+      line-height: 1.5;
+    }
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      padding: 10px 16px;
+      border-radius: 8px;
+      border: none;
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: opacity 0.15s;
+    }
+    .btn:active { opacity: 0.85; }
+    .btn-primary {
+      background: var(--primary);
+      color: white;
+    }
+    .btn-secondary {
+      background: var(--secondary);
+      color: white;
+    }
+    .btn-outline {
+      background: white;
+      border: 1px solid var(--border);
+      color: var(--text);
+    }
+
+    /* ========== FOOTER ========== */
+    .footer {
+      position: fixed;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      height: var(--footer-h);
+      background: #0f172a;
+      color: #94a3b8;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 11px;
+      z-index: 1000;
+    }
+
+    /* Placeholder pages */
+    .placeholder {
+      text-align: center;
+      padding: 40px 20px;
+    }
+    .placeholder .icon {
+      font-size: 48px;
+      margin-bottom: 12px;
+    }
+    .placeholder h2 {
+      font-size: 16px;
+      margin-bottom: 6px;
+    }
+    .placeholder p {
+      font-size: 13px;
+      color: var(--text-muted);
+    }
+  </style>
+</head>
+<body>
+
+  <!-- TOPBAR -->
+  <header class="topbar">
+    <div class="topbar-left">
+      <button class="btn-toggle" id="btnToggle" aria-label="Menu">☰</button>
+      <div class="logo">SP</div>
+    </div>
+
+    <div class="topbar-center">
+      <div class="school-name">SMPN PANTANG MUNDUR</div>
+      <div class="realtime" id="realtime">--:--:--</div>
+      <div class="username" id="username">Admin Sekolah</div>
+    </div>
+
+    <div class="topbar-right">
+      <button class="btn-icon" aria-label="Pesan">
+        ✉️
+        <span class="badge">3</span>
+      </button>
+      <div class="profile-wrap">
+        <div class="profile-photo" id="profileBtn">A</div>
+        <div class="profile-menu" id="profileMenu">
+          <a href="#" onclick="alert('Edit Profil'); return false;">✏️ Edit Profil</a>
+          <a href="#" onclick="alert('Login'); return false;">🔑 Login</a>
+          <a href="#" onclick="alert('Logout'); return false;">🚪 Logout</a>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <!-- SIDEBAR OVERLAY -->
+  <div class="sidebar-overlay" id="sidebarOverlay"></div>
+  <aside class="sidebar" id="sidebar">
+    <div class="sidebar-header">
+      <div class="avatar">A</div>
+      <div class="info">
+        <h3>Admin Sekolah</h3>
+        <p>SMPN Pantang Mundur</p>
+      </div>
+    </div>
+    <nav class="sidebar-menu">
+      <div class="menu-group">
+        <div class="menu-group-title">Dashboard</div>
+        <button class="menu-item active" data-page="dashboard">
+          <span class="icon">📊</span> Dashboard
+        </button>
+      </div>
+
+      <div class="menu-group">
+        <div class="menu-group-title">Siswa / Orang Tua</div>
+        <button class="menu-item" data-page="cari-siswa"><span class="icon">🔍</span> Cari Data Siswa</button>
+        <button class="menu-item" data-page="sidik-jari"><span class="icon">👆</span> Sidik Jari Siswa</button>
+        <button class="menu-item" data-page="syarat-naik"><span class="icon">📋</span> Cek Syarat Naik Kelas / Lulus</button>
+        <button class="menu-item" data-page="tugas-ujian"><span class="icon">📝</span> Kerjakan Tugas/Ujian</button>
+        <button class="menu-item" data-page="nilai-saya"><span class="icon">📈</span> Lihat Nilai Saya</button>
+        <button class="menu-item" data-page="kelulusan"><span class="icon">🎓</span> Kelulusan</button>
+        <button class="menu-item" data-page="validasi-lulusan"><span class="icon">✅</span> Validasi Data Lulusan</button>
+      </div>
+
+      <div class="menu-group">
+        <div class="menu-group-title">Guru</div>
+        <button class="menu-item" data-page="scan-barcode"><span class="icon">📷</span> Scan Barcode</button>
+        <button class="menu-item" data-page="input-izin"><span class="icon">🤒</span> Input Izin / Sakit</button>
+        <button class="menu-item" data-page="rekap-data"><span class="icon">📑</span> Rekap Data</button>
+        <button class="menu-item" data-page="jadwal-mapel"><span class="icon">📅</span> Jadwal Mapel</button>
+        <button class="menu-item" data-page="input-nilai"><span class="icon">✍️</span> Input Nilai</button>
+        <button class="menu-item" data-page="daftar-nilai"><span class="icon">📊</span> Daftar Nilai</button>
+        <button class="menu-item" data-page="kelola-tugas"><span class="icon">📂</span> Kelola Tugas/Ujian</button>
+        <button class="menu-item" data-page="download-absensi"><span class="icon">⬇️</span> Download Absensi</button>
+      </div>
+
+      <div class="menu-group">
+        <div class="menu-group-title">Admin</div>
+        <button class="menu-item" data-page="data-siswa"><span class="icon">👨‍🎓</span> Data Siswa</button>
+        <button class="menu-item" data-page="data-guru"><span class="icon">👨‍🏫</span> Data Guru</button>
+        <button class="menu-item" data-page="data-lulusan"><span class="icon">🎓</span> Data Lulusan</button>
+        <button class="menu-item" data-page="pengaturan"><span class="icon">⚙️</span> Pengaturan Sistem</button>
+      </div>
+    </nav>
+  </aside>
+
+  <!-- MAIN CONTENT -->
+  <main class="main">
+
+    <!-- DASHBOARD -->
+    <section class="page active" id="page-dashboard">
+      <div class="stats-row">
+        <!-- Kiri: Siswa -->
+        <div class="stat-card">
+          <div class="label">Jumlah Siswa</div>
+          <div class="value">482</div>
+          <div class="boxes-grid">
+            <div class="mini-box"><div class="num">168</div><div class="lbl">Kelas 7</div></div>
+            <div class="mini-box"><div class="num">156</div><div class="lbl">Kelas 8</div></div>
+            <div class="mini-box"><div class="num">158</div><div class="lbl">Kelas 9</div></div>
+            <div class="mini-box"><div class="num">245</div><div class="lbl">Laki-laki</div></div>
+            <div class="mini-box"><div class="num">237</div><div class="lbl">Perempuan</div></div>
+            <div class="mini-box"><div class="num">12</div><div class="lbl">Baru</div></div>
+          </div>
+        </div>
+        <!-- Kanan: Guru -->
+        <div class="stat-card guru">
+          <div class="label">Jumlah Guru</div>
+          <div class="value">38</div>
+          <div class="boxes-grid">
+            <div class="mini-box"><div class="num">18</div><div class="lbl">PNS</div></div>
+            <div class="mini-box"><div class="num">14</div><div class="lbl">Honorer</div></div>
+            <div class="mini-box"><div class="num">6</div><div class="lbl">GTT</div></div>
+            <div class="mini-box"><div class="num">15</div><div class="lbl">Laki-laki</div></div>
+            <div class="mini-box"><div class="num">23</div><div class="lbl">Perempuan</div></div>
+            <div class="mini-box"><div class="num">2</div><div class="lbl">Cuti</div></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="session-bar">
+        <span class="dot"></span>
+        Sesi Berlangsung Saat Ini : Sesi 1 (07:00 - 08:00)
+      </div>
+
+      <div class="section-title">Rekap Kehadiran Guru</div>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>No</th>
+              <th>Nama</th>
+              <th>L/P</th>
+              <th>Jam Scan</th>
+              <th>Sesi</th>
+              <th>Status</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr><td>1</td><td>Budi Santoso, S.Pd</td><td>L</td><td>06:52</td><td>1</td><td><span class="badge-status badge-hadir">Hadir</span></td></tr>
+            <tr><td>2</td><td>Siti Aminah, S.Pd</td><td>P</td><td>06:58</td><td>1</td><td><span class="badge-status badge-hadir">Hadir</span></td></tr>
+            <tr><td>3</td><td>Ahmad Fauzi, M.Pd</td><td>L</td><td>-</td><td>1</td><td><span class="badge-status badge-izin">Izin</span></td></tr>
+            <tr><td>4</td><td>Rina Wulandari, S.Pd</td><td>P</td><td>07:01</td><td>1</td><td><span class="badge-status badge-hadir">Hadir</span></td></tr>
+            <tr><td>5</td><td>Dedi Kurniawan, S.Pd</td><td>L</td><td>-</td><td>1</td><td><span class="badge-status badge-sakit">Sakit</span></td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="section-title">Rekap Kehadiran Siswa</div>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>No</th>
+              <th>Nama</th>
+              <th>L/P</th>
+              <th>Kelas</th>
+              <th>Jam Scan</th>
+              <th>Sesi</th>
+              <th>Status</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr><td>1</td><td>Andi Pratama</td><td>L</td><td>7A</td><td>06:45</td><td>1</td><td><span class="badge-status badge-hadir">Hadir</span></td></tr>
+            <tr><td>2</td><td>Salsa Bilah</td><td>P</td><td>7B</td><td>06:50</td><td>1</td><td><span class="badge-status badge-hadir">Hadir</span></td></tr>
+            <tr><td>3</td><td>Rizki Maulana</td><td>L</td><td>8A</td><td>-</td><td>1</td><td><span class="badge-status badge-alpha">Alpha</span></td></tr>
+            <tr><td>4</td><td>Dewi Lestari</td><td>P</td><td>8C</td><td>06:55</td><td>1</td><td><span class="badge-status badge-hadir">Hadir</span></td></tr>
+            <tr><td>5</td><td>Fajar Nugroho</td><td>L</td><td>9A</td><td>-</td><td>1</td><td><span class="badge-status badge-izin">Izin</span></td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- PLACEHOLDER PAGES -->
+    <section class="page" id="page-cari-siswa">
+      <div class="placeholder">
+        <div class="icon">🔍</div>
+        <h2>Cari Data Siswa</h2>
+        <p>Halaman pencarian data siswa</p>
+        <br>
+        <div class="card" style="text-align:left;max-width:400px;margin:0 auto;">
+          <input type="text" placeholder="Ketik nama / NIS..." style="width:100%;padding:12px;border:1px solid #e2e8f0;border-radius:8px;font-size:14px;margin-bottom:10px;">
+          <button class="btn btn-primary" style="width:100%;">Cari</button>
+        </div>
+      </div>
+    </section>
+
+    <section class="page" id="page-sidik-jari">
+      <div class="placeholder"><div class="icon">👆</div><h2>Sidik Jari Siswa</h2><p>Halaman absensi sidik jari siswa</p></div>
+    </section>
+    <section class="page" id="page-syarat-naik">
+      <div class="placeholder"><div class="icon">📋</div><h2>Cek Syarat Naik Kelas / Lulus</h2><p>Halaman pengecekan syarat naik kelas atau kelulusan</p></div>
+    </section>
+    <section class="page" id="page-tugas-ujian">
+      <div class="placeholder"><div class="icon">📝</div><h2>Kerjakan Tugas / Ujian</h2><p>Halaman pengerjaan tugas dan ujian online</p></div>
+    </section>
+    <section class="page" id="page-nilai-saya">
+      <div class="placeholder"><div class="icon">📈</div><h2>Lihat Nilai Saya</h2><p>Halaman melihat nilai pribadi siswa</p></div>
+    </section>
+    <section class="page" id="page-kelulusan">
+      <div class="placeholder"><div class="icon">🎓</div><h2>Kelulusan</h2><p>Halaman informasi kelulusan</p></div>
+    </section>
+    <section class="page" id="page-validasi-lulusan">
+      <div class="placeholder"><div class="icon">✅</div><h2>Validasi Data Lulusan</h2><p>Halaman validasi data lulusan</p></div>
+    </section>
+
+    <section class="page" id="page-scan-barcode">
+      <div class="placeholder"><div class="icon">📷</div><h2>Scan Barcode</h2><p>Halaman scan barcode absensi</p></div>
+    </section>
+    <section class="page" id="page-input-izin">
+      <div class="placeholder"><div class="icon">🤒</div><h2>Input Izin / Sakit</h2><p>Halaman input izin atau sakit guru/siswa</p></div>
+    </section>
+    <section class="page" id="page-rekap-data">
+      <div class="placeholder"><div class="icon">📑</div><h2>Rekap Data</h2><p>Halaman rekap data kehadiran</p></div>
+    </section>
+    <section class="page" id="page-jadwal-mapel">
+      <div class="placeholder"><div class="icon">📅</div><h2>Jadwal Mapel</h2><p>Halaman jadwal mata pelajaran</p></div>
+    </section>
+    <section class="page" id="page-input-nilai">
+      <div class="placeholder"><div class="icon">✍️</div><h2>Input Nilai</h2><p>Halaman input nilai siswa</p></div>
+    </section>
+    <section class="page" id="page-daftar-nilai">
+      <div class="placeholder"><div class="icon">📊</div><h2>Daftar Nilai</h2><p>Halaman daftar nilai</p></div>
+    </section>
+    <section class="page" id="page-kelola-tugas">
+      <div class="placeholder"><div class="icon">📂</div><h2>Kelola Tugas / Ujian</h2><p>Halaman pengelolaan tugas dan ujian</p></div>
+    </section>
+    <section class="page" id="page-download-absensi">
+      <div class="placeholder"><div class="icon">⬇️</div><h2>Download Absensi</h2><p>Halaman unduh data absensi</p></div>
+    </section>
+
+    <section class="page" id="page-data-siswa">
+      <div class="placeholder"><div class="icon">👨‍🎓</div><h2>Data Siswa</h2><p>Halaman manajemen data siswa</p></div>
+    </section>
+    <section class="page" id="page-data-guru">
+      <div class="placeholder"><div class="icon">👨‍🏫</div><h2>Data Guru</h2><p>Halaman manajemen data guru</p></div>
+    </section>
+    <section class="page" id="page-data-lulusan">
+      <div class="placeholder"><div class="icon">🎓</div><h2>Data Lulusan</h2><p>Halaman data lulusan</p></div>
+    </section>
+    <section class="page" id="page-pengaturan">
+      <div class="placeholder"><div class="icon">⚙️</div><h2>Pengaturan Sistem</h2><p>Halaman pengaturan sistem</p></div>
+    </section>
+
+  </main>
+
+  <!-- FOOTER -->
+  <footer class="footer">
+    © 2026 SMPN PANTANG MUNDUR *
+  </footer>
+
+  <script>
+    // Realtime clock
+    function updateClock() {
+      const now = new Date();
+      const options = { weekday: 'short', day: '2-digit', month: 'short', year: 'numeric' };
+      const dateStr = now.toLocaleDateString('id-ID', options);
+      const timeStr = now.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+      document.getElementById('realtime').textContent = dateStr + ' • ' + timeStr;
+    }
+    updateClock();
+    setInterval(updateClock, 1000);
+
+    // Sidebar toggle
+    const sidebar = document.getElementById('sidebar');
+    const overlay = document.getElementById('sidebarOverlay');
+    const btnToggle = document.getElementById('btnToggle');
+
+    function openSidebar() {
+      sidebar.classList.add('open');
+      overlay.classList.add('open');
+    }
+    function closeSidebar() {
+      sidebar.classList.remove('open');
+      overlay.classList.remove('open');
+    }
+
+    btnToggle.addEventListener('click', () => {
+      if (sidebar.classList.contains('open')) closeSidebar();
+      else openSidebar();
+    });
+    overlay.addEventListener('click', closeSidebar);
+
+    // Profile menu
+    const profileBtn = document.getElementById('profileBtn');
+    const profileMenu = document.getElementById('profileMenu');
+    profileBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      profileMenu.classList.toggle('show');
+    });
+    document.addEventListener('click', () => profileMenu.classList.remove('show'));
+
+    // Navigation
+    document.querySelectorAll('.menu-item').forEach(item => {
+      item.addEventListener('click', () => {
+        const pageId = item.getAttribute('data-page');
+        
+        // Update active menu
+        document.querySelectorAll('.menu-item').forEach(m => m.classList.remove('active'));
+        item.classList.add('active');
+
+        // Show page
+        document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+        const target = document.getElementById('page-' + pageId);
+        if (target) target.classList.add('active');
+
+        closeSidebar();
+        window.scrollTo(0, 0);
+      });
+    });
+  </script>
+</body>
+</html>
