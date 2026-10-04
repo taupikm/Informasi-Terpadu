@@ -775,7 +775,7 @@
   </footer>
 
   <script>
-    // Realtime clock
+    // ========== Realtime clock ==========
     function updateClock() {
       const now = new Date();
       const options = { weekday: 'short', day: '2-digit', month: 'short', year: 'numeric' };
@@ -786,7 +786,7 @@
     updateClock();
     setInterval(updateClock, 1000);
 
-    // Sidebar toggle
+    // ========== Sidebar toggle ==========
     const sidebar = document.getElementById('sidebar');
     const overlay = document.getElementById('sidebarOverlay');
     const btnToggle = document.getElementById('btnToggle');
@@ -806,7 +806,7 @@
     });
     overlay.addEventListener('click', closeSidebar);
 
-    // Profile menu
+    // ========== Profile menu ==========
     const profileBtn = document.getElementById('profileBtn');
     const profileMenu = document.getElementById('profileMenu');
     profileBtn.addEventListener('click', (e) => {
@@ -815,24 +815,92 @@
     });
     document.addEventListener('click', () => profileMenu.classList.remove('show'));
 
-    // Navigation
+    // ========== ROUTING (hash-based) ==========
+    // Agar refresh tetap di halaman yang sama
+    // Tombol back HP: subpage → dashboard, dashboard → konfirmasi keluar
+
+    let currentPage = 'dashboard';
+    let isHandlingBack = false;
+
+    function showPage(pageId, pushHistory = true) {
+      // Validasi halaman
+      const target = document.getElementById('page-' + pageId);
+      if (!target) pageId = 'dashboard';
+
+      // Update UI
+      document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+      document.getElementById('page-' + pageId).classList.add('active');
+
+      document.querySelectorAll('.menu-item').forEach(m => {
+        m.classList.toggle('active', m.getAttribute('data-page') === pageId);
+      });
+
+      currentPage = pageId;
+      closeSidebar();
+      window.scrollTo(0, 0);
+
+      // Update hash agar refresh tetap di halaman ini
+      if (pushHistory) {
+        const newHash = '#' + pageId;
+        if (location.hash !== newHash) {
+          history.pushState({ page: pageId }, '', newHash);
+        }
+      } else {
+        // Hanya ganti hash tanpa menambah history (saat restore dari hash)
+        history.replaceState({ page: pageId }, '', '#' + pageId);
+      }
+    }
+
+    // Klik menu sidebar
     document.querySelectorAll('.menu-item').forEach(item => {
       item.addEventListener('click', () => {
         const pageId = item.getAttribute('data-page');
-        
-        // Update active menu
-        document.querySelectorAll('.menu-item').forEach(m => m.classList.remove('active'));
-        item.classList.add('active');
-
-        // Show page
-        document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
-        const target = document.getElementById('page-' + pageId);
-        if (target) target.classList.add('active');
-
-        closeSidebar();
-        window.scrollTo(0, 0);
+        showPage(pageId, true);
       });
     });
+
+    // Saat load / refresh → baca hash
+    function initFromHash() {
+      let hash = location.hash.replace('#', '') || 'dashboard';
+      // Pastikan halaman valid
+      if (!document.getElementById('page-' + hash)) hash = 'dashboard';
+      showPage(hash, false);
+    }
+
+    // Saat tombol BACK browser / HP ditekan
+    window.addEventListener('popstate', function (e) {
+      if (isHandlingBack) return;
+      isHandlingBack = true;
+
+      if (currentPage !== 'dashboard') {
+        // Dari subpage → kembali ke Dashboard
+        showPage('dashboard', false);
+        // Push state lagi supaya history tetap ada (mencegah langsung keluar)
+        history.pushState({ page: 'dashboard' }, '', '#dashboard');
+      } else {
+        // Sudah di Dashboard → minta konfirmasi keluar
+        const yakin = confirm('Yakin ingin keluar?');
+        if (yakin) {
+          // User setuju → biarkan browser keluar / tutup tab
+          // Karena file lokal, window.close() sering tidak bekerja.
+          // Kita biarkan history pop selesai (keluar dari app).
+          history.back(); // atau biarkan saja
+        } else {
+          // User batal → dorong state lagi agar tetap di Dashboard
+          history.pushState({ page: 'dashboard' }, '', '#dashboard');
+        }
+      }
+
+      setTimeout(() => { isHandlingBack = false; }, 50);
+    });
+
+    // Inisialisasi saat pertama kali buka / refresh
+    initFromHash();
+
+    // Pastikan ada state di history (penting untuk back button)
+    if (!history.state || !history.state.page) {
+      history.replaceState({ page: currentPage }, '', '#' + currentPage);
+    }
   </script>
 </body>
 </html>
