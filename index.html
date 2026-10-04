@@ -689,6 +689,27 @@
     .search-input:focus {
       border-color: var(--primary);
     }
+    .periode-bar {
+      font-size: 13px;
+      color: var(--text);
+      padding: 8px 0;
+      border-bottom: 1px solid var(--border);
+    }
+    .periode-bar b {
+      color: var(--primary);
+    }
+    .nilai-input {
+      width: 70px;
+      padding: 6px 8px;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      font-size: 14px;
+      text-align: center;
+    }
+    .nilai-input:focus {
+      border-color: var(--primary);
+      outline: none;
+    }
   </style>
 </head>
 <body>
@@ -905,11 +926,102 @@
     <section class="page" id="page-jadwal-mapel">
       <div class="placeholder"><div class="icon">📅</div><h2>Jadwal Mapel</h2><p>Halaman jadwal mata pelajaran</p></div>
     </section>
+    <!-- ========== INPUT NILAI ========== -->
     <section class="page" id="page-input-nilai">
-      <div class="placeholder"><div class="icon">✍️</div><h2>Input Nilai</h2><p>Halaman input nilai siswa</p></div>
+      <div class="page-title">Input Nilai</div>
+      <div class="card" style="margin-bottom:12px;">
+        <div class="periode-bar" id="periodeBarInput">
+          Tahun Ajaran || Semester : <b id="labelPeriodeInput">-</b>
+        </div>
+        <div class="form-row" style="margin-top:12px;">
+          <div class="form-group">
+            <label>Jenis Penilaian</label>
+            <select id="inJenis">
+              <option value="NH">NH (Nilai Harian)</option>
+              <option value="TGS">TGS (Tugas)</option>
+              <option value="PTS">PTS</option>
+              <option value="ASAS">ASAS</option>
+              <option value="ASAJ">ASAJ</option>
+              <option value="ASAT">ASAT</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Penilaian Ke</label>
+            <select id="inKe">
+              <option value="1">1</option><option value="2">2</option><option value="3">3</option>
+              <option value="4">4</option><option value="5">5</option><option value="6">6</option>
+              <option value="7">7</option><option value="8">8</option><option value="9">9</option>
+              <option value="10">10</option><option value="11">11</option><option value="12">12</option>
+              <option value="13">13</option><option value="14">14</option><option value="15">15</option>
+              <option value="16">16</option><option value="17">17</option><option value="18">18</option>
+              <option value="19">19</option><option value="20">20</option>
+            </select>
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label>Mapel</label>
+            <select id="inMapel"><option value="">- Pilih Mapel -</option></select>
+          </div>
+          <div class="form-group">
+            <label>Kelas</label>
+            <select id="inKelas"><option value="">- Pilih Kelas -</option></select>
+          </div>
+        </div>
+        <button class="btn btn-primary" id="btnLoadSiswaNilai" style="width:100%;">Tampilkan Siswa</button>
+      </div>
+      <div class="toolbar">
+        <button class="btn btn-secondary" id="btnSimpanNilai" disabled>💾 Simpan Semua Nilai</button>
+        <span class="toolbar-info" id="infoInputNilai"></span>
+      </div>
+      <div class="table-wrap">
+        <table id="tableInputNilai">
+          <thead>
+            <tr>
+              <th>No</th>
+              <th>NISN</th>
+              <th>Nama</th>
+              <th style="min-width:90px;">Nilai</th>
+            </tr>
+          </thead>
+          <tbody id="tbodyInputNilai">
+            <tr><td colspan="4" style="text-align:center;padding:24px;color:#94a3b8;">Pilih Mapel & Kelas lalu klik Tampilkan Siswa</td></tr>
+          </tbody>
+        </table>
+      </div>
     </section>
+
+    <!-- ========== DAFTAR NILAI ========== -->
     <section class="page" id="page-daftar-nilai">
-      <div class="placeholder"><div class="icon">📊</div><h2>Daftar Nilai</h2><p>Halaman daftar nilai</p></div>
+      <div class="page-title">Daftar Nilai</div>
+      <div class="card" style="margin-bottom:12px;">
+        <div class="periode-bar" id="periodeBarDaftar">
+          Tahun Ajaran || Semester : <b id="labelPeriodeDaftar">-</b>
+        </div>
+        <div class="form-row" style="margin-top:12px;">
+          <div class="form-group">
+            <label>Mapel</label>
+            <select id="dnMapel"><option value="">- Pilih Mapel -</option></select>
+          </div>
+          <div class="form-group">
+            <label>Kelas</label>
+            <select id="dnKelas"><option value="">- Pilih Kelas -</option></select>
+          </div>
+        </div>
+        <button class="btn btn-primary" id="btnLoadDaftarNilai" style="width:100%;">Tampilkan Daftar Nilai</button>
+      </div>
+      <div class="table-wrap">
+        <table id="tableDaftarNilai">
+          <thead id="theadDaftarNilai">
+            <tr>
+              <th>No</th><th>NISN</th><th>Nama</th><th>L/P</th><th>NR</th>
+            </tr>
+          </thead>
+          <tbody id="tbodyDaftarNilai">
+            <tr><td colspan="5" style="text-align:center;padding:24px;color:#94a3b8;">Pilih Mapel & Kelas lalu klik Tampilkan</td></tr>
+          </tbody>
+        </table>
+      </div>
     </section>
     <section class="page" id="page-kelola-tugas">
       <div class="placeholder"><div class="icon">📂</div><h2>Kelola Tugas / Ujian</h2><p>Halaman pengelolaan tugas dan ujian</p></div>
@@ -1337,8 +1449,8 @@
     // Ganti 2 baris di bawah dengan nilai dari:
     // Supabase Dashboard → Project Settings → API
     // ============================================================
-    const SUPABASE_URL = 'https://yhivrwnumfzoncbcapgd.supabase.co';   // <-- ganti
-    const SUPABASE_ANON_KEY = 'sb_publishable_FjTrPaFEwR_tNfxH7puJ_w_KZHI4RuG';  // <-- ganti
+    const SUPABASE_URL = 'https://YOUR_PROJECT_ID.supabase.co';   // <-- ganti
+    const SUPABASE_ANON_KEY = 'YOUR_ANON_PUBLIC_KEY';              // <-- ganti
 
     let supabaseClient = null;
     try {
@@ -1628,6 +1740,7 @@
       if (pageId === 'data-siswa') loadSiswa();
       if (pageId === 'data-guru') loadGuru();
       if (pageId === 'data-lulusan') loadLulusan();
+      if (pageId === 'input-nilai' || pageId === 'daftar-nilai') initNilaiPage(pageId);
     }
 
     // Klik menu
@@ -2372,6 +2485,269 @@
         alert('Gagal import: ' + (e.message || e));
       }
       this.value = '';
+    });
+
+    // ============================================================
+    // PERIODE + INPUT NILAI + DAFTAR NILAI
+    // ============================================================
+    let aktifPeriode = null;   // { id, tahun_ajaran, semester }
+    let siswaNilaiList = [];   // siswa di kelas terpilih untuk input
+
+    async function loadAktifPeriode() {
+      try {
+        if (supabaseClient) {
+          const { data } = await supabaseClient.from('periode').select('*').eq('aktif', true).maybeSingle();
+          aktifPeriode = data;
+        } else {
+          aktifPeriode = { id: 3, tahun_ajaran: '2026/2027', semester: 'Ganjil', aktif: true };
+        }
+      } catch (e) {
+        console.error(e);
+        aktifPeriode = { id: 3, tahun_ajaran: '2026/2027', semester: 'Ganjil', aktif: true };
+      }
+      const label = aktifPeriode
+        ? (aktifPeriode.tahun_ajaran + ' || ' + aktifPeriode.semester)
+        : 'Belum ada periode aktif';
+      const el1 = document.getElementById('labelPeriodeInput');
+      const el2 = document.getElementById('labelPeriodeDaftar');
+      if (el1) el1.textContent = label;
+      if (el2) el2.textContent = label;
+    }
+
+    async function fillMapelKelasSelects() {
+      await loadMasterMapelKelas();
+      const mapelOpts = '<option value="">- Pilih Mapel -</option>' +
+        masterMapel.map(m => `<option value="${m.id}">${m.kode} – ${m.mapel}</option>`).join('');
+      const kelasOpts = '<option value="">- Pilih Kelas -</option>' +
+        masterKelas.map(k => `<option value="${k.kelas}">${k.kelas}</option>`).join('');
+      ['inMapel', 'dnMapel'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.innerHTML = mapelOpts;
+      });
+      ['inKelas', 'dnKelas'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.innerHTML = kelasOpts;
+      });
+    }
+
+    async function initNilaiPage(pageId) {
+      await loadAktifPeriode();
+      await fillMapelKelasSelects();
+      if (pageId === 'input-nilai') {
+        document.getElementById('tbodyInputNilai').innerHTML =
+          '<tr><td colspan="4" style="text-align:center;padding:24px;color:#94a3b8;">Pilih Mapel & Kelas lalu klik Tampilkan Siswa</td></tr>';
+        document.getElementById('btnSimpanNilai').disabled = true;
+        document.getElementById('infoInputNilai').textContent = '';
+      }
+    }
+
+    // ----- Tampilkan siswa untuk input nilai -----
+    document.getElementById('btnLoadSiswaNilai').addEventListener('click', async () => {
+      const mapelId = document.getElementById('inMapel').value;
+      const kelas = document.getElementById('inKelas').value;
+      const jenis = document.getElementById('inJenis').value;
+      const ke = document.getElementById('inKe').value;
+      if (!mapelId || !kelas) { alert('Pilih Mapel dan Kelas'); return; }
+      if (!aktifPeriode) { alert('Belum ada periode aktif. Buat periode di database.'); return; }
+
+      const tbody = document.getElementById('tbodyInputNilai');
+      tbody.innerHTML = '<tr><td colspan="4" style="text-align:center;padding:24px;color:#94a3b8;">Memuat...</td></tr>';
+
+      try {
+        // Ambil siswa di kelas tersebut
+        if (supabaseClient) {
+          const { data: siswa, error } = await supabaseClient
+            .from('siswa').select('id, nisn, nama').eq('kelas', kelas).eq('status', 'Aktif').order('nama');
+          if (error) throw error;
+          siswaNilaiList = siswa || [];
+
+          // Ambil nilai yang sudah ada
+          const { data: existing } = await supabaseClient
+            .from('nilai')
+            .select('siswa_id, nilai')
+            .eq('periode_id', aktifPeriode.id)
+            .eq('mapel_id', mapelId)
+            .eq('jenis', jenis)
+            .eq('ke', ke);
+          const mapNilai = {};
+          (existing || []).forEach(n => { mapNilai[n.siswa_id] = n.nilai; });
+          siswaNilaiList.forEach(s => { s._nilai = mapNilai[s.id] ?? ''; });
+        } else {
+          // Demo: filter dari dataSiswa lokal
+          if (!dataSiswa.length) await loadSiswa();
+          siswaNilaiList = dataSiswa.filter(s => s.kelas === kelas).map(s => ({
+            id: s.id, nisn: s.nisn, nama: s.nama, _nilai: ''
+          }));
+        }
+
+        if (!siswaNilaiList.length) {
+          tbody.innerHTML = '<tr><td colspan="4" style="text-align:center;padding:24px;color:#94a3b8;">Tidak ada siswa di kelas ' + kelas + '</td></tr>';
+          document.getElementById('btnSimpanNilai').disabled = true;
+          return;
+        }
+
+        tbody.innerHTML = siswaNilaiList.map((s, i) => `
+          <tr data-siswa-id="${s.id}">
+            <td>${i + 1}</td>
+            <td>${s.nisn || ''}</td>
+            <td>${esc(s.nama)}</td>
+            <td><input type="number" class="nilai-input" min="0" max="100" step="0.01"
+                 value="${s._nilai}" data-siswa-id="${s.id}" placeholder="0-100"></td>
+          </tr>`).join('');
+        document.getElementById('btnSimpanNilai').disabled = false;
+        document.getElementById('infoInputNilai').textContent = siswaNilaiList.length + ' siswa · ' + jenis + ke;
+      } catch (e) {
+        console.error(e);
+        alert('Gagal memuat siswa: ' + (e.message || e));
+      }
+    });
+
+    // ----- Simpan semua nilai -----
+    document.getElementById('btnSimpanNilai').addEventListener('click', async () => {
+      const mapelId = Number(document.getElementById('inMapel').value);
+      const kelas = document.getElementById('inKelas').value;
+      const jenis = document.getElementById('inJenis').value;
+      const ke = Number(document.getElementById('inKe').value);
+      if (!mapelId || !kelas || !aktifPeriode) return;
+
+      const inputs = document.querySelectorAll('#tbodyInputNilai .nilai-input');
+      const rows = [];
+      inputs.forEach(inp => {
+        const val = inp.value.trim();
+        if (val === '') return; // skip kosong
+        const num = parseFloat(val);
+        if (isNaN(num) || num < 0 || num > 100) return;
+        rows.push({
+          periode_id: aktifPeriode.id,
+          siswa_id: Number(inp.dataset.siswaId),
+          mapel_id: mapelId,
+          kelas: kelas,
+          jenis: jenis,
+          ke: ke,
+          nilai: num,
+          updated_at: new Date().toISOString()
+        });
+      });
+
+      if (!rows.length) { alert('Tidak ada nilai yang diisi'); return; }
+      if (!confirm('Simpan ' + rows.length + ' nilai?')) return;
+
+      try {
+        if (supabaseClient) {
+          // Upsert: hapus yang sama dulu lalu insert (atau gunakan upsert)
+          for (const r of rows) {
+            await supabaseClient.from('nilai')
+              .delete()
+              .eq('periode_id', r.periode_id)
+              .eq('siswa_id', r.siswa_id)
+              .eq('mapel_id', r.mapel_id)
+              .eq('jenis', r.jenis)
+              .eq('ke', r.ke);
+          }
+          const { error } = await supabaseClient.from('nilai').insert(rows);
+          if (error) throw error;
+        }
+        alert('Berhasil menyimpan ' + rows.length + ' nilai');
+      } catch (e) {
+        alert('Gagal simpan: ' + (e.message || e));
+      }
+    });
+
+    // ----- DAFTAR NILAI (kolom dinamis) -----
+    document.getElementById('btnLoadDaftarNilai').addEventListener('click', async () => {
+      const mapelId = document.getElementById('dnMapel').value;
+      const kelas = document.getElementById('dnKelas').value;
+      if (!mapelId || !kelas) { alert('Pilih Mapel dan Kelas'); return; }
+      if (!aktifPeriode) { alert('Belum ada periode aktif'); return; }
+
+      const thead = document.getElementById('theadDaftarNilai');
+      const tbody = document.getElementById('tbodyDaftarNilai');
+      tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;padding:24px;color:#94a3b8;">Memuat...</td></tr>';
+
+      try {
+        let siswaList = [];
+        let nilaiRows = [];
+
+        if (supabaseClient) {
+          const { data: siswa } = await supabaseClient
+            .from('siswa').select('id, nisn, nama, lp').eq('kelas', kelas).order('nama');
+          siswaList = siswa || [];
+
+          const { data: nilai } = await supabaseClient
+            .from('nilai')
+            .select('siswa_id, jenis, ke, nilai')
+            .eq('periode_id', aktifPeriode.id)
+            .eq('mapel_id', mapelId)
+            .eq('kelas', kelas);
+          nilaiRows = nilai || [];
+        } else {
+          if (!dataSiswa.length) await loadSiswa();
+          siswaList = dataSiswa.filter(s => s.kelas === kelas);
+          nilaiRows = []; // demo kosong
+        }
+
+        // Kumpulkan kolom dinamis: jenis+ke yang ada, urut
+        const colSet = new Map(); // key "NH1" -> { jenis, ke }
+        nilaiRows.forEach(n => {
+          const key = n.jenis + n.ke;
+          if (!colSet.has(key)) colSet.set(key, { jenis: n.jenis, ke: n.ke });
+        });
+        // Urutkan: NH, TGS, PTS, ASAS, ASAJ, ASAT lalu ke
+        const orderJenis = ['NH', 'TGS', 'PTS', 'ASAS', 'ASAJ', 'ASAT'];
+        const cols = [...colSet.values()].sort((a, b) => {
+          const ia = orderJenis.indexOf(a.jenis);
+          const ib = orderJenis.indexOf(b.jenis);
+          if (ia !== ib) return ia - ib;
+          return a.ke - b.ke;
+        });
+
+        // Header
+        let headerHtml = '<tr><th>No</th><th>NISN</th><th>Nama</th><th>L/P</th>';
+        cols.forEach(c => { headerHtml += `<th>${c.jenis}${c.ke}</th>`; });
+        headerHtml += '<th>NR</th></tr>';
+        thead.innerHTML = headerHtml;
+
+        // Map nilai: siswa_id -> { "NH1": 80, ... }
+        const mapNilai = {};
+        nilaiRows.forEach(n => {
+          if (!mapNilai[n.siswa_id]) mapNilai[n.siswa_id] = {};
+          mapNilai[n.siswa_id][n.jenis + n.ke] = n.nilai;
+        });
+
+        if (!siswaList.length) {
+          tbody.innerHTML = `<tr><td colspan="${4 + cols.length + 1}" style="text-align:center;padding:24px;color:#94a3b8;">Tidak ada siswa</td></tr>`;
+          return;
+        }
+
+        tbody.innerHTML = siswaList.map((s, i) => {
+          const nmap = mapNilai[s.id] || {};
+          let vals = [];
+          let sum = 0, count = 0;
+          cols.forEach(c => {
+            const key = c.jenis + c.ke;
+            const v = nmap[key];
+            if (v != null && v !== '') {
+              vals.push(`<td>${v}</td>`);
+              sum += Number(v);
+              count++;
+            } else {
+              vals.push('<td>-</td>');
+            }
+          });
+          const nr = count ? (sum / count).toFixed(1) : '-';
+          return `<tr>
+            <td>${i + 1}</td>
+            <td>${s.nisn || ''}</td>
+            <td>${esc(s.nama)}</td>
+            <td>${s.lp || ''}</td>
+            ${vals.join('')}
+            <td><b>${nr}</b></td>
+          </tr>`;
+        }).join('');
+      } catch (e) {
+        console.error(e);
+        alert('Gagal memuat daftar nilai: ' + (e.message || e));
+      }
     });
 
     // Inisialisasi
