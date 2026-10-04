@@ -525,6 +525,88 @@
       font-size: 13px;
       color: var(--text-muted);
     }
+
+    /* ========== MODAL ========== */
+    .modal-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.5);
+      z-index: 3000;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      padding: 16px;
+    }
+    .modal-overlay.show {
+      display: flex;
+    }
+    .modal {
+      background: white;
+      border-radius: 16px;
+      width: 100%;
+      max-width: 360px;
+      max-height: 90vh;
+      overflow-y: auto;
+      box-shadow: 0 20px 40px rgba(0,0,0,0.2);
+      animation: modalIn 0.25s ease;
+    }
+    @keyframes modalIn {
+      from { opacity: 0; transform: translateY(20px) scale(0.96); }
+      to { opacity: 1; transform: translateY(0) scale(1); }
+    }
+    .modal-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 16px 18px;
+      border-bottom: 1px solid var(--border);
+    }
+    .modal-header h3 {
+      font-size: 16px;
+      font-weight: 700;
+    }
+    .modal-close {
+      background: none;
+      border: none;
+      font-size: 22px;
+      color: var(--text-muted);
+      cursor: pointer;
+      line-height: 1;
+      padding: 4px;
+    }
+    .modal-body {
+      padding: 18px;
+    }
+    .form-group {
+      margin-bottom: 14px;
+    }
+    .form-group label {
+      display: block;
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--text-muted);
+      margin-bottom: 6px;
+    }
+    .form-group input {
+      width: 100%;
+      padding: 11px 12px;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      font-size: 14px;
+      outline: none;
+      transition: border-color 0.15s;
+    }
+    .form-group input:focus {
+      border-color: var(--primary);
+    }
+    .modal-footer {
+      padding: 0 18px 18px;
+      display: flex;
+      gap: 10px;
+    }
+    .modal-footer .btn {
+      flex: 1;
+    }
   </style>
 </head>
 <body>
@@ -550,9 +632,9 @@
       <div class="profile-wrap">
         <div class="profile-photo" id="profileBtn">A</div>
         <div class="profile-menu" id="profileMenu">
-          <a href="#" onclick="alert('Edit Profil'); return false;">✏️ Edit Profil</a>
-          <a href="#" onclick="alert('Login'); return false;">🔑 Login</a>
-          <a href="#" onclick="alert('Logout'); return false;">🚪 Logout</a>
+          <a href="#" id="btnEditProfil">✏️ Edit Profil</a>
+          <a href="#" id="btnLogin">🔑 Login</a>
+          <a href="#" id="btnLogout">🚪 Logout</a>
         </div>
       </div>
     </div>
@@ -774,6 +856,62 @@
     © 2026 SMPN PANTANG MUNDUR *
   </footer>
 
+  <!-- ========== MODAL LOGIN ========== -->
+  <div class="modal-overlay" id="modalLogin">
+    <div class="modal">
+      <div class="modal-header">
+        <h3>Login</h3>
+        <button class="modal-close" data-close="modalLogin">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div class="form-group">
+          <label>Username / NIP / NIS</label>
+          <input type="text" id="loginUser" placeholder="Masukkan username" autocomplete="username">
+        </div>
+        <div class="form-group">
+          <label>Password</label>
+          <input type="password" id="loginPass" placeholder="Masukkan password" autocomplete="current-password">
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-outline" data-close="modalLogin">Batal</button>
+        <button class="btn btn-primary" id="btnDoLogin">Masuk</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ========== MODAL EDIT PROFIL ========== -->
+  <div class="modal-overlay" id="modalEditProfil">
+    <div class="modal">
+      <div class="modal-header">
+        <h3>Edit Profil</h3>
+        <button class="modal-close" data-close="modalEditProfil">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div class="form-group">
+          <label>Nama Lengkap</label>
+          <input type="text" id="editNama" value="Admin Sekolah" placeholder="Nama lengkap">
+        </div>
+        <div class="form-group">
+          <label>Username</label>
+          <input type="text" id="editUsername" value="admin" placeholder="Username">
+        </div>
+        <div class="form-group">
+          <label>Password Baru</label>
+          <input type="password" id="editPass" placeholder="Kosongkan jika tidak diubah">
+        </div>
+        <div class="form-group">
+          <label>Konfirmasi Password</label>
+          <input type="password" id="editPass2" placeholder="Ulangi password baru">
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-outline" data-close="modalEditProfil">Batal</button>
+        <button class="btn btn-primary" id="btnSaveProfil">Simpan</button>
+      </div>
+    </div>
+  </div>
+
   <script>
     // ========== Realtime clock ==========
     function updateClock() {
@@ -815,7 +953,66 @@
     });
     document.addEventListener('click', () => profileMenu.classList.remove('show'));
 
-    // ========== ROUTING + BACK BUTTON ==========
+    // ========== MODAL helpers ==========
+    function openModal(id) {
+      document.getElementById(id).classList.add('show');
+      profileMenu.classList.remove('show');
+    }
+    function closeModal(id) {
+      document.getElementById(id).classList.remove('show');
+    }
+
+    // Tombol buka modal
+    document.getElementById('btnLogin').addEventListener('click', (e) => {
+      e.preventDefault();
+      openModal('modalLogin');
+    });
+    document.getElementById('btnEditProfil').addEventListener('click', (e) => {
+      e.preventDefault();
+      openModal('modalEditProfil');
+    });
+    document.getElementById('btnLogout').addEventListener('click', (e) => {
+      e.preventDefault();
+      if (confirm('Yakin ingin logout?')) {
+        document.getElementById('username').textContent = 'Tamu';
+        alert('Anda telah logout.');
+      }
+    });
+
+    // Tutup modal (tombol X dan Batal)
+    document.querySelectorAll('[data-close]').forEach(btn => {
+      btn.addEventListener('click', () => closeModal(btn.getAttribute('data-close')));
+    });
+    // Tutup modal jika klik di luar konten
+    document.querySelectorAll('.modal-overlay').forEach(ov => {
+      ov.addEventListener('click', (e) => {
+        if (e.target === ov) ov.classList.remove('show');
+      });
+    });
+
+    // Aksi tombol di dalam modal (masih dummy)
+    document.getElementById('btnDoLogin').addEventListener('click', () => {
+      const user = document.getElementById('loginUser').value.trim();
+      if (!user) {
+        alert('Username harus diisi');
+        return;
+      }
+      document.getElementById('username').textContent = user;
+      closeModal('modalLogin');
+      alert('Login berhasil (demo)');
+    });
+    document.getElementById('btnSaveProfil').addEventListener('click', () => {
+      const nama = document.getElementById('editNama').value.trim();
+      if (!nama) {
+        alert('Nama harus diisi');
+        return;
+      }
+      document.getElementById('username').textContent = nama;
+      closeModal('modalEditProfil');
+      alert('Profil berhasil disimpan (demo)');
+    });
+
+    // ========== ROUTING ==========
     let currentPage = 'dashboard';
 
     function showPage(pageId, addToHistory) {
@@ -855,44 +1052,52 @@
       showPage(hash, false);
     }
 
-    // ========== BACK BUTTON (inti perbaikan) ==========
-    // Pola yang paling stabil di Android Chrome / Safari:
-    // 1. Selalu pushState di awal
-    // 2. Setiap kali back ditekan → kita tangkap di popstate
-    // 3. Dari subpage → ke Dashboard + pushState lagi
-    // 4. Dari Dashboard → tampilkan confirm. Cancel = pushState lagi. OK = biarkan keluar.
+    // ========== BACK BUTTON – versi paling agresif ==========
+    // Cara kerja:
+    // - Kita selalu menjaga minimal 1 entry di history
+    // - Setiap popstate kita tangkap
+    // - Subpage → Dashboard
+    // - Dashboard → confirm keluar
 
-    window.addEventListener('popstate', function () {
+    function trapHistory() {
+      history.pushState({ page: currentPage, trap: true }, '', '#' + currentPage);
+    }
+
+    window.addEventListener('popstate', function (e) {
+      // Tutup modal dulu kalau terbuka
+      document.querySelectorAll('.modal-overlay.show').forEach(m => m.classList.remove('show'));
+
       if (currentPage !== 'dashboard') {
-        // Sub-halaman → kembali ke Dashboard
-        showPage('dashboard', false);
-        history.pushState({ page: 'dashboard' }, '', '#dashboard');
+        // Dari halaman lain → ke Dashboard
+        currentPage = 'dashboard';
+        document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+        document.getElementById('page-dashboard').classList.add('active');
+        document.querySelectorAll('.menu-item').forEach(m => {
+          m.classList.toggle('active', m.getAttribute('data-page') === 'dashboard');
+        });
+        history.replaceState({ page: 'dashboard', trap: true }, '', '#dashboard');
+        trapHistory(); // jaga agar back berikutnya masih tertangkap
         return;
       }
 
-      // Sudah di Dashboard → konfirmasi keluar
+      // Sudah di Dashboard → minta konfirmasi
       const yakin = confirm('Yakin ingin keluar?');
-
       if (yakin) {
-        // User OK → coba tutup
+        // Biarkan browser keluar dari history
+        // Coba tutup tab
         window.close();
-        // Fallback kalau window.close() diblokir browser:
-        // mundur 1 langkah lagi supaya benar-benar keluar dari history app
-        setTimeout(function () {
-          history.go(-1);
-        }, 50);
+        // Kalau masih di sini, mundur jauh
+        history.go(-99);
       } else {
-        // User Cancel → tetap di Dashboard, push state lagi
-        history.pushState({ page: 'dashboard' }, '', '#dashboard');
+        // Batal → pasang trap lagi
+        trapHistory();
       }
     });
 
     // Inisialisasi
     initFromHash();
-
-    // PENTING: selalu sisipkan 1 state di history
-    // tanpa ini tombol back HP langsung keluar tanpa melewati popstate
-    history.pushState({ page: currentPage }, '', '#' + currentPage);
+    // Pasang trap pertama kali (sangat penting)
+    trapHistory();
   </script>
 </body>
 </html>
