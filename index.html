@@ -815,19 +815,13 @@
     });
     document.addEventListener('click', () => profileMenu.classList.remove('show'));
 
-    // ========== ROUTING (hash-based) ==========
-    // Agar refresh tetap di halaman yang sama
-    // Tombol back HP: subpage → dashboard, dashboard → konfirmasi keluar
-
+    // ========== ROUTING + BACK BUTTON ==========
     let currentPage = 'dashboard';
-    let isHandlingBack = false;
 
-    function showPage(pageId, pushHistory = true) {
-      // Validasi halaman
-      const target = document.getElementById('page-' + pageId);
-      if (!target) pageId = 'dashboard';
+    function showPage(pageId, addToHistory) {
+      const el = document.getElementById('page-' + pageId);
+      if (!el) pageId = 'dashboard';
 
-      // Update UI
       document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
       document.getElementById('page-' + pageId).classList.add('active');
 
@@ -839,68 +833,66 @@
       closeSidebar();
       window.scrollTo(0, 0);
 
-      // Update hash agar refresh tetap di halaman ini
-      if (pushHistory) {
-        const newHash = '#' + pageId;
-        if (location.hash !== newHash) {
-          history.pushState({ page: pageId }, '', newHash);
-        }
+      const hash = '#' + pageId;
+      if (addToHistory) {
+        history.pushState({ page: pageId }, '', hash);
       } else {
-        // Hanya ganti hash tanpa menambah history (saat restore dari hash)
-        history.replaceState({ page: pageId }, '', '#' + pageId);
+        history.replaceState({ page: pageId }, '', hash);
       }
     }
 
-    // Klik menu sidebar
+    // Klik menu
     document.querySelectorAll('.menu-item').forEach(item => {
       item.addEventListener('click', () => {
-        const pageId = item.getAttribute('data-page');
-        showPage(pageId, true);
+        showPage(item.getAttribute('data-page'), true);
       });
     });
 
-    // Saat load / refresh → baca hash
+    // Baca hash saat load/refresh
     function initFromHash() {
-      let hash = location.hash.replace('#', '') || 'dashboard';
-      // Pastikan halaman valid
+      let hash = (location.hash || '#dashboard').replace('#', '');
       if (!document.getElementById('page-' + hash)) hash = 'dashboard';
       showPage(hash, false);
     }
 
-    // Saat tombol BACK browser / HP ditekan
-    window.addEventListener('popstate', function (e) {
-      if (isHandlingBack) return;
-      isHandlingBack = true;
+    // ========== BACK BUTTON (inti perbaikan) ==========
+    // Pola yang paling stabil di Android Chrome / Safari:
+    // 1. Selalu pushState di awal
+    // 2. Setiap kali back ditekan → kita tangkap di popstate
+    // 3. Dari subpage → ke Dashboard + pushState lagi
+    // 4. Dari Dashboard → tampilkan confirm. Cancel = pushState lagi. OK = biarkan keluar.
 
+    window.addEventListener('popstate', function () {
       if (currentPage !== 'dashboard') {
-        // Dari subpage → kembali ke Dashboard
+        // Sub-halaman → kembali ke Dashboard
         showPage('dashboard', false);
-        // Push state lagi supaya history tetap ada (mencegah langsung keluar)
         history.pushState({ page: 'dashboard' }, '', '#dashboard');
-      } else {
-        // Sudah di Dashboard → minta konfirmasi keluar
-        const yakin = confirm('Yakin ingin keluar?');
-        if (yakin) {
-          // User setuju → biarkan browser keluar / tutup tab
-          // Karena file lokal, window.close() sering tidak bekerja.
-          // Kita biarkan history pop selesai (keluar dari app).
-          history.back(); // atau biarkan saja
-        } else {
-          // User batal → dorong state lagi agar tetap di Dashboard
-          history.pushState({ page: 'dashboard' }, '', '#dashboard');
-        }
+        return;
       }
 
-      setTimeout(() => { isHandlingBack = false; }, 50);
+      // Sudah di Dashboard → konfirmasi keluar
+      const yakin = confirm('Yakin ingin keluar?');
+
+      if (yakin) {
+        // User OK → coba tutup
+        window.close();
+        // Fallback kalau window.close() diblokir browser:
+        // mundur 1 langkah lagi supaya benar-benar keluar dari history app
+        setTimeout(function () {
+          history.go(-1);
+        }, 50);
+      } else {
+        // User Cancel → tetap di Dashboard, push state lagi
+        history.pushState({ page: 'dashboard' }, '', '#dashboard');
+      }
     });
 
-    // Inisialisasi saat pertama kali buka / refresh
+    // Inisialisasi
     initFromHash();
 
-    // Pastikan ada state di history (penting untuk back button)
-    if (!history.state || !history.state.page) {
-      history.replaceState({ page: currentPage }, '', '#' + currentPage);
-    }
+    // PENTING: selalu sisipkan 1 state di history
+    // tanpa ini tombol back HP langsung keluar tanpa melewati popstate
+    history.pushState({ page: currentPage }, '', '#' + currentPage);
   </script>
 </body>
 </html>
