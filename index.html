@@ -652,6 +652,30 @@
       font-size: 14px;
       background: white;
     }
+    .check-list {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px 12px;
+      max-height: 140px;
+      overflow-y: auto;
+      padding: 8px;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      background: #f8fafc;
+    }
+    .check-list label {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      font-size: 12px;
+      font-weight: 500;
+      cursor: pointer;
+      white-space: nowrap;
+    }
+    .check-list input[type="checkbox"] {
+      width: 15px;
+      height: 15px;
+    }
   </style>
 </head>
 <body>
@@ -1160,6 +1184,18 @@
         <div class="form-group">
           <label>No HP</label>
           <input type="tel" id="guruHp" inputmode="numeric" placeholder="08xxxxxxxxxx">
+        </div>
+        <div class="form-group">
+          <label>Mapel yang diampu (bisa pilih lebih dari 1)</label>
+          <div id="guruMapelList" class="check-list">
+            <span style="color:#94a3b8;font-size:12px;">Memuat mapel...</span>
+          </div>
+        </div>
+        <div class="form-group">
+          <label>Kelas yang diajar (bisa pilih lebih dari 1)</label>
+          <div id="guruKelasList" class="check-list">
+            <span style="color:#94a3b8;font-size:12px;">Memuat kelas...</span>
+          </div>
         </div>
       </div>
       <div class="modal-footer">
@@ -1774,18 +1810,112 @@
       this.value = '';
     });
 
+    // ----- Master Mapel & Kelas (untuk checkbox di form guru) -----
+    let masterMapel = [];
+    let masterKelas = [];
+
+    async function loadMasterMapelKelas() {
+      try {
+        if (supabaseClient) {
+          const [m, k] = await Promise.all([
+            supabaseClient.from('mapel').select('id, kode, mapel').order('id'),
+            supabaseClient.from('kelas').select('id, kelas').order('id')
+          ]);
+          masterMapel = m.data || [];
+          masterKelas = k.data || [];
+        } else {
+          masterMapel = [
+            { id: 1, kode: 'PAI', mapel: 'Pendidikan Agama Islam' },
+            { id: 2, kode: 'PP', mapel: 'Pendidikan Pancasila' },
+            { id: 3, kode: 'BINDO', mapel: 'Bahasa Indonesia' },
+            { id: 4, kode: 'MTK', mapel: 'Matematika' },
+            { id: 5, kode: 'IPA', mapel: 'Ilmu Pengetahuan Alam' },
+            { id: 6, kode: 'IPS', mapel: 'Ilmu Pengetahuan Sosial' },
+            { id: 7, kode: 'BING', mapel: 'Bahasa Inggris' },
+            { id: 8, kode: 'SBK', mapel: 'Seni Budaya & Prakarya' },
+            { id: 9, kode: 'TIK', mapel: 'Informatika' },
+            { id: 10, kode: 'PENJAS', mapel: 'Pendidikan Jasmani' },
+            { id: 11, kode: 'BSND', mapel: 'Bahasa Sunda' }
+          ];
+          masterKelas = ['7A','7B','7C','7D','8A','8B','8C','8D','9A','9B','9C','9D']
+            .map((k, i) => ({ id: i + 1, kelas: k }));
+        }
+      } catch (e) {
+        console.error('Gagal load master mapel/kelas', e);
+      }
+    }
+
+    function renderMapelChecks(selectedIds) {
+      selectedIds = (selectedIds || []).map(String);
+      const box = document.getElementById('guruMapelList');
+      if (!masterMapel.length) {
+        box.innerHTML = '<span style="color:#94a3b8;font-size:12px;">Tidak ada data mapel</span>';
+        return;
+      }
+      box.innerHTML = masterMapel.map(m => `
+        <label>
+          <input type="checkbox" class="cb-mapel" value="${m.id}" ${selectedIds.includes(String(m.id)) ? 'checked' : ''}>
+          ${m.kode} – ${m.mapel}
+        </label>`).join('');
+    }
+
+    function renderKelasChecks(selectedIds) {
+      selectedIds = (selectedIds || []).map(String);
+      const box = document.getElementById('guruKelasList');
+      if (!masterKelas.length) {
+        box.innerHTML = '<span style="color:#94a3b8;font-size:12px;">Tidak ada data kelas</span>';
+        return;
+      }
+      box.innerHTML = masterKelas.map(k => `
+        <label>
+          <input type="checkbox" class="cb-kelas" value="${k.id}" ${selectedIds.includes(String(k.id)) ? 'checked' : ''}>
+          ${k.kelas}
+        </label>`).join('');
+    }
+
+    async function getGuruMapelIds(guruId) {
+      if (!supabaseClient || !guruId) return [];
+      const { data } = await supabaseClient.from('guru_mapel').select('mapel_id').eq('guru_id', guruId);
+      return (data || []).map(r => r.mapel_id);
+    }
+    async function getGuruKelasIds(guruId) {
+      if (!supabaseClient || !guruId) return [];
+      const { data } = await supabaseClient.from('guru_kelas').select('kelas_id').eq('guru_id', guruId);
+      return (data || []).map(r => r.kelas_id);
+    }
+
+    async function saveGuruRelasi(guruId) {
+      if (!supabaseClient || !guruId) return;
+      const mapelIds = [...document.querySelectorAll('.cb-mapel:checked')].map(c => Number(c.value));
+      const kelasIds = [...document.querySelectorAll('.cb-kelas:checked')].map(c => Number(c.value));
+
+      // Hapus relasi lama, lalu insert yang baru
+      await supabaseClient.from('guru_mapel').delete().eq('guru_id', guruId);
+      await supabaseClient.from('guru_kelas').delete().eq('guru_id', guruId);
+
+      if (mapelIds.length) {
+        await supabaseClient.from('guru_mapel').insert(mapelIds.map(mid => ({ guru_id: Number(guruId), mapel_id: mid })));
+      }
+      if (kelasIds.length) {
+        await supabaseClient.from('guru_kelas').insert(kelasIds.map(kid => ({ guru_id: Number(guruId), kelas_id: kid })));
+      }
+    }
+
     // ----- GURU: Tambah -----
-    document.getElementById('btnTambahGuru').addEventListener('click', () => {
+    document.getElementById('btnTambahGuru').addEventListener('click', async () => {
       document.getElementById('modalGuruTitle').textContent = 'Tambah Guru';
       document.getElementById('guruId').value = '';
       ['guruNama','guruPin','guruNip','guruJabatan','guruPangkat','guruMulaiKerja','guruHp'].forEach(id => document.getElementById(id).value = '');
       document.getElementById('guruLp').value = 'L';
       document.getElementById('guruStatus').value = 'Aktif';
+      await loadMasterMapelKelas();
+      renderMapelChecks([]);
+      renderKelasChecks([]);
       openModal('modalGuru');
     });
 
     // ----- GURU: Edit -----
-    document.getElementById('btnEditGuru').addEventListener('click', () => {
+    document.getElementById('btnEditGuru').addEventListener('click', async () => {
       const ids = getChecked('cb-guru');
       if (ids.length === 0) { alert('Centang 1 data yang ingin diedit'); return; }
       if (ids.length > 1) { alert('Pilih hanya 1 data untuk diedit'); return; }
@@ -1802,6 +1932,11 @@
       document.getElementById('guruMulaiKerja').value = g.mulai_kerja || '';
       document.getElementById('guruStatus').value = g.status || 'Aktif';
       document.getElementById('guruHp').value = g.no_hp || '';
+      await loadMasterMapelKelas();
+      const mapelIds = await getGuruMapelIds(g.id);
+      const kelasIds = await getGuruKelasIds(g.id);
+      renderMapelChecks(mapelIds);
+      renderKelasChecks(kelasIds);
       openModal('modalGuru');
     });
 
@@ -1822,14 +1957,18 @@
       if (!payload.nama || !payload.pin) { alert('Nama dan PIN wajib diisi'); return; }
 
       try {
+        let guruId = id;
         if (supabaseClient) {
           if (id) {
             const { error } = await supabaseClient.from('guru').update(payload).eq('id', id);
             if (error) throw error;
           } else {
-            const { error } = await supabaseClient.from('guru').insert([payload]);
+            const { data, error } = await supabaseClient.from('guru').insert([payload]).select('id').single();
             if (error) throw error;
+            guruId = data.id;
           }
+          // Simpan relasi mapel & kelas
+          await saveGuruRelasi(guruId);
         } else {
           if (id) {
             const idx = dataGuru.findIndex(x => String(x.id) === id);
