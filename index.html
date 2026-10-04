@@ -866,11 +866,11 @@
       <div class="modal-body">
         <div class="form-group">
           <label>Username / NIP / NIS</label>
-          <input type="text" id="loginUser" placeholder="Masukkan username" autocomplete="username">
+          <input type="text" id="loginUser" placeholder="Masukkan username" autocomplete="off" autocapitalize="off" spellcheck="false">
         </div>
         <div class="form-group">
           <label>Password</label>
-          <input type="password" id="loginPass" placeholder="Masukkan password" autocomplete="current-password">
+          <input type="password" id="loginPass" placeholder="Masukkan password" autocomplete="new-password">
         </div>
       </div>
       <div class="modal-footer">
@@ -890,19 +890,19 @@
       <div class="modal-body">
         <div class="form-group">
           <label>Nama Lengkap</label>
-          <input type="text" id="editNama" value="Admin Sekolah" placeholder="Nama lengkap">
+          <input type="text" id="editNama" value="Admin Sekolah" placeholder="Nama lengkap" autocomplete="off">
         </div>
         <div class="form-group">
           <label>Username</label>
-          <input type="text" id="editUsername" value="admin" placeholder="Username">
+          <input type="text" id="editUsername" value="admin" placeholder="Username" autocomplete="off">
         </div>
         <div class="form-group">
           <label>Password Baru</label>
-          <input type="password" id="editPass" placeholder="Kosongkan jika tidak diubah">
+          <input type="password" id="editPass" placeholder="Kosongkan jika tidak diubah" autocomplete="new-password">
         </div>
         <div class="form-group">
           <label>Konfirmasi Password</label>
-          <input type="password" id="editPass2" placeholder="Ulangi password baru">
+          <input type="password" id="editPass2" placeholder="Ulangi password baru" autocomplete="new-password">
         </div>
       </div>
       <div class="modal-footer">
@@ -1052,52 +1052,51 @@
       showPage(hash, false);
     }
 
-    // ========== BACK BUTTON – versi paling agresif ==========
-    // Cara kerja:
-    // - Kita selalu menjaga minimal 1 entry di history
-    // - Setiap popstate kita tangkap
-    // - Subpage → Dashboard
-    // - Dashboard → confirm keluar
+    // ========== BACK BUTTON – selalu re-arm ==========
+    // Setiap kali popstate, kita segera pushState lagi.
+    // Sehingga konfirmasi bisa muncul berkali-kali tanpa "habis".
 
-    function trapHistory() {
-      history.pushState({ page: currentPage, trap: true }, '', '#' + currentPage);
+    function rearmTrap() {
+      history.pushState({ page: currentPage, trap: Date.now() }, '', '#' + currentPage);
     }
 
-    window.addEventListener('popstate', function (e) {
-      // Tutup modal dulu kalau terbuka
+    window.addEventListener('popstate', function () {
+      // Tutup semua modal kalau terbuka
       document.querySelectorAll('.modal-overlay.show').forEach(m => m.classList.remove('show'));
 
       if (currentPage !== 'dashboard') {
-        // Dari halaman lain → ke Dashboard
+        // Sub-halaman → kembali ke Dashboard
         currentPage = 'dashboard';
         document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
         document.getElementById('page-dashboard').classList.add('active');
         document.querySelectorAll('.menu-item').forEach(m => {
           m.classList.toggle('active', m.getAttribute('data-page') === 'dashboard');
         });
-        history.replaceState({ page: 'dashboard', trap: true }, '', '#dashboard');
-        trapHistory(); // jaga agar back berikutnya masih tertangkap
+        history.replaceState({ page: 'dashboard' }, '', '#dashboard');
+        rearmTrap();
         return;
       }
 
-      // Sudah di Dashboard → minta konfirmasi
+      // Sudah di Dashboard → tampilkan konfirmasi
       const yakin = confirm('Yakin ingin keluar?');
+
       if (yakin) {
-        // Biarkan browser keluar dari history
-        // Coba tutup tab
+        // User setuju keluar
         window.close();
-        // Kalau masih di sini, mundur jauh
-        history.go(-99);
+        // Fallback: biarkan history mundur (jangan re-arm)
+        setTimeout(function () {
+          history.back();
+        }, 100);
       } else {
-        // Batal → pasang trap lagi
-        trapHistory();
+        // User batal → re-arm agar bisa ditekan lagi nanti
+        rearmTrap();
       }
     });
 
     // Inisialisasi
     initFromHash();
-    // Pasang trap pertama kali (sangat penting)
-    trapHistory();
+    // Pasang trap pertama kali
+    rearmTrap();
   </script>
 </body>
 </html>
