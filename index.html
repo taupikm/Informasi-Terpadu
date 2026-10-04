@@ -610,22 +610,37 @@
       flex: 1;
     }
 
-    /* Toolbar CRUD */
+    /* Toolbar CRUD – compact agar 1 baris di HP */
     .toolbar {
       display: flex;
-      flex-wrap: wrap;
-      gap: 8px;
+      flex-wrap: nowrap;
+      gap: 5px;
       align-items: center;
-      margin-bottom: 12px;
+      margin-bottom: 10px;
+      overflow-x: auto;
+      -webkit-overflow-scrolling: touch;
+      padding-bottom: 2px;
     }
     .toolbar .btn {
-      padding: 8px 12px;
-      font-size: 12px;
+      padding: 6px 8px;
+      font-size: 11px;
+      white-space: nowrap;
+      flex-shrink: 0;
+      line-height: 1.2;
     }
     .toolbar-info {
       margin-left: auto;
-      font-size: 12px;
+      font-size: 11px;
       color: var(--text-muted);
+      white-space: nowrap;
+      flex-shrink: 0;
+    }
+    .toolbar .search-input {
+      min-width: 100px;
+      max-width: 140px;
+      padding: 6px 8px;
+      font-size: 11px;
+      flex-shrink: 1;
     }
     .table-wrap table th:first-child,
     .table-wrap table td:first-child {
@@ -1208,7 +1223,7 @@
           <div class="toolbar">
             <button class="btn btn-primary" id="btnTambahMapel">+ Tambah</button>
             <button class="btn btn-secondary" id="btnEditMapel">✏️ Edit</button>
-            <button class="btn btn-outline" id="btnHapusMapel" style="color:#ef4444;border-color:#fca5a5;">🗑️ Hapus</button>
+            <button class="btn btn-outline" id="btnHapusMapel" style="color:#ef4444;border-color:#fca5a5;">🗑️</button>
             <span class="toolbar-info" id="infoMapel">0 data</span>
           </div>
           <div class="table-wrap">
@@ -1269,8 +1284,8 @@
           <div class="toolbar">
             <button class="btn btn-primary" id="btnTambahPeriode">+ Tambah</button>
             <button class="btn btn-secondary" id="btnEditPeriode">✏️ Edit</button>
-            <button class="btn btn-outline" id="btnHapusPeriode" style="color:#ef4444;border-color:#fca5a5;">🗑️ Hapus</button>
-            <button class="btn btn-secondary" id="btnAktifkanPeriode">✓ Set Aktif</button>
+            <button class="btn btn-outline" id="btnHapusPeriode" style="color:#ef4444;border-color:#fca5a5;">🗑️</button>
+            <button class="btn btn-secondary" id="btnAktifkanPeriode">✓ Aktif</button>
             <span class="toolbar-info" id="infoPeriode">0 data</span>
           </div>
           <div class="table-wrap">
