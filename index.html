@@ -676,6 +676,19 @@
       width: 15px;
       height: 15px;
     }
+    .search-input {
+      flex: 1;
+      min-width: 140px;
+      max-width: 220px;
+      padding: 8px 12px;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      font-size: 13px;
+      outline: none;
+    }
+    .search-input:focus {
+      border-color: var(--primary);
+    }
   </style>
 </head>
 <body>
@@ -914,6 +927,7 @@
         <button class="btn btn-outline" id="btnHapusSiswa" style="color:#ef4444;border-color:#fca5a5;">🗑️ Hapus</button>
         <button class="btn btn-outline" id="btnImportSiswa">📥 Import</button>
         <input type="file" id="fileImportSiswa" accept=".csv,.txt" style="display:none;">
+        <input type="search" id="cariSiswa" class="search-input" placeholder="Cari Nama / NISN..." autocomplete="off">
         <span class="toolbar-info" id="infoSiswa">0 data</span>
       </div>
       <div class="table-wrap">
@@ -973,9 +987,44 @@
       </div>
     </section>
 
+    <!-- ========== DATA LULUSAN ========== -->
     <section class="page" id="page-data-lulusan">
-      <div class="placeholder"><div class="icon">🎓</div><h2>Data Lulusan</h2><p>Halaman data lulusan</p></div>
+      <div class="page-title">Data Lulusan</div>
+      <div class="toolbar" id="toolbarLulusan">
+        <button class="btn btn-primary" id="btnTambahLulusan">+ Tambah</button>
+        <button class="btn btn-secondary" id="btnEditLulusan">✏️ Edit</button>
+        <button class="btn btn-outline" id="btnHapusLulusan" style="color:#ef4444;border-color:#fca5a5;">🗑️ Hapus</button>
+        <button class="btn btn-outline" id="btnImportLulusan">📥 Import</button>
+        <input type="file" id="fileImportLulusan" accept=".csv,.txt" style="display:none;">
+        <input type="search" id="cariLulusan" class="search-input" placeholder="Cari Nama / NISN..." autocomplete="off">
+        <span class="toolbar-info" id="infoLulusan">0 data</span>
+      </div>
+      <div class="table-wrap">
+        <table id="tableLulusan">
+          <thead>
+            <tr>
+              <th style="width:36px;"><input type="checkbox" id="checkAllLulusan" title="Pilih semua"></th>
+              <th>No</th>
+              <th>NISN</th>
+              <th>Nama</th>
+              <th>L/P</th>
+              <th>Tmp Lahir</th>
+              <th>Tgl Lahir</th>
+              <th>Tgl Mulai Sekolah</th>
+              <th>Tanggal Lulus</th>
+              <th>Tahun Lulus</th>
+              <th>Lama Belajar</th>
+              <th>Status Awal</th>
+              <th>Asal Sekolah</th>
+            </tr>
+          </thead>
+          <tbody id="tbodyLulusan">
+            <tr><td colspan="13" style="text-align:center;padding:24px;color:#94a3b8;">Memuat data...</td></tr>
+          </tbody>
+        </table>
+      </div>
     </section>
+
     <section class="page" id="page-pengaturan">
       <div class="placeholder"><div class="icon">⚙️</div><h2>Pengaturan Sistem</h2><p>Halaman pengaturan sistem</p></div>
     </section>
@@ -1201,6 +1250,83 @@
       <div class="modal-footer">
         <button class="btn btn-outline" data-close="modalGuru">Batal</button>
         <button class="btn btn-primary" id="btnSaveGuru">Simpan</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ========== MODAL LULUSAN (Tambah / Edit) ========== -->
+  <div class="modal-overlay" id="modalLulusan">
+    <div class="modal">
+      <div class="modal-header">
+        <h3 id="modalLulusanTitle">Tambah Lulusan</h3>
+        <button class="modal-close" data-close="modalLulusan">&times;</button>
+      </div>
+      <div class="modal-body">
+        <input type="hidden" id="lulusanId">
+        <div class="form-group">
+          <label>Nama Lengkap *</label>
+          <input type="text" id="lulusanNama" placeholder="Nama lulusan">
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label>NISN</label>
+            <input type="tel" id="lulusanNisn" inputmode="numeric" maxlength="10" placeholder="NISN">
+          </div>
+          <div class="form-group">
+            <label>L/P *</label>
+            <select id="lulusanLp">
+              <option value="L">Laki-laki</option>
+              <option value="P">Perempuan</option>
+            </select>
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label>Tempat Lahir</label>
+            <input type="text" id="lulusanTmpLahir" placeholder="Kota">
+          </div>
+          <div class="form-group">
+            <label>Tanggal Lahir</label>
+            <input type="date" id="lulusanTglLahir">
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label>Tgl Mulai Sekolah</label>
+            <input type="date" id="lulusanTglMulai">
+          </div>
+          <div class="form-group">
+            <label>Tanggal Lulus</label>
+            <input type="date" id="lulusanTglLulus">
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label>Tahun Lulus</label>
+            <input type="number" id="lulusanTahun" placeholder="2024" min="2000" max="2099">
+          </div>
+          <div class="form-group">
+            <label>Lama Belajar</label>
+            <input type="text" id="lulusanLama" placeholder="3 Tahun">
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label>Status Awal</label>
+            <select id="lulusanStatusAwal">
+              <option>Baru</option>
+              <option>Pindahan</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Asal Sekolah</label>
+            <input type="text" id="lulusanAsal" placeholder="Nama sekolah asal">
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-outline" data-close="modalLulusan">Batal</button>
+        <button class="btn btn-primary" id="btnSaveLulusan">Simpan</button>
       </div>
     </div>
   </div>
@@ -1501,6 +1627,7 @@
       // Load data saat buka halaman
       if (pageId === 'data-siswa') loadSiswa();
       if (pageId === 'data-guru') loadGuru();
+      if (pageId === 'data-lulusan') loadLulusan();
     }
 
     // Klik menu
@@ -1596,14 +1723,20 @@
     }
 
     function renderSiswa() {
+      const q = (document.getElementById('cariSiswa')?.value || '').trim().toLowerCase();
+      const filtered = q
+        ? dataSiswa.filter(s =>
+            (s.nama || '').toLowerCase().includes(q) ||
+            (s.nisn || '').toLowerCase().includes(q))
+        : dataSiswa;
       const tbody = document.getElementById('tbodySiswa');
-      document.getElementById('infoSiswa').textContent = dataSiswa.length + ' data';
+      document.getElementById('infoSiswa').textContent = filtered.length + (q ? ' ditemukan' : ' data');
       document.getElementById('checkAllSiswa').checked = false;
-      if (!dataSiswa.length) {
-        tbody.innerHTML = '<tr><td colspan="10" style="text-align:center;padding:24px;color:#94a3b8;">Belum ada data</td></tr>';
+      if (!filtered.length) {
+        tbody.innerHTML = '<tr><td colspan="10" style="text-align:center;padding:24px;color:#94a3b8;">' + (q ? 'Tidak ditemukan' : 'Belum ada data') + '</td></tr>';
         return;
       }
-      tbody.innerHTML = dataSiswa.map((s, i) => `
+      tbody.innerHTML = filtered.map((s, i) => `
         <tr data-id="${s.id}">
           <td><input type="checkbox" class="cb-siswa" value="${s.id}"></td>
           <td>${i + 1}</td>
@@ -1617,6 +1750,8 @@
           <td>${s.no_hp || ''}</td>
         </tr>`).join('');
     }
+
+    document.getElementById('cariSiswa').addEventListener('input', renderSiswa);
 
     // ----- LOAD GURU -----
     async function loadGuru() {
@@ -2034,6 +2169,204 @@
           rows.forEach(r => { r.id = Date.now() + Math.random(); dataGuru.push(r); });
         }
         await loadGuru();
+        alert('Import berhasil: ' + rows.length + ' data');
+      } catch (e) {
+        alert('Gagal import: ' + (e.message || e));
+      }
+      this.value = '';
+    });
+
+    // ============================================================
+    // CRUD LULUSAN
+    // ============================================================
+    let dataLulusan = [];
+    const DEMO_LULUSAN = [
+      { id: 1, nisn: '0012345678', nama: 'Ahmad Rizki', lp: 'L', tmp_lahir: 'Bandung', tgl_lahir: '2008-03-12', tgl_mulai_sekolah: '2021-07-15', tanggal_lulus: '2024-06-20', tahun_lulus: 2024, lama_belajar: '3 Tahun', status_awal: 'Baru', asal_sekolah: 'SDN 1 Bandung' },
+      { id: 2, nisn: '0012345679', nama: 'Siti Nurhaliza', lp: 'P', tmp_lahir: 'Jakarta', tgl_lahir: '2008-08-25', tgl_mulai_sekolah: '2021-07-15', tanggal_lulus: '2024-06-20', tahun_lulus: 2024, lama_belajar: '3 Tahun', status_awal: 'Baru', asal_sekolah: 'SDN 5 Jakarta' },
+      { id: 3, nisn: '0012345680', nama: 'Budi Setiawan', lp: 'L', tmp_lahir: 'Bogor', tgl_lahir: '2007-11-05', tgl_mulai_sekolah: '2020-07-15', tanggal_lulus: '2023-06-18', tahun_lulus: 2023, lama_belajar: '3 Tahun', status_awal: 'Pindahan', asal_sekolah: 'SMPN 2 Bogor' }
+    ];
+
+    async function loadLulusan() {
+      const tbody = document.getElementById('tbodyLulusan');
+      tbody.innerHTML = '<tr><td colspan="13" style="text-align:center;padding:24px;color:#94a3b8;">Memuat data...</td></tr>';
+      try {
+        if (supabaseClient) {
+          const { data, error } = await supabaseClient.from('lulusan').select('*').order('id');
+          if (error) throw error;
+          dataLulusan = data || [];
+        } else {
+          dataLulusan = JSON.parse(JSON.stringify(DEMO_LULUSAN));
+        }
+      } catch (e) {
+        console.error(e);
+        dataLulusan = JSON.parse(JSON.stringify(DEMO_LULUSAN));
+      }
+      renderLulusan();
+    }
+
+    function renderLulusan() {
+      const q = (document.getElementById('cariLulusan')?.value || '').trim().toLowerCase();
+      const filtered = q
+        ? dataLulusan.filter(s =>
+            (s.nama || '').toLowerCase().includes(q) ||
+            (s.nisn || '').toLowerCase().includes(q))
+        : dataLulusan;
+      const tbody = document.getElementById('tbodyLulusan');
+      document.getElementById('infoLulusan').textContent = filtered.length + (q ? ' ditemukan' : ' data');
+      document.getElementById('checkAllLulusan').checked = false;
+      if (!filtered.length) {
+        tbody.innerHTML = '<tr><td colspan="13" style="text-align:center;padding:24px;color:#94a3b8;">' + (q ? 'Tidak ditemukan' : 'Belum ada data') + '</td></tr>';
+        return;
+      }
+      tbody.innerHTML = filtered.map((s, i) => `
+        <tr data-id="${s.id}">
+          <td><input type="checkbox" class="cb-lulusan" value="${s.id}"></td>
+          <td>${i + 1}</td>
+          <td>${s.nisn || ''}</td>
+          <td>${esc(s.nama)}</td>
+          <td>${s.lp || ''}</td>
+          <td>${s.tmp_lahir || ''}</td>
+          <td>${s.tgl_lahir || ''}</td>
+          <td>${s.tgl_mulai_sekolah || ''}</td>
+          <td>${s.tanggal_lulus || ''}</td>
+          <td>${s.tahun_lulus || ''}</td>
+          <td>${s.lama_belajar || ''}</td>
+          <td>${s.status_awal || ''}</td>
+          <td>${esc(s.asal_sekolah || '')}</td>
+        </tr>`).join('');
+    }
+
+    document.getElementById('cariLulusan').addEventListener('input', renderLulusan);
+    document.getElementById('checkAllLulusan').addEventListener('change', function () {
+      document.querySelectorAll('.cb-lulusan').forEach(c => c.checked = this.checked);
+    });
+
+    // Tambah
+    document.getElementById('btnTambahLulusan').addEventListener('click', () => {
+      document.getElementById('modalLulusanTitle').textContent = 'Tambah Lulusan';
+      document.getElementById('lulusanId').value = '';
+      ['lulusanNama','lulusanNisn','lulusanTmpLahir','lulusanTglLahir','lulusanTglMulai','lulusanTglLulus','lulusanTahun','lulusanLama','lulusanAsal'].forEach(id => document.getElementById(id).value = '');
+      document.getElementById('lulusanLp').value = 'L';
+      document.getElementById('lulusanStatusAwal').value = 'Baru';
+      openModal('modalLulusan');
+    });
+
+    // Edit
+    document.getElementById('btnEditLulusan').addEventListener('click', () => {
+      const ids = getChecked('cb-lulusan');
+      if (ids.length === 0) { alert('Centang 1 data yang ingin diedit'); return; }
+      if (ids.length > 1) { alert('Pilih hanya 1 data untuk diedit'); return; }
+      const s = dataLulusan.find(x => String(x.id) === ids[0]);
+      if (!s) return;
+      document.getElementById('modalLulusanTitle').textContent = 'Edit Lulusan';
+      document.getElementById('lulusanId').value = s.id;
+      document.getElementById('lulusanNama').value = s.nama || '';
+      document.getElementById('lulusanNisn').value = s.nisn || '';
+      document.getElementById('lulusanLp').value = s.lp || 'L';
+      document.getElementById('lulusanTmpLahir').value = s.tmp_lahir || '';
+      document.getElementById('lulusanTglLahir').value = s.tgl_lahir || '';
+      document.getElementById('lulusanTglMulai').value = s.tgl_mulai_sekolah || '';
+      document.getElementById('lulusanTglLulus').value = s.tanggal_lulus || '';
+      document.getElementById('lulusanTahun').value = s.tahun_lulus || '';
+      document.getElementById('lulusanLama').value = s.lama_belajar || '';
+      document.getElementById('lulusanStatusAwal').value = s.status_awal || 'Baru';
+      document.getElementById('lulusanAsal').value = s.asal_sekolah || '';
+      openModal('modalLulusan');
+    });
+
+    // Simpan
+    document.getElementById('btnSaveLulusan').addEventListener('click', async () => {
+      const id = document.getElementById('lulusanId').value;
+      const payload = {
+        nama: document.getElementById('lulusanNama').value.trim(),
+        nisn: document.getElementById('lulusanNisn').value.trim() || null,
+        lp: document.getElementById('lulusanLp').value,
+        tmp_lahir: document.getElementById('lulusanTmpLahir').value.trim() || null,
+        tgl_lahir: document.getElementById('lulusanTglLahir').value || null,
+        tgl_mulai_sekolah: document.getElementById('lulusanTglMulai').value || null,
+        tanggal_lulus: document.getElementById('lulusanTglLulus').value || null,
+        tahun_lulus: parseInt(document.getElementById('lulusanTahun').value) || null,
+        lama_belajar: document.getElementById('lulusanLama').value.trim() || null,
+        status_awal: document.getElementById('lulusanStatusAwal').value || null,
+        asal_sekolah: document.getElementById('lulusanAsal').value.trim() || null
+      };
+      if (!payload.nama) { alert('Nama wajib diisi'); return; }
+      try {
+        if (supabaseClient) {
+          if (id) {
+            const { error } = await supabaseClient.from('lulusan').update(payload).eq('id', id);
+            if (error) throw error;
+          } else {
+            const { error } = await supabaseClient.from('lulusan').insert([payload]);
+            if (error) throw error;
+          }
+        } else {
+          if (id) {
+            const idx = dataLulusan.findIndex(x => String(x.id) === id);
+            if (idx >= 0) dataLulusan[idx] = { ...dataLulusan[idx], ...payload };
+          } else {
+            payload.id = Date.now();
+            dataLulusan.push(payload);
+          }
+        }
+        closeModal('modalLulusan');
+        await loadLulusan();
+        alert(id ? 'Data berhasil diubah' : 'Data berhasil ditambah');
+      } catch (e) {
+        alert('Gagal simpan: ' + (e.message || e));
+      }
+    });
+
+    // Hapus
+    document.getElementById('btnHapusLulusan').addEventListener('click', async () => {
+      const ids = getChecked('cb-lulusan');
+      if (!ids.length) { alert('Centang data yang ingin dihapus'); return; }
+      if (!confirm('Hapus ' + ids.length + ' data lulusan terpilih?')) return;
+      try {
+        if (supabaseClient) {
+          const { error } = await supabaseClient.from('lulusan').delete().in('id', ids.map(Number));
+          if (error) throw error;
+        } else {
+          dataLulusan = dataLulusan.filter(x => !ids.includes(String(x.id)));
+        }
+        await loadLulusan();
+        alert('Data berhasil dihapus');
+      } catch (e) {
+        alert('Gagal hapus: ' + (e.message || e));
+      }
+    });
+
+    // Import CSV
+    document.getElementById('btnImportLulusan').addEventListener('click', () => document.getElementById('fileImportLulusan').click());
+    document.getElementById('fileImportLulusan').addEventListener('change', async function () {
+      const file = this.files[0];
+      if (!file) return;
+      const text = await file.text();
+      const lines = text.trim().split(/\r?\n/);
+      if (lines.length < 2) { alert('File kosong / tidak valid'); return; }
+      // Format: nisn,nama,lp,tmp_lahir,tgl_lahir,tgl_mulai_sekolah,tanggal_lulus,tahun_lulus,lama_belajar,status_awal,asal_sekolah
+      const rows = [];
+      for (let i = 1; i < lines.length; i++) {
+        const c = lines[i].split(',').map(x => x.trim().replace(/^"|"$/g, ''));
+        if (c.length < 2) continue;
+        rows.push({
+          nisn: c[0] || null, nama: c[1], lp: c[2] || 'L',
+          tmp_lahir: c[3] || null, tgl_lahir: c[4] || null,
+          tgl_mulai_sekolah: c[5] || null, tanggal_lulus: c[6] || null,
+          tahun_lulus: parseInt(c[7]) || null, lama_belajar: c[8] || null,
+          status_awal: c[9] || null, asal_sekolah: c[10] || null
+        });
+      }
+      if (!rows.length) { alert('Tidak ada baris valid'); return; }
+      if (!confirm('Import ' + rows.length + ' data lulusan?')) return;
+      try {
+        if (supabaseClient) {
+          const { error } = await supabaseClient.from('lulusan').insert(rows);
+          if (error) throw error;
+        } else {
+          rows.forEach(r => { r.id = Date.now() + Math.random(); dataLulusan.push(r); });
+        }
+        await loadLulusan();
         alert('Import berhasil: ' + rows.length + ' data');
       } catch (e) {
         alert('Gagal import: ' + (e.message || e));
