@@ -710,6 +710,63 @@
       border-color: var(--primary);
       outline: none;
     }
+    /* Accordion */
+    .accordion {
+      background: var(--card);
+      border-radius: 12px;
+      margin-bottom: 12px;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+      overflow: hidden;
+    }
+    .accordion-header {
+      width: 100%;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 14px 16px;
+      background: #f8fafc;
+      border: none;
+      border-bottom: 1px solid var(--border);
+      font-size: 15px;
+      font-weight: 700;
+      color: var(--text);
+      cursor: pointer;
+      text-align: left;
+    }
+    .accordion-header:active { background: #f1f5f9; }
+    .acc-icon {
+      font-size: 12px;
+      transition: transform 0.2s;
+      color: var(--text-muted);
+    }
+    .accordion-header.open .acc-icon {
+      transform: rotate(180deg);
+    }
+    .accordion-body {
+      display: none;
+      padding: 12px;
+    }
+    .accordion-body.open {
+      display: block;
+    }
+    .badge-aktif {
+      display: inline-block;
+      padding: 2px 8px;
+      border-radius: 10px;
+      font-size: 11px;
+      font-weight: 600;
+      background: #dcfce7;
+      color: #166534;
+    }
+    .badge-nonaktif {
+      display: inline-block;
+      padding: 2px 8px;
+      border-radius: 10px;
+      font-size: 11px;
+      font-weight: 600;
+      background: #f1f5f9;
+      color: #64748b;
+    }
   </style>
 </head>
 <body>
@@ -1137,8 +1194,107 @@
       </div>
     </section>
 
+    <!-- ========== PENGATURAN SISTEM ========== -->
     <section class="page" id="page-pengaturan">
-      <div class="placeholder"><div class="icon">⚙️</div><h2>Pengaturan Sistem</h2><p>Halaman pengaturan sistem</p></div>
+      <div class="page-title">Pengaturan Sistem</div>
+
+      <!-- Section Mapel -->
+      <div class="accordion">
+        <button type="button" class="accordion-header" data-acc="accMapelBody">
+          <span>📚 Mapel</span>
+          <span class="acc-icon">▼</span>
+        </button>
+        <div class="accordion-body open" id="accMapelBody">
+          <div class="toolbar">
+            <button class="btn btn-primary" id="btnTambahMapel">+ Tambah</button>
+            <button class="btn btn-secondary" id="btnEditMapel">✏️ Edit</button>
+            <button class="btn btn-outline" id="btnHapusMapel" style="color:#ef4444;border-color:#fca5a5;">🗑️ Hapus</button>
+            <span class="toolbar-info" id="infoMapel">0 data</span>
+          </div>
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th style="width:36px;"><input type="checkbox" id="checkAllMapel"></th>
+                  <th>No</th>
+                  <th>Kode</th>
+                  <th>Mapel</th>
+                </tr>
+              </thead>
+              <tbody id="tbodyMapel">
+                <tr><td colspan="4" style="text-align:center;padding:16px;color:#94a3b8;">Memuat...</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- Section Kelas -->
+      <div class="accordion">
+        <button type="button" class="accordion-header" data-acc="accKelasBody">
+          <span>🏫 Kelas</span>
+          <span class="acc-icon">▼</span>
+        </button>
+        <div class="accordion-body" id="accKelasBody">
+          <div class="toolbar">
+            <button class="btn btn-primary" id="btnTambahKelas">+ Tambah</button>
+            <button class="btn btn-secondary" id="btnEditKelas">✏️ Edit</button>
+            <button class="btn btn-outline" id="btnHapusKelas" style="color:#ef4444;border-color:#fca5a5;">🗑️ Hapus</button>
+            <span class="toolbar-info" id="infoKelas">0 data</span>
+          </div>
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th style="width:36px;"><input type="checkbox" id="checkAllKelas"></th>
+                  <th>No</th>
+                  <th>Kelas</th>
+                </tr>
+              </thead>
+              <tbody id="tbodyKelas">
+                <tr><td colspan="3" style="text-align:center;padding:16px;color:#94a3b8;">Memuat...</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- Section Periode -->
+      <div class="accordion">
+        <button type="button" class="accordion-header" data-acc="accPeriodeBody">
+          <span>📅 Periode</span>
+          <span class="acc-icon">▼</span>
+        </button>
+        <div class="accordion-body" id="accPeriodeBody">
+          <div class="toolbar">
+            <button class="btn btn-primary" id="btnTambahPeriode">+ Tambah</button>
+            <button class="btn btn-secondary" id="btnEditPeriode">✏️ Edit</button>
+            <button class="btn btn-outline" id="btnHapusPeriode" style="color:#ef4444;border-color:#fca5a5;">🗑️ Hapus</button>
+            <button class="btn btn-secondary" id="btnAktifkanPeriode">✓ Set Aktif</button>
+            <span class="toolbar-info" id="infoPeriode">0 data</span>
+          </div>
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th style="width:36px;"><input type="checkbox" id="checkAllPeriode"></th>
+                  <th>No</th>
+                  <th>Tahun Ajaran</th>
+                  <th>Semester</th>
+                  <th>Tgl Mulai</th>
+                  <th>Tgl Akhir</th>
+                  <th>Tgl Kelulusan</th>
+                  <th>Tgl Naik Kelas</th>
+                  <th>Aktif</th>
+                </tr>
+              </thead>
+              <tbody id="tbodyPeriode">
+                <tr><td colspan="9" style="text-align:center;padding:16px;color:#94a3b8;">Memuat...</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
     </section>
 
   </main>
@@ -1439,6 +1595,102 @@
       <div class="modal-footer">
         <button class="btn btn-outline" data-close="modalLulusan">Batal</button>
         <button class="btn btn-primary" id="btnSaveLulusan">Simpan</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ========== MODAL MAPEL ========== -->
+  <div class="modal-overlay" id="modalMapel">
+    <div class="modal">
+      <div class="modal-header">
+        <h3 id="modalMapelTitle">Tambah Mapel</h3>
+        <button class="modal-close" data-close="modalMapel">&times;</button>
+      </div>
+      <div class="modal-body">
+        <input type="hidden" id="mapelId">
+        <div class="form-group">
+          <label>Kode *</label>
+          <input type="text" id="mapelKode" placeholder="Contoh: MTK" maxlength="10">
+        </div>
+        <div class="form-group">
+          <label>Nama Mapel *</label>
+          <input type="text" id="mapelNama" placeholder="Contoh: Matematika">
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-outline" data-close="modalMapel">Batal</button>
+        <button class="btn btn-primary" id="btnSaveMapel">Simpan</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ========== MODAL KELAS ========== -->
+  <div class="modal-overlay" id="modalKelas">
+    <div class="modal">
+      <div class="modal-header">
+        <h3 id="modalKelasTitle">Tambah Kelas</h3>
+        <button class="modal-close" data-close="modalKelas">&times;</button>
+      </div>
+      <div class="modal-body">
+        <input type="hidden" id="kelasId">
+        <div class="form-group">
+          <label>Nama Kelas *</label>
+          <input type="text" id="kelasNama" placeholder="Contoh: 7A" maxlength="10">
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-outline" data-close="modalKelas">Batal</button>
+        <button class="btn btn-primary" id="btnSaveKelas">Simpan</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ========== MODAL PERIODE ========== -->
+  <div class="modal-overlay" id="modalPeriode">
+    <div class="modal">
+      <div class="modal-header">
+        <h3 id="modalPeriodeTitle">Tambah Periode</h3>
+        <button class="modal-close" data-close="modalPeriode">&times;</button>
+      </div>
+      <div class="modal-body">
+        <input type="hidden" id="periodeId">
+        <div class="form-row">
+          <div class="form-group">
+            <label>Tahun Ajaran *</label>
+            <input type="text" id="periodeTahun" placeholder="2026/2027">
+          </div>
+          <div class="form-group">
+            <label>Semester *</label>
+            <select id="periodeSemester">
+              <option value="Ganjil">Ganjil</option>
+              <option value="Genap">Genap</option>
+            </select>
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label>Tanggal Mulai</label>
+            <input type="date" id="periodeTglMulai">
+          </div>
+          <div class="form-group">
+            <label>Tanggal Akhir</label>
+            <input type="date" id="periodeTglAkhir">
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label>Tanggal Kelulusan</label>
+            <input type="date" id="periodeTglLulus">
+          </div>
+          <div class="form-group">
+            <label>Tanggal Naik Kelas</label>
+            <input type="date" id="periodeTglNaik">
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-outline" data-close="modalPeriode">Batal</button>
+        <button class="btn btn-primary" id="btnSavePeriode">Simpan</button>
       </div>
     </div>
   </div>
@@ -1770,6 +2022,7 @@
       if (pageId === 'data-guru') loadGuru();
       if (pageId === 'data-lulusan') loadLulusan();
       if (pageId === 'input-nilai' || pageId === 'daftar-nilai') initNilaiPage(pageId);
+      if (pageId === 'pengaturan') loadPengaturan();
     }
 
     // Klik menu
@@ -2777,6 +3030,359 @@
         console.error(e);
         alert('Gagal memuat daftar nilai: ' + (e.message || e));
       }
+    });
+
+    // ============================================================
+    // PENGATURAN: Mapel, Kelas, Periode (CRUD + Accordion)
+    // ============================================================
+    let dataMapel = [];
+    let dataKelas = [];
+    let dataPeriode = [];
+
+    // Accordion toggle
+    document.querySelectorAll('.accordion-header').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const body = document.getElementById(btn.getAttribute('data-acc'));
+        if (!body) return;
+        const isOpen = body.classList.contains('open');
+        body.classList.toggle('open', !isOpen);
+        btn.classList.toggle('open', !isOpen);
+      });
+    });
+    // Open first accordion header by default
+    const firstAcc = document.querySelector('#accMapelBody');
+    if (firstAcc) {
+      firstAcc.classList.add('open');
+      const hdr = document.querySelector('[data-acc="accMapelBody"]');
+      if (hdr) hdr.classList.add('open');
+    }
+
+    async function loadPengaturan() {
+      await Promise.all([loadMapelTable(), loadKelasTable(), loadPeriodeTable()]);
+    }
+
+    // ----- MAPEL -----
+    async function loadMapelTable() {
+      try {
+        if (supabaseClient) {
+          const { data, error } = await supabaseClient.from('mapel').select('*').order('id');
+          if (error) throw error;
+          dataMapel = data || [];
+        } else {
+          await loadMasterMapelKelas();
+          dataMapel = masterMapel.slice();
+        }
+      } catch (e) { console.error(e); dataMapel = []; }
+      renderMapelTable();
+    }
+    function renderMapelTable() {
+      const tbody = document.getElementById('tbodyMapel');
+      document.getElementById('infoMapel').textContent = dataMapel.length + ' data';
+      document.getElementById('checkAllMapel').checked = false;
+      if (!dataMapel.length) {
+        tbody.innerHTML = '<tr><td colspan="4" style="text-align:center;padding:16px;color:#94a3b8;">Belum ada data</td></tr>';
+        return;
+      }
+      tbody.innerHTML = dataMapel.map((m, i) => `
+        <tr data-id="${m.id}">
+          <td><input type="checkbox" class="cb-mapel-row" value="${m.id}"></td>
+          <td>${i + 1}</td>
+          <td>${esc(m.kode)}</td>
+          <td>${esc(m.mapel)}</td>
+        </tr>`).join('');
+    }
+    document.getElementById('checkAllMapel').addEventListener('change', function () {
+      document.querySelectorAll('.cb-mapel-row').forEach(c => c.checked = this.checked);
+    });
+    document.getElementById('btnTambahMapel').addEventListener('click', () => {
+      document.getElementById('modalMapelTitle').textContent = 'Tambah Mapel';
+      document.getElementById('mapelId').value = '';
+      document.getElementById('mapelKode').value = '';
+      document.getElementById('mapelNama').value = '';
+      openModal('modalMapel');
+    });
+    document.getElementById('btnEditMapel').addEventListener('click', () => {
+      const ids = getChecked('cb-mapel-row');
+      if (ids.length !== 1) { alert('Centang tepat 1 data untuk diedit'); return; }
+      const m = dataMapel.find(x => String(x.id) === ids[0]);
+      if (!m) return;
+      document.getElementById('modalMapelTitle').textContent = 'Edit Mapel';
+      document.getElementById('mapelId').value = m.id;
+      document.getElementById('mapelKode').value = m.kode || '';
+      document.getElementById('mapelNama').value = m.mapel || '';
+      openModal('modalMapel');
+    });
+    document.getElementById('btnSaveMapel').addEventListener('click', async () => {
+      const id = document.getElementById('mapelId').value;
+      const payload = {
+        kode: document.getElementById('mapelKode').value.trim().toUpperCase(),
+        mapel: document.getElementById('mapelNama').value.trim()
+      };
+      if (!payload.kode || !payload.mapel) { alert('Kode dan Nama Mapel wajib'); return; }
+      try {
+        if (supabaseClient) {
+          if (id) {
+            const { error } = await supabaseClient.from('mapel').update(payload).eq('id', id);
+            if (error) throw error;
+          } else {
+            const { error } = await supabaseClient.from('mapel').insert([payload]);
+            if (error) throw error;
+          }
+        } else {
+          if (id) {
+            const idx = dataMapel.findIndex(x => String(x.id) === id);
+            if (idx >= 0) dataMapel[idx] = { ...dataMapel[idx], ...payload };
+          } else {
+            payload.id = Date.now();
+            dataMapel.push(payload);
+          }
+        }
+        closeModal('modalMapel');
+        await loadMapelTable();
+        alert(id ? 'Mapel diubah' : 'Mapel ditambah');
+      } catch (e) { alert('Gagal: ' + (e.message || e)); }
+    });
+    document.getElementById('btnHapusMapel').addEventListener('click', async () => {
+      const ids = getChecked('cb-mapel-row');
+      if (!ids.length) { alert('Centang data yang ingin dihapus'); return; }
+      if (!confirm('Hapus ' + ids.length + ' mapel?')) return;
+      try {
+        if (supabaseClient) {
+          const { error } = await supabaseClient.from('mapel').delete().in('id', ids.map(Number));
+          if (error) throw error;
+        } else {
+          dataMapel = dataMapel.filter(x => !ids.includes(String(x.id)));
+        }
+        await loadMapelTable();
+        alert('Mapel dihapus');
+      } catch (e) { alert('Gagal: ' + (e.message || e)); }
+    });
+
+    // ----- KELAS -----
+    async function loadKelasTable() {
+      try {
+        if (supabaseClient) {
+          const { data, error } = await supabaseClient.from('kelas').select('*').order('id');
+          if (error) throw error;
+          dataKelas = data || [];
+        } else {
+          await loadMasterMapelKelas();
+          dataKelas = masterKelas.slice();
+        }
+      } catch (e) { console.error(e); dataKelas = []; }
+      renderKelasTable();
+    }
+    function renderKelasTable() {
+      const tbody = document.getElementById('tbodyKelas');
+      document.getElementById('infoKelas').textContent = dataKelas.length + ' data';
+      document.getElementById('checkAllKelas').checked = false;
+      if (!dataKelas.length) {
+        tbody.innerHTML = '<tr><td colspan="3" style="text-align:center;padding:16px;color:#94a3b8;">Belum ada data</td></tr>';
+        return;
+      }
+      tbody.innerHTML = dataKelas.map((k, i) => `
+        <tr data-id="${k.id}">
+          <td><input type="checkbox" class="cb-kelas-row" value="${k.id}"></td>
+          <td>${i + 1}</td>
+          <td>${esc(k.kelas)}</td>
+        </tr>`).join('');
+    }
+    document.getElementById('checkAllKelas').addEventListener('change', function () {
+      document.querySelectorAll('.cb-kelas-row').forEach(c => c.checked = this.checked);
+    });
+    document.getElementById('btnTambahKelas').addEventListener('click', () => {
+      document.getElementById('modalKelasTitle').textContent = 'Tambah Kelas';
+      document.getElementById('kelasId').value = '';
+      document.getElementById('kelasNama').value = '';
+      openModal('modalKelas');
+    });
+    document.getElementById('btnEditKelas').addEventListener('click', () => {
+      const ids = getChecked('cb-kelas-row');
+      if (ids.length !== 1) { alert('Centang tepat 1 data untuk diedit'); return; }
+      const k = dataKelas.find(x => String(x.id) === ids[0]);
+      if (!k) return;
+      document.getElementById('modalKelasTitle').textContent = 'Edit Kelas';
+      document.getElementById('kelasId').value = k.id;
+      document.getElementById('kelasNama').value = k.kelas || '';
+      openModal('modalKelas');
+    });
+    document.getElementById('btnSaveKelas').addEventListener('click', async () => {
+      const id = document.getElementById('kelasId').value;
+      const payload = { kelas: document.getElementById('kelasNama').value.trim().toUpperCase() };
+      if (!payload.kelas) { alert('Nama Kelas wajib'); return; }
+      try {
+        if (supabaseClient) {
+          if (id) {
+            const { error } = await supabaseClient.from('kelas').update(payload).eq('id', id);
+            if (error) throw error;
+          } else {
+            const { error } = await supabaseClient.from('kelas').insert([payload]);
+            if (error) throw error;
+          }
+        } else {
+          if (id) {
+            const idx = dataKelas.findIndex(x => String(x.id) === id);
+            if (idx >= 0) dataKelas[idx] = { ...dataKelas[idx], ...payload };
+          } else {
+            payload.id = Date.now();
+            dataKelas.push(payload);
+          }
+        }
+        closeModal('modalKelas');
+        await loadKelasTable();
+        alert(id ? 'Kelas diubah' : 'Kelas ditambah');
+      } catch (e) { alert('Gagal: ' + (e.message || e)); }
+    });
+    document.getElementById('btnHapusKelas').addEventListener('click', async () => {
+      const ids = getChecked('cb-kelas-row');
+      if (!ids.length) { alert('Centang data yang ingin dihapus'); return; }
+      if (!confirm('Hapus ' + ids.length + ' kelas?')) return;
+      try {
+        if (supabaseClient) {
+          const { error } = await supabaseClient.from('kelas').delete().in('id', ids.map(Number));
+          if (error) throw error;
+        } else {
+          dataKelas = dataKelas.filter(x => !ids.includes(String(x.id)));
+        }
+        await loadKelasTable();
+        alert('Kelas dihapus');
+      } catch (e) { alert('Gagal: ' + (e.message || e)); }
+    });
+
+    // ----- PERIODE -----
+    async function loadPeriodeTable() {
+      try {
+        if (supabaseClient) {
+          const { data, error } = await supabaseClient.from('periode').select('*').order('id');
+          if (error) throw error;
+          dataPeriode = data || [];
+        } else {
+          dataPeriode = [
+            { id: 3, tahun_ajaran: '2026/2027', semester: 'Ganjil', tanggal_mulai: '2026-07-14', tanggal_akhir: '2026-12-19', tanggal_kelulusan: '2026-06-15', tanggal_naik_kelas: '2026-06-20', aktif: true }
+          ];
+        }
+      } catch (e) { console.error(e); dataPeriode = []; }
+      renderPeriodeTable();
+    }
+    function renderPeriodeTable() {
+      const tbody = document.getElementById('tbodyPeriode');
+      document.getElementById('infoPeriode').textContent = dataPeriode.length + ' data';
+      document.getElementById('checkAllPeriode').checked = false;
+      if (!dataPeriode.length) {
+        tbody.innerHTML = '<tr><td colspan="9" style="text-align:center;padding:16px;color:#94a3b8;">Belum ada data</td></tr>';
+        return;
+      }
+      tbody.innerHTML = dataPeriode.map((p, i) => `
+        <tr data-id="${p.id}">
+          <td><input type="checkbox" class="cb-periode-row" value="${p.id}"></td>
+          <td>${i + 1}</td>
+          <td>${esc(p.tahun_ajaran)}</td>
+          <td>${esc(p.semester)}</td>
+          <td>${p.tanggal_mulai || '-'}</td>
+          <td>${p.tanggal_akhir || '-'}</td>
+          <td>${p.tanggal_kelulusan || '-'}</td>
+          <td>${p.tanggal_naik_kelas || '-'}</td>
+          <td>${p.aktif ? '<span class="badge-aktif">Aktif</span>' : '<span class="badge-nonaktif">Tidak</span>'}</td>
+        </tr>`).join('');
+    }
+    document.getElementById('checkAllPeriode').addEventListener('change', function () {
+      document.querySelectorAll('.cb-periode-row').forEach(c => c.checked = this.checked);
+    });
+    document.getElementById('btnTambahPeriode').addEventListener('click', () => {
+      document.getElementById('modalPeriodeTitle').textContent = 'Tambah Periode';
+      document.getElementById('periodeId').value = '';
+      document.getElementById('periodeTahun').value = '';
+      document.getElementById('periodeSemester').value = 'Ganjil';
+      document.getElementById('periodeTglMulai').value = '';
+      document.getElementById('periodeTglAkhir').value = '';
+      document.getElementById('periodeTglLulus').value = '';
+      document.getElementById('periodeTglNaik').value = '';
+      openModal('modalPeriode');
+    });
+    document.getElementById('btnEditPeriode').addEventListener('click', () => {
+      const ids = getChecked('cb-periode-row');
+      if (ids.length !== 1) { alert('Centang tepat 1 data untuk diedit'); return; }
+      const p = dataPeriode.find(x => String(x.id) === ids[0]);
+      if (!p) return;
+      document.getElementById('modalPeriodeTitle').textContent = 'Edit Periode';
+      document.getElementById('periodeId').value = p.id;
+      document.getElementById('periodeTahun').value = p.tahun_ajaran || '';
+      document.getElementById('periodeSemester').value = p.semester || 'Ganjil';
+      document.getElementById('periodeTglMulai').value = p.tanggal_mulai || '';
+      document.getElementById('periodeTglAkhir').value = p.tanggal_akhir || '';
+      document.getElementById('periodeTglLulus').value = p.tanggal_kelulusan || '';
+      document.getElementById('periodeTglNaik').value = p.tanggal_naik_kelas || '';
+      openModal('modalPeriode');
+    });
+    document.getElementById('btnSavePeriode').addEventListener('click', async () => {
+      const id = document.getElementById('periodeId').value;
+      const payload = {
+        tahun_ajaran: document.getElementById('periodeTahun').value.trim(),
+        semester: document.getElementById('periodeSemester').value,
+        tanggal_mulai: document.getElementById('periodeTglMulai').value || null,
+        tanggal_akhir: document.getElementById('periodeTglAkhir').value || null,
+        tanggal_kelulusan: document.getElementById('periodeTglLulus').value || null,
+        tanggal_naik_kelas: document.getElementById('periodeTglNaik').value || null
+      };
+      if (!payload.tahun_ajaran || !payload.semester) { alert('Tahun Ajaran dan Semester wajib'); return; }
+      try {
+        if (supabaseClient) {
+          if (id) {
+            const { error } = await supabaseClient.from('periode').update(payload).eq('id', id);
+            if (error) throw error;
+          } else {
+            payload.aktif = false;
+            const { error } = await supabaseClient.from('periode').insert([payload]);
+            if (error) throw error;
+          }
+        } else {
+          if (id) {
+            const idx = dataPeriode.findIndex(x => String(x.id) === id);
+            if (idx >= 0) dataPeriode[idx] = { ...dataPeriode[idx], ...payload };
+          } else {
+            payload.id = Date.now();
+            payload.aktif = false;
+            dataPeriode.push(payload);
+          }
+        }
+        closeModal('modalPeriode');
+        await loadPeriodeTable();
+        alert(id ? 'Periode diubah' : 'Periode ditambah');
+      } catch (e) { alert('Gagal: ' + (e.message || e)); }
+    });
+    document.getElementById('btnHapusPeriode').addEventListener('click', async () => {
+      const ids = getChecked('cb-periode-row');
+      if (!ids.length) { alert('Centang data yang ingin dihapus'); return; }
+      if (!confirm('Hapus ' + ids.length + ' periode?')) return;
+      try {
+        if (supabaseClient) {
+          const { error } = await supabaseClient.from('periode').delete().in('id', ids.map(Number));
+          if (error) throw error;
+        } else {
+          dataPeriode = dataPeriode.filter(x => !ids.includes(String(x.id)));
+        }
+        await loadPeriodeTable();
+        alert('Periode dihapus');
+      } catch (e) { alert('Gagal: ' + (e.message || e)); }
+    });
+    // Set Aktif (hanya 1)
+    document.getElementById('btnAktifkanPeriode').addEventListener('click', async () => {
+      const ids = getChecked('cb-periode-row');
+      if (ids.length !== 1) { alert('Centang tepat 1 periode untuk diaktifkan'); return; }
+      if (!confirm('Jadikan periode ini sebagai periode aktif?')) return;
+      try {
+        if (supabaseClient) {
+          // Nonaktifkan semua dulu
+          await supabaseClient.from('periode').update({ aktif: false }).neq('id', 0);
+          const { error } = await supabaseClient.from('periode').update({ aktif: true }).eq('id', Number(ids[0]));
+          if (error) throw error;
+        } else {
+          dataPeriode.forEach(p => { p.aktif = String(p.id) === ids[0]; });
+        }
+        await loadPeriodeTable();
+        await loadAktifPeriode(); // refresh label di Input/Daftar Nilai
+        alert('Periode aktif diperbarui');
+      } catch (e) { alert('Gagal: ' + (e.message || e)); }
     });
 
     // Inisialisasi
