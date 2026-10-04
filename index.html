@@ -1509,6 +1509,7 @@
     // guest | siswa | guru | admin
     let currentRole = 'guest';
     let currentUserName = 'Tamu (Belum Login)';
+    const SESSION_KEY = 'smpn_session';
 
     const ROLE_DATA = {
       siswa: { name: 'Siswa Demo', avatar: 'S', label: 'Siswa' },
@@ -1516,7 +1517,31 @@
       admin: { name: 'Admin Sekolah', avatar: 'A', label: 'Admin' }
     };
 
-    function applyRole(role) {
+    function saveSession() {
+      if (currentRole === 'guest') {
+        localStorage.removeItem(SESSION_KEY);
+        return;
+      }
+      localStorage.setItem(SESSION_KEY, JSON.stringify({
+        role: currentRole,
+        name: currentUserName || ROLE_DATA[currentRole]?.name || '',
+        label: ROLE_DATA[currentRole]?.label || '',
+        avatar: ROLE_DATA[currentRole]?.avatar || '?'
+      }));
+    }
+
+    function loadSession() {
+      try {
+        const raw = localStorage.getItem(SESSION_KEY);
+        if (!raw) return null;
+        return JSON.parse(raw);
+      } catch (e) {
+        return null;
+      }
+    }
+
+    // skipRedirect = true → jangan pindah ke dashboard (untuk restore saat refresh)
+    function applyRole(role, skipRedirect) {
       currentRole = role;
 
       const isLoggedIn = role !== 'guest';
@@ -1558,7 +1583,6 @@
         if (r === 'all') {
           group.style.display = 'block';
         } else if (role === 'admin') {
-          // Admin melihat semua
           group.style.display = 'block';
         } else if (role === 'siswa' && r === 'siswa') {
           group.style.display = 'block';
@@ -1569,8 +1593,13 @@
         }
       });
 
-      // Setelah login/logout selalu kembali ke dashboard
-      showPage('dashboard', false);
+      // Simpan / hapus sesi
+      saveSession();
+
+      // Hanya redirect ke dashboard saat login/logout manual, BUKAN saat restore refresh
+      if (!skipRedirect) {
+        showPage('dashboard', false);
+      }
     }
 
     // ========== MODAL helpers ==========
@@ -1599,7 +1628,7 @@
     document.getElementById('btnLogout').addEventListener('click', (e) => {
       e.preventDefault();
       if (confirm('Yakin ingin logout?')) {
-        applyRole('guest');
+        applyRole('guest'); // saveSession akan menghapus localStorage
         alert('Anda telah logout.');
       }
     });
@@ -1682,7 +1711,7 @@
         // Update nama di ROLE_DATA agar tampil nama asli dari database
         if (userName) ROLE_DATA[role].name = userName;
 
-        applyRole(role);
+        applyRole(role); // simpan sesi + ke dashboard
         closeModal('modalLogin');
         alert('Login berhasil sebagai ' + ROLE_DATA[role].label + (userName ? '\n' + userName : ''));
       } catch (err) {
@@ -2751,8 +2780,20 @@
     });
 
     // Inisialisasi
+    // 1. Restore sesi login dari localStorage (agar refresh tidak logout)
+    (function restoreSession() {
+      const ses = loadSession();
+      if (ses && ses.role && ses.role !== 'guest' && ROLE_DATA[ses.role]) {
+        ROLE_DATA[ses.role].name = ses.name || ROLE_DATA[ses.role].name;
+        if (ses.avatar) ROLE_DATA[ses.role].avatar = ses.avatar;
+        applyRole(ses.role, true); // skipRedirect → tetap di halaman hash saat ini
+      }
+    })();
+
+    // 2. Buka halaman sesuai hash URL
     initFromHash();
-    // Pasang trap pertama kali
+
+    // 3. Pasang trap tombol back
     rearmTrap();
   </script>
 </body>
