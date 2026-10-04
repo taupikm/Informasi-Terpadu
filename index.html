@@ -4,6 +4,8 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
   <title>SMPN PANTANG MUNDUR</title>
+  <!-- Supabase JS Client (CDN) -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <style>
     :root {
       --primary: #1a56db;
@@ -614,27 +616,27 @@
   <!-- TOPBAR -->
   <header class="topbar">
     <div class="topbar-left">
-      <button class="btn-toggle" id="btnToggle" aria-label="Menu">☰</button>
+      <button class="btn-toggle" id="btnToggle" aria-label="Menu" style="display:none;">☰</button>
       <div class="logo">SP</div>
     </div>
 
     <div class="topbar-center">
       <div class="school-name">SMPN PANTANG MUNDUR</div>
       <div class="realtime" id="realtime">--:--:--</div>
-      <div class="username" id="username">Admin Sekolah</div>
+      <div class="username" id="username">Tamu (Belum Login)</div>
     </div>
 
     <div class="topbar-right">
-      <button class="btn-icon" aria-label="Pesan">
+      <button class="btn-icon" id="btnPesan" aria-label="Pesan" style="display:none;">
         ✉️
         <span class="badge">3</span>
       </button>
       <div class="profile-wrap">
-        <div class="profile-photo" id="profileBtn">A</div>
+        <div class="profile-photo" id="profileBtn">?</div>
         <div class="profile-menu" id="profileMenu">
-          <a href="#" id="btnEditProfil">✏️ Edit Profil</a>
+          <a href="#" id="btnEditProfil" style="display:none;">✏️ Edit Profil</a>
           <a href="#" id="btnLogin">🔑 Login</a>
-          <a href="#" id="btnLogout">🚪 Logout</a>
+          <a href="#" id="btnLogout" style="display:none;">🚪 Logout</a>
         </div>
       </div>
     </div>
@@ -644,21 +646,21 @@
   <div class="sidebar-overlay" id="sidebarOverlay"></div>
   <aside class="sidebar" id="sidebar">
     <div class="sidebar-header">
-      <div class="avatar">A</div>
+      <div class="avatar" id="sidebarAvatar">?</div>
       <div class="info">
-        <h3>Admin Sekolah</h3>
-        <p>SMPN Pantang Mundur</p>
+        <h3 id="sidebarName">Tamu</h3>
+        <p id="sidebarRole">Belum Login</p>
       </div>
     </div>
     <nav class="sidebar-menu">
-      <div class="menu-group">
+      <div class="menu-group" data-role="all">
         <div class="menu-group-title">Dashboard</div>
         <button class="menu-item active" data-page="dashboard">
           <span class="icon">📊</span> Dashboard
         </button>
       </div>
 
-      <div class="menu-group">
+      <div class="menu-group" data-role="siswa" style="display:none;">
         <div class="menu-group-title">Siswa / Orang Tua</div>
         <button class="menu-item" data-page="cari-siswa"><span class="icon">🔍</span> Cari Data Siswa</button>
         <button class="menu-item" data-page="sidik-jari"><span class="icon">👆</span> Sidik Jari Siswa</button>
@@ -669,7 +671,7 @@
         <button class="menu-item" data-page="validasi-lulusan"><span class="icon">✅</span> Validasi Data Lulusan</button>
       </div>
 
-      <div class="menu-group">
+      <div class="menu-group" data-role="guru" style="display:none;">
         <div class="menu-group-title">Guru</div>
         <button class="menu-item" data-page="scan-barcode"><span class="icon">📷</span> Scan Barcode</button>
         <button class="menu-item" data-page="input-izin"><span class="icon">🤒</span> Input Izin / Sakit</button>
@@ -681,7 +683,7 @@
         <button class="menu-item" data-page="download-absensi"><span class="icon">⬇️</span> Download Absensi</button>
       </div>
 
-      <div class="menu-group">
+      <div class="menu-group" data-role="admin" style="display:none;">
         <div class="menu-group-title">Admin</div>
         <button class="menu-item" data-page="data-siswa"><span class="icon">👨‍🎓</span> Data Siswa</button>
         <button class="menu-item" data-page="data-guru"><span class="icon">👨‍🏫</span> Data Guru</button>
@@ -865,13 +867,14 @@
       </div>
       <div class="modal-body">
         <div class="form-group">
-          <label>Username / NIP / NIS</label>
-          <input type="text" id="loginUser" placeholder="Masukkan username" autocomplete="off" autocapitalize="off" spellcheck="false">
+          <label>NISN (Siswa) atau PIN (Guru/Admin)</label>
+          <input type="tel" id="loginKode" inputmode="numeric" pattern="[0-9]*" maxlength="10"
+                 placeholder="Masukkan NISN / PIN" autocomplete="off" autocapitalize="off" spellcheck="false">
         </div>
-        <div class="form-group">
-          <label>Password</label>
-          <input type="password" id="loginPass" placeholder="Masukkan password" autocomplete="new-password">
-        </div>
+        <p style="font-size:11px;color:#64748b;margin-top:-6px;line-height:1.4;">
+          Login dengan NISN (siswa) atau PIN (guru/admin).<br>
+          Demo: Siswa <b>0123456789</b> · Guru <b>123456</b> · Admin <b>456789</b>
+        </p>
       </div>
       <div class="modal-footer">
         <button class="btn btn-outline" data-close="modalLogin">Batal</button>
@@ -913,6 +916,27 @@
   </div>
 
   <script>
+    // ============================================================
+    // KONFIGURASI SUPABASE
+    // Ganti 2 baris di bawah dengan nilai dari:
+    // Supabase Dashboard → Project Settings → API
+    // ============================================================
+    const SUPABASE_URL = 'https://YOUR_PROJECT_ID.supabase.co';   // <-- ganti
+    const SUPABASE_ANON_KEY = 'YOUR_ANON_PUBLIC_KEY';              // <-- ganti
+
+    let supabaseClient = null;
+    try {
+      if (SUPABASE_URL && !SUPABASE_URL.includes('YOUR_PROJECT')) {
+        const { createClient } = supabase;
+        supabaseClient = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+        console.log('Supabase connected');
+      } else {
+        console.warn('Supabase belum dikonfigurasi – memakai mode demo lokal');
+      }
+    } catch (e) {
+      console.warn('Gagal init Supabase:', e);
+    }
+
     // ========== Realtime clock ==========
     function updateClock() {
       const now = new Date();
@@ -953,10 +977,83 @@
     });
     document.addEventListener('click', () => profileMenu.classList.remove('show'));
 
+    // ========== ROLE & LOGIN ==========
+    // guest | siswa | guru | admin
+    let currentRole = 'guest';
+    let currentUserName = 'Tamu (Belum Login)';
+
+    const ROLE_DATA = {
+      siswa: { name: 'Siswa Demo', avatar: 'S', label: 'Siswa' },
+      guru:  { name: 'Guru Demo',  avatar: 'G', label: 'Guru' },
+      admin: { name: 'Admin Sekolah', avatar: 'A', label: 'Admin' }
+    };
+
+    function applyRole(role) {
+      currentRole = role;
+
+      const isLoggedIn = role !== 'guest';
+      const btnToggle = document.getElementById('btnToggle');
+      const btnPesan = document.getElementById('btnPesan');
+      const btnEdit = document.getElementById('btnEditProfil');
+      const btnLogin = document.getElementById('btnLogin');
+      const btnLogout = document.getElementById('btnLogout');
+
+      // Toggle sidebar & pesan hanya muncul jika sudah login
+      btnToggle.style.display = isLoggedIn ? 'flex' : 'none';
+      btnPesan.style.display = isLoggedIn ? 'flex' : 'none';
+      btnEdit.style.display = isLoggedIn ? 'block' : 'none';
+      btnLogin.style.display = isLoggedIn ? 'none' : 'block';
+      btnLogout.style.display = isLoggedIn ? 'block' : 'none';
+
+      // Update topbar & sidebar header
+      if (isLoggedIn) {
+        const d = ROLE_DATA[role];
+        currentUserName = d.name;
+        document.getElementById('username').textContent = d.name + ' (' + d.label + ')';
+        document.getElementById('profileBtn').textContent = d.avatar;
+        document.getElementById('sidebarAvatar').textContent = d.avatar;
+        document.getElementById('sidebarName').textContent = d.name;
+        document.getElementById('sidebarRole').textContent = d.label;
+      } else {
+        currentUserName = 'Tamu (Belum Login)';
+        document.getElementById('username').textContent = currentUserName;
+        document.getElementById('profileBtn').textContent = '?';
+        document.getElementById('sidebarAvatar').textContent = '?';
+        document.getElementById('sidebarName').textContent = 'Tamu';
+        document.getElementById('sidebarRole').textContent = 'Belum Login';
+        closeSidebar();
+      }
+
+      // Tampilkan / sembunyikan grup menu sesuai role
+      document.querySelectorAll('.menu-group').forEach(group => {
+        const r = group.getAttribute('data-role');
+        if (r === 'all') {
+          group.style.display = 'block';
+        } else if (role === 'admin') {
+          // Admin melihat semua
+          group.style.display = 'block';
+        } else if (role === 'siswa' && r === 'siswa') {
+          group.style.display = 'block';
+        } else if (role === 'guru' && r === 'guru') {
+          group.style.display = 'block';
+        } else {
+          group.style.display = 'none';
+        }
+      });
+
+      // Setelah login/logout selalu kembali ke dashboard
+      showPage('dashboard', false);
+    }
+
     // ========== MODAL helpers ==========
     function openModal(id) {
       document.getElementById(id).classList.add('show');
       profileMenu.classList.remove('show');
+      if (id === 'modalLogin') {
+        const inp = document.getElementById('loginKode');
+        inp.value = '';
+        setTimeout(() => inp.focus(), 200);
+      }
     }
     function closeModal(id) {
       document.getElementById(id).classList.remove('show');
@@ -974,7 +1071,7 @@
     document.getElementById('btnLogout').addEventListener('click', (e) => {
       e.preventDefault();
       if (confirm('Yakin ingin logout?')) {
-        document.getElementById('username').textContent = 'Tamu';
+        applyRole('guest');
         alert('Anda telah logout.');
       }
     });
@@ -990,24 +1087,98 @@
       });
     });
 
-    // Aksi tombol di dalam modal (masih dummy)
-    document.getElementById('btnDoLogin').addEventListener('click', () => {
-      const user = document.getElementById('loginUser').value.trim();
-      if (!user) {
-        alert('Username harus diisi');
+    // Proses Login (Supabase + fallback demo)
+    document.getElementById('btnDoLogin').addEventListener('click', async () => {
+      const kode = document.getElementById('loginKode').value.trim();
+      if (!kode) {
+        alert('NISN / PIN harus diisi');
         return;
       }
-      document.getElementById('username').textContent = user;
-      closeModal('modalLogin');
-      alert('Login berhasil (demo)');
+      if (!/^\d+$/.test(kode)) {
+        alert('Hanya boleh angka');
+        return;
+      }
+
+      const btn = document.getElementById('btnDoLogin');
+      btn.disabled = true;
+      btn.textContent = 'Memeriksa...';
+
+      let role = null;
+      let userName = null;
+
+      try {
+        if (supabaseClient) {
+          // --- Cek di tabel admin ---
+          const { data: adminData } = await supabaseClient
+            .from('admin').select('nama, pin').eq('pin', kode).maybeSingle();
+          if (adminData) {
+            role = 'admin';
+            userName = adminData.nama;
+          }
+
+          // --- Cek di tabel guru ---
+          if (!role) {
+            const { data: guruData } = await supabaseClient
+              .from('guru').select('nama, pin').eq('pin', kode).maybeSingle();
+            if (guruData) {
+              role = 'guru';
+              userName = guruData.nama;
+            }
+          }
+
+          // --- Cek di tabel siswa (NISN) ---
+          if (!role) {
+            const { data: siswaData } = await supabaseClient
+              .from('siswa').select('nama, nisn').eq('nisn', kode).maybeSingle();
+            if (siswaData) {
+              role = 'siswa';
+              userName = siswaData.nama;
+            }
+          }
+        } else {
+          // --- Mode demo lokal (tanpa Supabase) ---
+          if (kode === '0123456789' || kode === '012345678') {
+            role = 'siswa'; userName = 'Siswa Demo';
+          } else if (kode === '123456') {
+            role = 'guru'; userName = 'Guru Demo';
+          } else if (kode === '456789') {
+            role = 'admin'; userName = 'Admin Sekolah';
+          }
+        }
+
+        if (!role) {
+          alert('NISN / PIN tidak dikenali.\n\nDemo:\nSiswa = 0123456789\nGuru = 123456\nAdmin = 456789');
+          return;
+        }
+
+        // Update nama di ROLE_DATA agar tampil nama asli dari database
+        if (userName) ROLE_DATA[role].name = userName;
+
+        applyRole(role);
+        closeModal('modalLogin');
+        alert('Login berhasil sebagai ' + ROLE_DATA[role].label + (userName ? '\n' + userName : ''));
+      } catch (err) {
+        console.error(err);
+        alert('Gagal terhubung ke server. Coba lagi atau periksa konfigurasi Supabase.');
+      } finally {
+        btn.disabled = false;
+        btn.textContent = 'Masuk';
+      }
     });
+
+    // Enter key di input login
+    document.getElementById('loginKode').addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') document.getElementById('btnDoLogin').click();
+    });
+
     document.getElementById('btnSaveProfil').addEventListener('click', () => {
       const nama = document.getElementById('editNama').value.trim();
       if (!nama) {
         alert('Nama harus diisi');
         return;
       }
-      document.getElementById('username').textContent = nama;
+      document.getElementById('username').textContent = nama + (currentRole !== 'guest' ? ' (' + ROLE_DATA[currentRole].label + ')' : '');
+      document.getElementById('sidebarName').textContent = nama;
       closeModal('modalEditProfil');
       alert('Profil berhasil disimpan (demo)');
     });
