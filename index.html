@@ -2390,8 +2390,10 @@
       if (!confirm('Hapus ' + ids.length + ' data siswa terpilih?')) return;
       try {
         if (supabaseClient) {
-          const { error } = await supabaseClient.from('siswa').delete().in('id', ids.map(Number));
+          const idNums = ids.map(Number).filter(n => !isNaN(n));
+          const { data, error } = await supabaseClient.from('siswa').delete().in('id', idNums).select('id');
           if (error) throw error;
+          if (!data || !data.length) throw new Error('Tidak ada baris terhapus. Jalankan SQL fix RLS di Supabase.');
         } else {
           dataSiswa = dataSiswa.filter(x => !ids.includes(String(x.id)));
         }
@@ -2730,8 +2732,10 @@
       if (!confirm('Hapus ' + ids.length + ' data guru terpilih?')) return;
       try {
         if (supabaseClient) {
-          const { error } = await supabaseClient.from('guru').delete().in('id', ids.map(Number));
+          const idNums = ids.map(Number).filter(n => !isNaN(n));
+          const { data, error } = await supabaseClient.from('guru').delete().in('id', idNums).select('id');
           if (error) throw error;
+          if (!data || !data.length) throw new Error('Tidak ada baris terhapus. Jalankan SQL fix RLS di Supabase.');
         } else {
           dataGuru = dataGuru.filter(x => !ids.includes(String(x.id)));
         }
@@ -2933,8 +2937,10 @@
       if (!confirm('Hapus ' + ids.length + ' data lulusan terpilih?')) return;
       try {
         if (supabaseClient) {
-          const { error } = await supabaseClient.from('lulusan').delete().in('id', ids.map(Number));
+          const idNums = ids.map(Number).filter(n => !isNaN(n));
+          const { data, error } = await supabaseClient.from('lulusan').delete().in('id', idNums).select('id');
           if (error) throw error;
+          if (!data || !data.length) throw new Error('Tidak ada baris terhapus. Jalankan SQL fix RLS di Supabase.');
         } else {
           dataLulusan = dataLulusan.filter(x => !ids.includes(String(x.id)));
         }
