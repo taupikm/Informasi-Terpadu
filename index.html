@@ -6,6 +6,8 @@
   <title>SMPN PANTANG MUNDUR</title>
   <!-- Supabase JS Client (CDN) -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <!-- HTML5 QR Code Scanner -->
+  <script src="https://cdn.jsdelivr.net/npm/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
   <style>
     :root {
       --primary: #1a56db;
@@ -998,10 +1000,23 @@
           Sesi aktif : <b id="scanLabelSesi">-</b>
           <span id="scanLabelJam" style="color:#64748b;font-size:12px;"></span>
         </div>
+
+        <!-- Tombol kamera -->
+        <div style="display:flex;gap:8px;margin-top:12px;">
+          <button class="btn btn-primary" id="btnBukaKamera" style="flex:1;">📷 Buka Kamera</button>
+          <button class="btn btn-outline" id="btnTutupKamera" style="flex:1;display:none;">✕ Tutup Kamera</button>
+        </div>
+
+        <!-- Area preview kamera -->
+        <div id="qrReaderWrap" style="display:none;margin-top:12px;">
+          <div id="qrReader" style="width:100%;border-radius:12px;overflow:hidden;"></div>
+          <p style="font-size:11px;color:#64748b;text-align:center;margin-top:6px;">Arahkan kamera ke barcode / QR code</p>
+        </div>
+
         <div class="form-group" style="margin-top:14px;">
-          <label>Scan / Input NISN (Siswa) atau NIP (Guru)</label>
+          <label>Atau ketik NISN (Siswa) / NIP (Guru)</label>
           <input type="tel" id="scanKode" inputmode="numeric" autocomplete="off"
-                 placeholder="Arahkan scanner atau ketik kode..."
+                 placeholder="Ketik kode lalu Enter..."
                  style="font-size:18px;letter-spacing:1px;text-align:center;padding:14px;">
         </div>
         <button class="btn btn-primary" id="btnProsesScan" style="width:100%;margin-top:4px;">Proses Scan</button>
@@ -3538,6 +3553,10 @@
 
       document.getElementById('scanHasil').style.display = 'none';
       document.getElementById('scanKode').value = '';
+      // Pastikan kamera tertutup saat masuk halaman
+      if (typeof tutupKamera === 'function' && typeof kameraAktif !== 'undefined' && kameraAktif) {
+        await tutupKamera();
+      }
       setTimeout(() => document.getElementById('scanKode').focus(), 200);
       await loadScanLog();
     }
@@ -3731,12 +3750,97 @@
       document.getElementById('scanKode').focus();
     });
 
-    // Scanner barcode biasanya kirim Enter setelah kode
+    // Scanner USB/bluetooth biasanya kirim Enter setelah kode
     document.getElementById('scanKode').addEventListener('keydown', (e) => {
       if (e.key === 'Enter') {
         e.preventDefault();
         document.getElementById('btnProsesScan').click();
       }
+    });
+
+    // ========== KAMERA QR / BARCODE ==========
+    let html5QrCode = null;
+    let kameraAktif = false;
+    let lastScanCode = '';
+    let lastScanTime = 0;
+
+    async function bukaKamera() {
+      if (kameraAktif) return;
+      const wrap = document.getElementById('qrReaderWrap');
+      wrap.style.display = 'block';
+      document.getElementById('btnBukaKamera').style.display = 'none';
+      document.getElementById('btnTutupKamera').style.display = 'block';
+
+      try {
+        if (typeof Html5Qrcode === 'undefined') {
+          alert('Library scanner belum termuat. Cek koneksi internet.');
+          tutupKamera();
+          return;
+        }
+        html5QrCode = new Html5Qrcode('qrReader');
+        await html5QrCode.start(
+          { facingMode: 'environment' }, // kamera belakang
+          {
+            fps: 10,
+            qrbox: { width: 250, height: 150 },
+            aspectRatio: 1.5
+          },
+          async (decodedText) => {
+            // Hindari scan berulang kode yang sama dalam 3 detik
+            const now = Date.now();
+            if (decodedText === lastScanCode && now - lastScanTime < 3000) return;
+            lastScanCode = decodedText;
+            lastScanTime = now;
+
+            // Getarkan HP jika didukung
+            if (navigator.vibrate) navigator.vibrate(100);
+
+            document.getElementById('scanKode').value = decodedText;
+            await prosesScan(decodedText);
+            document.getElementById('scanKode').value = '';
+          },
+          () => {} // ignore scan failure frames
+        );
+        kameraAktif = true;
+      } catch (err) {
+        console.error(err);
+        alert('Gagal membuka kamera.\n\nPastikan:\n• Izin kamera diizinkan di browser\n• Situs memakai HTTPS (atau localhost)\n\nError: ' + (err.message || err));
+        tutupKamera();
+      }
+    }
+
+    async function tutupKamera() {
+      try {
+        if (html5QrCode && kameraAktif) {
+          await html5QrCode.stop();
+          html5QrCode.clear();
+        }
+      } catch (e) {
+        console.warn('Stop camera:', e);
+      }
+      html5QrCode = null;
+      kameraAktif = false;
+      document.getElementById('qrReaderWrap').style.display = 'none';
+      document.getElementById('btnBukaKamera').style.display = 'block';
+      document.getElementById('btnTutupKamera').style.display = 'none';
+      // kosongkan isi reader
+      const reader = document.getElementById('qrReader');
+      if (reader) reader.innerHTML = '';
+    }
+
+    document.getElementById('btnBukaKamera').addEventListener('click', bukaKamera);
+    document.getElementById('btnTutupKamera').addEventListener('click', tutupKamera);
+
+    // Tutup kamera otomatis saat pindah halaman
+    const _origShowPage = showPage;
+    // tidak override showPage; cukup di initScanPage / saat leave
+    // Hook: saat showPage ke selain scan-barcode, tutup kamera
+    document.querySelectorAll('.menu-item').forEach(item => {
+      item.addEventListener('click', () => {
+        if (item.getAttribute('data-page') !== 'scan-barcode' && kameraAktif) {
+          tutupKamera();
+        }
+      });
     });
 
     // Inisialisasi
