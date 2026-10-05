@@ -2460,6 +2460,19 @@
 
     document.getElementById('btnImportSiswa').addEventListener('click', () => openImportDialog('siswa'));
 
+    function normLP(v) {
+      if (!v) return null;
+      v = String(v).trim().toUpperCase();
+      if (v === 'L' || v.startsWith('L')) return 'L';
+      if (v === 'P' || v.startsWith('P')) return 'P';
+      return null;
+    }
+    function emptyToNull(v) {
+      if (v === undefined || v === null) return null;
+      v = String(v).trim();
+      return v === '' ? null : v;
+    }
+
     async function handleImportSiswa(file) {
       const text = await file.text();
       const lines = text.trim().split(/\r?\n/);
@@ -2467,24 +2480,39 @@
       const rows = [];
       for (let i = 1; i < lines.length; i++) {
         const c = lines[i].split(',').map(x => x.trim().replace(/^"|"$/g, ''));
-        if (c.length < 3) continue;
+        const nama = emptyToNull(c[0]);
+        const nisn = emptyToNull(c[2]);
+        if (!nama || !nisn) continue;
         rows.push({
-          nama: c[0], lp: c[1] || 'L', nisn: c[2], kelas: c[3] || null,
-          tmp_lahir: c[4] || null, tgl_lahir: c[5] || null, status: c[6] || 'Aktif',
-          alamat: c[7] || null, nama_ayah: c[8] || null, nama_ibu: c[9] || null, no_hp: c[10] || null
+          nama: nama,
+          lp: normLP(c[1]),
+          nisn: nisn,
+          kelas: emptyToNull(c[3]),
+          tmp_lahir: emptyToNull(c[4]),
+          tgl_lahir: emptyToNull(c[5]),
+          status: emptyToNull(c[6]) || 'Aktif',
+          alamat: emptyToNull(c[7]),
+          nama_ayah: emptyToNull(c[8]),
+          nama_ibu: emptyToNull(c[9]),
+          no_hp: emptyToNull(c[10])
         });
       }
-      if (!rows.length) { alert('Tidak ada baris valid'); return; }
-      if (!confirm('Import ' + rows.length + ' data siswa?')) return;
+      if (!rows.length) { alert('Tidak ada baris valid (nama & NISN wajib)'); return; }
+      if (!confirm('Import/Update ' + rows.length + ' data siswa?')) return;
       try {
         if (supabaseClient) {
-          const { error } = await supabaseClient.from('siswa').insert(rows);
+          // Upsert berdasarkan NISN (unik)
+          const { error } = await supabaseClient.from('siswa').upsert(rows, { onConflict: 'nisn' });
           if (error) throw error;
         } else {
-          rows.forEach(r => { r.id = Date.now() + Math.random(); dataSiswa.push(r); });
+          rows.forEach(r => {
+            const idx = dataSiswa.findIndex(x => x.nisn === r.nisn);
+            if (idx >= 0) dataSiswa[idx] = { ...dataSiswa[idx], ...r };
+            else { r.id = Date.now() + Math.random(); dataSiswa.push(r); }
+          });
         }
         await loadSiswa();
-        alert('Import berhasil: ' + rows.length + ' data');
+        alert('Import/Update berhasil: ' + rows.length + ' data');
       } catch (e) {
         alert('Gagal import: ' + (e.message || e));
       }
@@ -2694,24 +2722,37 @@
       const rows = [];
       for (let i = 1; i < lines.length; i++) {
         const c = lines[i].split(',').map(x => x.trim().replace(/^"|"$/g, ''));
-        if (c.length < 3) continue;
+        const nama = emptyToNull(c[0]);
+        const pin = emptyToNull(c[8]);
+        if (!nama || !pin) continue; // nama & pin wajib
         rows.push({
-          nama: c[0], lp: c[1] || 'L', nip: c[2] || null, jabatan: c[3] || null,
-          pangkat_gol: c[4] || null, mulai_kerja: c[5] || null, status: c[6] || 'Aktif',
-          no_hp: c[7] || null, pin: c[8] || String(100000 + i)
+          nama: nama,
+          lp: normLP(c[1]),
+          nip: emptyToNull(c[2]),
+          jabatan: emptyToNull(c[3]),
+          pangkat_gol: emptyToNull(c[4]),
+          mulai_kerja: emptyToNull(c[5]),
+          status: emptyToNull(c[6]) || 'Aktif',
+          no_hp: emptyToNull(c[7]),
+          pin: pin
         });
       }
-      if (!rows.length) { alert('Tidak ada baris valid'); return; }
-      if (!confirm('Import ' + rows.length + ' data guru?')) return;
+      if (!rows.length) { alert('Tidak ada baris valid (nama & PIN wajib)'); return; }
+      if (!confirm('Import/Update ' + rows.length + ' data guru?')) return;
       try {
         if (supabaseClient) {
-          const { error } = await supabaseClient.from('guru').insert(rows);
+          // Upsert berdasarkan PIN (unik)
+          const { error } = await supabaseClient.from('guru').upsert(rows, { onConflict: 'pin' });
           if (error) throw error;
         } else {
-          rows.forEach(r => { r.id = Date.now() + Math.random(); dataGuru.push(r); });
+          rows.forEach(r => {
+            const idx = dataGuru.findIndex(x => x.pin === r.pin);
+            if (idx >= 0) dataGuru[idx] = { ...dataGuru[idx], ...r };
+            else { r.id = Date.now() + Math.random(); dataGuru.push(r); }
+          });
         }
         await loadGuru();
-        alert('Import berhasil: ' + rows.length + ' data');
+        alert('Import/Update berhasil: ' + rows.length + ' data');
       } catch (e) {
         alert('Gagal import: ' + (e.message || e));
       }
@@ -2886,19 +2927,28 @@
       const rows = [];
       for (let i = 1; i < lines.length; i++) {
         const c = lines[i].split(',').map(x => x.trim().replace(/^"|"$/g, ''));
-        if (c.length < 2) continue;
+        const nama = emptyToNull(c[1]);
+        if (!nama) continue;
+        const tahun = emptyToNull(c[7]);
         rows.push({
-          nisn: c[0] || null, nama: c[1], lp: c[2] || 'L',
-          tmp_lahir: c[3] || null, tgl_lahir: c[4] || null,
-          tgl_mulai_sekolah: c[5] || null, tanggal_lulus: c[6] || null,
-          tahun_lulus: parseInt(c[7]) || null, lama_belajar: c[8] || null,
-          status_awal: c[9] || null, asal_sekolah: c[10] || null
+          nisn: emptyToNull(c[0]),
+          nama: nama,
+          lp: normLP(c[2]),
+          tmp_lahir: emptyToNull(c[3]),
+          tgl_lahir: emptyToNull(c[4]),
+          tgl_mulai_sekolah: emptyToNull(c[5]),
+          tanggal_lulus: emptyToNull(c[6]),
+          tahun_lulus: tahun ? parseInt(tahun) : null,
+          lama_belajar: emptyToNull(c[8]),
+          status_awal: emptyToNull(c[9]),
+          asal_sekolah: emptyToNull(c[10])
         });
       }
-      if (!rows.length) { alert('Tidak ada baris valid'); return; }
+      if (!rows.length) { alert('Tidak ada baris valid (nama wajib)'); return; }
       if (!confirm('Import ' + rows.length + ' data lulusan?')) return;
       try {
         if (supabaseClient) {
+          // Lulusan: insert saja (nisn tidak selalu unik di schema)
           const { error } = await supabaseClient.from('lulusan').insert(rows);
           if (error) throw error;
         } else {
