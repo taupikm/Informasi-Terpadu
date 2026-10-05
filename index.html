@@ -992,15 +992,32 @@
 
     <!-- ========== SCAN BARCODE ========== -->
     <section class="page" id="page-scan-barcode">
-      <div class="page-title">Scan Barcode Absensi</div>
+      <div class="page-title">Absensi QR / Sidik Jari</div>
 
       <div class="card" style="margin-bottom:12px;">
         <div class="periode-bar">
           Periode : <b id="scanLabelPeriode">-</b>
         </div>
-        <div style="margin-top:10px;font-size:13px;">
+        <div style="margin-top:8px;font-size:13px;">
           Sesi aktif : <b id="scanLabelSesi">-</b>
           <span id="scanLabelJam" style="color:#64748b;font-size:12px;"></span>
+        </div>
+
+        <!-- Tombol Sidik Jari -->
+        <div style="margin-top:12px;">
+          <button class="btn btn-primary" id="btnSidikJari" style="width:100%;background:#1e40af;">
+            👆 <span id="labelSidikJari">Daftar Sidik Jari</span>
+          </button>
+        </div>
+
+        <!-- Switch Siswa / Guru (hanya Admin) -->
+        <div id="scanTipeSwitch" style="display:none;margin-top:12px;">
+          <div style="display:flex;border-radius:10px;overflow:hidden;border:1px solid #1e40af;">
+            <button type="button" class="scan-tipe-btn active" data-tipe="siswa" id="btnScanSiswa"
+              style="flex:1;padding:10px;border:none;font-weight:700;font-size:13px;cursor:pointer;background:#38bdf8;color:#0f172a;">Siswa</button>
+            <button type="button" class="scan-tipe-btn" data-tipe="guru" id="btnScanGuru"
+              style="flex:1;padding:10px;border:none;font-weight:700;font-size:13px;cursor:pointer;background:#1e40af;color:white;">Guru</button>
+          </div>
         </div>
 
         <!-- Tombol kamera -->
@@ -1858,6 +1875,8 @@
     // guest | siswa | guru | admin
     let currentRole = 'guest';
     let currentUserName = 'Tamu (Belum Login)';
+    let currentUserId = null; // id di tabel siswa/guru/admin
+    let currentUserKode = null; // NISN atau PIN/NIP
     const SESSION_KEY = 'smpn_session';
 
     const ROLE_DATA = {
@@ -1875,7 +1894,9 @@
         role: currentRole,
         name: currentUserName || ROLE_DATA[currentRole]?.name || '',
         label: ROLE_DATA[currentRole]?.label || '',
-        avatar: ROLE_DATA[currentRole]?.avatar || '?'
+        avatar: ROLE_DATA[currentRole]?.avatar || '?',
+        userId: currentUserId,
+        kode: currentUserKode
       }));
     }
 
@@ -2011,44 +2032,48 @@
 
       let role = null;
       let userName = null;
+      let userId = null;
 
       try {
         if (supabaseClient) {
           // --- Cek di tabel admin ---
           const { data: adminData } = await supabaseClient
-            .from('admin').select('nama, pin').eq('pin', kode).maybeSingle();
+            .from('admin').select('id, nama, pin').eq('pin', kode).maybeSingle();
           if (adminData) {
             role = 'admin';
             userName = adminData.nama;
+            userId = adminData.id;
           }
 
           // --- Cek di tabel guru ---
           if (!role) {
             const { data: guruData } = await supabaseClient
-              .from('guru').select('nama, pin').eq('pin', kode).maybeSingle();
+              .from('guru').select('id, nama, pin').eq('pin', kode).maybeSingle();
             if (guruData) {
               role = 'guru';
               userName = guruData.nama;
+              userId = guruData.id;
             }
           }
 
           // --- Cek di tabel siswa (NISN) ---
           if (!role) {
             const { data: siswaData } = await supabaseClient
-              .from('siswa').select('nama, nisn').eq('nisn', kode).maybeSingle();
+              .from('siswa').select('id, nama, nisn').eq('nisn', kode).maybeSingle();
             if (siswaData) {
               role = 'siswa';
               userName = siswaData.nama;
+              userId = siswaData.id;
             }
           }
         } else {
           // --- Mode demo lokal (tanpa Supabase) ---
           if (kode === '0123456789' || kode === '012345678') {
-            role = 'siswa'; userName = 'Siswa Demo';
+            role = 'siswa'; userName = 'Siswa Demo'; userId = 1;
           } else if (kode === '123456') {
-            role = 'guru'; userName = 'Guru Demo';
+            role = 'guru'; userName = 'Guru Demo'; userId = 1;
           } else if (kode === '456789') {
-            role = 'admin'; userName = 'Admin Sekolah';
+            role = 'admin'; userName = 'Admin Sekolah'; userId = 1;
           }
         }
 
@@ -2056,6 +2081,8 @@
           alert('NISN / PIN tidak dikenali.\n\nDemo:\nSiswa = 0123456789\nGuru = 123456\nAdmin = 456789');
           return;
         }
+        currentUserId = userId;
+        currentUserKode = kode;
 
         // Update nama di ROLE_DATA agar tampil nama asli dari database
         if (userName) ROLE_DATA[role].name = userName;
@@ -3021,10 +3048,31 @@
 
     async function fillMapelKelasSelects() {
       await loadMasterMapelKelas();
+      let mapelList = masterMapel.slice();
+      let kelasList = masterKelas.slice();
+
+      // Guru hanya melihat mapel & kelas yang diampu
+      if (currentRole === 'guru' && currentUserId && supabaseClient) {
+        try {
+          const [gm, gk] = await Promise.all([
+            supabaseClient.from('guru_mapel').select('mapel_id').eq('guru_id', currentUserId),
+            supabaseClient.from('guru_kelas').select('kelas_id').eq('guru_id', currentUserId)
+          ]);
+          const mapelIds = (gm.data || []).map(r => r.mapel_id);
+          const kelasIds = (gk.data || []).map(r => r.kelas_id);
+          if (mapelIds.length) mapelList = masterMapel.filter(m => mapelIds.includes(m.id));
+          else mapelList = [];
+          if (kelasIds.length) kelasList = masterKelas.filter(k => kelasIds.includes(k.id));
+          else kelasList = [];
+        } catch (e) {
+          console.warn('Filter mapel/kelas guru gagal', e);
+        }
+      }
+
       const mapelOpts = '<option value="">- Pilih Mapel -</option>' +
-        masterMapel.map(m => `<option value="${m.id}">${m.kode} – ${m.mapel}</option>`).join('');
+        mapelList.map(m => `<option value="${m.id}">${m.kode} – ${m.mapel}</option>`).join('');
       const kelasOpts = '<option value="">- Pilih Kelas -</option>' +
-        masterKelas.map(k => `<option value="${k.kelas}">${k.kelas}</option>`).join('');
+        kelasList.map(k => `<option value="${k.kelas}">${k.kelas}</option>`).join('');
       ['inMapel', 'dnMapel'].forEach(id => {
         const el = document.getElementById(id);
         if (el) el.innerHTML = mapelOpts;
@@ -3678,6 +3726,8 @@
       return nowMin <= mulai ? 'TW' : 'TL';
     }
 
+    let scanTipe = 'siswa'; // siswa | guru (untuk admin switch)
+
     async function initScanPage() {
       await loadAktifPeriode();
       await loadSesi();
@@ -3699,12 +3749,145 @@
         labelJam.textContent = '';
       }
 
-      // Pastikan kamera tertutup saat masuk halaman
+      // Switch Siswa/Guru hanya untuk Admin
+      const sw = document.getElementById('scanTipeSwitch');
+      if (currentRole === 'admin') {
+        sw.style.display = 'block';
+        scanTipe = 'siswa';
+        setScanTipeUI('siswa');
+      } else {
+        sw.style.display = 'none';
+        // Guru scan untuk siswa; siswa tidak akses halaman ini biasanya
+        scanTipe = currentRole === 'guru' ? 'siswa' : 'siswa';
+      }
+
+      // Label tombol sidik jari
+      updateLabelSidikJari();
+
       if (typeof tutupKamera === 'function' && typeof kameraAktif !== 'undefined' && kameraAktif) {
         await tutupKamera();
       }
       await loadScanLog();
     }
+
+    function setScanTipeUI(tipe) {
+      scanTipe = tipe;
+      const btnS = document.getElementById('btnScanSiswa');
+      const btnG = document.getElementById('btnScanGuru');
+      if (tipe === 'siswa') {
+        btnS.style.background = '#38bdf8';
+        btnS.style.color = '#0f172a';
+        btnG.style.background = '#1e40af';
+        btnG.style.color = 'white';
+      } else {
+        btnG.style.background = '#38bdf8';
+        btnG.style.color = '#0f172a';
+        btnS.style.background = '#1e40af';
+        btnS.style.color = 'white';
+      }
+    }
+
+    document.getElementById('btnScanSiswa').addEventListener('click', () => setScanTipeUI('siswa'));
+    document.getElementById('btnScanGuru').addEventListener('click', () => setScanTipeUI('guru'));
+
+    // Sidik jari: cek apakah device + credential sudah terdaftar (localStorage + WebAuthn)
+    function sidikJariKey() {
+      return 'smpn_fp_' + (currentUserKode || 'guest');
+    }
+    function isSidikJariTerdaftar() {
+      try {
+        return !!localStorage.getItem(sidikJariKey());
+      } catch (e) { return false; }
+    }
+    function updateLabelSidikJari() {
+      const lab = document.getElementById('labelSidikJari');
+      if (!lab) return;
+      lab.textContent = isSidikJariTerdaftar() ? 'Absen Sidik Jari' : 'Daftar Sidik Jari';
+    }
+
+    async function daftarSidikJari() {
+      if (!window.PublicKeyCredential) {
+        alert('Perangkat/browser tidak mendukung sidik jari (WebAuthn).\nGunakan HP modern dengan fingerprint.');
+        return;
+      }
+      if (!currentUserKode) {
+        alert('Login terlebih dahulu untuk mendaftarkan sidik jari.');
+        return;
+      }
+      try {
+        const challenge = new Uint8Array(32);
+        crypto.getRandomValues(challenge);
+        const userIdBytes = new TextEncoder().encode(String(currentUserKode)).slice(0, 32);
+        const cred = await navigator.credentials.create({
+          publicKey: {
+            challenge,
+            rp: { name: 'SMPN Pantang Mundur', id: location.hostname },
+            user: {
+              id: userIdBytes,
+              name: currentUserKode,
+              displayName: currentUserName || currentUserKode
+            },
+            pubKeyCredParams: [{ type: 'public-key', alg: -7 }, { type: 'public-key', alg: -257 }],
+            authenticatorSelection: {
+              authenticatorAttachment: 'platform',
+              userVerification: 'required',
+              residentKey: 'preferred'
+            },
+            timeout: 60000
+          }
+        });
+        if (cred) {
+          localStorage.setItem(sidikJariKey(), cred.id);
+          updateLabelSidikJari();
+          alert('Sidik jari berhasil didaftarkan untuk ' + (currentUserName || currentUserKode));
+        }
+      } catch (e) {
+        console.error(e);
+        alert('Gagal daftar sidik jari: ' + (e.message || e));
+      }
+    }
+
+    async function absenSidikJari() {
+      if (!window.PublicKeyCredential) {
+        alert('Perangkat tidak mendukung sidik jari.');
+        return;
+      }
+      const credId = localStorage.getItem(sidikJariKey());
+      if (!credId) {
+        alert('Sidik jari belum terdaftar. Klik Daftar Sidik Jari terlebih dahulu.');
+        return;
+      }
+      try {
+        const challenge = new Uint8Array(32);
+        crypto.getRandomValues(challenge);
+        // Convert credential id (base64url-ish from browser) - use allowCredentials empty for discoverable
+        await navigator.credentials.get({
+          publicKey: {
+            challenge,
+            timeout: 60000,
+            userVerification: 'required',
+            rpId: location.hostname
+          }
+        });
+        // Verified fingerprint → absen dengan kode user yang login
+        if (currentUserKode) {
+          await prosesScan(currentUserKode, true);
+        } else {
+          alert('Sesi login tidak ditemukan.');
+        }
+      } catch (e) {
+        console.error(e);
+        alert('Absen sidik jari gagal / dibatalkan: ' + (e.message || e));
+      }
+    }
+
+    document.getElementById('btnSidikJari').addEventListener('click', async () => {
+      if (isSidikJariTerdaftar()) {
+        await absenSidikJari();
+      } else {
+        await daftarSidikJari();
+      }
+    });
 
     function tampilHasil(ok, nama, status, ket) {
       document.getElementById('scanHasilIcon').textContent = ok ? '✅' : '❌';
@@ -3755,7 +3938,7 @@
       }
     }
 
-    async function prosesScan(kode) {
+    async function prosesScan(kode, fromFingerprint) {
       kode = String(kode || '').trim();
       if (!kode) {
         tampilHasil(false, '', 'Gagal', 'Kode kosong');
@@ -3771,44 +3954,43 @@
 
       const today = new Date().toISOString().slice(0, 10);
 
-      // 1. Cari identitas: siswa by NISN, atau guru by NIP / PIN
+      // 1. Cari identitas sesuai tipe scan (admin switch) atau auto
       let person = null;
       let tipe = null;
+      const preferTipe = fromFingerprint ? null : (currentRole === 'admin' ? scanTipe : 'siswa');
 
       try {
         if (supabaseClient) {
-          // Cek siswa
-          const { data: siswa } = await supabaseClient.from('siswa').select('id, nama, nisn, status').eq('nisn', kode).maybeSingle();
-          if (siswa) {
-            person = siswa;
-            tipe = 'siswa';
-          } else {
-            // Cek guru by NIP
+          // Cari siswa
+          if (!preferTipe || preferTipe === 'siswa') {
+            const { data: siswa } = await supabaseClient.from('siswa').select('id, nama, nisn, status').eq('nisn', kode).maybeSingle();
+            if (siswa) { person = siswa; tipe = 'siswa'; }
+          }
+          // Cari guru
+          if (!person && (!preferTipe || preferTipe === 'guru')) {
             let { data: guru } = await supabaseClient.from('guru').select('id, nama, nip, pin, status').eq('nip', kode).maybeSingle();
             if (!guru) {
-              // fallback PIN
               const res = await supabaseClient.from('guru').select('id, nama, nip, pin, status').eq('pin', kode).maybeSingle();
               guru = res.data;
             }
-            if (guru) {
-              person = guru;
-              tipe = 'guru';
-            }
+            if (guru) { person = guru; tipe = 'guru'; }
           }
         } else {
-          // Demo lokal
           if (!dataSiswa.length) await loadSiswa();
           if (!dataGuru.length) await loadGuru();
-          const s = dataSiswa.find(x => x.nisn === kode);
-          if (s) { person = s; tipe = 'siswa'; }
-          else {
+          if (!preferTipe || preferTipe === 'siswa') {
+            const s = dataSiswa.find(x => x.nisn === kode);
+            if (s) { person = s; tipe = 'siswa'; }
+          }
+          if (!person && (!preferTipe || preferTipe === 'guru')) {
             const g = dataGuru.find(x => x.nip === kode || x.pin === kode);
             if (g) { person = g; tipe = 'guru'; }
           }
         }
 
         if (!person) {
-          tampilHasil(false, kode, 'Tidak ditemukan', 'NISN / NIP tidak terdaftar');
+          const label = preferTipe === 'guru' ? 'NIP/PIN Guru' : (preferTipe === 'siswa' ? 'NISN Siswa' : 'NISN / NIP');
+          tampilHasil(false, kode, 'Tidak ditemukan', label + ' tidak terdaftar');
           return;
         }
 
@@ -3980,6 +4162,8 @@
       if (ses && ses.role && ses.role !== 'guest' && ROLE_DATA[ses.role]) {
         ROLE_DATA[ses.role].name = ses.name || ROLE_DATA[ses.role].name;
         if (ses.avatar) ROLE_DATA[ses.role].avatar = ses.avatar;
+        currentUserId = ses.userId || null;
+        currentUserKode = ses.kode || null;
         applyRole(ses.role, true); // skipRedirect → tetap di halaman hash saat ini
       }
     })();
