@@ -8,6 +8,8 @@
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <!-- HTML5 QR Code Scanner -->
   <script src="https://cdn.jsdelivr.net/npm/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
+  <!-- SheetJS untuk Excel (.xlsx) -->
+  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
   <style>
     :root {
       --primary: #1a56db;
@@ -1778,11 +1780,11 @@
       </div>
       <div class="modal-body">
         <p style="font-size:13px;color:#64748b;margin-bottom:12px;" id="modalImportDesc">
-          Download contoh format, isi data, lalu pilih file CSV untuk diimpor.
+          Download contoh format Excel, isi data, lalu pilih file .xlsx untuk diimpor.
         </p>
-        <button class="btn btn-outline" id="btnDownloadContoh" style="width:100%;margin-bottom:12px;">📄 Download Contoh Format</button>
-        <button class="btn btn-primary" id="btnPilihFileImport" style="width:100%;">📂 Pilih File CSV</button>
-        <input type="file" id="fileImportHidden" accept=".csv,.txt" style="display:none;">
+        <button class="btn btn-outline" id="btnDownloadContoh" style="width:100%;margin-bottom:12px;">📄 Download Contoh Format Excel</button>
+        <button class="btn btn-primary" id="btnPilihFileImport" style="width:100%;">📂 Pilih File Excel</button>
+        <input type="file" id="fileImportHidden" accept=".xlsx,.xls,.csv" style="display:none;">
       </div>
       <div class="modal-footer">
         <button class="btn btn-outline" data-close="modalImport" style="width:100%;">Batal</button>
@@ -2400,27 +2402,27 @@
       }
     });
 
-    // ----- IMPORT (dialog + contoh format) -----
+    // ----- IMPORT Excel (dialog + contoh format) -----
     let importTarget = null; // 'siswa' | 'guru' | 'lulusan'
 
     const IMPORT_CONTOH = {
       siswa: {
         title: 'Import Data Siswa',
-        filename: 'contoh_siswa.csv',
-        header: 'nama,lp,nisn,kelas,tmp_lahir,tgl_lahir,status,alamat,nama_ayah,nama_ibu,no_hp',
-        sample: 'Andi Pratama,L,0123456789,7A,Bandung,2012-05-15,Aktif,Jl. Merdeka,Joko,Sari,081111111111'
+        filename: 'contoh_siswa.xlsx',
+        headers: ['nama','lp','nisn','kelas','tmp_lahir','tgl_lahir','status','alamat','nama_ayah','nama_ibu','no_hp'],
+        sample: ['Andi Pratama','L','0123456789','7A','Bandung','2012-05-15','Aktif','Jl. Merdeka','Joko','Sari','081111111111']
       },
       guru: {
         title: 'Import Data Guru',
-        filename: 'contoh_guru.csv',
-        header: 'nama,lp,nip,jabatan,pangkat_gol,mulai_kerja,status,no_hp,pin',
-        sample: 'Budi Santoso,L,196505121990031001,Guru Matematika,Pembina / IV-a,1990-03-01,Aktif,081234567890,123456'
+        filename: 'contoh_guru.xlsx',
+        headers: ['nama','lp','nip','jabatan','pangkat_gol','mulai_kerja','status','no_hp','pin'],
+        sample: ['Budi Santoso','L','196505121990031001','Guru Matematika','Pembina / IV-a','1990-03-01','Aktif','081234567890','123456']
       },
       lulusan: {
         title: 'Import Data Lulusan',
-        filename: 'contoh_lulusan.csv',
-        header: 'nisn,nama,lp,tmp_lahir,tgl_lahir,tgl_mulai_sekolah,tanggal_lulus,tahun_lulus,lama_belajar,status_awal,asal_sekolah',
-        sample: '0012345678,Ahmad Rizki,L,Bandung,2008-03-12,2021-07-15,2024-06-20,2024,3 Tahun,Baru,SDN 1 Bandung'
+        filename: 'contoh_lulusan.xlsx',
+        headers: ['nisn','nama','lp','tmp_lahir','tgl_lahir','tgl_mulai_sekolah','tanggal_lulus','tahun_lulus','lama_belajar','status_awal','asal_sekolah'],
+        sample: ['0012345678','Ahmad Rizki','L','Bandung','2008-03-12','2021-07-15','2024-06-20','2024','3 Tahun','Baru','SDN 1 Bandung']
       }
     };
 
@@ -2433,28 +2435,57 @@
 
     document.getElementById('btnDownloadContoh').addEventListener('click', () => {
       if (!importTarget) return;
+      if (typeof XLSX === 'undefined') {
+        alert('Library Excel belum termuat. Cek koneksi internet.');
+        return;
+      }
       const cfg = IMPORT_CONTOH[importTarget];
-      const content = cfg.header + '\n' + cfg.sample + '\n';
-      const blob = new Blob([content], { type: 'text/csv;charset=utf-8;' });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = cfg.filename;
-      a.click();
-      URL.revokeObjectURL(url);
+      const ws = XLSX.utils.aoa_to_sheet([cfg.headers, cfg.sample]);
+      // Lebar kolom otomatis
+      ws['!cols'] = cfg.headers.map(() => ({ wch: 16 }));
+      const wb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb, ws, 'Data');
+      XLSX.writeFile(wb, cfg.filename);
     });
 
     document.getElementById('btnPilihFileImport').addEventListener('click', () => {
       document.getElementById('fileImportHidden').click();
     });
 
+    // Baca file Excel/CSV → array of arrays (baris)
+    async function bacaFileSpreadsheet(file) {
+      if (typeof XLSX === 'undefined') throw new Error('Library Excel belum termuat');
+      const data = await file.arrayBuffer();
+      const wb = XLSX.read(data, { type: 'array', cellDates: true });
+      const sheet = wb.Sheets[wb.SheetNames[0]];
+      // header:1 → array of arrays, raw:false → format string
+      const rows = XLSX.utils.sheet_to_json(sheet, { header: 1, defval: '', raw: false });
+      return rows;
+    }
+
+    // Normalisasi nilai sel Excel (tanggal, angka, dll)
+    function cellStr(v) {
+      if (v === undefined || v === null) return '';
+      if (v instanceof Date) {
+        const y = v.getFullYear();
+        const m = String(v.getMonth() + 1).padStart(2, '0');
+        const d = String(v.getDate()).padStart(2, '0');
+        return y + '-' + m + '-' + d;
+      }
+      return String(v).trim();
+    }
+
     document.getElementById('fileImportHidden').addEventListener('change', async function () {
       const file = this.files[0];
       if (!file || !importTarget) return;
       closeModal('modalImport');
-      if (importTarget === 'siswa') await handleImportSiswa(file);
-      else if (importTarget === 'guru') await handleImportGuru(file);
-      else if (importTarget === 'lulusan') await handleImportLulusan(file);
+      try {
+        if (importTarget === 'siswa') await handleImportSiswa(file);
+        else if (importTarget === 'guru') await handleImportGuru(file);
+        else if (importTarget === 'lulusan') await handleImportLulusan(file);
+      } catch (e) {
+        alert('Gagal baca file: ' + (e.message || e));
+      }
       this.value = '';
     });
 
@@ -2474,12 +2505,11 @@
     }
 
     async function handleImportSiswa(file) {
-      const text = await file.text();
-      const lines = text.trim().split(/\r?\n/);
+      const lines = await bacaFileSpreadsheet(file);
       if (lines.length < 2) { alert('File kosong / tidak valid'); return; }
       const rows = [];
       for (let i = 1; i < lines.length; i++) {
-        const c = lines[i].split(',').map(x => x.trim().replace(/^"|"$/g, ''));
+        const c = (lines[i] || []).map(cellStr);
         const nama = emptyToNull(c[0]);
         const nisn = emptyToNull(c[2]);
         if (!nama || !nisn) continue;
@@ -2501,7 +2531,6 @@
       if (!confirm('Import/Update ' + rows.length + ' data siswa?')) return;
       try {
         if (supabaseClient) {
-          // Upsert berdasarkan NISN (unik)
           const { error } = await supabaseClient.from('siswa').upsert(rows, { onConflict: 'nisn' });
           if (error) throw error;
         } else {
@@ -2716,15 +2745,14 @@
     // ----- GURU: Import CSV -----
     document.getElementById('btnImportGuru').addEventListener('click', () => openImportDialog('guru'));
     async function handleImportGuru(file) {
-      const text = await file.text();
-      const lines = text.trim().split(/\r?\n/);
+      const lines = await bacaFileSpreadsheet(file);
       if (lines.length < 2) { alert('File kosong / tidak valid'); return; }
       const rows = [];
       for (let i = 1; i < lines.length; i++) {
-        const c = lines[i].split(',').map(x => x.trim().replace(/^"|"$/g, ''));
+        const c = (lines[i] || []).map(cellStr);
         const nama = emptyToNull(c[0]);
         const pin = emptyToNull(c[8]);
-        if (!nama || !pin) continue; // nama & pin wajib
+        if (!nama || !pin) continue;
         rows.push({
           nama: nama,
           lp: normLP(c[1]),
@@ -2741,7 +2769,6 @@
       if (!confirm('Import/Update ' + rows.length + ' data guru?')) return;
       try {
         if (supabaseClient) {
-          // Upsert berdasarkan PIN (unik)
           const { error } = await supabaseClient.from('guru').upsert(rows, { onConflict: 'pin' });
           if (error) throw error;
         } else {
@@ -2921,12 +2948,11 @@
     // Import CSV
     document.getElementById('btnImportLulusan').addEventListener('click', () => openImportDialog('lulusan'));
     async function handleImportLulusan(file) {
-      const text = await file.text();
-      const lines = text.trim().split(/\r?\n/);
+      const lines = await bacaFileSpreadsheet(file);
       if (lines.length < 2) { alert('File kosong / tidak valid'); return; }
       const rows = [];
       for (let i = 1; i < lines.length; i++) {
-        const c = lines[i].split(',').map(x => x.trim().replace(/^"|"$/g, ''));
+        const c = (lines[i] || []).map(cellStr);
         const nama = emptyToNull(c[1]);
         if (!nama) continue;
         const tahun = emptyToNull(c[7]);
@@ -2948,7 +2974,6 @@
       if (!confirm('Import ' + rows.length + ' data lulusan?')) return;
       try {
         if (supabaseClient) {
-          // Lulusan: insert saja (nisn tidak selalu unik di schema)
           const { error } = await supabaseClient.from('lulusan').insert(rows);
           if (error) throw error;
         } else {
