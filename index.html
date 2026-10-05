@@ -1009,24 +1009,9 @@
 
         <!-- Area preview kamera -->
         <div id="qrReaderWrap" style="display:none;margin-top:12px;">
-          <div id="qrReader" style="width:100%;border-radius:12px;overflow:hidden;"></div>
+          <div id="qrReader" style="width:100%;min-height:340px;border-radius:12px;overflow:hidden;background:#111;"></div>
           <p style="font-size:11px;color:#64748b;text-align:center;margin-top:6px;">Arahkan kamera ke barcode / QR code</p>
         </div>
-
-        <div class="form-group" style="margin-top:14px;">
-          <label>Atau ketik NISN (Siswa) / NIP (Guru)</label>
-          <input type="tel" id="scanKode" inputmode="numeric" autocomplete="off"
-                 placeholder="Ketik kode lalu Enter..."
-                 style="font-size:18px;letter-spacing:1px;text-align:center;padding:14px;">
-        </div>
-        <button class="btn btn-primary" id="btnProsesScan" style="width:100%;margin-top:4px;">Proses Scan</button>
-      </div>
-
-      <div id="scanHasil" class="card" style="display:none;margin-bottom:12px;">
-        <div id="scanHasilIcon" style="font-size:36px;text-align:center;"></div>
-        <div id="scanHasilNama" style="text-align:center;font-weight:700;font-size:16px;margin-top:4px;"></div>
-        <div id="scanHasilStatus" style="text-align:center;font-size:14px;margin-top:4px;"></div>
-        <div id="scanHasilKet" style="text-align:center;font-size:12px;color:#64748b;margin-top:4px;"></div>
       </div>
 
       <div class="section-title">Riwayat Scan Hari Ini</div>
@@ -1769,6 +1754,42 @@
     </div>
   </div>
 
+  <!-- ========== MODAL HASIL SCAN ========== -->
+  <div class="modal-overlay" id="modalScanHasil">
+    <div class="modal" style="max-width:320px;text-align:center;">
+      <div class="modal-body" style="padding:24px 18px 8px;">
+        <div id="scanHasilIcon" style="font-size:48px;"></div>
+        <div id="scanHasilNama" style="font-weight:700;font-size:17px;margin-top:8px;"></div>
+        <div id="scanHasilStatus" style="font-size:15px;margin-top:6px;font-weight:600;"></div>
+        <div id="scanHasilKet" style="font-size:12px;color:#64748b;margin-top:6px;line-height:1.4;"></div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-primary" id="btnScanHasilOk" style="width:100%;">OK</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ========== MODAL IMPORT ========== -->
+  <div class="modal-overlay" id="modalImport">
+    <div class="modal">
+      <div class="modal-header">
+        <h3 id="modalImportTitle">Import Data</h3>
+        <button class="modal-close" data-close="modalImport">&times;</button>
+      </div>
+      <div class="modal-body">
+        <p style="font-size:13px;color:#64748b;margin-bottom:12px;" id="modalImportDesc">
+          Download contoh format, isi data, lalu pilih file CSV untuk diimpor.
+        </p>
+        <button class="btn btn-outline" id="btnDownloadContoh" style="width:100%;margin-bottom:12px;">📄 Download Contoh Format</button>
+        <button class="btn btn-primary" id="btnPilihFileImport" style="width:100%;">📂 Pilih File CSV</button>
+        <input type="file" id="fileImportHidden" accept=".csv,.txt" style="display:none;">
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-outline" data-close="modalImport" style="width:100%;">Batal</button>
+      </div>
+    </div>
+  </div>
+
   <script>
     // ============================================================
     // KONFIGURASI SUPABASE
@@ -2379,15 +2400,70 @@
       }
     });
 
-    // ----- SISWA: Import CSV -----
-    document.getElementById('btnImportSiswa').addEventListener('click', () => document.getElementById('fileImportSiswa').click());
-    document.getElementById('fileImportSiswa').addEventListener('change', async function () {
+    // ----- IMPORT (dialog + contoh format) -----
+    let importTarget = null; // 'siswa' | 'guru' | 'lulusan'
+
+    const IMPORT_CONTOH = {
+      siswa: {
+        title: 'Import Data Siswa',
+        filename: 'contoh_siswa.csv',
+        header: 'nama,lp,nisn,kelas,tmp_lahir,tgl_lahir,status,alamat,nama_ayah,nama_ibu,no_hp',
+        sample: 'Andi Pratama,L,0123456789,7A,Bandung,2012-05-15,Aktif,Jl. Merdeka,Joko,Sari,081111111111'
+      },
+      guru: {
+        title: 'Import Data Guru',
+        filename: 'contoh_guru.csv',
+        header: 'nama,lp,nip,jabatan,pangkat_gol,mulai_kerja,status,no_hp,pin',
+        sample: 'Budi Santoso,L,196505121990031001,Guru Matematika,Pembina / IV-a,1990-03-01,Aktif,081234567890,123456'
+      },
+      lulusan: {
+        title: 'Import Data Lulusan',
+        filename: 'contoh_lulusan.csv',
+        header: 'nisn,nama,lp,tmp_lahir,tgl_lahir,tgl_mulai_sekolah,tanggal_lulus,tahun_lulus,lama_belajar,status_awal,asal_sekolah',
+        sample: '0012345678,Ahmad Rizki,L,Bandung,2008-03-12,2021-07-15,2024-06-20,2024,3 Tahun,Baru,SDN 1 Bandung'
+      }
+    };
+
+    function openImportDialog(target) {
+      importTarget = target;
+      const cfg = IMPORT_CONTOH[target];
+      document.getElementById('modalImportTitle').textContent = cfg.title;
+      openModal('modalImport');
+    }
+
+    document.getElementById('btnDownloadContoh').addEventListener('click', () => {
+      if (!importTarget) return;
+      const cfg = IMPORT_CONTOH[importTarget];
+      const content = cfg.header + '\n' + cfg.sample + '\n';
+      const blob = new Blob([content], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = cfg.filename;
+      a.click();
+      URL.revokeObjectURL(url);
+    });
+
+    document.getElementById('btnPilihFileImport').addEventListener('click', () => {
+      document.getElementById('fileImportHidden').click();
+    });
+
+    document.getElementById('fileImportHidden').addEventListener('change', async function () {
       const file = this.files[0];
-      if (!file) return;
+      if (!file || !importTarget) return;
+      closeModal('modalImport');
+      if (importTarget === 'siswa') await handleImportSiswa(file);
+      else if (importTarget === 'guru') await handleImportGuru(file);
+      else if (importTarget === 'lulusan') await handleImportLulusan(file);
+      this.value = '';
+    });
+
+    document.getElementById('btnImportSiswa').addEventListener('click', () => openImportDialog('siswa'));
+
+    async function handleImportSiswa(file) {
       const text = await file.text();
       const lines = text.trim().split(/\r?\n/);
       if (lines.length < 2) { alert('File kosong / tidak valid'); return; }
-      // Format: nama,lp,nisn,kelas,tmp_lahir,tgl_lahir,status,alamat,nama_ayah,nama_ibu,no_hp
       const rows = [];
       for (let i = 1; i < lines.length; i++) {
         const c = lines[i].split(',').map(x => x.trim().replace(/^"|"$/g, ''));
@@ -2412,8 +2488,7 @@
       } catch (e) {
         alert('Gagal import: ' + (e.message || e));
       }
-      this.value = '';
-    });
+    }
 
     // ----- Master Mapel & Kelas (untuk checkbox di form guru) -----
     let masterMapel = [];
@@ -2611,14 +2686,11 @@
     });
 
     // ----- GURU: Import CSV -----
-    document.getElementById('btnImportGuru').addEventListener('click', () => document.getElementById('fileImportGuru').click());
-    document.getElementById('fileImportGuru').addEventListener('change', async function () {
-      const file = this.files[0];
-      if (!file) return;
+    document.getElementById('btnImportGuru').addEventListener('click', () => openImportDialog('guru'));
+    async function handleImportGuru(file) {
       const text = await file.text();
       const lines = text.trim().split(/\r?\n/);
       if (lines.length < 2) { alert('File kosong / tidak valid'); return; }
-      // Format: nama,lp,nip,jabatan,pangkat_gol,mulai_kerja,status,no_hp,pin
       const rows = [];
       for (let i = 1; i < lines.length; i++) {
         const c = lines[i].split(',').map(x => x.trim().replace(/^"|"$/g, ''));
@@ -2643,8 +2715,7 @@
       } catch (e) {
         alert('Gagal import: ' + (e.message || e));
       }
-      this.value = '';
-    });
+    }
 
     // ============================================================
     // CRUD LULUSAN
@@ -2807,14 +2878,11 @@
     });
 
     // Import CSV
-    document.getElementById('btnImportLulusan').addEventListener('click', () => document.getElementById('fileImportLulusan').click());
-    document.getElementById('fileImportLulusan').addEventListener('change', async function () {
-      const file = this.files[0];
-      if (!file) return;
+    document.getElementById('btnImportLulusan').addEventListener('click', () => openImportDialog('lulusan'));
+    async function handleImportLulusan(file) {
       const text = await file.text();
       const lines = text.trim().split(/\r?\n/);
       if (lines.length < 2) { alert('File kosong / tidak valid'); return; }
-      // Format: nisn,nama,lp,tmp_lahir,tgl_lahir,tgl_mulai_sekolah,tanggal_lulus,tahun_lulus,lama_belajar,status_awal,asal_sekolah
       const rows = [];
       for (let i = 1; i < lines.length; i++) {
         const c = lines[i].split(',').map(x => x.trim().replace(/^"|"$/g, ''));
@@ -2841,8 +2909,7 @@
       } catch (e) {
         alert('Gagal import: ' + (e.message || e));
       }
-      this.value = '';
-    });
+    }
 
     // ============================================================
     // PERIODE + INPUT NILAI + DAFTAR NILAI
@@ -3551,24 +3618,20 @@
         labelJam.textContent = '';
       }
 
-      document.getElementById('scanHasil').style.display = 'none';
-      document.getElementById('scanKode').value = '';
       // Pastikan kamera tertutup saat masuk halaman
       if (typeof tutupKamera === 'function' && typeof kameraAktif !== 'undefined' && kameraAktif) {
         await tutupKamera();
       }
-      setTimeout(() => document.getElementById('scanKode').focus(), 200);
       await loadScanLog();
     }
 
     function tampilHasil(ok, nama, status, ket) {
-      const box = document.getElementById('scanHasil');
-      box.style.display = 'block';
       document.getElementById('scanHasilIcon').textContent = ok ? '✅' : '❌';
       document.getElementById('scanHasilNama').textContent = nama || '-';
       document.getElementById('scanHasilStatus').textContent = status || '';
       document.getElementById('scanHasilStatus').style.color = ok ? '#166534' : '#991b1b';
       document.getElementById('scanHasilKet').textContent = ket || '';
+      openModal('modalScanHasil');
     }
 
     async function loadScanLog() {
@@ -3743,19 +3806,8 @@
       }
     }
 
-    document.getElementById('btnProsesScan').addEventListener('click', () => {
-      const kode = document.getElementById('scanKode').value;
-      prosesScan(kode);
-      document.getElementById('scanKode').value = '';
-      document.getElementById('scanKode').focus();
-    });
-
-    // Scanner USB/bluetooth biasanya kirim Enter setelah kode
-    document.getElementById('scanKode').addEventListener('keydown', (e) => {
-      if (e.key === 'Enter') {
-        e.preventDefault();
-        document.getElementById('btnProsesScan').click();
-      }
+    document.getElementById('btnScanHasilOk').addEventListener('click', () => {
+      closeModal('modalScanHasil');
     });
 
     // ========== KAMERA QR / BARCODE ==========
@@ -3778,33 +3830,30 @@
           return;
         }
         html5QrCode = new Html5Qrcode('qrReader');
+        // Area scan lebih lebar vertikal agar bagian hitam berkurang
+        const boxW = Math.min(window.innerWidth - 48, 320);
+        const boxH = Math.round(boxW * 0.55);
         await html5QrCode.start(
-          { facingMode: 'environment' }, // kamera belakang
+          { facingMode: 'environment' },
           {
             fps: 10,
-            qrbox: { width: 250, height: 150 },
-            aspectRatio: 1.5
+            qrbox: { width: boxW, height: boxH },
+            aspectRatio: 1.0
           },
           async (decodedText) => {
-            // Hindari scan berulang kode yang sama dalam 3 detik
             const now = Date.now();
             if (decodedText === lastScanCode && now - lastScanTime < 3000) return;
             lastScanCode = decodedText;
             lastScanTime = now;
-
-            // Getarkan HP jika didukung
             if (navigator.vibrate) navigator.vibrate(100);
-
-            document.getElementById('scanKode').value = decodedText;
             await prosesScan(decodedText);
-            document.getElementById('scanKode').value = '';
           },
-          () => {} // ignore scan failure frames
+          () => {}
         );
         kameraAktif = true;
       } catch (err) {
         console.error(err);
-        alert('Gagal membuka kamera.\n\nPastikan:\n• Izin kamera diizinkan di browser\n• Situs memakai HTTPS (atau localhost)\n\nError: ' + (err.message || err));
+        alert('Gagal membuka kamera.\n\nPastikan:\n• Izin kamera diizinkan di browser\n• Situs memakai HTTPS\n\nError: ' + (err.message || err));
         tutupKamera();
       }
     }
