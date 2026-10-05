@@ -986,9 +986,53 @@
       <div class="placeholder"><div class="icon">✅</div><h2>Validasi Data Lulusan</h2><p>Halaman validasi data lulusan</p></div>
     </section>
 
+    <!-- ========== SCAN BARCODE ========== -->
     <section class="page" id="page-scan-barcode">
-      <div class="placeholder"><div class="icon">📷</div><h2>Scan Barcode</h2><p>Halaman scan barcode absensi</p></div>
+      <div class="page-title">Scan Barcode Absensi</div>
+
+      <div class="card" style="margin-bottom:12px;">
+        <div class="periode-bar">
+          Periode : <b id="scanLabelPeriode">-</b>
+        </div>
+        <div style="margin-top:10px;font-size:13px;">
+          Sesi aktif : <b id="scanLabelSesi">-</b>
+          <span id="scanLabelJam" style="color:#64748b;font-size:12px;"></span>
+        </div>
+        <div class="form-group" style="margin-top:14px;">
+          <label>Scan / Input NISN (Siswa) atau NIP (Guru)</label>
+          <input type="tel" id="scanKode" inputmode="numeric" autocomplete="off"
+                 placeholder="Arahkan scanner atau ketik kode..."
+                 style="font-size:18px;letter-spacing:1px;text-align:center;padding:14px;">
+        </div>
+        <button class="btn btn-primary" id="btnProsesScan" style="width:100%;margin-top:4px;">Proses Scan</button>
+      </div>
+
+      <div id="scanHasil" class="card" style="display:none;margin-bottom:12px;">
+        <div id="scanHasilIcon" style="font-size:36px;text-align:center;"></div>
+        <div id="scanHasilNama" style="text-align:center;font-weight:700;font-size:16px;margin-top:4px;"></div>
+        <div id="scanHasilStatus" style="text-align:center;font-size:14px;margin-top:4px;"></div>
+        <div id="scanHasilKet" style="text-align:center;font-size:12px;color:#64748b;margin-top:4px;"></div>
+      </div>
+
+      <div class="section-title">Riwayat Scan Hari Ini</div>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Jam</th>
+              <th>Nama</th>
+              <th>Tipe</th>
+              <th>Sesi</th>
+              <th>Status</th>
+            </tr>
+          </thead>
+          <tbody id="tbodyScanLog">
+            <tr><td colspan="5" style="text-align:center;padding:16px;color:#94a3b8;">Belum ada scan</td></tr>
+          </tbody>
+        </table>
+      </div>
     </section>
+
     <section class="page" id="page-input-izin">
       <div class="placeholder"><div class="icon">🤒</div><h2>Input Izin / Sakit</h2><p>Halaman input izin atau sakit guru/siswa</p></div>
     </section>
@@ -1716,8 +1760,8 @@
     // Ganti 2 baris di bawah dengan nilai dari:
     // Supabase Dashboard → Project Settings → API
     // ============================================================
-    const SUPABASE_URL = 'https://yhivrwnumfzoncbcapgd.supabase.co';   // <-- ganti
-    const SUPABASE_ANON_KEY = 'sb_publishable_FjTrPaFEwR_tNfxH7puJ_w_KZHI4RuG';              // <-- ganti
+    const SUPABASE_URL = 'https://YOUR_PROJECT_ID.supabase.co';   // <-- ganti
+    const SUPABASE_ANON_KEY = 'YOUR_ANON_PUBLIC_KEY';              // <-- ganti
 
     let supabaseClient = null;
     try {
@@ -2038,6 +2082,7 @@
       if (pageId === 'data-lulusan') loadLulusan();
       if (pageId === 'input-nilai' || pageId === 'daftar-nilai') initNilaiPage(pageId);
       if (pageId === 'pengaturan') loadPengaturan();
+      if (pageId === 'scan-barcode') initScanPage();
     }
 
     // Klik menu
@@ -3398,6 +3443,300 @@
         await loadAktifPeriode(); // refresh label di Input/Daftar Nilai
         alert('Periode aktif diperbarui');
       } catch (e) { alert('Gagal: ' + (e.message || e)); }
+    });
+
+    // ============================================================
+    // SCAN BARCODE ABSENSI
+    // ============================================================
+    let dataSesi = [];
+    let sesiAktif = null; // sesi berdasarkan jam sekarang
+
+    async function loadSesi() {
+      try {
+        if (supabaseClient) {
+          const { data, error } = await supabaseClient.from('sesi').select('*').eq('aktif', true).order('urutan');
+          if (error) throw error;
+          dataSesi = data || [];
+        } else {
+          dataSesi = [
+            { id: 1, nama: 'Sesi 1', urutan: 1, jam_mulai: '07:00', jam_akhir: '08:00', aktif: true },
+            { id: 2, nama: 'Sesi 2', urutan: 2, jam_mulai: '10:00', jam_akhir: '11:00', aktif: true },
+            { id: 3, nama: 'Sesi 3', urutan: 3, jam_mulai: '13:00', jam_akhir: '14:00', aktif: true }
+          ];
+        }
+      } catch (e) {
+        console.error(e);
+        dataSesi = [];
+      }
+    }
+
+    function timeToMinutes(t) {
+      // "07:00" atau "07:00:00" → menit dari 00:00
+      if (!t) return 0;
+      const p = String(t).split(':');
+      return parseInt(p[0]) * 60 + parseInt(p[1] || 0);
+    }
+
+    function getSesiAktifSekarang() {
+      const now = new Date();
+      const nowMin = now.getHours() * 60 + now.getMinutes();
+      // Cari sesi yang jam_mulai <= now <= jam_akhir
+      // Jika di luar semua sesi, ambil sesi terdekat yang sudah lewat jam_mulai (untuk TL)
+      let aktif = null;
+      for (const s of dataSesi) {
+        const mulai = timeToMinutes(s.jam_mulai);
+        const akhir = timeToMinutes(s.jam_akhir);
+        if (nowMin >= mulai && nowMin <= akhir) {
+          aktif = s;
+          break;
+        }
+      }
+      // Jika tidak dalam window sesi, cek sesi terakhir yang jam_mulai sudah lewat hari ini
+      // (masih boleh scan sebagai TL sampai jam_akhir sesi berikutnya / akhir hari)
+      if (!aktif && dataSesi.length) {
+        // Ambil sesi dengan jam_mulai <= now, urutan terbesar
+        const candidates = dataSesi.filter(s => timeToMinutes(s.jam_mulai) <= nowMin);
+        if (candidates.length) {
+          aktif = candidates[candidates.length - 1];
+        } else {
+          // Sebelum sesi 1 → anggap sesi 1 (nanti jadi TW jika sebelum mulai? atau tunggu)
+          aktif = dataSesi[0];
+        }
+      }
+      return aktif;
+    }
+
+    function statusTWTL(sesi) {
+      const now = new Date();
+      const nowMin = now.getHours() * 60 + now.getMinutes();
+      const mulai = timeToMinutes(sesi.jam_mulai);
+      // TW jika scan sebelum atau tepat jam_mulai + toleransi 0 menit (bisa disesuaikan)
+      // TL jika setelah jam_mulai
+      return nowMin <= mulai ? 'TW' : 'TL';
+    }
+
+    async function initScanPage() {
+      await loadAktifPeriode();
+      await loadSesi();
+      sesiAktif = getSesiAktifSekarang();
+
+      const labelPeriode = document.getElementById('scanLabelPeriode');
+      if (labelPeriode) {
+        labelPeriode.textContent = aktifPeriode
+          ? (aktifPeriode.tahun_ajaran + ' || ' + aktifPeriode.semester)
+          : 'Belum ada periode aktif';
+      }
+      const labelSesi = document.getElementById('scanLabelSesi');
+      const labelJam = document.getElementById('scanLabelJam');
+      if (sesiAktif) {
+        labelSesi.textContent = sesiAktif.nama;
+        labelJam.textContent = ' (' + sesiAktif.jam_mulai + ' – ' + sesiAktif.jam_akhir + ')';
+      } else {
+        labelSesi.textContent = 'Tidak ada sesi';
+        labelJam.textContent = '';
+      }
+
+      document.getElementById('scanHasil').style.display = 'none';
+      document.getElementById('scanKode').value = '';
+      setTimeout(() => document.getElementById('scanKode').focus(), 200);
+      await loadScanLog();
+    }
+
+    function tampilHasil(ok, nama, status, ket) {
+      const box = document.getElementById('scanHasil');
+      box.style.display = 'block';
+      document.getElementById('scanHasilIcon').textContent = ok ? '✅' : '❌';
+      document.getElementById('scanHasilNama').textContent = nama || '-';
+      document.getElementById('scanHasilStatus').textContent = status || '';
+      document.getElementById('scanHasilStatus').style.color = ok ? '#166534' : '#991b1b';
+      document.getElementById('scanHasilKet').textContent = ket || '';
+    }
+
+    async function loadScanLog() {
+      const tbody = document.getElementById('tbodyScanLog');
+      const today = new Date().toISOString().slice(0, 10);
+      try {
+        let rows = [];
+        if (supabaseClient) {
+          const { data, error } = await supabaseClient
+            .from('absensi')
+            .select('*')
+            .eq('tanggal', today)
+            .order('jam_scan', { ascending: false })
+            .limit(50);
+          if (error) throw error;
+          rows = data || [];
+        }
+        if (!rows.length) {
+          tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;padding:16px;color:#94a3b8;">Belum ada scan hari ini</td></tr>';
+          return;
+        }
+        tbody.innerHTML = rows.map(r => {
+          const jam = r.jam_scan ? new Date(r.jam_scan).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit', second: '2-digit' }) : '-';
+          let badge = r.status;
+          if (r.status === 'TW') badge = '<span class="badge-status badge-hadir">TW</span>';
+          else if (r.status === 'TL') badge = '<span class="badge-status badge-izin">TL</span>';
+          else if (r.status === 'A') badge = '<span class="badge-status badge-alpha">A</span>';
+          else if (r.status === 'B') badge = '<span class="badge-status badge-sakit">B</span>';
+          return `<tr>
+            <td>${jam}</td>
+            <td>${esc(r.nama)}</td>
+            <td>${r.tipe}</td>
+            <td>${r.sesi_nama || '-'}</td>
+            <td>${badge}</td>
+          </tr>`;
+        }).join('');
+      } catch (e) {
+        console.error(e);
+        tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;padding:16px;color:#94a3b8;">Gagal memuat log</td></tr>';
+      }
+    }
+
+    async function prosesScan(kode) {
+      kode = String(kode || '').trim();
+      if (!kode) {
+        tampilHasil(false, '', 'Gagal', 'Kode kosong');
+        return;
+      }
+      if (!sesiAktif) {
+        tampilHasil(false, '', 'Gagal', 'Tidak ada sesi aktif saat ini');
+        return;
+      }
+      if (!aktifPeriode) {
+        await loadAktifPeriode();
+      }
+
+      const today = new Date().toISOString().slice(0, 10);
+
+      // 1. Cari identitas: siswa by NISN, atau guru by NIP / PIN
+      let person = null;
+      let tipe = null;
+
+      try {
+        if (supabaseClient) {
+          // Cek siswa
+          const { data: siswa } = await supabaseClient.from('siswa').select('id, nama, nisn, status').eq('nisn', kode).maybeSingle();
+          if (siswa) {
+            person = siswa;
+            tipe = 'siswa';
+          } else {
+            // Cek guru by NIP
+            let { data: guru } = await supabaseClient.from('guru').select('id, nama, nip, pin, status').eq('nip', kode).maybeSingle();
+            if (!guru) {
+              // fallback PIN
+              const res = await supabaseClient.from('guru').select('id, nama, nip, pin, status').eq('pin', kode).maybeSingle();
+              guru = res.data;
+            }
+            if (guru) {
+              person = guru;
+              tipe = 'guru';
+            }
+          }
+        } else {
+          // Demo lokal
+          if (!dataSiswa.length) await loadSiswa();
+          if (!dataGuru.length) await loadGuru();
+          const s = dataSiswa.find(x => x.nisn === kode);
+          if (s) { person = s; tipe = 'siswa'; }
+          else {
+            const g = dataGuru.find(x => x.nip === kode || x.pin === kode);
+            if (g) { person = g; tipe = 'guru'; }
+          }
+        }
+
+        if (!person) {
+          tampilHasil(false, kode, 'Tidak ditemukan', 'NISN / NIP tidak terdaftar');
+          return;
+        }
+
+        // 2. Cek apakah sudah punya status A atau B hari ini → ditolak
+        if (supabaseClient) {
+          const { data: abRows } = await supabaseClient
+            .from('absensi')
+            .select('status, sesi_nama')
+            .eq('tanggal', today)
+            .eq('kode', kode)
+            .in('status', ['A', 'B']);
+          if (abRows && abRows.length) {
+            const st = abRows.map(r => r.status).join(',');
+            tampilHasil(false, person.nama, 'Scan Ditolak',
+              'Sudah berstatus ' + st + ' hari ini. Tidak dapat scan di sesi manapun.');
+            return;
+          }
+
+          // 3. Cek sudah scan sesi ini?
+          const { data: dup } = await supabaseClient
+            .from('absensi')
+            .select('id, status, jam_scan')
+            .eq('tanggal', today)
+            .eq('sesi_id', sesiAktif.id)
+            .eq('kode', kode)
+            .maybeSingle();
+          if (dup) {
+            tampilHasil(false, person.nama, 'Scan Ditolak',
+              'Kamu sudah scan sesi ini (' + sesiAktif.nama + ')');
+            return;
+          }
+        }
+
+        // 4. Tentukan TW / TL
+        const status = statusTWTL(sesiAktif);
+        const now = new Date();
+        const ket = status === 'TW'
+          ? 'Tepat waktu – ' + sesiAktif.nama
+          : 'Terlambat – ' + sesiAktif.nama;
+
+        // 5. Simpan
+        const row = {
+          periode_id: aktifPeriode ? aktifPeriode.id : null,
+          tanggal: today,
+          sesi_id: sesiAktif.id,
+          sesi_nama: sesiAktif.nama,
+          sesi_urutan: sesiAktif.urutan,
+          tipe: tipe,
+          ref_id: person.id,
+          kode: kode,
+          nama: person.nama,
+          jam_scan: now.toISOString(),
+          status: status,
+          keterangan: ket
+        };
+
+        if (supabaseClient) {
+          const { error } = await supabaseClient.from('absensi').insert([row]);
+          if (error) {
+            // Unique violation = sudah scan
+            if (error.code === '23505') {
+              tampilHasil(false, person.nama, 'Scan Ditolak', 'Kamu sudah scan sesi ini');
+              return;
+            }
+            throw error;
+          }
+        }
+
+        tampilHasil(true, person.nama,
+          status === 'TW' ? 'TW – Tepat Waktu' : 'TL – Terlambat',
+          ket + ' · ' + now.toLocaleTimeString('id-ID'));
+        await loadScanLog();
+      } catch (e) {
+        console.error(e);
+        tampilHasil(false, '', 'Error', e.message || String(e));
+      }
+    }
+
+    document.getElementById('btnProsesScan').addEventListener('click', () => {
+      const kode = document.getElementById('scanKode').value;
+      prosesScan(kode);
+      document.getElementById('scanKode').value = '';
+      document.getElementById('scanKode').focus();
+    });
+
+    // Scanner barcode biasanya kirim Enter setelah kode
+    document.getElementById('scanKode').addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        document.getElementById('btnProsesScan').click();
+      }
     });
 
     // Inisialisasi
