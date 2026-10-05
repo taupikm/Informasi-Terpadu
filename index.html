@@ -1373,6 +1373,82 @@
           </div>
         </div>
       </div>
+
+      <!-- Section Sesi + Hari Libur (satu kelompok) -->
+      <div class="accordion">
+        <button type="button" class="accordion-header" data-acc="accSesiLiburBody">
+          <span>⏰ Sesi & Hari Libur</span>
+          <span class="acc-icon">▼</span>
+        </button>
+        <div class="accordion-body" id="accSesiLiburBody">
+          <div style="font-size:13px;font-weight:700;margin-bottom:8px;">Setting Sesi</div>
+          <div class="toolbar">
+            <button class="btn btn-primary" id="btnTambahSesi">+ Tambah</button>
+            <button class="btn btn-secondary" id="btnEditSesi">✏️ Edit</button>
+            <button class="btn btn-outline" id="btnHapusSesi" style="color:#ef4444;border-color:#fca5a5;">🗑️</button>
+            <span class="toolbar-info" id="infoSesiTbl">0 data</span>
+          </div>
+          <div class="table-wrap" style="margin-bottom:16px;">
+            <table>
+              <thead>
+                <tr>
+                  <th style="width:36px;"><input type="checkbox" id="checkAllSesi"></th>
+                  <th>No</th>
+                  <th>Nama</th>
+                  <th>Urutan</th>
+                  <th>Jam Mulai</th>
+                  <th>Jam Akhir</th>
+                  <th>Aktif</th>
+                </tr>
+              </thead>
+              <tbody id="tbodySesi">
+                <tr><td colspan="7" style="text-align:center;padding:16px;color:#94a3b8;">Memuat...</td></tr>
+              </tbody>
+            </table>
+          </div>
+
+          <div style="font-size:13px;font-weight:700;margin-bottom:8px;">Hari Libur</div>
+          <p style="font-size:11px;color:#64748b;margin-bottom:8px;">Pada hari libur, kamera scanner &amp; sidik jari nonaktif.</p>
+          <div class="toolbar">
+            <button class="btn btn-primary" id="btnTambahLibur">+ Tambah</button>
+            <button class="btn btn-outline" id="btnHapusLibur" style="color:#ef4444;border-color:#fca5a5;">🗑️</button>
+            <span class="toolbar-info" id="infoLibur">0 data</span>
+          </div>
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th style="width:36px;"><input type="checkbox" id="checkAllLibur"></th>
+                  <th>No</th>
+                  <th>Tanggal</th>
+                  <th>Keterangan</th>
+                </tr>
+              </thead>
+              <tbody id="tbodyLibur">
+                <tr><td colspan="4" style="text-align:center;padding:16px;color:#94a3b8;">Memuat...</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- Section Izin Sidik Jari -->
+      <div class="accordion">
+        <button type="button" class="accordion-header" data-acc="accIzinFpBody">
+          <span>👆 Izin Sidik Jari</span>
+          <span class="acc-icon">▼</span>
+        </button>
+        <div class="accordion-body" id="accIzinFpBody">
+          <p style="font-size:12px;color:#64748b;margin-bottom:10px;">Centang user yang diizinkan memakai fitur sidik jari, lalu simpan.</p>
+          <div class="toolbar">
+            <button class="btn btn-primary" id="btnSimpanIzinFp">💾 Simpan Izin</button>
+            <span class="toolbar-info" id="infoIzinFp">0 dipilih</span>
+          </div>
+          <div id="listIzinFp" class="check-list" style="max-height:280px;">
+            <span style="color:#94a3b8;font-size:12px;">Memuat daftar user...</span>
+          </div>
+        </div>
+      </div>
     </section>
 
   </main>
@@ -1392,8 +1468,9 @@
       <div class="modal-body">
         <div class="form-group">
           <label>NISN (Siswa) atau PIN (Guru/Admin)</label>
-          <input type="tel" id="loginKode" inputmode="numeric" pattern="[0-9]*" maxlength="10"
-                 placeholder="Masukkan NISN / PIN" autocomplete="off" autocapitalize="off" spellcheck="false">
+          <input type="password" id="loginKode" inputmode="numeric" pattern="[0-9]*" maxlength="10"
+                 placeholder="••••••••••" autocomplete="new-password" autocapitalize="off" spellcheck="false"
+                 style="text-align:center;letter-spacing:6px;font-size:20px;">
         </div>
         <p style="font-size:11px;color:#64748b;margin-top:-6px;line-height:1.4;">
           Login dengan NISN (siswa) atau PIN (guru/admin).<br>
@@ -1769,6 +1846,74 @@
       <div class="modal-footer">
         <button class="btn btn-outline" data-close="modalPeriode">Batal</button>
         <button class="btn btn-primary" id="btnSavePeriode">Simpan</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ========== MODAL SESI ========== -->
+  <div class="modal-overlay" id="modalSesi">
+    <div class="modal">
+      <div class="modal-header">
+        <h3 id="modalSesiTitle">Tambah Sesi</h3>
+        <button class="modal-close" data-close="modalSesi">&times;</button>
+      </div>
+      <div class="modal-body">
+        <input type="hidden" id="sesiId">
+        <div class="form-group">
+          <label>Nama Sesi *</label>
+          <input type="text" id="sesiNama" placeholder="Sesi 1">
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label>Urutan *</label>
+            <input type="number" id="sesiUrutan" min="1" value="1">
+          </div>
+          <div class="form-group">
+            <label>Aktif</label>
+            <select id="sesiAktifFlag">
+              <option value="true">Ya</option>
+              <option value="false">Tidak</option>
+            </select>
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label>Jam Mulai *</label>
+            <input type="time" id="sesiJamMulai">
+          </div>
+          <div class="form-group">
+            <label>Jam Akhir *</label>
+            <input type="time" id="sesiJamAkhir">
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-outline" data-close="modalSesi">Batal</button>
+        <button class="btn btn-primary" id="btnSaveSesi">Simpan</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ========== MODAL HARI LIBUR ========== -->
+  <div class="modal-overlay" id="modalLibur">
+    <div class="modal">
+      <div class="modal-header">
+        <h3>Tambah Hari Libur</h3>
+        <button class="modal-close" data-close="modalLibur">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div class="form-group">
+          <label>Tanggal *</label>
+          <input type="date" id="liburTanggal">
+        </div>
+        <div class="form-group">
+          <label>Keterangan</label>
+          <input type="text" id="liburKet" placeholder="Libur nasional / cuti bersama">
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-outline" data-close="modalLibur">Batal</button>
+        <button class="btn btn-primary" id="btnSaveLibur">Simpan</button>
       </div>
     </div>
   </div>
@@ -3329,7 +3474,10 @@
     }
 
     async function loadPengaturan() {
-      await Promise.all([loadMapelTable(), loadKelasTable(), loadPeriodeTable()]);
+      await Promise.all([
+        loadMapelTable(), loadKelasTable(), loadPeriodeTable(),
+        loadSesiTable(), loadLiburTable(), loadIzinFpList()
+      ]);
     }
 
     // ----- MAPEL -----
@@ -3764,6 +3912,35 @@
       // Label tombol sidik jari
       updateLabelSidikJari();
 
+      // Cek hari libur → nonaktifkan kamera & sidik jari
+      const libur = await isHariLiburHariIni();
+      const btnKamera = document.getElementById('btnBukaKamera');
+      const btnFp = document.getElementById('btnSidikJari');
+      if (libur) {
+        if (btnKamera) {
+          btnKamera.disabled = true;
+          btnKamera.textContent = '📷 Nonaktif (Hari Libur)';
+          btnKamera.style.opacity = '0.6';
+        }
+        if (btnFp) {
+          btnFp.disabled = true;
+          btnFp.style.opacity = '0.6';
+          document.getElementById('labelSidikJari').textContent = 'Nonaktif (Hari Libur)';
+        }
+        tampilHasil(false, '', 'Hari Libur', (libur.keterangan || 'Hari ini libur') + ' — absensi nonaktif');
+      } else {
+        if (btnKamera) {
+          btnKamera.disabled = false;
+          btnKamera.textContent = '📷 Buka Kamera';
+          btnKamera.style.opacity = '1';
+        }
+        if (btnFp) {
+          btnFp.disabled = false;
+          btnFp.style.opacity = '1';
+        }
+        updateLabelSidikJari();
+      }
+
       if (typeof tutupKamera === 'function' && typeof kameraAktif !== 'undefined' && kameraAktif) {
         await tutupKamera();
       }
@@ -3814,6 +3991,16 @@
         alert('Login terlebih dahulu untuk mendaftarkan sidik jari.');
         return;
       }
+      const libur = await isHariLiburHariIni();
+      if (libur) {
+        alert('Hari libur — absensi / daftar sidik jari nonaktif.\n' + (libur.keterangan || ''));
+        return;
+      }
+      const izin = await cekIzinSidikJari(currentUserKode);
+      if (!izin) {
+        alert('Anda belum diizinkan memakai sidik jari.\nHubungi Admin untuk mengaktifkan di Pengaturan → Izin Sidik Jari.');
+        return;
+      }
       try {
         const challenge = new Uint8Array(32);
         crypto.getRandomValues(challenge);
@@ -3850,6 +4037,16 @@
     async function absenSidikJari() {
       if (!window.PublicKeyCredential) {
         alert('Perangkat tidak mendukung sidik jari.');
+        return;
+      }
+      const libur = await isHariLiburHariIni();
+      if (libur) {
+        alert('Hari libur — absensi nonaktif.\n' + (libur.keterangan || ''));
+        return;
+      }
+      const izin = await cekIzinSidikJari(currentUserKode);
+      if (!izin) {
+        alert('Anda belum diizinkan memakai sidik jari.');
         return;
       }
       const credId = localStorage.getItem(sidikJariKey());
@@ -4081,6 +4278,11 @@
 
     async function bukaKamera() {
       if (kameraAktif) return;
+      const libur = await isHariLiburHariIni();
+      if (libur) {
+        alert('Hari libur — kamera scanner nonaktif.\n' + (libur.keterangan || ''));
+        return;
+      }
       const wrap = document.getElementById('qrReaderWrap');
       wrap.style.display = 'block';
       document.getElementById('btnBukaKamera').style.display = 'none';
@@ -4154,6 +4356,281 @@
         }
       });
     });
+
+    // ============================================================
+    // SETTING SESI + HARI LIBUR + IZIN SIDIK JARI
+    // ============================================================
+    let dataSesiTbl = [];
+    let dataLibur = [];
+    let dataIzinFp = []; // { tipe, ref_id, kode, nama, aktif }
+
+    async function loadSesiTable() {
+      try {
+        if (supabaseClient) {
+          const { data, error } = await supabaseClient.from('sesi').select('*').order('urutan');
+          if (error) throw error;
+          dataSesiTbl = data || [];
+        } else {
+          dataSesiTbl = [
+            { id: 1, nama: 'Sesi 1', urutan: 1, jam_mulai: '07:00', jam_akhir: '08:00', aktif: true },
+            { id: 2, nama: 'Sesi 2', urutan: 2, jam_mulai: '10:00', jam_akhir: '11:00', aktif: true },
+            { id: 3, nama: 'Sesi 3', urutan: 3, jam_mulai: '13:00', jam_akhir: '14:00', aktif: true }
+          ];
+        }
+      } catch (e) { console.error(e); dataSesiTbl = []; }
+      const tbody = document.getElementById('tbodySesi');
+      if (!tbody) return;
+      document.getElementById('infoSesiTbl').textContent = dataSesiTbl.length + ' data';
+      document.getElementById('checkAllSesi').checked = false;
+      if (!dataSesiTbl.length) {
+        tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;padding:16px;color:#94a3b8;">Belum ada sesi</td></tr>';
+        return;
+      }
+      tbody.innerHTML = dataSesiTbl.map((s, i) => `
+        <tr data-id="${s.id}">
+          <td><input type="checkbox" class="cb-sesi-row" value="${s.id}"></td>
+          <td>${i + 1}</td>
+          <td>${esc(s.nama)}</td>
+          <td>${s.urutan}</td>
+          <td>${s.jam_mulai || '-'}</td>
+          <td>${s.jam_akhir || '-'}</td>
+          <td>${s.aktif ? '<span class="badge-aktif">Aktif</span>' : '<span class="badge-nonaktif">Tidak</span>'}</td>
+        </tr>`).join('');
+    }
+
+    document.getElementById('checkAllSesi')?.addEventListener('change', function () {
+      document.querySelectorAll('.cb-sesi-row').forEach(c => c.checked = this.checked);
+    });
+    document.getElementById('btnTambahSesi')?.addEventListener('click', () => {
+      document.getElementById('modalSesiTitle').textContent = 'Tambah Sesi';
+      document.getElementById('sesiId').value = '';
+      document.getElementById('sesiNama').value = '';
+      document.getElementById('sesiUrutan').value = (dataSesiTbl.length + 1);
+      document.getElementById('sesiJamMulai').value = '07:00';
+      document.getElementById('sesiJamAkhir').value = '08:00';
+      document.getElementById('sesiAktifFlag').value = 'true';
+      openModal('modalSesi');
+    });
+    document.getElementById('btnEditSesi')?.addEventListener('click', () => {
+      const ids = getChecked('cb-sesi-row');
+      if (ids.length !== 1) { alert('Centang tepat 1 sesi'); return; }
+      const s = dataSesiTbl.find(x => String(x.id) === ids[0]);
+      if (!s) return;
+      document.getElementById('modalSesiTitle').textContent = 'Edit Sesi';
+      document.getElementById('sesiId').value = s.id;
+      document.getElementById('sesiNama').value = s.nama || '';
+      document.getElementById('sesiUrutan').value = s.urutan || 1;
+      document.getElementById('sesiJamMulai').value = (s.jam_mulai || '').toString().slice(0, 5);
+      document.getElementById('sesiJamAkhir').value = (s.jam_akhir || '').toString().slice(0, 5);
+      document.getElementById('sesiAktifFlag').value = s.aktif ? 'true' : 'false';
+      openModal('modalSesi');
+    });
+    document.getElementById('btnSaveSesi')?.addEventListener('click', async () => {
+      const id = document.getElementById('sesiId').value;
+      const payload = {
+        nama: document.getElementById('sesiNama').value.trim(),
+        urutan: parseInt(document.getElementById('sesiUrutan').value) || 1,
+        jam_mulai: document.getElementById('sesiJamMulai').value || null,
+        jam_akhir: document.getElementById('sesiJamAkhir').value || null,
+        aktif: document.getElementById('sesiAktifFlag').value === 'true'
+      };
+      if (!payload.nama || !payload.jam_mulai || !payload.jam_akhir) {
+        alert('Nama, Jam Mulai, Jam Akhir wajib'); return;
+      }
+      try {
+        if (supabaseClient) {
+          if (id) {
+            const { error } = await supabaseClient.from('sesi').update(payload).eq('id', id);
+            if (error) throw error;
+          } else {
+            const { error } = await supabaseClient.from('sesi').insert([payload]);
+            if (error) throw error;
+          }
+        } else {
+          if (id) {
+            const idx = dataSesiTbl.findIndex(x => String(x.id) === id);
+            if (idx >= 0) dataSesiTbl[idx] = { ...dataSesiTbl[idx], ...payload };
+          } else {
+            payload.id = Date.now();
+            dataSesiTbl.push(payload);
+          }
+        }
+        closeModal('modalSesi');
+        await loadSesiTable();
+        alert('Sesi disimpan');
+      } catch (e) { alert('Gagal: ' + (e.message || e)); }
+    });
+    document.getElementById('btnHapusSesi')?.addEventListener('click', async () => {
+      const ids = getChecked('cb-sesi-row');
+      if (!ids.length) { alert('Centang sesi yang ingin dihapus'); return; }
+      if (!confirm('Hapus ' + ids.length + ' sesi?')) return;
+      try {
+        if (supabaseClient) {
+          const { data, error } = await supabaseClient.from('sesi').delete().in('id', ids.map(Number)).select('id');
+          if (error) throw error;
+          if (!data || !data.length) throw new Error('Tidak terhapus. Cek RLS.');
+        } else {
+          dataSesiTbl = dataSesiTbl.filter(x => !ids.includes(String(x.id)));
+        }
+        await loadSesiTable();
+        alert('Sesi dihapus');
+      } catch (e) { alert('Gagal: ' + (e.message || e)); }
+    });
+
+    // ----- HARI LIBUR -----
+    async function loadLiburTable() {
+      try {
+        if (supabaseClient) {
+          const { data, error } = await supabaseClient.from('hari_libur').select('*').order('tanggal');
+          if (error) throw error;
+          dataLibur = data || [];
+        } else {
+          dataLibur = [];
+        }
+      } catch (e) { console.error(e); dataLibur = []; }
+      const tbody = document.getElementById('tbodyLibur');
+      if (!tbody) return;
+      document.getElementById('infoLibur').textContent = dataLibur.length + ' data';
+      document.getElementById('checkAllLibur').checked = false;
+      if (!dataLibur.length) {
+        tbody.innerHTML = '<tr><td colspan="4" style="text-align:center;padding:16px;color:#94a3b8;">Belum ada hari libur</td></tr>';
+        return;
+      }
+      tbody.innerHTML = dataLibur.map((r, i) => `
+        <tr data-id="${r.id}">
+          <td><input type="checkbox" class="cb-libur-row" value="${r.id}"></td>
+          <td>${i + 1}</td>
+          <td>${r.tanggal}</td>
+          <td>${esc(r.keterangan || '')}</td>
+        </tr>`).join('');
+    }
+    document.getElementById('checkAllLibur')?.addEventListener('change', function () {
+      document.querySelectorAll('.cb-libur-row').forEach(c => c.checked = this.checked);
+    });
+    document.getElementById('btnTambahLibur')?.addEventListener('click', () => {
+      document.getElementById('liburTanggal').value = '';
+      document.getElementById('liburKet').value = '';
+      openModal('modalLibur');
+    });
+    document.getElementById('btnSaveLibur')?.addEventListener('click', async () => {
+      const tanggal = document.getElementById('liburTanggal').value;
+      const keterangan = document.getElementById('liburKet').value.trim() || null;
+      if (!tanggal) { alert('Tanggal wajib'); return; }
+      try {
+        if (supabaseClient) {
+          const { error } = await supabaseClient.from('hari_libur').upsert([{ tanggal, keterangan }], { onConflict: 'tanggal' });
+          if (error) throw error;
+        } else {
+          dataLibur.push({ id: Date.now(), tanggal, keterangan });
+        }
+        closeModal('modalLibur');
+        await loadLiburTable();
+        alert('Hari libur disimpan');
+      } catch (e) { alert('Gagal: ' + (e.message || e)); }
+    });
+    document.getElementById('btnHapusLibur')?.addEventListener('click', async () => {
+      const ids = getChecked('cb-libur-row');
+      if (!ids.length) { alert('Centang data yang ingin dihapus'); return; }
+      if (!confirm('Hapus ' + ids.length + ' hari libur?')) return;
+      try {
+        if (supabaseClient) {
+          const { error } = await supabaseClient.from('hari_libur').delete().in('id', ids.map(Number));
+          if (error) throw error;
+        } else {
+          dataLibur = dataLibur.filter(x => !ids.includes(String(x.id)));
+        }
+        await loadLiburTable();
+        alert('Hari libur dihapus');
+      } catch (e) { alert('Gagal: ' + (e.message || e)); }
+    });
+
+    async function isHariLiburHariIni() {
+      const today = new Date().toISOString().slice(0, 10);
+      try {
+        if (supabaseClient) {
+          const { data } = await supabaseClient.from('hari_libur').select('id, keterangan').eq('tanggal', today).maybeSingle();
+          return data || null;
+        }
+        return dataLibur.find(r => r.tanggal === today) || null;
+      } catch (e) { return null; }
+    }
+
+    // ----- IZIN SIDIK JARI -----
+    async function loadIzinFpList() {
+      const box = document.getElementById('listIzinFp');
+      if (!box) return;
+      box.innerHTML = '<span style="color:#94a3b8;font-size:12px;">Memuat...</span>';
+      try {
+        let users = [];
+        let allowed = new Set();
+        if (supabaseClient) {
+          const [siswaRes, guruRes, izinRes] = await Promise.all([
+            supabaseClient.from('siswa').select('id, nama, nisn').order('nama'),
+            supabaseClient.from('guru').select('id, nama, pin, nip').order('nama'),
+            supabaseClient.from('izin_sidik_jari').select('tipe, ref_id').eq('aktif', true)
+          ]);
+          (siswaRes.data || []).forEach(s => users.push({ tipe: 'siswa', ref_id: s.id, kode: s.nisn, nama: s.nama }));
+          (guruRes.data || []).forEach(g => users.push({ tipe: 'guru', ref_id: g.id, kode: g.nip || g.pin, nama: g.nama }));
+          (izinRes.data || []).forEach(r => allowed.add(r.tipe + ':' + r.ref_id));
+        } else {
+          if (!dataSiswa.length) await loadSiswa();
+          if (!dataGuru.length) await loadGuru();
+          dataSiswa.forEach(s => users.push({ tipe: 'siswa', ref_id: s.id, kode: s.nisn, nama: s.nama }));
+          dataGuru.forEach(g => users.push({ tipe: 'guru', ref_id: g.id, kode: g.nip || g.pin, nama: g.nama }));
+        }
+        dataIzinFp = users;
+        if (!users.length) {
+          box.innerHTML = '<span style="color:#94a3b8;font-size:12px;">Belum ada data siswa/guru</span>';
+          return;
+        }
+        box.innerHTML = users.map(u => `
+          <label style="width:100%;">
+            <input type="checkbox" class="cb-izin-fp" data-tipe="${u.tipe}" data-ref="${u.ref_id}"
+              data-kode="${esc(u.kode || '')}" data-nama="${esc(u.nama || '')}"
+              ${allowed.has(u.tipe + ':' + u.ref_id) ? 'checked' : ''}>
+            <span style="font-size:12px;">[${u.tipe}] ${esc(u.nama)} <span style="color:#94a3b8;">(${esc(u.kode || '-')})</span></span>
+          </label>`).join('');
+        updateInfoIzinFp();
+        box.querySelectorAll('.cb-izin-fp').forEach(cb => cb.addEventListener('change', updateInfoIzinFp));
+      } catch (e) {
+        console.error(e);
+        box.innerHTML = '<span style="color:#ef4444;font-size:12px;">Gagal memuat: ' + (e.message || e) + '</span>';
+      }
+    }
+    function updateInfoIzinFp() {
+      const n = document.querySelectorAll('.cb-izin-fp:checked').length;
+      const el = document.getElementById('infoIzinFp');
+      if (el) el.textContent = n + ' dipilih';
+    }
+    document.getElementById('btnSimpanIzinFp')?.addEventListener('click', async () => {
+      const checked = [...document.querySelectorAll('.cb-izin-fp:checked')].map(cb => ({
+        tipe: cb.dataset.tipe,
+        ref_id: Number(cb.dataset.ref),
+        kode: cb.dataset.kode || null,
+        nama: cb.dataset.nama || null,
+        aktif: true
+      }));
+      if (!confirm('Simpan izin sidik jari untuk ' + checked.length + ' user?')) return;
+      try {
+        if (supabaseClient) {
+          // Hapus semua lalu insert yang dicentang
+          await supabaseClient.from('izin_sidik_jari').delete().neq('id', 0);
+          if (checked.length) {
+            const { error } = await supabaseClient.from('izin_sidik_jari').insert(checked);
+            if (error) throw error;
+          }
+        }
+        alert('Izin sidik jari disimpan');
+        await loadIzinFpList();
+      } catch (e) { alert('Gagal: ' + (e.message || e)); }
+    });
+
+    async function cekIzinSidikJari(kode) {
+      if (!supabaseClient || !kode) return true; // demo: izinkan
+      const { data } = await supabaseClient.from('izin_sidik_jari')
+        .select('id').eq('kode', kode).eq('aktif', true).maybeSingle();
+      return !!data;
+    }
 
     // Inisialisasi
     // 1. Restore sesi login dari localStorage (agar refresh tidak logout)
