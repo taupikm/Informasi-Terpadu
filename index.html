@@ -3839,30 +3839,17 @@
     function getSesiAktifSekarang() {
       const now = new Date();
       const nowMin = now.getHours() * 60 + now.getMinutes();
-      // Cari sesi yang jam_mulai <= now <= jam_akhir
-      // Jika di luar semua sesi, ambil sesi terdekat yang sudah lewat jam_mulai (untuk TL)
-      let aktif = null;
+      // Hanya sesi yang flag aktif=true DAN jam sekarang di antara jam_mulai – jam_akhir
+      // Di luar jendela jam → null (kamera/scan terkunci)
       for (const s of dataSesi) {
+        if (s.aktif === false) continue;
         const mulai = timeToMinutes(s.jam_mulai);
         const akhir = timeToMinutes(s.jam_akhir);
         if (nowMin >= mulai && nowMin <= akhir) {
-          aktif = s;
-          break;
+          return s;
         }
       }
-      // Jika tidak dalam window sesi, cek sesi terakhir yang jam_mulai sudah lewat hari ini
-      // (masih boleh scan sebagai TL sampai jam_akhir sesi berikutnya / akhir hari)
-      if (!aktif && dataSesi.length) {
-        // Ambil sesi dengan jam_mulai <= now, urutan terbesar
-        const candidates = dataSesi.filter(s => timeToMinutes(s.jam_mulai) <= nowMin);
-        if (candidates.length) {
-          aktif = candidates[candidates.length - 1];
-        } else {
-          // Sebelum sesi 1 → anggap sesi 1 (nanti jadi TW jika sebelum mulai? atau tunggu)
-          aktif = dataSesi[0];
-        }
-      }
-      return aktif;
+      return null;
     }
 
     function statusTWTL(sesi) {
@@ -3891,10 +3878,10 @@
       const labelJam = document.getElementById('scanLabelJam');
       if (sesiAktif) {
         labelSesi.textContent = sesiAktif.nama;
-        labelJam.textContent = ' (' + sesiAktif.jam_mulai + ' – ' + sesiAktif.jam_akhir + ')';
+        labelJam.textContent = ' (' + String(sesiAktif.jam_mulai).slice(0,5) + ' – ' + String(sesiAktif.jam_akhir).slice(0,5) + ')';
       } else {
-        labelSesi.textContent = 'Tidak ada sesi';
-        labelJam.textContent = '';
+        labelSesi.textContent = 'Di luar jam sesi';
+        labelJam.textContent = ' — scanner terkunci';
       }
 
       // Switch Siswa/Guru hanya untuk Admin
@@ -3912,22 +3899,26 @@
       // Label tombol sidik jari
       updateLabelSidikJari();
 
-      // Cek hari libur → nonaktifkan kamera & sidik jari
+      // Kunci kamera/sidik jari jika hari libur ATAU di luar jam sesi
       const libur = await isHariLiburHariIni();
       const btnKamera = document.getElementById('btnBukaKamera');
       const btnFp = document.getElementById('btnSidikJari');
-      if (libur) {
+      const diLuarSesi = !sesiAktif;
+
+      if (libur || diLuarSesi) {
+        const alasan = libur
+          ? ('Hari Libur' + (libur.keterangan ? ' — ' + libur.keterangan : ''))
+          : 'Di luar jam sesi aktif';
         if (btnKamera) {
           btnKamera.disabled = true;
-          btnKamera.textContent = '📷 Nonaktif (Hari Libur)';
+          btnKamera.textContent = libur ? '📷 Nonaktif (Hari Libur)' : '📷 Terkunci (Luar Jam Sesi)';
           btnKamera.style.opacity = '0.6';
         }
         if (btnFp) {
           btnFp.disabled = true;
           btnFp.style.opacity = '0.6';
-          document.getElementById('labelSidikJari').textContent = 'Nonaktif (Hari Libur)';
+          document.getElementById('labelSidikJari').textContent = libur ? 'Nonaktif (Hari Libur)' : 'Terkunci (Luar Jam Sesi)';
         }
-        tampilHasil(false, '', 'Hari Libur', (libur.keterangan || 'Hari ini libur') + ' — absensi nonaktif');
       } else {
         if (btnKamera) {
           btnKamera.disabled = false;
@@ -3996,7 +3987,7 @@
         alert('Hari libur — absensi / daftar sidik jari nonaktif.\n' + (libur.keterangan || ''));
         return;
       }
-      const izin = await cekIzinSidikJari(currentUserKode);
+      const izin = await cekIzinSidikJari();
       if (!izin) {
         alert('Anda belum diizinkan memakai sidik jari.\nHubungi Admin untuk mengaktifkan di Pengaturan → Izin Sidik Jari.');
         return;
@@ -4004,7 +3995,7 @@
       try {
         const challenge = new Uint8Array(32);
         crypto.getRandomValues(challenge);
-        const userIdBytes = new TextEncoder().encode(String(currentUserKode)).slice(0, 32);
+        const userIdBytes = new TextEncoder().encode(String(currentUserKode || currentUserId || 'user')).slice(0, 32);
         const cred = await navigator.credentials.create({
           publicKey: {
             challenge,
@@ -4044,7 +4035,7 @@
         alert('Hari libur — absensi nonaktif.\n' + (libur.keterangan || ''));
         return;
       }
-      const izin = await cekIzinSidikJari(currentUserKode);
+      const izin = await cekIzinSidikJari();
       if (!izin) {
         alert('Anda belum diizinkan memakai sidik jari.');
         return;
@@ -4278,6 +4269,13 @@
 
     async function bukaKamera() {
       if (kameraAktif) return;
+      // Refresh sesi aktif (jam bisa berubah saat halaman tetap terbuka)
+      await loadSesi();
+      sesiAktif = getSesiAktifSekarang();
+      if (!sesiAktif) {
+        alert('Kamera terkunci.\nSaat ini di luar jam sesi aktif.\nScan hanya bisa dilakukan selama jam sesi.');
+        return;
+      }
       const libur = await isHariLiburHariIni();
       if (libur) {
         alert('Hari libur — kamera scanner nonaktif.\n' + (libur.keterangan || ''));
@@ -4570,7 +4568,8 @@
             supabaseClient.from('izin_sidik_jari').select('tipe, ref_id').eq('aktif', true)
           ]);
           (siswaRes.data || []).forEach(s => users.push({ tipe: 'siswa', ref_id: s.id, kode: s.nisn, nama: s.nama }));
-          (guruRes.data || []).forEach(g => users.push({ tipe: 'guru', ref_id: g.id, kode: g.nip || g.pin, nama: g.nama }));
+          // Simpan PIN (bukan NIP) agar selaras dengan kode login guru
+          (guruRes.data || []).forEach(g => users.push({ tipe: 'guru', ref_id: g.id, kode: g.pin || g.nip, nama: g.nama }));
           (izinRes.data || []).forEach(r => allowed.add(r.tipe + ':' + r.ref_id));
         } else {
           if (!dataSiswa.length) await loadSiswa();
@@ -4625,10 +4624,23 @@
       } catch (e) { alert('Gagal: ' + (e.message || e)); }
     });
 
-    async function cekIzinSidikJari(kode) {
-      if (!supabaseClient || !kode) return true; // demo: izinkan
-      const { data } = await supabaseClient.from('izin_sidik_jari')
-        .select('id').eq('kode', kode).eq('aktif', true).maybeSingle();
+    async function cekIzinSidikJari() {
+      // Admin selalu boleh
+      if (currentRole === 'admin') return true;
+      if (!supabaseClient) return true; // mode demo
+      if (!currentUserId || (currentRole !== 'guru' && currentRole !== 'siswa')) return false;
+      const tipe = currentRole === 'guru' ? 'guru' : 'siswa';
+      // Cek berdasarkan tipe + ref_id (lebih andal daripada kode PIN/NIP)
+      const { data, error } = await supabaseClient.from('izin_sidik_jari')
+        .select('id')
+        .eq('tipe', tipe)
+        .eq('ref_id', currentUserId)
+        .eq('aktif', true)
+        .maybeSingle();
+      if (error) {
+        console.warn('cekIzinSidikJari', error);
+        return false;
+      }
       return !!data;
     }
 
