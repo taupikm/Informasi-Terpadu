@@ -430,6 +430,54 @@
       font-size: 12px;
       min-width: 480px;
     }
+    /* Filter rekap: label sejajar kiri, input kanan */
+    .rekap-filter-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 8px;
+    }
+    .rekap-filter-row label {
+      flex: 0 0 110px;
+      font-size: 12px;
+      font-weight: 600;
+      color: #334155;
+      margin: 0;
+    }
+    .rekap-filter-row input,
+    .rekap-filter-row select {
+      flex: 1;
+      min-width: 0;
+      padding: 8px 10px;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      font-size: 13px;
+      background: #fff;
+    }
+    /* Tabel rekap: boleh scroll horizontal, kolom tidak tumpuk */
+    #page-rekap-data .table-wrap {
+      overflow-x: auto;
+      -webkit-overflow-scrolling: touch;
+    }
+    #page-rekap-data #tableRekap {
+      min-width: 640px;
+      width: max-content;
+      table-layout: auto;
+      font-size: 12px;
+    }
+    #page-rekap-data #tableRekap th,
+    #page-rekap-data #tableRekap td {
+      white-space: nowrap;
+      padding: 6px 8px;
+      vertical-align: middle;
+    }
+    #page-rekap-data #tableRekap th:nth-child(4),
+    #page-rekap-data #tableRekap td:nth-child(4) {
+      max-width: 140px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
     /* Tabel rekap dashboard: kompak, tanpa min-width agar 3+ sesi muat di HP */
     #page-dashboard .table-wrap table {
       min-width: 0;
@@ -1130,39 +1178,31 @@
     <section class="page" id="page-rekap-data">
       <div class="page-title">Rekap Data Absensi</div>
       <div class="card" style="margin-bottom:10px;padding:12px;">
-        <div class="form-row">
-          <div class="form-group" style="margin-bottom:8px;">
-            <label>Dari Tanggal</label>
-            <input type="date" id="rekapDari">
-          </div>
-          <div class="form-group" style="margin-bottom:8px;">
-            <label>Sampai Tanggal</label>
-            <input type="date" id="rekapSampai">
-          </div>
+        <div class="rekap-filter-row">
+          <label>Dari Tanggal</label>
+          <input type="date" id="rekapDari">
         </div>
-        <div class="form-row">
-          <div class="form-group" style="margin-bottom:8px;">
-            <label>Nama / NISN / NIP</label>
-            <input type="text" id="rekapNama" placeholder="Kosongkan = semua">
-          </div>
-          <div class="form-group" style="margin-bottom:8px;">
-            <label>Kelas</label>
-            <select id="rekapKelas"><option value="">Semua Kelas</option></select>
-          </div>
+        <div class="rekap-filter-row">
+          <label>Sampai Tanggal</label>
+          <input type="date" id="rekapSampai">
         </div>
-        <div class="form-row">
-          <div class="form-group" style="margin-bottom:0;">
-            <label>Tipe</label>
-            <select id="rekapTipe">
-              <option value="">Semua</option>
-              <option value="siswa">Siswa</option>
-              <option value="guru">Guru</option>
-            </select>
-          </div>
-          <div class="form-group" style="margin-bottom:0;display:flex;align-items:flex-end;gap:6px;">
-            <button class="btn btn-primary" id="btnCariRekap" style="flex:1;">🔍 Cari</button>
-          </div>
+        <div class="rekap-filter-row">
+          <label>Nama / NISN</label>
+          <input type="text" id="rekapNama" placeholder="Kosongkan = semua">
         </div>
+        <div class="rekap-filter-row">
+          <label>Kelas</label>
+          <select id="rekapKelas"><option value="">Semua Kelas</option></select>
+        </div>
+        <div class="rekap-filter-row">
+          <label>Tipe</label>
+          <select id="rekapTipe">
+            <option value="">Semua</option>
+            <option value="siswa">Siswa</option>
+            <option value="guru">Guru</option>
+          </select>
+        </div>
+        <button class="btn btn-primary" id="btnCariRekap" style="width:100%;margin-top:8px;">🔍 Cari</button>
       </div>
       <div class="toolbar" id="toolbarRekapAdmin">
         <button class="btn btn-secondary" id="btnEditRekap">✏️ Edit Status</button>
@@ -1174,7 +1214,7 @@
         <span class="toolbar-info" id="infoRekapView">0 data</span>
       </div>
       <div class="table-wrap">
-        <table id="tableRekap" style="min-width:0;table-layout:fixed;">
+        <table id="tableRekap">
           <thead id="theadRekap">
             <tr>
               <th style="width:32px;"><input type="checkbox" id="checkAllRekap"></th>
@@ -5485,14 +5525,14 @@
       const nSesi = rekapSesiList.length;
 
       let h = '<tr>';
-      h += '<th style="width:28px;padding:4px;"><input type="checkbox" id="checkAllRekap"></th>';
-      h += '<th style="width:28px;padding:4px;font-size:10px;">No</th>';
-      h += '<th style="padding:4px;font-size:10px;">NISN/NIP</th>';
-      h += '<th style="padding:4px;font-size:10px;">Nama</th>';
+      h += '<th><input type="checkbox" id="checkAllRekap"></th>';
+      h += '<th>No</th>';
+      h += '<th>NISN/NIP</th>';
+      h += '<th>Nama</th>';
       rekapSesiList.forEach((s, i) => {
-        h += '<th style="width:36px;padding:4px 2px;font-size:10px;text-align:center;">S' + (s.urutan != null ? s.urutan : (i + 1)) + '</th>';
+        h += '<th style="text-align:center;">S' + (s.urutan != null ? s.urutan : (i + 1)) + '</th>';
       });
-      h += '<th style="padding:4px;font-size:10px;">Tanggal</th></tr>';
+      h += '<th>Tanggal</th></tr>';
       thead.innerHTML = h;
       document.getElementById('checkAllRekap')?.addEventListener('change', function () {
         document.querySelectorAll('.cb-rekap-row').forEach(c => { c.checked = this.checked; });
@@ -5641,14 +5681,18 @@
               (jamShort ? '<div style="font-size:9px;color:#64748b;">' + jamShort + '</div>' : '') +
               '</td>';
           }).join('');
-          const idList = (row.ids || []).join(',');
+          const idList = (row.ids || []).filter(Boolean).join(',');
           return '<tr>' +
-            '<td style="padding:4px;"><input type="checkbox" class="cb-rekap-row" value="' + esc(idList) + '"></td>' +
-            '<td style="padding:4px;font-size:11px;">' + (i + 1) + '</td>' +
-            '<td style="padding:4px;font-size:10px;">' + esc(row.kode || '–') + '</td>' +
-            '<td style="padding:4px;font-size:11px;overflow:hidden;text-overflow:ellipsis;">' + esc(row.nama) + '</td>' +
+            '<td><input type="checkbox" class="cb-rekap-row" value="' + esc(idList) +
+            '" data-ref="' + esc(String(row.ref_id||'')) +
+            '" data-tipe="' + esc(row.tipe||'') +
+            '" data-tgl="' + esc(row.tanggal||'') +
+            '" data-kode="' + esc(row.kode||'') + '"></td>' +
+            '<td>' + (i + 1) + '</td>' +
+            '<td>' + esc(row.kode || '–') + '</td>' +
+            '<td title="' + esc(row.nama) + '">' + esc(row.nama) + '</td>' +
             cells +
-            '<td style="padding:4px;font-size:10px;white-space:nowrap;">' + esc(row.tanggal) + '</td>' +
+            '<td>' + esc(row.tanggal) + '</td>' +
             '</tr>';
         }).join('');
 
@@ -5795,21 +5839,51 @@
       }
       const boxes = [...document.querySelectorAll('.cb-rekap-row:checked')];
       if (!boxes.length) { alert('Centang data yang ingin dihapus'); return; }
-      // value bisa berisi banyak id (pivot)
+
       const ids = [];
+      const byKey = []; // hapus via ref_id + tanggal + tipe jika belum ada id di DB
       boxes.forEach(b => {
-        String(b.value).split(',').forEach(id => {
+        let hasId = false;
+        String(b.value || '').split(',').forEach(id => {
           const n = Number(id);
-          if (!isNaN(n) && n) ids.push(n);
+          if (!isNaN(n) && n) { ids.push(n); hasId = true; }
         });
+        if (!hasId && b.dataset.ref && b.dataset.tgl) {
+          byKey.push({
+            ref_id: Number(b.dataset.ref),
+            tanggal: b.dataset.tgl,
+            tipe: b.dataset.tipe || '',
+            kode: b.dataset.kode || ''
+          });
+        }
       });
-      if (!ids.length) return;
-      if (!(await showConfirm('Hapus ' + ids.length + ' record absensi terpilih?', 'Hapus Rekap', '🗑️'))) return;
+
+      if (!ids.length && !byKey.length) {
+        alert('Tidak ada record yang bisa dihapus (belum tersimpan di database)');
+        return;
+      }
+      const totalEst = ids.length + byKey.length;
+      if (!(await showConfirm('Hapus ' + totalEst + ' baris absensi terpilih (semua sesi pada tanggal tersebut)?', 'Hapus Rekap', '🗑️'))) return;
+
       try {
         if (supabaseClient) {
-          const { data, error } = await supabaseClient.from('absensi').delete().in('id', ids).select('id');
-          if (error) throw error;
-          if (!data || !data.length) throw new Error('Tidak terhapus. Cek RLS.');
+          let deleted = 0;
+          if (ids.length) {
+            const { data, error } = await supabaseClient.from('absensi').delete().in('id', ids).select('id');
+            if (error) throw error;
+            deleted += (data || []).length;
+          }
+          for (const k of byKey) {
+            let q = supabaseClient.from('absensi').delete()
+              .eq('tanggal', k.tanggal)
+              .eq('tipe', k.tipe)
+              .eq('ref_id', k.ref_id);
+            if (k.kode) q = q.eq('kode', k.kode);
+            const { data, error } = await q.select('id');
+            if (error) throw error;
+            deleted += (data || []).length;
+          }
+          if (!deleted) throw new Error('Tidak terhapus. Cek RLS policy DELETE pada tabel absensi.');
         }
         await loadRekapData();
         alert('Data absensi dihapus');
