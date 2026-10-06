@@ -5460,14 +5460,18 @@
       const kelas = document.getElementById('rekapKelas')?.value || '';
       const tipe = document.getElementById('rekapTipe')?.value || '';
 
-      // Jika tanggal kosong → gunakan rentang tahun ajaran aktif
+      if (!aktifPeriode) await loadAktifPeriode();
+      await loadLiburMap();
+      await loadSesi();
+
       if (!dari || !sampai) {
-        if (!aktifPeriode) await loadAktifPeriode();
         if (aktifPeriode) {
           if (!dari) dari = (aktifPeriode.tgl_mulai || '').toString().slice(0, 10);
           if (!sampai) sampai = (aktifPeriode.tgl_akhir || '').toString().slice(0, 10);
         }
       }
+      if (!dari) dari = new Date().toISOString().slice(0, 10);
+      if (!sampai) sampai = dari;
 
       rekapSesiList = (dataSesi || []).filter(s => s.aktif !== false)
         .sort((a, b) => (a.urutan || 0) - (b.urutan || 0));
@@ -5480,7 +5484,6 @@
       }
       const nSesi = rekapSesiList.length;
 
-      // Header dinamis
       let h = '<tr>';
       h += '<th style="width:28px;padding:4px;"><input type="checkbox" id="checkAllRekap"></th>';
       h += '<th style="width:28px;padding:4px;font-size:10px;">No</th>';
@@ -5489,79 +5492,130 @@
       rekapSesiList.forEach((s, i) => {
         h += '<th style="width:36px;padding:4px 2px;font-size:10px;text-align:center;">S' + (s.urutan != null ? s.urutan : (i + 1)) + '</th>';
       });
-      h += '<th style="padding:4px;font-size:10px;">Tanggal</th>';
-      h += '</tr>';
+      h += '<th style="padding:4px;font-size:10px;">Tanggal</th></tr>';
       thead.innerHTML = h;
       document.getElementById('checkAllRekap')?.addEventListener('change', function () {
         document.querySelectorAll('.cb-rekap-row').forEach(c => { c.checked = this.checked; });
       });
 
       try {
+        const dates = [];
+        {
+          const d0 = new Date(dari + 'T00:00:00');
+          const d1 = new Date(sampai + 'T00:00:00');
+          if (isNaN(d0) || isNaN(d1) || d1 < d0) {
+            tbody.innerHTML = '<tr><td colspan="10" style="text-align:center;color:#ef4444;">Tanggal tidak valid</td></tr>';
+            return;
+          }
+          let cur = new Date(d0);
+          let guard = 0;
+          while (cur <= d1 && guard < 120) {
+            dates.push(cur.toISOString().slice(0, 10));
+            cur.setDate(cur.getDate() + 1);
+            guard++;
+          }
+        }
+
+        // Materialize A/B ke DB untuk tanggal dalam rentang (skip libur)
+        for (const tgl of dates) {
+          if (!isTanggalLibur(tgl)) {
+            try { await materializeAbsensiForDate(tgl); } catch (e) { console.warn('mat', tgl, e); }
+          }
+        }
+
         let rows = [];
         if (supabaseClient) {
-          let query = supabaseClient.from('absensi').select('*').order('tanggal', { ascending: false }).order('nama');
-          if (dari) query = query.gte('tanggal', dari);
-          if (sampai) query = query.lte('tanggal', sampai);
+          let query = supabaseClient.from('absensi').select('*')
+            .gte('tanggal', dari).lte('tanggal', sampai)
+            .order('tanggal', { ascending: false }).order('nama');
           if (tipe) query = query.eq('tipe', tipe);
-          // periode_id opsional — data lama mungkin null
           const { data, error } = await query.limit(10000);
           if (error) throw error;
           rows = data || [];
         }
 
-        // Filter client-side: nama/kode, kelas (perlu join siswa)
+        let people = [];
+        if (supabaseClient) {
+          if (tipe === 'guru' || !tipe) {
+            const { data: gdata } = await supabaseClient.from('guru').select('id, nama, nip, pin').order('nama');
+            (gdata || []).forEach(g => people.push({
+              tipe: 'guru', id: g.id, nama: g.nama, kode: g.nip || g.pin || ''
+            }));
+          }
+          if (tipe === 'siswa' || !tipe) {
+            let sq = supabaseClient.from('siswa').select('id, nama, nisn, kelas');
+            if (kelas) sq = sq.eq('kelas', kelas);
+            const { data: sdata } = await sq.order('nama');
+            (sdata || []).forEach(s => people.push({
+              tipe: 'siswa', id: s.id, nama: s.nama, kode: s.nisn || '', kelas: s.kelas
+            }));
+          }
+        }
+
         if (qNama) {
+          people = people.filter(p =>
+            String(p.nama || '').toLowerCase().includes(qNama) ||
+            String(p.kode || '').toLowerCase().includes(qNama)
+          );
           rows = rows.filter(r =>
             String(r.nama || '').toLowerCase().includes(qNama) ||
             String(r.kode || '').toLowerCase().includes(qNama)
           );
         }
-
-        // Filter kelas: ambil map ref_id siswa → kelas
-        let kelasMap = {};
-        if (kelas && supabaseClient) {
-          const { data: siswaKelas } = await supabaseClient.from('siswa').select('id, kelas').eq('kelas', kelas);
-          const ids = new Set((siswaKelas || []).map(s => Number(s.id)));
-          rows = rows.filter(r => r.tipe === 'siswa' && ids.has(Number(r.ref_id)));
-          (siswaKelas || []).forEach(s => { kelasMap[s.id] = s.kelas; });
-        } else if (supabaseClient && rows.some(r => r.tipe === 'siswa')) {
-          // optional: not loading all
+        if (kelas) {
+          const ids = new Set(people.filter(p => p.tipe === 'siswa').map(p => Number(p.id)));
+          people = people.filter(p => p.tipe === 'guru' || ids.has(Number(p.id)));
+          rows = rows.filter(r => r.tipe !== 'siswa' || ids.has(Number(r.ref_id)));
+        }
+        if (tipe) {
+          people = people.filter(p => p.tipe === tipe);
+          rows = rows.filter(r => r.tipe === tipe);
         }
 
-        // Pivot: key = tanggal + tipe + ref_id/kode
+        // Tampilkan semua orang pada filter jika rentang wajar atau ada filter nama/kelas
+        const showAllPeople = !!(qNama || kelas || dates.length <= 14 || people.length <= 80);
+
         const map = new Map();
-        rows.forEach(r => {
-          const key = [r.tanggal, r.tipe, r.ref_id || r.kode].join('|');
+        function ensureKey(tgl, person) {
+          const key = [tgl, person.tipe, person.id].join('|');
           if (!map.has(key)) {
             map.set(key, {
-              ids: [],
-              tanggal: r.tanggal,
-              tipe: r.tipe,
-              ref_id: r.ref_id,
-              kode: r.kode,
-              nama: r.nama,
-              sesi: {}
+              ids: [], tanggal: tgl, tipe: person.tipe, ref_id: person.id,
+              kode: person.kode, nama: person.nama, sesi: {}
             });
           }
-          const item = map.get(key);
-          item.ids.push(r.id);
-          const sid = r.sesi_id != null ? String(r.sesi_id) : '';
-          const snama = r.sesi_nama || '';
-          // match by id or name or urutan
-          let matched = false;
+          return map.get(key);
+        }
+
+        rows.forEach(r => {
+          const person = { tipe: r.tipe, id: r.ref_id, kode: r.kode, nama: r.nama };
+          const item = ensureKey(r.tanggal, person);
+          if (r.id) item.ids.push(r.id);
           rekapSesiList.forEach(s => {
-            if (Number(s.id) === Number(r.sesi_id) || s.nama === r.sesi_nama) {
-              item.sesi[s.id] = r;
-              matched = true;
-            }
+            if (Number(s.id) === Number(r.sesi_id) || s.nama === r.sesi_nama) item.sesi[s.id] = r;
           });
-          if (!matched && r.sesi_urutan != null) {
-            const s = rekapSesiList.find(x => Number(x.urutan) === Number(r.sesi_urutan));
-            if (s) item.sesi[s.id] = r;
-          }
         });
 
-        dataRekap = Array.from(map.values()).sort((a, b) => {
+        if (showAllPeople) {
+          people.forEach(person => {
+            dates.forEach(tgl => {
+              if (isTanggalLibur(tgl)) return;
+              const item = ensureKey(tgl, person);
+              const dayAbs = rows.filter(r =>
+                r.tanggal === tgl && r.tipe === person.tipe && Number(r.ref_id) === Number(person.id)
+              );
+              rekapSesiList.forEach(ses => {
+                if (item.sesi[ses.id]) return;
+                const ab = resolveAbsensi(person.tipe, person.id, ses, dayAbs, rekapSesiList, tgl);
+                if (ab) item.sesi[ses.id] = ab;
+              });
+            });
+          });
+        }
+
+        dataRekap = Array.from(map.values()).filter(row =>
+          rekapSesiList.some(s => row.sesi[s.id])
+        ).sort((a, b) => {
           if (a.tanggal === b.tanggal) return String(a.nama).localeCompare(String(b.nama));
           return a.tanggal < b.tanggal ? 1 : -1;
         });
@@ -5571,16 +5625,14 @@
         if (iv) iv.textContent = dataRekap.length + ' baris';
 
         if (!dataRekap.length) {
-          tbody.innerHTML = '<tr><td colspan="' + (5 + nSesi) + '" style="text-align:center;padding:16px;color:#94a3b8;">Tidak ada data</td></tr>';
+          tbody.innerHTML = '<tr><td colspan="' + (5 + nSesi) + '" style="text-align:center;padding:16px;color:#94a3b8;">Tidak ada data untuk filter ini</td></tr>';
           return;
         }
 
         tbody.innerHTML = dataRekap.map((row, i) => {
-          // Flatten abs for this person-day for resolveAbsensi
-          const dayAbsFlat = [];
-          Object.keys(row.sesi || {}).forEach(k => { if (row.sesi[k]) dayAbsFlat.push(row.sesi[k]); });
+          const dayAbsFlat = Object.values(row.sesi || {});
           const cells = rekapSesiList.map(s => {
-            const ab = resolveAbsensi(row.tipe, row.ref_id, s, dayAbsFlat, rekapSesiList, row.tanggal);
+            const ab = row.sesi[s.id] || resolveAbsensi(row.tipe, row.ref_id, s, dayAbsFlat, rekapSesiList, row.tanggal);
             if (!ab) return '<td style="text-align:center;padding:4px 2px;color:#cbd5e1;font-size:10px;">–</td>';
             const jam = fmtJam(ab.jam_scan);
             const jamShort = jam ? jam.slice(0, 5) : '';
@@ -5589,7 +5641,7 @@
               (jamShort ? '<div style="font-size:9px;color:#64748b;">' + jamShort + '</div>' : '') +
               '</td>';
           }).join('');
-          const idList = row.ids.join(',');
+          const idList = (row.ids || []).join(',');
           return '<tr>' +
             '<td style="padding:4px;"><input type="checkbox" class="cb-rekap-row" value="' + esc(idList) + '"></td>' +
             '<td style="padding:4px;font-size:11px;">' + (i + 1) + '</td>' +
@@ -5599,14 +5651,12 @@
             '<td style="padding:4px;font-size:10px;white-space:nowrap;">' + esc(row.tanggal) + '</td>' +
             '</tr>';
         }).join('');
-        // Guru: sembunyikan kolom checkbox
+
         if (currentRole !== 'admin') {
           document.querySelectorAll('#tableRekap .cb-rekap-row, #checkAllRekap').forEach(el => {
             el.style.display = 'none';
-            if (el.closest('th') || el.closest('td')) {
-              const cell = el.closest('th') || el.closest('td');
-              if (cell) cell.style.display = 'none';
-            }
+            const cell = el.closest('th') || el.closest('td');
+            if (cell) cell.style.display = 'none';
           });
         }
       } catch (e) {
