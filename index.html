@@ -875,83 +875,102 @@
 
     <!-- DASHBOARD -->
     <section class="page active" id="page-dashboard">
-      <div class="stats-row">
-        <!-- Kiri: Siswa -->
-        <div class="stat-card">
-          <div class="label">Jumlah Siswa</div>
-          <div class="value">482</div>
-          <div class="boxes-grid">
-            <div class="mini-box"><div class="num">168</div><div class="lbl">Kelas 7</div></div>
-            <div class="mini-box"><div class="num">156</div><div class="lbl">Kelas 8</div></div>
-            <div class="mini-box"><div class="num">158</div><div class="lbl">Kelas 9</div></div>
-            <div class="mini-box"><div class="num">245</div><div class="lbl">Laki-laki</div></div>
-            <div class="mini-box"><div class="num">237</div><div class="lbl">Perempuan</div></div>
-            <div class="mini-box"><div class="num">12</div><div class="lbl">Baru</div></div>
-          </div>
+      <!-- Statistik Guru -->
+      <div class="card" style="padding:12px;margin-bottom:10px;">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+          <div style="font-size:13px;font-weight:700;">Statistik Guru</div>
+          <div id="dashTotalGuru" style="background:#e0f2fe;color:#0369a1;font-size:12px;font-weight:700;padding:2px 10px;border-radius:8px;">0</div>
         </div>
-        <!-- Kanan: Guru -->
-        <div class="stat-card guru">
-          <div class="label">Jumlah Guru</div>
-          <div class="value">38</div>
-          <div class="boxes-grid">
-            <div class="mini-box"><div class="num">18</div><div class="lbl">PNS</div></div>
-            <div class="mini-box"><div class="num">14</div><div class="lbl">Honorer</div></div>
-            <div class="mini-box"><div class="num">6</div><div class="lbl">GTT</div></div>
-            <div class="mini-box"><div class="num">15</div><div class="lbl">Laki-laki</div></div>
-            <div class="mini-box"><div class="num">23</div><div class="lbl">Perempuan</div></div>
-            <div class="mini-box"><div class="num">2</div><div class="lbl">Cuti</div></div>
+        <div style="display:grid;grid-template-columns:repeat(6,1fr);gap:4px;text-align:center;font-size:10px;">
+          <div style="border:1px solid #e2e8f0;border-radius:6px;padding:6px 2px;">
+            <div style="font-weight:700;color:#166534;">TW</div>
+            <div id="stGuruTW" style="font-weight:600;margin-top:2px;">0</div>
+          </div>
+          <div style="border:1px solid #e2e8f0;border-radius:6px;padding:6px 2px;">
+            <div style="font-weight:700;color:#a16207;">TL</div>
+            <div id="stGuruTL" style="font-weight:600;margin-top:2px;">0</div>
+          </div>
+          <div style="border:1px solid #e2e8f0;border-radius:6px;padding:6px 2px;">
+            <div style="font-weight:700;color:#991b1b;">Sakit</div>
+            <div id="stGuruSakit" style="font-weight:600;margin-top:2px;">0</div>
+          </div>
+          <div style="border:1px solid #e2e8f0;border-radius:6px;padding:6px 2px;">
+            <div style="font-weight:700;color:#92400e;">Izin</div>
+            <div id="stGuruIzin" style="font-weight:600;margin-top:2px;">0</div>
+          </div>
+          <div style="border:1px solid #e2e8f0;border-radius:6px;padding:6px 2px;">
+            <div style="font-weight:700;color:#475569;">Alpa</div>
+            <div id="stGuruAlpa" style="font-weight:600;margin-top:2px;">0</div>
+          </div>
+          <div style="border:1px solid #e2e8f0;border-radius:6px;padding:6px 2px;">
+            <div style="font-weight:700;color:#7f1d1d;">Bolos</div>
+            <div id="stGuruBolos" style="font-weight:600;margin-top:2px;">0</div>
           </div>
         </div>
       </div>
 
-      <div class="session-bar">
-        <span class="dot"></span>
-        Sesi Berlangsung Saat Ini : Sesi 1 (07:00 - 08:00)
+      <!-- Statistik Siswa -->
+      <div class="card" style="padding:12px;margin-bottom:10px;">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+          <div style="font-size:13px;font-weight:700;">Statistik Siswa</div>
+          <div id="dashTotalSiswa" style="background:#e0f2fe;color:#0369a1;font-size:12px;font-weight:700;padding:2px 10px;border-radius:8px;">0</div>
+        </div>
+        <div style="display:grid;grid-template-columns:repeat(6,1fr);gap:4px;text-align:center;font-size:10px;">
+          <div style="border:1px solid #e2e8f0;border-radius:6px;padding:6px 2px;">
+            <div style="font-weight:700;color:#166534;">TW</div>
+            <div id="stSiswaTW" style="font-weight:600;margin-top:2px;">0</div>
+          </div>
+          <div style="border:1px solid #e2e8f0;border-radius:6px;padding:6px 2px;">
+            <div style="font-weight:700;color:#a16207;">TL</div>
+            <div id="stSiswaTL" style="font-weight:600;margin-top:2px;">0</div>
+          </div>
+          <div style="border:1px solid #e2e8f0;border-radius:6px;padding:6px 2px;">
+            <div style="font-weight:700;color:#991b1b;">Sakit</div>
+            <div id="stSiswaSakit" style="font-weight:600;margin-top:2px;">0</div>
+          </div>
+          <div style="border:1px solid #e2e8f0;border-radius:6px;padding:6px 2px;">
+            <div style="font-weight:700;color:#92400e;">Izin</div>
+            <div id="stSiswaIzin" style="font-weight:600;margin-top:2px;">0</div>
+          </div>
+          <div style="border:1px solid #e2e8f0;border-radius:6px;padding:6px 2px;">
+            <div style="font-weight:700;color:#475569;">Alpa</div>
+            <div id="stSiswaAlpa" style="font-weight:600;margin-top:2px;">0</div>
+          </div>
+          <div style="border:1px solid #e2e8f0;border-radius:6px;padding:6px 2px;">
+            <div style="font-weight:700;color:#7f1d1d;">Bolos</div>
+            <div id="stSiswaBolos" style="font-weight:600;margin-top:2px;">0</div>
+          </div>
+        </div>
       </div>
 
+      <!-- Informasi Sesi -->
+      <div id="dashSesiInfo" style="background:#e0f7fa;border:1px solid #67e8f9;border-radius:12px;padding:12px 14px;text-align:center;margin-bottom:12px;">
+        <div style="font-size:12px;font-weight:600;color:#0e7490;">Sesi Berlangsung</div>
+        <div id="dashSesiDetail" style="font-size:13px;font-weight:700;color:#155e75;margin-top:4px;">Memuat...</div>
+      </div>
+
+      <!-- Rekap Guru -->
       <div class="section-title">Rekap Kehadiran Guru</div>
       <div class="table-wrap">
         <table>
-          <thead>
-            <tr>
-              <th>No</th>
-              <th>Nama</th>
-              <th>L/P</th>
-              <th>Jam Scan</th>
-              <th>Sesi</th>
-              <th>Status</th>
-            </tr>
+          <thead id="theadDashGuru">
+            <tr><th>No</th><th>Nama</th><th>Jam Scan</th></tr>
           </thead>
-          <tbody>
-            <tr><td>1</td><td>Budi Santoso, S.Pd</td><td>L</td><td>06:52</td><td>1</td><td><span class="badge-status badge-hadir">Hadir</span></td></tr>
-            <tr><td>2</td><td>Siti Aminah, S.Pd</td><td>P</td><td>06:58</td><td>1</td><td><span class="badge-status badge-hadir">Hadir</span></td></tr>
-            <tr><td>3</td><td>Ahmad Fauzi, M.Pd</td><td>L</td><td>-</td><td>1</td><td><span class="badge-status badge-izin">Izin</span></td></tr>
-            <tr><td>4</td><td>Rina Wulandari, S.Pd</td><td>P</td><td>07:01</td><td>1</td><td><span class="badge-status badge-hadir">Hadir</span></td></tr>
-            <tr><td>5</td><td>Dedi Kurniawan, S.Pd</td><td>L</td><td>-</td><td>1</td><td><span class="badge-status badge-sakit">Sakit</span></td></tr>
+          <tbody id="tbodyDashGuru">
+            <tr><td colspan="3" style="text-align:center;padding:16px;color:#94a3b8;">Memuat...</td></tr>
           </tbody>
         </table>
       </div>
 
+      <!-- Rekap Siswa -->
       <div class="section-title">Rekap Kehadiran Siswa</div>
       <div class="table-wrap">
         <table>
-          <thead>
-            <tr>
-              <th>No</th>
-              <th>Nama</th>
-              <th>L/P</th>
-              <th>Kelas</th>
-              <th>Jam Scan</th>
-              <th>Sesi</th>
-              <th>Status</th>
-            </tr>
+          <thead id="theadDashSiswa">
+            <tr><th>No</th><th>Nama</th><th>Kelas</th><th>Jam Scan</th></tr>
           </thead>
-          <tbody>
-            <tr><td>1</td><td>Andi Pratama</td><td>L</td><td>7A</td><td>06:45</td><td>1</td><td><span class="badge-status badge-hadir">Hadir</span></td></tr>
-            <tr><td>2</td><td>Salsa Bilah</td><td>P</td><td>7B</td><td>06:50</td><td>1</td><td><span class="badge-status badge-hadir">Hadir</span></td></tr>
-            <tr><td>3</td><td>Rizki Maulana</td><td>L</td><td>8A</td><td>-</td><td>1</td><td><span class="badge-status badge-alpha">Alpha</span></td></tr>
-            <tr><td>4</td><td>Dewi Lestari</td><td>P</td><td>8C</td><td>06:55</td><td>1</td><td><span class="badge-status badge-hadir">Hadir</span></td></tr>
-            <tr><td>5</td><td>Fajar Nugroho</td><td>L</td><td>9A</td><td>-</td><td>1</td><td><span class="badge-status badge-izin">Izin</span></td></tr>
+          <tbody id="tbodyDashSiswa">
+            <tr><td colspan="4" style="text-align:center;padding:16px;color:#94a3b8;">Memuat...</td></tr>
           </tbody>
         </table>
       </div>
@@ -1396,13 +1415,14 @@
                   <th>No</th>
                   <th>Nama</th>
                   <th>Urutan</th>
-                  <th>Jam Mulai</th>
-                  <th>Jam Akhir</th>
+                  <th>Waktu 1</th>
+                  <th>Waktu 2</th>
+                  <th>Waktu 3</th>
                   <th>Aktif</th>
                 </tr>
               </thead>
               <tbody id="tbodySesi">
-                <tr><td colspan="7" style="text-align:center;padding:16px;color:#94a3b8;">Memuat...</td></tr>
+                <tr><td colspan="8" style="text-align:center;padding:16px;color:#94a3b8;">Memuat...</td></tr>
               </tbody>
             </table>
           </div>
@@ -1876,16 +1896,19 @@
             </select>
           </div>
         </div>
-        <div class="form-row">
-          <div class="form-group">
-            <label>Jam Mulai *</label>
-            <input type="time" id="sesiJamMulai">
-          </div>
-          <div class="form-group">
-            <label>Jam Akhir *</label>
-            <input type="time" id="sesiJamAkhir">
-          </div>
+        <div class="form-group">
+          <label>Waktu 1 – Mulai / TW *</label>
+          <input type="time" id="sesiJamMulai">
         </div>
+        <div class="form-group">
+          <label>Waktu 2 – Batas TW→TL *</label>
+          <input type="time" id="sesiJamBatas">
+        </div>
+        <div class="form-group">
+          <label>Waktu 3 – Akhir Sesi *</label>
+          <input type="time" id="sesiJamAkhir">
+        </div>
+        <p style="font-size:11px;color:#64748b;margin-top:-6px;">Contoh: 07:30 – 08:00 – 08:30 → TW sampai 08:00, TL sampai 08:30</p>
       </div>
       <div class="modal-footer">
         <button class="btn btn-outline" data-close="modalSesi">Batal</button>
@@ -2371,6 +2394,7 @@
       if (pageId === 'input-nilai' || pageId === 'daftar-nilai') initNilaiPage(pageId);
       if (pageId === 'pengaturan') loadPengaturan();
       if (pageId === 'scan-barcode') initScanPage();
+      if (pageId === 'dashboard') loadDashboard();
     }
 
     // Klik menu
@@ -3882,6 +3906,166 @@
       } catch (e) { alert('Gagal: ' + (e.message || e)); }
     });
 
+
+    // ============================================================
+    // DASHBOARD – statistik & rekap real
+    // ============================================================
+    function fmtJam(iso) {
+      if (!iso) return '';
+      try {
+        return new Date(iso).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+      } catch (e) { return ''; }
+    }
+    function badgeStatusDash(st) {
+      if (!st) return '';
+      const s = String(st).toUpperCase();
+      if (s === 'TW') return '<span style="color:#16a34a;font-weight:700;">TW</span>';
+      if (s === 'TL') return '<span style="color:#ca8a04;font-weight:700;">TL</span>';
+      if (s === 'A' || s === 'ALPA') return '<span style="color:#dc2626;font-weight:700;">A</span>';
+      if (s === 'B' || s === 'BOLOS') return '<span style="color:#7f1d1d;font-weight:700;">B</span>';
+      if (s === 'SAKIT') return '<span style="color:#991b1b;font-weight:700;">Sakit</span>';
+      if (s === 'IZIN') return '<span style="color:#92400e;font-weight:700;">Izin</span>';
+      return '<span style="font-weight:600;">' + s + '</span>';
+    }
+    function normStatusKey(st) {
+      const s = String(st || '').toUpperCase();
+      if (s === 'TW') return 'TW';
+      if (s === 'TL') return 'TL';
+      if (s === 'SAKIT') return 'Sakit';
+      if (s === 'IZIN') return 'Izin';
+      if (s === 'A' || s === 'ALPA' || s === 'ALPHA') return 'Alpa';
+      if (s === 'B' || s === 'BOLOS') return 'Bolos';
+      return s;
+    }
+
+    async function loadDashboard() {
+      try {
+        await loadSesi();
+        const today = new Date().toISOString().slice(0, 10);
+        const sesiList = (dataSesi || []).filter(s => s.aktif !== false).sort((a, b) => (a.urutan || 0) - (b.urutan || 0));
+        const nSesi = Math.max(sesiList.length, 1);
+
+        // Info sesi berlangsung
+        const aktif = getSesiAktifSekarang();
+        const det = document.getElementById('dashSesiDetail');
+        if (aktif) {
+          const t1 = String(aktif.jam_mulai || '').slice(0, 5);
+          const t2 = String(aktif.jam_batas || '').slice(0, 5) || '-';
+          const t3 = String(aktif.jam_akhir || '').slice(0, 5);
+          det.textContent = aktif.nama + ' : ' + t1 + ' – ' + t2 + ' – ' + t3;
+        } else {
+          det.textContent = 'Di luar jam sesi / tidak ada sesi aktif';
+        }
+
+        // Data absensi hari ini
+        let absRows = [];
+        let guruList = [];
+        let siswaList = [];
+        if (supabaseClient) {
+          const [ab, g, s] = await Promise.all([
+            supabaseClient.from('absensi').select('*').eq('tanggal', today),
+            supabaseClient.from('guru').select('id, nama, status').order('nama'),
+            supabaseClient.from('siswa').select('id, nama, kelas, status').order('nama')
+          ]);
+          absRows = ab.data || [];
+          guruList = g.data || [];
+          siswaList = s.data || [];
+        } else {
+          guruList = dataGuru || [];
+          siswaList = dataSiswa || [];
+        }
+
+        document.getElementById('dashTotalGuru').textContent = guruList.length;
+        document.getElementById('dashTotalSiswa').textContent = siswaList.length;
+
+        // Statistik per status per sesi: "10|10|9"
+        function buildStatStr(tipe, statusKey) {
+          const counts = sesiList.map(ses => {
+            return absRows.filter(r =>
+              r.tipe === tipe &&
+              normStatusKey(r.status) === statusKey &&
+              (Number(r.sesi_id) === Number(ses.id) || r.sesi_nama === ses.nama)
+            ).length;
+          });
+          if (!sesiList.length) return '0';
+          return counts.join(' | ');
+        }
+        const keys = [
+          ['TW', 'TW'], ['TL', 'TL'], ['Sakit', 'Sakit'],
+          ['Izin', 'Izin'], ['Alpa', 'Alpa'], ['Bolos', 'Bolos']
+        ];
+        keys.forEach(([label, key]) => {
+          const elG = document.getElementById('stGuru' + label);
+          const elS = document.getElementById('stSiswa' + label);
+          if (elG) elG.textContent = buildStatStr('guru', key);
+          if (elS) elS.textContent = buildStatStr('siswa', key);
+        });
+
+        // Header dinamis sesi
+        function buildHead(withKelas) {
+          let h = '<tr><th>No</th><th>Nama</th>';
+          if (withKelas) h += '<th>Kelas</th>';
+          h += '<th>Jam Scan</th>';
+          sesiList.forEach(s => { h += '<th>' + esc(s.nama || ('Sesi ' + s.urutan)) + '</th>'; });
+          h += '</tr>';
+          return h;
+        }
+        document.getElementById('theadDashGuru').innerHTML = buildHead(false);
+        document.getElementById('theadDashSiswa').innerHTML = buildHead(true);
+
+        function findAbs(tipe, refId, ses) {
+          return absRows.find(r =>
+            r.tipe === tipe &&
+            Number(r.ref_id) === Number(refId) &&
+            (Number(r.sesi_id) === Number(ses.id) || r.sesi_nama === ses.nama)
+          );
+        }
+
+        // Rekap Guru – semua guru
+        const tbG = document.getElementById('tbodyDashGuru');
+        if (!guruList.length) {
+          tbG.innerHTML = '<tr><td colspan="' + (3 + nSesi) + '" style="text-align:center;padding:16px;color:#94a3b8;">Belum ada data guru</td></tr>';
+        } else {
+          tbG.innerHTML = guruList.map((g, i) => {
+            const jams = [];
+            const cells = sesiList.map(ses => {
+              const ab = findAbs('guru', g.id, ses);
+              if (ab) {
+                jams.push(fmtJam(ab.jam_scan));
+                return '<td style="text-align:center;">' + badgeStatusDash(ab.status) + '</td>';
+              }
+              return '<td style="text-align:center;color:#cbd5e1;">–</td>';
+            }).join('');
+            return '<tr><td>' + (i + 1) + '</td><td>' + esc(g.nama) + '</td><td style="font-size:11px;line-height:1.4;">' +
+              (jams.length ? jams.map(j => esc(j)).join('<br>') : '–') + '</td>' + cells + '</tr>';
+          }).join('');
+        }
+
+        // Rekap Siswa – semua siswa
+        const tbS = document.getElementById('tbodyDashSiswa');
+        if (!siswaList.length) {
+          tbS.innerHTML = '<tr><td colspan="' + (4 + nSesi) + '" style="text-align:center;padding:16px;color:#94a3b8;">Belum ada data siswa</td></tr>';
+        } else {
+          tbS.innerHTML = siswaList.map((s, i) => {
+            const jams = [];
+            const cells = sesiList.map(ses => {
+              const ab = findAbs('siswa', s.id, ses);
+              if (ab) {
+                jams.push(fmtJam(ab.jam_scan));
+                return '<td style="text-align:center;">' + badgeStatusDash(ab.status) + '</td>';
+              }
+              return '<td style="text-align:center;color:#cbd5e1;">–</td>';
+            }).join('');
+            return '<tr><td>' + (i + 1) + '</td><td>' + esc(s.nama) + '</td><td>' + esc(s.kelas || '–') +
+              '</td><td style="font-size:11px;line-height:1.4;">' +
+              (jams.length ? jams.map(j => esc(j)).join('<br>') : '–') + '</td>' + cells + '</tr>';
+          }).join('');
+        }
+      } catch (e) {
+        console.error('loadDashboard', e);
+      }
+    }
+
     // ============================================================
     // SCAN BARCODE ABSENSI
     // ============================================================
@@ -3896,9 +4080,9 @@
           dataSesi = data || [];
         } else {
           dataSesi = [
-            { id: 1, nama: 'Sesi 1', urutan: 1, jam_mulai: '07:00', jam_akhir: '08:00', aktif: true },
-            { id: 2, nama: 'Sesi 2', urutan: 2, jam_mulai: '10:00', jam_akhir: '11:00', aktif: true },
-            { id: 3, nama: 'Sesi 3', urutan: 3, jam_mulai: '13:00', jam_akhir: '14:00', aktif: true }
+            { id: 1, nama: 'Sesi 1', urutan: 1, jam_mulai: '07:30', jam_batas: '08:00', jam_akhir: '08:30', aktif: true },
+            { id: 2, nama: 'Sesi 2', urutan: 2, jam_mulai: '10:00', jam_batas: '10:15', jam_akhir: '11:00', aktif: true },
+            { id: 3, nama: 'Sesi 3', urutan: 3, jam_mulai: '13:00', jam_batas: '13:15', jam_akhir: '14:00', aktif: true }
           ];
         }
       } catch (e) {
@@ -3934,9 +4118,15 @@
       const now = new Date();
       const nowMin = now.getHours() * 60 + now.getMinutes();
       const mulai = timeToMinutes(sesi.jam_mulai);
-      // TW jika scan sebelum atau tepat jam_mulai + toleransi 0 menit (bisa disesuaikan)
-      // TL jika setelah jam_mulai
-      return nowMin <= mulai ? 'TW' : 'TL';
+      // jam_batas = batas TW→TL; fallback tengah jika belum diisi
+      let batas = timeToMinutes(sesi.jam_batas);
+      const akhir = timeToMinutes(sesi.jam_akhir);
+      if (!sesi.jam_batas || !batas) {
+        batas = mulai + Math.floor((akhir - mulai) / 2);
+      }
+      // TW: dari jam_mulai s/d jam_batas
+      // TL: setelah jam_batas s/d jam_akhir
+      return nowMin <= batas ? 'TW' : 'TL';
     }
 
     let scanTipe = 'siswa'; // siswa | guru (untuk admin switch)
@@ -3956,7 +4146,7 @@
       const labelJam = document.getElementById('scanLabelJam');
       if (sesiAktif) {
         labelSesi.textContent = sesiAktif.nama;
-        labelJam.textContent = ' (' + String(sesiAktif.jam_mulai).slice(0,5) + ' – ' + String(sesiAktif.jam_akhir).slice(0,5) + ')';
+        labelJam.textContent = ' (' + String(sesiAktif.jam_mulai||'').slice(0,5) + ' – ' + String(sesiAktif.jam_batas||'').slice(0,5) + ' – ' + String(sesiAktif.jam_akhir||'').slice(0,5) + ')';
       } else {
         labelSesi.textContent = 'Di luar jam sesi';
         labelJam.textContent = ' — scanner terkunci';
@@ -4538,9 +4728,9 @@
           dataSesiTbl = data || [];
         } else {
           dataSesiTbl = [
-            { id: 1, nama: 'Sesi 1', urutan: 1, jam_mulai: '07:00', jam_akhir: '08:00', aktif: true },
-            { id: 2, nama: 'Sesi 2', urutan: 2, jam_mulai: '10:00', jam_akhir: '11:00', aktif: true },
-            { id: 3, nama: 'Sesi 3', urutan: 3, jam_mulai: '13:00', jam_akhir: '14:00', aktif: true }
+            { id: 1, nama: 'Sesi 1', urutan: 1, jam_mulai: '07:30', jam_batas: '08:00', jam_akhir: '08:30', aktif: true },
+            { id: 2, nama: 'Sesi 2', urutan: 2, jam_mulai: '10:00', jam_batas: '10:15', jam_akhir: '11:00', aktif: true },
+            { id: 3, nama: 'Sesi 3', urutan: 3, jam_mulai: '13:00', jam_batas: '13:15', jam_akhir: '14:00', aktif: true }
           ];
         }
       } catch (e) { console.error(e); dataSesiTbl = []; }
@@ -4549,7 +4739,7 @@
       document.getElementById('infoSesiTbl').textContent = dataSesiTbl.length + ' data';
       document.getElementById('checkAllSesi').checked = false;
       if (!dataSesiTbl.length) {
-        tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;padding:16px;color:#94a3b8;">Belum ada sesi</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;padding:16px;color:#94a3b8;">Belum ada sesi</td></tr>';
         return;
       }
       tbody.innerHTML = dataSesiTbl.map((s, i) => `
@@ -4558,8 +4748,9 @@
           <td>${i + 1}</td>
           <td>${esc(s.nama)}</td>
           <td>${s.urutan}</td>
-          <td>${s.jam_mulai || '-'}</td>
-          <td>${s.jam_akhir || '-'}</td>
+          <td>${String(s.jam_mulai||'-').slice(0,5)}</td>
+          <td>${String(s.jam_batas||'-').slice(0,5)}</td>
+          <td>${String(s.jam_akhir||'-').slice(0,5)}</td>
           <td>${s.aktif ? '<span class="badge-aktif">Aktif</span>' : '<span class="badge-nonaktif">Tidak</span>'}</td>
         </tr>`).join('');
     }
@@ -4572,8 +4763,9 @@
       document.getElementById('sesiId').value = '';
       document.getElementById('sesiNama').value = '';
       document.getElementById('sesiUrutan').value = (dataSesiTbl.length + 1);
-      document.getElementById('sesiJamMulai').value = '07:00';
-      document.getElementById('sesiJamAkhir').value = '08:00';
+      document.getElementById('sesiJamMulai').value = '07:30';
+      document.getElementById('sesiJamBatas').value = '08:00';
+      document.getElementById('sesiJamAkhir').value = '08:30';
       document.getElementById('sesiAktifFlag').value = 'true';
       openModal('modalSesi');
     });
@@ -4587,6 +4779,7 @@
       document.getElementById('sesiNama').value = s.nama || '';
       document.getElementById('sesiUrutan').value = s.urutan || 1;
       document.getElementById('sesiJamMulai').value = (s.jam_mulai || '').toString().slice(0, 5);
+      document.getElementById('sesiJamBatas').value = (s.jam_batas || '').toString().slice(0, 5);
       document.getElementById('sesiJamAkhir').value = (s.jam_akhir || '').toString().slice(0, 5);
       document.getElementById('sesiAktifFlag').value = s.aktif ? 'true' : 'false';
       openModal('modalSesi');
@@ -4597,11 +4790,12 @@
         nama: document.getElementById('sesiNama').value.trim(),
         urutan: parseInt(document.getElementById('sesiUrutan').value) || 1,
         jam_mulai: document.getElementById('sesiJamMulai').value || null,
+        jam_batas: document.getElementById('sesiJamBatas').value || null,
         jam_akhir: document.getElementById('sesiJamAkhir').value || null,
         aktif: document.getElementById('sesiAktifFlag').value === 'true'
       };
-      if (!payload.nama || !payload.jam_mulai || !payload.jam_akhir) {
-        alert('Nama, Jam Mulai, Jam Akhir wajib'); return;
+      if (!payload.nama || !payload.jam_mulai || !payload.jam_batas || !payload.jam_akhir) {
+        alert('Nama dan ketiga waktu wajib diisi'); return;
       }
       try {
         if (supabaseClient) {
@@ -4827,6 +5021,8 @@
 
     // 2. Buka halaman sesuai hash URL
     initFromHash();
+    // Muat dashboard jika di halaman utama
+    if (currentPage === 'dashboard') loadDashboard();
 
     // 3. Pasang trap tombol back
     rearmTrap();
