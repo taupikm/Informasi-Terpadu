@@ -4041,73 +4041,84 @@
     }
 
     async function loadDashboard() {
+      const tbG = document.getElementById('tbodyDashGuru');
+      const tbS = document.getElementById('tbodyDashSiswa');
       try {
-        await loadSesi();
+        // Pastikan dataSesi terisi
+        if (typeof loadSesi === 'function') {
+          await loadSesi();
+        }
         const today = new Date().toISOString().slice(0, 10);
-        const sesiList = (dataSesi || []).filter(s => s.aktif !== false).sort((a, b) => (a.urutan || 0) - (b.urutan || 0));
+        const sesiList = (typeof dataSesi !== 'undefined' && dataSesi ? dataSesi : [])
+          .filter(s => s.aktif !== false)
+          .sort((a, b) => (a.urutan || 0) - (b.urutan || 0));
         const nSesi = Math.max(sesiList.length, 1);
 
         // Info sesi berlangsung
-        const aktif = getSesiAktifSekarang();
         const det = document.getElementById('dashSesiDetail');
-        if (aktif) {
-          const t1 = String(aktif.jam_mulai || '').slice(0, 5);
-          const t2 = String(aktif.jam_batas || '').slice(0, 5) || '-';
-          const t3 = String(aktif.jam_akhir || '').slice(0, 5);
-          det.textContent = aktif.nama + ' : ' + t1 + ' – ' + t2 + ' – ' + t3;
-        } else {
-          det.textContent = 'Di luar jam sesi / tidak ada sesi aktif';
+        let aktif = null;
+        try { aktif = getSesiAktifSekarang(); } catch (e) { aktif = null; }
+        if (det) {
+          if (aktif) {
+            const t1 = String(aktif.jam_mulai || '').slice(0, 5);
+            const t2 = String(aktif.jam_batas || '').slice(0, 5) || '-';
+            const t3 = String(aktif.jam_akhir || '').slice(0, 5);
+            det.textContent = (aktif.nama || 'Sesi') + ' : ' + t1 + ' – ' + t2 + ' – ' + t3;
+          } else {
+            det.textContent = 'Di luar jam sesi / tidak ada sesi aktif';
+          }
         }
 
-        // Data absensi hari ini
+        // Data absensi + master
         let absRows = [];
         let guruList = [];
         let siswaList = [];
         if (supabaseClient) {
-          const [ab, g, s] = await Promise.all([
-            supabaseClient.from('absensi').select('*').eq('tanggal', today),
-            supabaseClient.from('guru').select('id, nama, status').order('nama'),
-            supabaseClient.from('siswa').select('id, nama, kelas, status').order('nama')
-          ]);
-          absRows = ab.data || [];
-          guruList = g.data || [];
-          siswaList = s.data || [];
+          try {
+            const [ab, g, s] = await Promise.all([
+              supabaseClient.from('absensi').select('id, tipe, ref_id, kode, nama, status, sesi_id, sesi_nama, jam_scan, tanggal').eq('tanggal', today),
+              supabaseClient.from('guru').select('id, nama').order('nama'),
+              supabaseClient.from('siswa').select('id, nama, kelas').order('nama')
+            ]);
+            if (ab.error) console.warn('absensi', ab.error);
+            if (g.error) console.warn('guru', g.error);
+            if (s.error) console.warn('siswa', s.error);
+            absRows = ab.data || [];
+            guruList = g.data || [];
+            siswaList = s.data || [];
+          } catch (netErr) {
+            console.error('dashboard fetch', netErr);
+          }
         } else {
-          guruList = dataGuru || [];
-          siswaList = dataSiswa || [];
+          guruList = (typeof dataGuru !== 'undefined' && dataGuru) ? dataGuru : [];
+          siswaList = (typeof dataSiswa !== 'undefined' && dataSiswa) ? dataSiswa : [];
         }
 
-        document.getElementById('dashTotalGuru').textContent = guruList.length;
-        document.getElementById('dashTotalSiswa').textContent = siswaList.length;
+        const elTG = document.getElementById('dashTotalGuru');
+        const elTS = document.getElementById('dashTotalSiswa');
+        if (elTG) elTG.textContent = guruList.length;
+        if (elTS) elTS.textContent = siswaList.length;
 
-        // Statistik per status per sesi: "10|10|9"
         function buildStatStr(tipe, statusKey) {
-          const counts = sesiList.map(ses => {
-            return absRows.filter(r =>
-              r.tipe === tipe &&
-              normStatusKey(r.status) === statusKey &&
-              (Number(r.sesi_id) === Number(ses.id) || r.sesi_nama === ses.nama)
-            ).length;
-          });
           if (!sesiList.length) return '0';
-          return counts.join(' | ');
+          return sesiList.map(ses => absRows.filter(r =>
+            r.tipe === tipe &&
+            normStatusKey(r.status) === statusKey &&
+            (Number(r.sesi_id) === Number(ses.id) || r.sesi_nama === ses.nama)
+          ).length).join(' | ');
         }
-        const keys = [
+        [
           ['TW', 'TW'], ['TL', 'TL'], ['Sakit', 'Sakit'],
           ['Izin', 'Izin'], ['Alpa', 'Alpa'], ['Bolos', 'Bolos']
-        ];
-        keys.forEach(([label, key]) => {
+        ].forEach(([label, key]) => {
           const elG = document.getElementById('stGuru' + label);
           const elS = document.getElementById('stSiswa' + label);
           if (elG) elG.textContent = buildStatStr('guru', key);
           if (elS) elS.textContent = buildStatStr('siswa', key);
         });
 
-        // Header dinamis sesi
-        // Header kompak: S1, S2, S3... agar muat di HP
         function shortSesiLabel(s, idx) {
-          const u = s.urutan != null ? s.urutan : (idx + 1);
-          return 'S' + u;
+          return 'S' + (s.urutan != null ? s.urutan : (idx + 1));
         }
         function buildHead(withKelas) {
           let h = '<tr>';
@@ -4117,11 +4128,12 @@
           sesiList.forEach((s, idx) => {
             h += '<th style="width:36px;padding:6px 2px;font-size:10px;text-align:center;">' + shortSesiLabel(s, idx) + '</th>';
           });
-          h += '</tr>';
-          return h;
+          return h + '</tr>';
         }
-        document.getElementById('theadDashGuru').innerHTML = buildHead(false);
-        document.getElementById('theadDashSiswa').innerHTML = buildHead(true);
+        const thG = document.getElementById('theadDashGuru');
+        const thS = document.getElementById('theadDashSiswa');
+        if (thG) thG.innerHTML = buildHead(false);
+        if (thS) thS.innerHTML = buildHead(true);
 
         function findAbs(tipe, refId, ses) {
           return absRows.find(r =>
@@ -4130,8 +4142,6 @@
             (Number(r.sesi_id) === Number(ses.id) || r.sesi_nama === ses.nama)
           );
         }
-
-        // Status + jam kecil di dalam sel sesi (tanpa kolom Jam Scan terpisah)
         function cellSesi(ab) {
           if (!ab) return '<td style="text-align:center;padding:4px 2px;color:#cbd5e1;font-size:10px;">–</td>';
           const jam = fmtJam(ab.jam_scan);
@@ -4142,36 +4152,37 @@
             '</td>';
         }
 
-        // Rekap Guru – semua guru
-        const tbG = document.getElementById('tbodyDashGuru');
-        if (!guruList.length) {
-          tbG.innerHTML = '<tr><td colspan="' + (2 + nSesi) + '" style="text-align:center;padding:16px;color:#94a3b8;">Belum ada data guru</td></tr>';
-        } else {
-          tbG.innerHTML = guruList.map((g, i) => {
-            const cells = sesiList.map(ses => cellSesi(findAbs('guru', g.id, ses))).join('');
-            return '<tr>' +
-              '<td style="padding:6px 4px;font-size:11px;">' + (i + 1) + '</td>' +
-              '<td style="padding:6px 4px;font-size:11px;max-width:110px;overflow:hidden;text-overflow:ellipsis;">' + esc(g.nama) + '</td>' +
-              cells + '</tr>';
-          }).join('');
+        if (tbG) {
+          if (!guruList.length) {
+            tbG.innerHTML = '<tr><td colspan="' + (2 + nSesi) + '" style="text-align:center;padding:16px;color:#94a3b8;">Belum ada data guru</td></tr>';
+          } else {
+            tbG.innerHTML = guruList.map((g, i) => {
+              const cells = sesiList.map(ses => cellSesi(findAbs('guru', g.id, ses))).join('');
+              return '<tr><td style="padding:6px 4px;font-size:11px;">' + (i + 1) +
+                '</td><td style="padding:6px 4px;font-size:11px;max-width:110px;overflow:hidden;text-overflow:ellipsis;">' +
+                esc(g.nama) + '</td>' + cells + '</tr>';
+            }).join('');
+          }
         }
-
-        // Rekap Siswa – semua siswa
-        const tbS = document.getElementById('tbodyDashSiswa');
-        if (!siswaList.length) {
-          tbS.innerHTML = '<tr><td colspan="' + (3 + nSesi) + '" style="text-align:center;padding:16px;color:#94a3b8;">Belum ada data siswa</td></tr>';
-        } else {
-          tbS.innerHTML = siswaList.map((s, i) => {
-            const cells = sesiList.map(ses => cellSesi(findAbs('siswa', s.id, ses))).join('');
-            return '<tr>' +
-              '<td style="padding:6px 4px;font-size:11px;">' + (i + 1) + '</td>' +
-              '<td style="padding:6px 4px;font-size:11px;max-width:100px;overflow:hidden;text-overflow:ellipsis;">' + esc(s.nama) + '</td>' +
-              '<td style="padding:6px 2px;font-size:10px;text-align:center;">' + esc(s.kelas || '–') + '</td>' +
-              cells + '</tr>';
-          }).join('');
+        if (tbS) {
+          if (!siswaList.length) {
+            tbS.innerHTML = '<tr><td colspan="' + (3 + nSesi) + '" style="text-align:center;padding:16px;color:#94a3b8;">Belum ada data siswa</td></tr>';
+          } else {
+            tbS.innerHTML = siswaList.map((s, i) => {
+              const cells = sesiList.map(ses => cellSesi(findAbs('siswa', s.id, ses))).join('');
+              return '<tr><td style="padding:6px 4px;font-size:11px;">' + (i + 1) +
+                '</td><td style="padding:6px 4px;font-size:11px;max-width:100px;overflow:hidden;text-overflow:ellipsis;">' +
+                esc(s.nama) + '</td><td style="padding:6px 2px;font-size:10px;text-align:center;">' +
+                esc(s.kelas || '–') + '</td>' + cells + '</tr>';
+            }).join('');
+          }
         }
       } catch (e) {
         console.error('loadDashboard', e);
+        if (tbG) tbG.innerHTML = '<tr><td colspan="8" style="text-align:center;padding:16px;color:#ef4444;">Gagal memuat: ' + esc(String(e.message || e)) + '</td></tr>';
+        if (tbS) tbS.innerHTML = '<tr><td colspan="8" style="text-align:center;padding:16px;color:#ef4444;">Gagal memuat</td></tr>';
+        const det = document.getElementById('dashSesiDetail');
+        if (det) det.textContent = 'Gagal memuat data';
       }
     }
 
