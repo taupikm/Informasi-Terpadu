@@ -2112,22 +2112,8 @@
       </div>
       <div class="modal-body">
         <p id="editRekapInfo" style="font-size:12px;color:#64748b;margin-bottom:10px;"></p>
-        <div class="form-group">
-          <label>Status baru *</label>
-          <select id="editRekapStatus">
-            <option value="TW">TW – Tepat Waktu</option>
-            <option value="TL">TL – Terlambat</option>
-            <option value="Izin">Izin</option>
-            <option value="Sakit">Sakit</option>
-            <option value="A">A – Alpa</option>
-            <option value="B">B – Bolos</option>
-          </select>
-        </div>
-        <div class="form-group">
-          <label>Keterangan</label>
-          <input type="text" id="editRekapKet" placeholder="Opsional">
-        </div>
-        <p style="font-size:11px;color:#94a3b8;">Status ini diterapkan ke semua record absensi pada baris yang dicentang.</p>
+        <div id="editRekapSesiList" style="display:flex;flex-direction:column;gap:10px;"></div>
+        <p style="font-size:11px;color:#94a3b8;margin-top:10px;">Ubah status per sesi. A dan B saling mengunci.</p>
       </div>
       <div class="modal-footer">
         <button class="btn btn-outline" data-close="modalEditRekap">Batal</button>
@@ -4134,6 +4120,63 @@
       return s;
     }
 
+    function sesiSudahBerakhir(ses, refDate) {
+      const d = refDate ? new Date(refDate) : new Date();
+      const now = new Date();
+      const dayStr = d.toISOString().slice(0, 10);
+      const todayStr = now.toISOString().slice(0, 10);
+      if (dayStr < todayStr) return true;
+      if (dayStr > todayStr) return false;
+      const nowMin = now.getHours() * 60 + now.getMinutes();
+      return nowMin > timeToMinutes(ses.jam_akhir);
+    }
+
+    function resolveAbsensi(tipe, refId, ses, absRows, sesiList, tanggal) {
+      const real = absRows.find(r =>
+        r.tipe === tipe &&
+        Number(r.ref_id) === Number(refId) &&
+        (Number(r.sesi_id) === Number(ses.id) || r.sesi_nama === ses.nama)
+      );
+      if (real) return Object.assign({}, real, { _virtual: false });
+
+      if (!sesiSudahBerakhir(ses, tanggal)) return null;
+
+      const dayRows = absRows.filter(r =>
+        r.tipe === tipe && Number(r.ref_id) === Number(refId)
+      );
+      const hasA = dayRows.some(r => {
+        const k = normStatusKey(r.status);
+        return k === 'Alpa' || r.status === 'A';
+      });
+      const hasB = dayRows.some(r => {
+        const k = normStatusKey(r.status);
+        return k === 'Bolos' || r.status === 'B';
+      });
+      const earlier = sesiList.filter(s => (s.urutan || 0) < (ses.urutan || 0));
+      const scannedEarlier = earlier.some(s => {
+        const x = absRows.find(r =>
+          r.tipe === tipe && Number(r.ref_id) === Number(refId) &&
+          (Number(r.sesi_id) === Number(s.id) || r.sesi_nama === s.nama)
+        );
+        if (!x) return false;
+        const k = normStatusKey(x.status);
+        return k === 'TW' || k === 'TL';
+      });
+
+      let status;
+      if (hasA) status = 'A';
+      else if (hasB) status = 'B';
+      else if (scannedEarlier) status = 'B';
+      else status = 'A';
+
+      return {
+        id: null, tipe: tipe, ref_id: refId, status: status,
+        sesi_id: ses.id, sesi_nama: ses.nama,
+        jam_scan: null, _virtual: true
+      };
+    }
+
+
     async function loadDashboard() {
       const tbG = document.getElementById('tbodyDashGuru');
       const tbS = document.getElementById('tbodyDashSiswa');
@@ -4229,13 +4272,6 @@
         if (thG) thG.innerHTML = buildHead(false);
         if (thS) thS.innerHTML = buildHead(true);
 
-        function findAbs(tipe, refId, ses) {
-          return absRows.find(r =>
-            r.tipe === tipe &&
-            Number(r.ref_id) === Number(refId) &&
-            (Number(r.sesi_id) === Number(ses.id) || r.sesi_nama === ses.nama)
-          );
-        }
         function cellSesi(ab) {
           if (!ab) return '<td style="text-align:center;padding:4px 2px;color:#cbd5e1;font-size:10px;">–</td>';
           const jam = fmtJam(ab.jam_scan);
@@ -4251,7 +4287,7 @@
             tbG.innerHTML = '<tr><td colspan="' + (2 + nSesi) + '" style="text-align:center;padding:16px;color:#94a3b8;">Belum ada data guru</td></tr>';
           } else {
             tbG.innerHTML = guruList.map((g, i) => {
-              const cells = sesiList.map(ses => cellSesi(findAbs('guru', g.id, ses))).join('');
+              const cells = sesiList.map(ses => cellSesi(resolveAbsensi('guru', g.id, ses, absRows, sesiList, today))).join('');
               return '<tr><td style="padding:6px 4px;font-size:11px;">' + (i + 1) +
                 '</td><td style="padding:6px 4px;font-size:11px;max-width:110px;overflow:hidden;text-overflow:ellipsis;">' +
                 esc(g.nama) + '</td>' + cells + '</tr>';
@@ -4263,7 +4299,7 @@
             tbS.innerHTML = '<tr><td colspan="' + (3 + nSesi) + '" style="text-align:center;padding:16px;color:#94a3b8;">Belum ada data siswa</td></tr>';
           } else {
             tbS.innerHTML = siswaList.map((s, i) => {
-              const cells = sesiList.map(ses => cellSesi(findAbs('siswa', s.id, ses))).join('');
+              const cells = sesiList.map(ses => cellSesi(resolveAbsensi('siswa', s.id, ses, absRows, sesiList, today))).join('');
               return '<tr><td style="padding:6px 4px;font-size:11px;">' + (i + 1) +
                 '</td><td style="padding:6px 4px;font-size:11px;max-width:100px;overflow:hidden;text-overflow:ellipsis;">' +
                 esc(s.nama) + '</td><td style="padding:6px 2px;font-size:10px;text-align:center;">' +
@@ -5383,8 +5419,11 @@
         }
 
         tbody.innerHTML = dataRekap.map((row, i) => {
+          // Flatten abs for this person-day for resolveAbsensi
+          const dayAbsFlat = [];
+          Object.keys(row.sesi || {}).forEach(k => { if (row.sesi[k]) dayAbsFlat.push(row.sesi[k]); });
           const cells = rekapSesiList.map(s => {
-            const ab = row.sesi[s.id];
+            const ab = resolveAbsensi(row.tipe, row.ref_id, s, dayAbsFlat, rekapSesiList, row.tanggal);
             if (!ab) return '<td style="text-align:center;padding:4px 2px;color:#cbd5e1;font-size:10px;">–</td>';
             const jam = fmtJam(ab.jam_scan);
             const jamShort = jam ? jam.slice(0, 5) : '';
@@ -5436,40 +5475,109 @@
       return ids;
     }
 
-    document.getElementById('btnEditRekap')?.addEventListener('click', () => {
+    let _editRekapRow = null;
+
+    document.getElementById('btnEditRekap')?.addEventListener('click', async () => {
       if (currentRole !== 'admin') {
         alert('Hanya Admin yang dapat mengedit status absensi');
         return;
       }
-      const ids = getRekapSelectedIds();
-      if (!ids.length) { alert('Centang baris yang ingin diedit'); return; }
+      const boxes = [...document.querySelectorAll('.cb-rekap-row:checked')];
+      if (boxes.length !== 1) {
+        alert('Centang tepat 1 baris (satu orang + satu tanggal) untuk edit per sesi');
+        return;
+      }
+      const idList = String(boxes[0].value).split(',').map(Number).filter(n => !isNaN(n) && n);
+      const row = dataRekap.find(r => r.ids && r.ids.some(id => idList.includes(Number(id))));
+      if (!row) { alert('Data tidak ditemukan, klik Cari ulang'); return; }
+      _editRekapRow = row;
+
       document.getElementById('editRekapInfo').textContent =
-        ids.length + ' record absensi akan diubah statusnya.';
-      document.getElementById('editRekapStatus').value = 'TW';
-      document.getElementById('editRekapKet').value = '';
+        (row.nama || '') + ' · ' + (row.kode || '') + ' · ' + (row.tanggal || '');
+
+      let dayAbs = [];
+      if (supabaseClient) {
+        let q = supabaseClient.from('absensi').select('*').eq('tanggal', row.tanggal).eq('tipe', row.tipe);
+        if (row.ref_id) q = q.eq('ref_id', row.ref_id);
+        else if (row.kode) q = q.eq('kode', row.kode);
+        const { data } = await q;
+        dayAbs = data || [];
+      }
+
+      const sesiList = (rekapSesiList && rekapSesiList.length) ? rekapSesiList :
+        (dataSesi || []).filter(s => s.aktif !== false).sort((a,b)=>(a.urutan||0)-(b.urutan||0));
+
+      const box = document.getElementById('editRekapSesiList');
+      box.innerHTML = sesiList.map(ses => {
+        const ab = resolveAbsensi(row.tipe, row.ref_id, ses, dayAbs, sesiList, row.tanggal);
+        const st = ab ? String(ab.status) : '';
+        const jam = ab && ab.jam_scan ? fmtJam(ab.jam_scan).slice(0, 5) : '–';
+        const t1 = String(ses.jam_mulai || '').slice(0, 5);
+        const t2 = String(ses.jam_batas || '').slice(0, 5);
+        const t3 = String(ses.jam_akhir || '').slice(0, 5);
+        const recId = ab && ab.id ? ab.id : '';
+        const opts = ['TW','TL','Izin','Sakit','A','B'].map(s => {
+          const sel = (st === s) ? ' selected' : '';
+          return '<option value="' + s + '"' + sel + '>' + s + '</option>';
+        }).join('');
+        return '<div style="border:1px solid #e2e8f0;border-radius:8px;padding:10px;">' +
+          '<div style="font-size:12px;font-weight:700;margin-bottom:4px;">' + esc(ses.nama || ('Sesi ' + ses.urutan)) +
+          ' <span style="font-weight:500;color:#64748b;">(' + t1 + ' – ' + t2 + ' – ' + t3 + ')</span></div>' +
+          '<div style="font-size:11px;color:#64748b;margin-bottom:6px;">Jam scan: <b>' + jam + '</b>' +
+          (ab && ab._virtual ? ' <span style="color:#f59e0b;">(otomatis)</span>' : '') + '</div>' +
+          '<select class="edit-sesi-status" data-sesi-id="' + ses.id + '" data-sesi-nama="' + esc(ses.nama||'') +
+          '" data-sesi-urutan="' + (ses.urutan||'') + '" data-rec-id="' + recId + '" ' +
+          'style="width:100%;padding:8px;border-radius:8px;border:1px solid #e2e8f0;font-size:13px;">' +
+          opts + '</select></div>';
+      }).join('');
+
       openModal('modalEditRekap');
     });
 
     document.getElementById('btnSaveEditRekap')?.addEventListener('click', async () => {
-      if (currentRole !== 'admin') return;
-      const ids = getRekapSelectedIds();
-      if (!ids.length) { alert('Tidak ada data terpilih'); return; }
-      const status = document.getElementById('editRekapStatus').value;
-      const ket = document.getElementById('editRekapKet').value.trim() || null;
-      if (!status) { alert('Pilih status'); return; }
-      if (!(await showConfirm('Ubah status ' + ids.length + ' record menjadi "' + status + '"?', 'Edit Status', '✏️'))) return;
+      if (currentRole !== 'admin' || !_editRekapRow) return;
+      const row = _editRekapRow;
+      const selects = [...document.querySelectorAll('.edit-sesi-status')];
+      if (!(await showConfirm('Simpan status semua sesi untuk ' + (row.nama||'') + '?', 'Edit Status', '✏️'))) return;
       try {
-        if (supabaseClient) {
-          const payload = { status: status };
-          if (ket) payload.keterangan = ket;
-          const { error } = await supabaseClient.from('absensi').update(payload).in('id', ids);
-          if (error) throw error;
+        if (!supabaseClient) { alert('Butuh koneksi Supabase'); return; }
+        if (!aktifPeriode) await loadAktifPeriode();
+        for (const sel of selects) {
+          const status = sel.value;
+          if (!status) continue;
+          const recId = sel.dataset.recId;
+          const sesiId = Number(sel.dataset.sesiId);
+          const sesiNama = sel.dataset.sesiNama;
+          const sesiUrutan = sel.dataset.sesiUrutan ? Number(sel.dataset.sesiUrutan) : null;
+          if (recId) {
+            const { error } = await supabaseClient.from('absensi')
+              .update({ status: status, keterangan: 'Edit admin' }).eq('id', Number(recId));
+            if (error) throw error;
+          } else {
+            const payload = {
+              periode_id: aktifPeriode ? aktifPeriode.id : null,
+              tanggal: row.tanggal,
+              sesi_id: sesiId,
+              sesi_nama: sesiNama,
+              sesi_urutan: sesiUrutan,
+              tipe: row.tipe,
+              ref_id: row.ref_id,
+              kode: row.kode,
+              nama: row.nama,
+              jam_scan: null,
+              status: status,
+              keterangan: 'Edit admin / otomatis'
+            };
+            const { error } = await supabaseClient.from('absensi').insert([payload]);
+            if (error) throw error;
+          }
         }
         closeModal('modalEditRekap');
+        _editRekapRow = null;
         await loadRekapData();
-        alert('Status berhasil diubah');
+        alert('Status sesi berhasil disimpan');
       } catch (e) {
-        alert('Gagal edit: ' + (e.message || e));
+        alert('Gagal simpan: ' + (e.message || e));
       }
     });
 
