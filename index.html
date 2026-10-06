@@ -1128,7 +1128,62 @@
       </div>
     </section>
     <section class="page" id="page-rekap-data">
-      <div class="placeholder"><div class="icon">📑</div><h2>Rekap Data</h2><p>Halaman rekap data kehadiran</p></div>
+      <div class="page-title">Rekap Data Absensi</div>
+      <div class="card" style="margin-bottom:10px;padding:12px;">
+        <div class="form-row">
+          <div class="form-group" style="margin-bottom:8px;">
+            <label>Dari Tanggal</label>
+            <input type="date" id="rekapDari">
+          </div>
+          <div class="form-group" style="margin-bottom:8px;">
+            <label>Sampai Tanggal</label>
+            <input type="date" id="rekapSampai">
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group" style="margin-bottom:8px;">
+            <label>Nama / NISN / NIP</label>
+            <input type="text" id="rekapNama" placeholder="Kosongkan = semua">
+          </div>
+          <div class="form-group" style="margin-bottom:8px;">
+            <label>Kelas</label>
+            <select id="rekapKelas"><option value="">Semua Kelas</option></select>
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group" style="margin-bottom:0;">
+            <label>Tipe</label>
+            <select id="rekapTipe">
+              <option value="">Semua</option>
+              <option value="siswa">Siswa</option>
+              <option value="guru">Guru</option>
+            </select>
+          </div>
+          <div class="form-group" style="margin-bottom:0;display:flex;align-items:flex-end;gap:6px;">
+            <button class="btn btn-primary" id="btnCariRekap" style="flex:1;">🔍 Cari</button>
+          </div>
+        </div>
+      </div>
+      <div class="toolbar">
+        <button class="btn btn-outline" id="btnHapusRekap" style="color:#ef4444;border-color:#fca5a5;">🗑️ Hapus</button>
+        <span class="toolbar-info" id="infoRekap">0 data</span>
+      </div>
+      <div class="table-wrap">
+        <table id="tableRekap" style="min-width:0;table-layout:fixed;">
+          <thead id="theadRekap">
+            <tr>
+              <th style="width:32px;"><input type="checkbox" id="checkAllRekap"></th>
+              <th>No</th>
+              <th>NISN/NIP</th>
+              <th>Nama</th>
+              <th>Tanggal</th>
+            </tr>
+          </thead>
+          <tbody id="tbodyRekap">
+            <tr><td colspan="5" style="text-align:center;padding:16px;color:#94a3b8;">Pilih filter lalu klik Cari</td></tr>
+          </tbody>
+        </table>
+      </div>
     </section>
     <section class="page" id="page-jadwal-mapel">
       <div class="placeholder"><div class="icon">📅</div><h2>Jadwal Mapel</h2><p>Halaman jadwal mata pelajaran</p></div>
@@ -2496,6 +2551,7 @@
       if (pageId === 'scan-barcode') initScanPage();
       if (pageId === 'dashboard') loadDashboard();
       if (pageId === 'input-izin') initIzinPage();
+      if (pageId === 'rekap-data') initRekapPage();
     }
 
     // Klik menu
@@ -5126,6 +5182,217 @@
       return !!data;
     }
 
+
+
+    // ============================================================
+    // REKAP DATA ABSENSI
+    // ============================================================
+    let dataRekap = [];
+    let rekapSesiList = [];
+
+    async function initRekapPage() {
+      await loadSesi();
+      rekapSesiList = (dataSesi || []).filter(s => s.aktif !== false)
+        .sort((a, b) => (a.urutan || 0) - (b.urutan || 0));
+      // default tanggal: hari ini
+      const today = new Date().toISOString().slice(0, 10);
+      const dari = document.getElementById('rekapDari');
+      const sampai = document.getElementById('rekapSampai');
+      if (dari && !dari.value) dari.value = today;
+      if (sampai && !sampai.value) sampai.value = today;
+      // isi kelas
+      const sel = document.getElementById('rekapKelas');
+      if (sel) {
+        try {
+          let kelas = [];
+          if (supabaseClient) {
+            const { data } = await supabaseClient.from('kelas').select('kelas').order('kelas');
+            kelas = (data || []).map(k => k.kelas);
+          } else if (typeof masterKelas !== 'undefined' && masterKelas.length) {
+            kelas = masterKelas.map(k => k.kelas || k);
+          }
+          const cur = sel.value;
+          sel.innerHTML = '<option value="">Semua Kelas</option>' +
+            kelas.map(k => '<option value="' + esc(k) + '">' + esc(k) + '</option>').join('');
+          if (cur) sel.value = cur;
+        } catch (e) { console.warn(e); }
+      }
+      // auto cari sekali
+      await loadRekapData();
+    }
+
+    async function loadRekapData() {
+      const tbody = document.getElementById('tbodyRekap');
+      const thead = document.getElementById('theadRekap');
+      if (!tbody) return;
+      tbody.innerHTML = '<tr><td colspan="10" style="text-align:center;padding:16px;color:#94a3b8;">Memuat...</td></tr>';
+
+      const dari = document.getElementById('rekapDari')?.value || '';
+      const sampai = document.getElementById('rekapSampai')?.value || '';
+      const qNama = (document.getElementById('rekapNama')?.value || '').trim().toLowerCase();
+      const kelas = document.getElementById('rekapKelas')?.value || '';
+      const tipe = document.getElementById('rekapTipe')?.value || '';
+
+      rekapSesiList = (dataSesi || []).filter(s => s.aktif !== false)
+        .sort((a, b) => (a.urutan || 0) - (b.urutan || 0));
+      if (!rekapSesiList.length) {
+        rekapSesiList = [
+          { id: 1, nama: 'Sesi 1', urutan: 1 },
+          { id: 2, nama: 'Sesi 2', urutan: 2 },
+          { id: 3, nama: 'Sesi 3', urutan: 3 }
+        ];
+      }
+      const nSesi = rekapSesiList.length;
+
+      // Header dinamis
+      let h = '<tr>';
+      h += '<th style="width:28px;padding:4px;"><input type="checkbox" id="checkAllRekap"></th>';
+      h += '<th style="width:28px;padding:4px;font-size:10px;">No</th>';
+      h += '<th style="padding:4px;font-size:10px;">NISN/NIP</th>';
+      h += '<th style="padding:4px;font-size:10px;">Nama</th>';
+      rekapSesiList.forEach((s, i) => {
+        h += '<th style="width:36px;padding:4px 2px;font-size:10px;text-align:center;">S' + (s.urutan != null ? s.urutan : (i + 1)) + '</th>';
+      });
+      h += '<th style="padding:4px;font-size:10px;">Tanggal</th>';
+      h += '</tr>';
+      thead.innerHTML = h;
+      document.getElementById('checkAllRekap')?.addEventListener('change', function () {
+        document.querySelectorAll('.cb-rekap-row').forEach(c => { c.checked = this.checked; });
+      });
+
+      try {
+        let rows = [];
+        if (supabaseClient) {
+          let query = supabaseClient.from('absensi').select('*').order('tanggal', { ascending: false }).order('nama');
+          if (dari) query = query.gte('tanggal', dari);
+          if (sampai) query = query.lte('tanggal', sampai);
+          if (tipe) query = query.eq('tipe', tipe);
+          const { data, error } = await query.limit(2000);
+          if (error) throw error;
+          rows = data || [];
+        }
+
+        // Filter client-side: nama/kode, kelas (perlu join siswa)
+        if (qNama) {
+          rows = rows.filter(r =>
+            String(r.nama || '').toLowerCase().includes(qNama) ||
+            String(r.kode || '').toLowerCase().includes(qNama)
+          );
+        }
+
+        // Filter kelas: ambil map ref_id siswa → kelas
+        let kelasMap = {};
+        if (kelas && supabaseClient) {
+          const { data: siswaKelas } = await supabaseClient.from('siswa').select('id, kelas').eq('kelas', kelas);
+          const ids = new Set((siswaKelas || []).map(s => Number(s.id)));
+          rows = rows.filter(r => r.tipe === 'siswa' && ids.has(Number(r.ref_id)));
+          (siswaKelas || []).forEach(s => { kelasMap[s.id] = s.kelas; });
+        } else if (supabaseClient && rows.some(r => r.tipe === 'siswa')) {
+          // optional: not loading all
+        }
+
+        // Pivot: key = tanggal + tipe + ref_id/kode
+        const map = new Map();
+        rows.forEach(r => {
+          const key = [r.tanggal, r.tipe, r.ref_id || r.kode].join('|');
+          if (!map.has(key)) {
+            map.set(key, {
+              ids: [],
+              tanggal: r.tanggal,
+              tipe: r.tipe,
+              ref_id: r.ref_id,
+              kode: r.kode,
+              nama: r.nama,
+              sesi: {}
+            });
+          }
+          const item = map.get(key);
+          item.ids.push(r.id);
+          const sid = r.sesi_id != null ? String(r.sesi_id) : '';
+          const snama = r.sesi_nama || '';
+          // match by id or name or urutan
+          let matched = false;
+          rekapSesiList.forEach(s => {
+            if (Number(s.id) === Number(r.sesi_id) || s.nama === r.sesi_nama) {
+              item.sesi[s.id] = r;
+              matched = true;
+            }
+          });
+          if (!matched && r.sesi_urutan != null) {
+            const s = rekapSesiList.find(x => Number(x.urutan) === Number(r.sesi_urutan));
+            if (s) item.sesi[s.id] = r;
+          }
+        });
+
+        dataRekap = Array.from(map.values()).sort((a, b) => {
+          if (a.tanggal === b.tanggal) return String(a.nama).localeCompare(String(b.nama));
+          return a.tanggal < b.tanggal ? 1 : -1;
+        });
+
+        document.getElementById('infoRekap').textContent = dataRekap.length + ' baris';
+
+        if (!dataRekap.length) {
+          tbody.innerHTML = '<tr><td colspan="' + (5 + nSesi) + '" style="text-align:center;padding:16px;color:#94a3b8;">Tidak ada data</td></tr>';
+          return;
+        }
+
+        tbody.innerHTML = dataRekap.map((row, i) => {
+          const cells = rekapSesiList.map(s => {
+            const ab = row.sesi[s.id];
+            if (!ab) return '<td style="text-align:center;padding:4px 2px;color:#cbd5e1;font-size:10px;">–</td>';
+            const jam = fmtJam(ab.jam_scan);
+            const jamShort = jam ? jam.slice(0, 5) : '';
+            return '<td style="text-align:center;padding:4px 2px;line-height:1.25;">' +
+              badgeStatusDash(ab.status) +
+              (jamShort ? '<div style="font-size:9px;color:#64748b;">' + jamShort + '</div>' : '') +
+              '</td>';
+          }).join('');
+          const idList = row.ids.join(',');
+          return '<tr>' +
+            '<td style="padding:4px;"><input type="checkbox" class="cb-rekap-row" value="' + esc(idList) + '"></td>' +
+            '<td style="padding:4px;font-size:11px;">' + (i + 1) + '</td>' +
+            '<td style="padding:4px;font-size:10px;">' + esc(row.kode || '–') + '</td>' +
+            '<td style="padding:4px;font-size:11px;overflow:hidden;text-overflow:ellipsis;">' + esc(row.nama) + '</td>' +
+            cells +
+            '<td style="padding:4px;font-size:10px;white-space:nowrap;">' + esc(row.tanggal) + '</td>' +
+            '</tr>';
+        }).join('');
+      } catch (e) {
+        console.error(e);
+        tbody.innerHTML = '<tr><td colspan="10" style="text-align:center;padding:16px;color:#ef4444;">Gagal: ' + esc(String(e.message || e)) + '</td></tr>';
+      }
+    }
+
+    document.getElementById('btnCariRekap')?.addEventListener('click', () => loadRekapData());
+    document.getElementById('rekapNama')?.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') loadRekapData();
+    });
+
+    document.getElementById('btnHapusRekap')?.addEventListener('click', async () => {
+      const boxes = [...document.querySelectorAll('.cb-rekap-row:checked')];
+      if (!boxes.length) { alert('Centang data yang ingin dihapus'); return; }
+      // value bisa berisi banyak id (pivot)
+      const ids = [];
+      boxes.forEach(b => {
+        String(b.value).split(',').forEach(id => {
+          const n = Number(id);
+          if (!isNaN(n) && n) ids.push(n);
+        });
+      });
+      if (!ids.length) return;
+      if (!(await showConfirm('Hapus ' + ids.length + ' record absensi terpilih?', 'Hapus Rekap', '🗑️'))) return;
+      try {
+        if (supabaseClient) {
+          const { data, error } = await supabaseClient.from('absensi').delete().in('id', ids).select('id');
+          if (error) throw error;
+          if (!data || !data.length) throw new Error('Tidak terhapus. Cek RLS.');
+        }
+        await loadRekapData();
+        alert('Data absensi dihapus');
+      } catch (e) {
+        alert('Gagal hapus: ' + (e.message || e));
+      }
+    });
 
     // ============================================================
     // INPUT IZIN / SAKIT
