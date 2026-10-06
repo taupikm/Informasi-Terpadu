@@ -3964,8 +3964,14 @@
     }
     function isSidikJariTerdaftar() {
       try {
-        return !!localStorage.getItem(sidikJariKey());
-      } catch (e) { return false; }
+        const raw = localStorage.getItem(sidikJariKey());
+        if (!raw) return false;
+        const obj = JSON.parse(raw);
+        // Format baru wajib punya credId (hasil WebAuthn / sensor HP)
+        return !!(obj && obj.credId);
+      } catch (e) {
+        return false;
+      }
     }
     function updateLabelSidikJari() {
       const lab = document.getElementById('labelSidikJari');
@@ -3973,7 +3979,25 @@
       lab.textContent = isSidikJariTerdaftar() ? 'Absen Sidik Jari' : 'Daftar Sidik Jari';
     }
 
-    // Sidik jari TANPA WebAuthn/passkey Google — registrasi perangkat + izin admin
+    // ============================================================
+    // SIDIK JARI ASLI (WebAuthn platform authenticator / fingerprint HP)
+    // Dialog sistem HP akan muncul sebentar — itu wajib untuk sensor nyata.
+    // ============================================================
+    function bufferToBase64url(buf) {
+      const bytes = new Uint8Array(buf);
+      let str = '';
+      bytes.forEach(b => { str += String.fromCharCode(b); });
+      return btoa(str).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+    }
+    function base64urlToBuffer(str) {
+      str = str.replace(/-/g, '+').replace(/_/g, '/');
+      while (str.length % 4) str += '=';
+      const bin = atob(str);
+      const bytes = new Uint8Array(bin.length);
+      for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+      return bytes.buffer;
+    }
+
     async function daftarSidikJari() {
       await loadSesi();
       sesiAktif = getSesiAktifSekarang();
@@ -3987,7 +4011,7 @@
         return;
       }
       if (!currentUserKode && !currentUserId) {
-        tampilHasil(false, '', 'Gagal', 'Login terlebih dahulu untuk mendaftarkan sidik jari');
+        tampilHasil(false, '', 'Gagal', 'Login terlebih dahulu');
         return;
       }
       const izin = await cekIzinSidikJari();
@@ -3996,17 +4020,72 @@
           'Admin belum mengizinkan sidik jari untuk akun Anda');
         return;
       }
-      // Daftar di perangkat ini (tanpa dialog Google/passkey)
-      localStorage.setItem(sidikJariKey(), JSON.stringify({
-        kode: currentUserKode,
-        userId: currentUserId,
-        nama: currentUserName,
-        role: currentRole,
-        at: new Date().toISOString()
-      }));
-      updateLabelSidikJari();
-      tampilHasil(true, currentUserName || currentUserKode, 'Terdaftar',
-        'Sidik jari berhasil didaftarkan di perangkat ini');
+      if (!window.PublicKeyCredential || !navigator.credentials) {
+        tampilHasil(false, '', 'Tidak Didukung',
+          'Browser/HP ini tidak mendukung sidik jari web. Gunakan Chrome terbaru di Android.');
+        return;
+      }
+
+      try {
+        const challenge = new Uint8Array(32);
+        crypto.getRandomValues(challenge);
+        const userIdBytes = new TextEncoder().encode(
+          String(currentRole + ':' + (currentUserId || currentUserKode))
+        ).slice(0, 64);
+
+        // Platform authenticator = sidik jari / face unlock HP (bukan USB key)
+        const cred = await navigator.credentials.create({
+          publicKey: {
+            challenge: challenge,
+            rp: {
+              name: 'SMPN Pantang Mundur',
+              id: location.hostname
+            },
+            user: {
+              id: userIdBytes,
+              name: String(currentUserKode || currentUserId),
+              displayName: String(currentUserName || currentUserKode || 'User')
+            },
+            pubKeyCredParams: [
+              { type: 'public-key', alg: -7 },
+              { type: 'public-key', alg: -257 }
+            ],
+            authenticatorSelection: {
+              authenticatorAttachment: 'platform',
+              userVerification: 'required',
+              residentKey: 'discouraged',
+              requireResidentKey: false
+            },
+            attestation: 'none',
+            timeout: 90000
+          }
+        });
+
+        if (!cred) {
+          tampilHasil(false, '', 'Gagal', 'Tidak ada respons dari sensor');
+          return;
+        }
+
+        const rawId = bufferToBase64url(cred.rawId);
+        localStorage.setItem(sidikJariKey(), JSON.stringify({
+          credId: rawId,
+          kode: currentUserKode,
+          userId: currentUserId,
+          nama: currentUserName,
+          role: currentRole,
+          at: new Date().toISOString()
+        }));
+        updateLabelSidikJari();
+        tampilHasil(true, currentUserName || currentUserKode, 'Terdaftar',
+          'Sidik jari HP berhasil didaftarkan di perangkat ini');
+      } catch (e) {
+        console.error(e);
+        let msg = e.message || String(e);
+        if (e.name === 'NotAllowedError') msg = 'Dibatalkan atau sensor tidak tersedia';
+        if (e.name === 'InvalidStateError') msg = 'Sidik jari sudah terdaftar di browser ini';
+        if (e.name === 'NotSupportedError') msg = 'HP/browser tidak mendukung sidik jari web';
+        tampilHasil(false, '', 'Gagal Daftar', msg);
+      }
     }
 
     async function absenSidikJari() {
@@ -4027,15 +4106,53 @@
           'Admin belum mengizinkan sidik jari untuk akun Anda');
         return;
       }
-      if (!isSidikJariTerdaftar()) {
-        tampilHasil(false, '', 'Belum Terdaftar', 'Daftarkan sidik jari terlebih dahulu');
+      if (!window.PublicKeyCredential || !navigator.credentials) {
+        tampilHasil(false, '', 'Tidak Didukung', 'Browser tidak mendukung sidik jari web');
         return;
       }
-      // Absen langsung untuk user yang login (tanpa dialog Google)
-      if (currentUserKode) {
-        await prosesScan(currentUserKode, true);
-      } else {
-        tampilHasil(false, '', 'Gagal', 'Sesi login tidak ditemukan');
+
+      let stored = null;
+      try {
+        stored = JSON.parse(localStorage.getItem(sidikJariKey()) || 'null');
+      } catch (e) { stored = null; }
+
+      // Kompatibel format lama (string saja)
+      const credId = stored && stored.credId ? stored.credId : (typeof stored === 'string' ? null : null);
+      if (!stored || !credId) {
+        // Belum daftar dengan format baru → minta daftar ulang
+        localStorage.removeItem(sidikJariKey());
+        updateLabelSidikJari();
+        tampilHasil(false, '', 'Belum Terdaftar', 'Daftarkan sidik jari HP terlebih dahulu');
+        return;
+      }
+
+      try {
+        const challenge = new Uint8Array(32);
+        crypto.getRandomValues(challenge);
+        await navigator.credentials.get({
+          publicKey: {
+            challenge: challenge,
+            timeout: 90000,
+            userVerification: 'required',
+            rpId: location.hostname,
+            allowCredentials: [{
+              type: 'public-key',
+              id: base64urlToBuffer(credId),
+              transports: ['internal']
+            }]
+          }
+        });
+        // Fingerprint verified → absen
+        if (currentUserKode) {
+          await prosesScan(currentUserKode, true);
+        } else {
+          tampilHasil(false, '', 'Gagal', 'Sesi login tidak ditemukan');
+        }
+      } catch (e) {
+        console.error(e);
+        let msg = e.message || String(e);
+        if (e.name === 'NotAllowedError') msg = 'Dibatalkan atau sidik jari tidak cocok';
+        tampilHasil(false, '', 'Gagal Absen', msg);
       }
     }
 
