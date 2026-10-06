@@ -4236,13 +4236,18 @@
         if (elTG) elTG.textContent = guruList.length;
         if (elTS) elTS.textContent = siswaList.length;
 
-        function buildStatStr(tipe, statusKey) {
+        // Statistik termasuk A/B otomatis → total status per sesi = jumlah orang
+        function countStatusPerSesi(tipe, people, statusKey) {
           if (!sesiList.length) return '0';
-          return sesiList.map(ses => absRows.filter(r =>
-            r.tipe === tipe &&
-            normStatusKey(r.status) === statusKey &&
-            (Number(r.sesi_id) === Number(ses.id) || r.sesi_nama === ses.nama)
-          ).length).join(' | ');
+          return sesiList.map(ses => {
+            let n = 0;
+            people.forEach(p => {
+              const ab = resolveAbsensi(tipe, p.id, ses, absRows, sesiList, today);
+              if (!ab) return;
+              if (normStatusKey(ab.status) === statusKey) n++;
+            });
+            return n;
+          }).join(' | ');
         }
         [
           ['TW', 'TW'], ['TL', 'TL'], ['Sakit', 'Sakit'],
@@ -4250,8 +4255,8 @@
         ].forEach(([label, key]) => {
           const elG = document.getElementById('stGuru' + label);
           const elS = document.getElementById('stSiswa' + label);
-          if (elG) elG.textContent = buildStatStr('guru', key);
-          if (elS) elS.textContent = buildStatStr('siswa', key);
+          if (elG) elG.textContent = countStatusPerSesi('guru', guruList, key);
+          if (elS) elS.textContent = countStatusPerSesi('siswa', siswaList, key);
         });
 
         function shortSesiLabel(s, idx) {
