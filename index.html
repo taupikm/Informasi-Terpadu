@@ -3974,22 +3974,30 @@
     }
 
     async function daftarSidikJari() {
-      if (!window.PublicKeyCredential) {
-        alert('Perangkat/browser tidak mendukung sidik jari (WebAuthn).\nGunakan HP modern dengan fingerprint.');
-        return;
-      }
-      if (!currentUserKode) {
-        alert('Login terlebih dahulu untuk mendaftarkan sidik jari.');
+      // Validasi dulu — tanpa popup browser WebAuthn jika tidak eligible
+      await loadSesi();
+      sesiAktif = getSesiAktifSekarang();
+      if (!sesiAktif) {
+        tampilHasil(false, '', 'Terkunci', 'Di luar jam sesi aktif — sidik jari nonaktif');
         return;
       }
       const libur = await isHariLiburHariIni();
       if (libur) {
-        alert('Hari libur — absensi / daftar sidik jari nonaktif.\n' + (libur.keterangan || ''));
+        tampilHasil(false, '', 'Hari Libur', (libur.keterangan || 'Hari ini libur') + ' — sidik jari nonaktif');
+        return;
+      }
+      if (!currentUserKode && !currentUserId) {
+        tampilHasil(false, '', 'Gagal', 'Login terlebih dahulu untuk mendaftarkan sidik jari');
         return;
       }
       const izin = await cekIzinSidikJari();
       if (!izin) {
-        alert('Anda belum diizinkan memakai sidik jari.\nHubungi Admin untuk mengaktifkan di Pengaturan → Izin Sidik Jari.');
+        tampilHasil(false, currentUserName || '', 'Tidak Diizinkan',
+          'Admin belum mengizinkan sidik jari untuk akun Anda');
+        return;
+      }
+      if (!window.PublicKeyCredential) {
+        tampilHasil(false, '', 'Tidak Didukung', 'Perangkat/browser tidak mendukung sidik jari');
         return;
       }
       try {
@@ -4002,8 +4010,8 @@
             rp: { name: 'SMPN Pantang Mundur', id: location.hostname },
             user: {
               id: userIdBytes,
-              name: currentUserKode,
-              displayName: currentUserName || currentUserKode
+              name: String(currentUserKode || currentUserId),
+              displayName: currentUserName || String(currentUserKode || currentUserId)
             },
             pubKeyCredParams: [{ type: 'public-key', alg: -7 }, { type: 'public-key', alg: -257 }],
             authenticatorSelection: {
@@ -4017,38 +4025,47 @@
         if (cred) {
           localStorage.setItem(sidikJariKey(), cred.id);
           updateLabelSidikJari();
-          alert('Sidik jari berhasil didaftarkan untuk ' + (currentUserName || currentUserKode));
+          tampilHasil(true, currentUserName || currentUserKode, 'Terdaftar', 'Sidik jari berhasil didaftarkan');
         }
       } catch (e) {
         console.error(e);
-        alert('Gagal daftar sidik jari: ' + (e.message || e));
+        // User cancel / NotAllowedError → jangan tampilkan popup agresif
+        const msg = (e && e.name === 'NotAllowedError')
+          ? 'Dibatalkan atau sidik jari tidak tersedia'
+          : (e.message || String(e));
+        tampilHasil(false, '', 'Gagal Daftar', msg);
       }
     }
 
     async function absenSidikJari() {
-      if (!window.PublicKeyCredential) {
-        alert('Perangkat tidak mendukung sidik jari.');
+      await loadSesi();
+      sesiAktif = getSesiAktifSekarang();
+      if (!sesiAktif) {
+        tampilHasil(false, '', 'Terkunci', 'Di luar jam sesi aktif — sidik jari nonaktif');
         return;
       }
       const libur = await isHariLiburHariIni();
       if (libur) {
-        alert('Hari libur — absensi nonaktif.\n' + (libur.keterangan || ''));
+        tampilHasil(false, '', 'Hari Libur', (libur.keterangan || 'Hari ini libur') + ' — absensi nonaktif');
         return;
       }
       const izin = await cekIzinSidikJari();
       if (!izin) {
-        alert('Anda belum diizinkan memakai sidik jari.');
+        tampilHasil(false, currentUserName || '', 'Tidak Diizinkan',
+          'Admin belum mengizinkan sidik jari untuk akun Anda');
         return;
       }
-      const credId = localStorage.getItem(sidikJariKey());
-      if (!credId) {
-        alert('Sidik jari belum terdaftar. Klik Daftar Sidik Jari terlebih dahulu.');
+      if (!window.PublicKeyCredential) {
+        tampilHasil(false, '', 'Tidak Didukung', 'Perangkat tidak mendukung sidik jari');
+        return;
+      }
+      if (!isSidikJariTerdaftar()) {
+        tampilHasil(false, '', 'Belum Terdaftar', 'Daftarkan sidik jari terlebih dahulu');
         return;
       }
       try {
         const challenge = new Uint8Array(32);
         crypto.getRandomValues(challenge);
-        // Convert credential id (base64url-ish from browser) - use allowCredentials empty for discoverable
         await navigator.credentials.get({
           publicKey: {
             challenge,
@@ -4057,19 +4074,24 @@
             rpId: location.hostname
           }
         });
-        // Verified fingerprint → absen dengan kode user yang login
         if (currentUserKode) {
           await prosesScan(currentUserKode, true);
         } else {
-          alert('Sesi login tidak ditemukan.');
+          tampilHasil(false, '', 'Gagal', 'Sesi login tidak ditemukan');
         }
       } catch (e) {
         console.error(e);
-        alert('Absen sidik jari gagal / dibatalkan: ' + (e.message || e));
+        const msg = (e && e.name === 'NotAllowedError')
+          ? 'Dibatalkan atau verifikasi gagal'
+          : (e.message || String(e));
+        tampilHasil(false, '', 'Gagal Absen', msg);
       }
     }
 
     document.getElementById('btnSidikJari').addEventListener('click', async () => {
+      // Jika tombol disabled (luar jam / libur), jangan proses
+      const btn = document.getElementById('btnSidikJari');
+      if (btn && btn.disabled) return;
       if (isSidikJariTerdaftar()) {
         await absenSidikJari();
       } else {
