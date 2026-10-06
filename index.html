@@ -1086,7 +1086,46 @@
     </section>
 
     <section class="page" id="page-input-izin">
-      <div class="placeholder"><div class="icon">🤒</div><h2>Input Izin / Sakit</h2><p>Halaman input izin atau sakit guru/siswa</p></div>
+      <div class="page-title">Input Izin / Sakit</div>
+      <div class="card" style="margin-bottom:10px;">
+        <div class="periode-bar">Periode : <b id="izinLabelPeriode">-</b></div>
+        <div style="font-size:12px;margin-top:4px;color:#64748b;">Tanggal : <b id="izinLabelTanggal">-</b></div>
+      </div>
+      <div class="toolbar">
+        <button class="btn btn-primary" id="btnTambahIzin">+ Tambah</button>
+        <button class="btn btn-outline" id="btnHapusIzin" style="color:#ef4444;border-color:#fca5a5;">🗑️</button>
+        <input type="search" class="search-input" id="searchIzin" placeholder="Cari Nama / NISN...">
+        <select id="filterIzinStatus" style="padding:6px 8px;font-size:11px;border-radius:8px;border:1px solid var(--border);">
+          <option value="">Semua</option>
+          <option value="Izin">Izin</option>
+          <option value="Sakit">Sakit</option>
+        </select>
+        <select id="filterIzinTipe" style="padding:6px 8px;font-size:11px;border-radius:8px;border:1px solid var(--border);">
+          <option value="">Semua</option>
+          <option value="siswa">Siswa</option>
+          <option value="guru">Guru</option>
+        </select>
+        <span class="toolbar-info" id="infoIzin">0 data</span>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th style="width:36px;"><input type="checkbox" id="checkAllIzin"></th>
+              <th>No</th>
+              <th>Nama</th>
+              <th>Tipe</th>
+              <th>Kode</th>
+              <th>Sesi</th>
+              <th>Status</th>
+              <th>Ket</th>
+            </tr>
+          </thead>
+          <tbody id="tbodyIzin">
+            <tr><td colspan="8" style="text-align:center;padding:16px;color:#94a3b8;">Memuat...</td></tr>
+          </tbody>
+        </table>
+      </div>
     </section>
     <section class="page" id="page-rekap-data">
       <div class="placeholder"><div class="icon">📑</div><h2>Rekap Data</h2><p>Halaman rekap data kehadiran</p></div>
@@ -1956,6 +1995,53 @@
   </div>
 
 
+
+  <!-- ========== MODAL IZIN / SAKIT ========== -->
+  <div class="modal-overlay" id="modalIzin">
+    <div class="modal">
+      <div class="modal-header">
+        <h3>Tambah Izin / Sakit</h3>
+        <button class="modal-close" data-close="modalIzin">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div class="form-group">
+          <label>Tipe *</label>
+          <select id="izinTipe">
+            <option value="siswa">Siswa</option>
+            <option value="guru">Guru</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Cari Nama / NISN / NIP *</label>
+          <input type="text" id="izinCariUser" placeholder="Ketik minimal 2 huruf...">
+          <div id="izinUserHasil" style="max-height:120px;overflow-y:auto;margin-top:6px;border:1px solid var(--border);border-radius:8px;display:none;"></div>
+          <input type="hidden" id="izinRefId">
+          <input type="hidden" id="izinKode">
+          <input type="hidden" id="izinNama">
+          <div id="izinUserPilih" style="font-size:12px;color:var(--primary);margin-top:4px;display:none;"></div>
+        </div>
+        <div class="form-group">
+          <label>Status *</label>
+          <select id="izinStatus">
+            <option value="Izin">Izin</option>
+            <option value="Sakit">Sakit</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Sesi *</label>
+          <select id="izinSesi"></select>
+        </div>
+        <div class="form-group">
+          <label>Keterangan</label>
+          <input type="text" id="izinKet" placeholder="Opsional">
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-outline" data-close="modalIzin">Batal</button>
+        <button class="btn btn-primary" id="btnSaveIzin">Simpan</button>
+      </div>
+    </div>
+  </div>
   <!-- ========== MODAL DIALOG (alert / confirm) ========== -->
   <div class="modal-overlay" id="modalDialog">
     <div class="modal" style="max-width:320px;text-align:center;">
@@ -2409,6 +2495,7 @@
       if (pageId === 'pengaturan') loadPengaturan();
       if (pageId === 'scan-barcode') initScanPage();
       if (pageId === 'dashboard') loadDashboard();
+      if (pageId === 'input-izin') initIzinPage();
     }
 
     // Klik menu
@@ -4569,7 +4656,7 @@
             .select('status, sesi_nama')
             .eq('tanggal', today)
             .eq('kode', kode)
-            .in('status', ['A', 'B']);
+            .in('status', ['A', 'B', 'Izin', 'Sakit', 'IZIN', 'SAKIT', 'Alpa', 'Bolos']);
           if (abRows && abRows.length) {
             const st = abRows.map(r => r.status).join(',');
             tampilHasil(false, person.nama, 'Scan Ditolak',
@@ -5028,7 +5115,271 @@
       return !!data;
     }
 
-    // Inisialisasi
+
+    // ============================================================
+    // INPUT IZIN / SAKIT
+    // ============================================================
+    let dataIzinHariIni = [];
+    let izinFilterQ = '';
+    let izinFilterStatus = '';
+    let izinFilterTipe = '';
+
+    async function initIzinPage() {
+      await loadAktifPeriode();
+      await loadSesi();
+      const today = new Date().toISOString().slice(0, 10);
+      const lp = document.getElementById('izinLabelPeriode');
+      const lt = document.getElementById('izinLabelTanggal');
+      if (lp) lp.textContent = aktifPeriode
+        ? (aktifPeriode.tahun_ajaran + ' || ' + aktifPeriode.semester) : 'Belum ada periode aktif';
+      if (lt) lt.textContent = today;
+      // isi dropdown sesi
+      const sel = document.getElementById('izinSesi');
+      if (sel) {
+        const list = (dataSesi || []).filter(s => s.aktif !== false).sort((a,b)=>(a.urutan||0)-(b.urutan||0));
+        sel.innerHTML = list.length
+          ? list.map(s => '<option value="' + s.id + '" data-nama="' + esc(s.nama) + '" data-urutan="' + (s.urutan||'') + '">' +
+              esc(s.nama) + ' (' + String(s.jam_mulai||'').slice(0,5) + '–' + String(s.jam_akhir||'').slice(0,5) + ')</option>').join('')
+          : '<option value="">Tidak ada sesi</option>';
+      }
+      await loadIzinTable();
+    }
+
+    async function loadIzinTable() {
+      const today = new Date().toISOString().slice(0, 10);
+      const tbody = document.getElementById('tbodyIzin');
+      try {
+        if (supabaseClient) {
+          const { data, error } = await supabaseClient
+            .from('absensi')
+            .select('*')
+            .eq('tanggal', today)
+            .in('status', ['Izin', 'Sakit', 'IZIN', 'SAKIT'])
+            .order('jam_scan', { ascending: false });
+          if (error) throw error;
+          dataIzinHariIni = data || [];
+        } else {
+          dataIzinHariIni = [];
+        }
+      } catch (e) {
+        console.error(e);
+        dataIzinHariIni = [];
+      }
+      renderIzinTable();
+    }
+
+    function renderIzinTable() {
+      const tbody = document.getElementById('tbodyIzin');
+      if (!tbody) return;
+      let rows = dataIzinHariIni.slice();
+      const q = (izinFilterQ || '').toLowerCase().trim();
+      if (q) {
+        rows = rows.filter(r =>
+          String(r.nama || '').toLowerCase().includes(q) ||
+          String(r.kode || '').toLowerCase().includes(q)
+        );
+      }
+      if (izinFilterStatus) {
+        rows = rows.filter(r => String(r.status || '').toLowerCase() === izinFilterStatus.toLowerCase());
+      }
+      if (izinFilterTipe) {
+        rows = rows.filter(r => r.tipe === izinFilterTipe);
+      }
+      document.getElementById('infoIzin').textContent = rows.length + ' data';
+      document.getElementById('checkAllIzin').checked = false;
+      if (!rows.length) {
+        tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;padding:16px;color:#94a3b8;">Tidak ada data izin/sakit hari ini</td></tr>';
+        return;
+      }
+      tbody.innerHTML = rows.map((r, i) => {
+        const st = String(r.status || '');
+        const badge = st.toLowerCase() === 'sakit'
+          ? '<span class="badge-status badge-sakit">Sakit</span>'
+          : '<span class="badge-status badge-izin">Izin</span>';
+        return '<tr data-id="' + r.id + '">' +
+          '<td><input type="checkbox" class="cb-izin-row" value="' + r.id + '"></td>' +
+          '<td>' + (i + 1) + '</td>' +
+          '<td>' + esc(r.nama) + '</td>' +
+          '<td>' + esc(r.tipe) + '</td>' +
+          '<td>' + esc(r.kode || '') + '</td>' +
+          '<td>' + esc(r.sesi_nama || '-') + '</td>' +
+          '<td>' + badge + '</td>' +
+          '<td style="max-width:100px;overflow:hidden;text-overflow:ellipsis;">' + esc(r.keterangan || '') + '</td>' +
+          '</tr>';
+      }).join('');
+    }
+
+    document.getElementById('searchIzin')?.addEventListener('input', function () {
+      izinFilterQ = this.value;
+      renderIzinTable();
+    });
+    document.getElementById('filterIzinStatus')?.addEventListener('change', function () {
+      izinFilterStatus = this.value;
+      renderIzinTable();
+    });
+    document.getElementById('filterIzinTipe')?.addEventListener('change', function () {
+      izinFilterTipe = this.value;
+      renderIzinTable();
+    });
+    document.getElementById('checkAllIzin')?.addEventListener('change', function () {
+      document.querySelectorAll('.cb-izin-row').forEach(c => { c.checked = this.checked; });
+    });
+
+    document.getElementById('btnTambahIzin')?.addEventListener('click', () => {
+      document.getElementById('izinCariUser').value = '';
+      document.getElementById('izinRefId').value = '';
+      document.getElementById('izinKode').value = '';
+      document.getElementById('izinNama').value = '';
+      document.getElementById('izinUserPilih').style.display = 'none';
+      document.getElementById('izinUserHasil').style.display = 'none';
+      document.getElementById('izinKet').value = '';
+      document.getElementById('izinStatus').value = 'Izin';
+      openModal('modalIzin');
+    });
+
+    // Live search user
+    let _izinSearchTimer = null;
+    document.getElementById('izinCariUser')?.addEventListener('input', function () {
+      clearTimeout(_izinSearchTimer);
+      const q = this.value.trim();
+      const box = document.getElementById('izinUserHasil');
+      if (q.length < 2) {
+        box.style.display = 'none';
+        box.innerHTML = '';
+        return;
+      }
+      _izinSearchTimer = setTimeout(async () => {
+        const tipe = document.getElementById('izinTipe').value;
+        let list = [];
+        try {
+          if (supabaseClient) {
+            if (tipe === 'siswa') {
+              const { data } = await supabaseClient.from('siswa').select('id, nama, nisn')
+                .or('nama.ilike.%' + q + '%,nisn.ilike.%' + q + '%').limit(15);
+              list = (data || []).map(x => ({ id: x.id, nama: x.nama, kode: x.nisn }));
+            } else {
+              const { data } = await supabaseClient.from('guru').select('id, nama, nip, pin')
+                .or('nama.ilike.%' + q + '%,nip.ilike.%' + q + '%,pin.ilike.%' + q + '%').limit(15);
+              list = (data || []).map(x => ({ id: x.id, nama: x.nama, kode: x.nip || x.pin }));
+            }
+          } else {
+            if (tipe === 'siswa') {
+              if (!dataSiswa.length) await loadSiswa();
+              list = dataSiswa.filter(x =>
+                String(x.nama||'').toLowerCase().includes(q.toLowerCase()) ||
+                String(x.nisn||'').includes(q)
+              ).slice(0, 15).map(x => ({ id: x.id, nama: x.nama, kode: x.nisn }));
+            } else {
+              if (!dataGuru.length) await loadGuru();
+              list = dataGuru.filter(x =>
+                String(x.nama||'').toLowerCase().includes(q.toLowerCase()) ||
+                String(x.nip||'').includes(q) || String(x.pin||'').includes(q)
+              ).slice(0, 15).map(x => ({ id: x.id, nama: x.nama, kode: x.nip || x.pin }));
+            }
+          }
+        } catch (e) { console.error(e); }
+        if (!list.length) {
+          box.innerHTML = '<div style="padding:8px;font-size:12px;color:#94a3b8;">Tidak ditemukan</div>';
+          box.style.display = 'block';
+          return;
+        }
+        box.innerHTML = list.map(u =>
+          '<div class="izin-user-item" data-id="' + u.id + '" data-kode="' + esc(u.kode||'') + '" data-nama="' + esc(u.nama||'') + '" ' +
+          'style="padding:8px 10px;font-size:12px;cursor:pointer;border-bottom:1px solid #f1f5f9;">' +
+          esc(u.nama) + ' <span style="color:#94a3b8;">(' + esc(u.kode||'-') + ')</span></div>'
+        ).join('');
+        box.style.display = 'block';
+        box.querySelectorAll('.izin-user-item').forEach(el => {
+          el.addEventListener('click', () => {
+            document.getElementById('izinRefId').value = el.dataset.id;
+            document.getElementById('izinKode').value = el.dataset.kode;
+            document.getElementById('izinNama').value = el.dataset.nama;
+            document.getElementById('izinUserPilih').textContent = '✓ ' + el.dataset.nama + ' (' + el.dataset.kode + ')';
+            document.getElementById('izinUserPilih').style.display = 'block';
+            document.getElementById('izinCariUser').value = el.dataset.nama;
+            box.style.display = 'none';
+          });
+        });
+      }, 300);
+    });
+    document.getElementById('izinTipe')?.addEventListener('change', () => {
+      document.getElementById('izinCariUser').value = '';
+      document.getElementById('izinRefId').value = '';
+      document.getElementById('izinUserPilih').style.display = 'none';
+      document.getElementById('izinUserHasil').style.display = 'none';
+    });
+
+    document.getElementById('btnSaveIzin')?.addEventListener('click', async () => {
+      const refId = document.getElementById('izinRefId').value;
+      const kode = document.getElementById('izinKode').value;
+      const nama = document.getElementById('izinNama').value;
+      const tipe = document.getElementById('izinTipe').value;
+      const status = document.getElementById('izinStatus').value;
+      const sesiEl = document.getElementById('izinSesi');
+      const sesiId = sesiEl.value;
+      const sesiNama = sesiEl.selectedOptions[0]?.dataset?.nama || sesiEl.selectedOptions[0]?.textContent || '';
+      const sesiUrutan = sesiEl.selectedOptions[0]?.dataset?.urutan || null;
+      const ket = document.getElementById('izinKet').value.trim() || (status + ' — input manual');
+      if (!refId || !nama) { alert('Pilih siswa/guru dari hasil pencarian'); return; }
+      if (!sesiId) { alert('Pilih sesi'); return; }
+      if (!aktifPeriode) await loadAktifPeriode();
+      const today = new Date().toISOString().slice(0, 10);
+      const row = {
+        periode_id: aktifPeriode ? aktifPeriode.id : null,
+        tanggal: today,
+        sesi_id: Number(sesiId),
+        sesi_nama: sesiNama,
+        sesi_urutan: sesiUrutan ? Number(sesiUrutan) : null,
+        tipe: tipe,
+        ref_id: Number(refId),
+        kode: kode,
+        nama: nama,
+        jam_scan: new Date().toISOString(),
+        status: status,
+        keterangan: ket
+      };
+      try {
+        if (supabaseClient) {
+          // Cegah duplikat sesi yang sama
+          const { data: dup } = await supabaseClient.from('absensi').select('id, status')
+            .eq('tanggal', today).eq('sesi_id', Number(sesiId)).eq('kode', kode).maybeSingle();
+          if (dup) {
+            const { error } = await supabaseClient.from('absensi').update({
+              status: status, keterangan: ket, jam_scan: row.jam_scan
+            }).eq('id', dup.id);
+            if (error) throw error;
+          } else {
+            const { error } = await supabaseClient.from('absensi').insert([row]);
+            if (error) throw error;
+          }
+        }
+        closeModal('modalIzin');
+        await loadIzinTable();
+        alert(status + ' berhasil disimpan untuk ' + nama);
+      } catch (e) {
+        alert('Gagal simpan: ' + (e.message || e));
+      }
+    });
+
+    document.getElementById('btnHapusIzin')?.addEventListener('click', async () => {
+      const ids = getChecked('cb-izin-row');
+      if (!ids.length) { alert('Centang data yang ingin dihapus'); return; }
+      if (!(await showConfirm('Hapus ' + ids.length + ' data izin/sakit?', 'Hapus Data', '🗑️'))) return;
+      try {
+        if (supabaseClient) {
+          const { data, error } = await supabaseClient.from('absensi').delete().in('id', ids.map(Number)).select('id');
+          if (error) throw error;
+          if (!data || !data.length) throw new Error('Tidak terhapus. Cek RLS.');
+        }
+        await loadIzinTable();
+        alert('Data dihapus');
+      } catch (e) {
+        alert('Gagal hapus: ' + (e.message || e));
+      }
+    });
+
+
+        // Inisialisasi
     // 1. Restore sesi login dari localStorage (agar refresh tidak logout)
     (function restoreSession() {
       const ses = loadSession();
