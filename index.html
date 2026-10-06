@@ -430,6 +430,20 @@
       font-size: 12px;
       min-width: 480px;
     }
+    /* Tabel rekap dashboard: kompak, tanpa min-width agar 3+ sesi muat di HP */
+    #page-dashboard .table-wrap table {
+      min-width: 0;
+      width: 100%;
+      table-layout: fixed;
+      font-size: 11px;
+    }
+    #page-dashboard .table-wrap th,
+    #page-dashboard .table-wrap td {
+      padding: 6px 4px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
     th {
       background: #f1f5f9;
       padding: 10px 8px;
@@ -3919,13 +3933,14 @@
     function badgeStatusDash(st) {
       if (!st) return '';
       const s = String(st).toUpperCase();
-      if (s === 'TW') return '<span style="color:#16a34a;font-weight:700;">TW</span>';
-      if (s === 'TL') return '<span style="color:#ca8a04;font-weight:700;">TL</span>';
-      if (s === 'A' || s === 'ALPA') return '<span style="color:#dc2626;font-weight:700;">A</span>';
-      if (s === 'B' || s === 'BOLOS') return '<span style="color:#7f1d1d;font-weight:700;">B</span>';
-      if (s === 'SAKIT') return '<span style="color:#991b1b;font-weight:700;">Sakit</span>';
-      if (s === 'IZIN') return '<span style="color:#92400e;font-weight:700;">Izin</span>';
-      return '<span style="font-weight:600;">' + s + '</span>';
+      const base = 'font-weight:700;font-size:10px;';
+      if (s === 'TW') return '<span style="color:#16a34a;' + base + '">TW</span>';
+      if (s === 'TL') return '<span style="color:#ca8a04;' + base + '">TL</span>';
+      if (s === 'A' || s === 'ALPA' || s === 'ALPHA') return '<span style="color:#dc2626;' + base + '">A</span>';
+      if (s === 'B' || s === 'BOLOS') return '<span style="color:#7f1d1d;' + base + '">B</span>';
+      if (s === 'SAKIT') return '<span style="color:#991b1b;' + base + '">Sk</span>';
+      if (s === 'IZIN') return '<span style="color:#92400e;' + base + '">Iz</span>';
+      return '<span style="' + base + '">' + s + '</span>';
     }
     function normStatusKey(st) {
       const s = String(st || '').toUpperCase();
@@ -4002,11 +4017,19 @@
         });
 
         // Header dinamis sesi
+        // Header kompak: S1, S2, S3... agar muat di HP
+        function shortSesiLabel(s, idx) {
+          const u = s.urutan != null ? s.urutan : (idx + 1);
+          return 'S' + u;
+        }
         function buildHead(withKelas) {
-          let h = '<tr><th>No</th><th>Nama</th>';
-          if (withKelas) h += '<th>Kelas</th>';
-          h += '<th>Jam Scan</th>';
-          sesiList.forEach(s => { h += '<th>' + esc(s.nama || ('Sesi ' + s.urutan)) + '</th>'; });
+          let h = '<tr>';
+          h += '<th style="width:28px;padding:6px 4px;font-size:10px;">No</th>';
+          h += '<th style="padding:6px 4px;font-size:10px;">Nama</th>';
+          if (withKelas) h += '<th style="width:36px;padding:6px 2px;font-size:10px;">Kls</th>';
+          sesiList.forEach((s, idx) => {
+            h += '<th style="width:36px;padding:6px 2px;font-size:10px;text-align:center;">' + shortSesiLabel(s, idx) + '</th>';
+          });
           h += '</tr>';
           return h;
         }
@@ -4021,44 +4044,43 @@
           );
         }
 
+        // Status + jam kecil di dalam sel sesi (tanpa kolom Jam Scan terpisah)
+        function cellSesi(ab) {
+          if (!ab) return '<td style="text-align:center;padding:4px 2px;color:#cbd5e1;font-size:10px;">–</td>';
+          const jam = fmtJam(ab.jam_scan);
+          const jamShort = jam ? jam.slice(0, 5) : '';
+          return '<td style="text-align:center;padding:4px 2px;line-height:1.25;">' +
+            badgeStatusDash(ab.status) +
+            (jamShort ? '<div style="font-size:9px;color:#64748b;">' + jamShort + '</div>' : '') +
+            '</td>';
+        }
+
         // Rekap Guru – semua guru
         const tbG = document.getElementById('tbodyDashGuru');
         if (!guruList.length) {
-          tbG.innerHTML = '<tr><td colspan="' + (3 + nSesi) + '" style="text-align:center;padding:16px;color:#94a3b8;">Belum ada data guru</td></tr>';
+          tbG.innerHTML = '<tr><td colspan="' + (2 + nSesi) + '" style="text-align:center;padding:16px;color:#94a3b8;">Belum ada data guru</td></tr>';
         } else {
           tbG.innerHTML = guruList.map((g, i) => {
-            const jams = [];
-            const cells = sesiList.map(ses => {
-              const ab = findAbs('guru', g.id, ses);
-              if (ab) {
-                jams.push(fmtJam(ab.jam_scan));
-                return '<td style="text-align:center;">' + badgeStatusDash(ab.status) + '</td>';
-              }
-              return '<td style="text-align:center;color:#cbd5e1;">–</td>';
-            }).join('');
-            return '<tr><td>' + (i + 1) + '</td><td>' + esc(g.nama) + '</td><td style="font-size:11px;line-height:1.4;">' +
-              (jams.length ? jams.map(j => esc(j)).join('<br>') : '–') + '</td>' + cells + '</tr>';
+            const cells = sesiList.map(ses => cellSesi(findAbs('guru', g.id, ses))).join('');
+            return '<tr>' +
+              '<td style="padding:6px 4px;font-size:11px;">' + (i + 1) + '</td>' +
+              '<td style="padding:6px 4px;font-size:11px;max-width:110px;overflow:hidden;text-overflow:ellipsis;">' + esc(g.nama) + '</td>' +
+              cells + '</tr>';
           }).join('');
         }
 
         // Rekap Siswa – semua siswa
         const tbS = document.getElementById('tbodyDashSiswa');
         if (!siswaList.length) {
-          tbS.innerHTML = '<tr><td colspan="' + (4 + nSesi) + '" style="text-align:center;padding:16px;color:#94a3b8;">Belum ada data siswa</td></tr>';
+          tbS.innerHTML = '<tr><td colspan="' + (3 + nSesi) + '" style="text-align:center;padding:16px;color:#94a3b8;">Belum ada data siswa</td></tr>';
         } else {
           tbS.innerHTML = siswaList.map((s, i) => {
-            const jams = [];
-            const cells = sesiList.map(ses => {
-              const ab = findAbs('siswa', s.id, ses);
-              if (ab) {
-                jams.push(fmtJam(ab.jam_scan));
-                return '<td style="text-align:center;">' + badgeStatusDash(ab.status) + '</td>';
-              }
-              return '<td style="text-align:center;color:#cbd5e1;">–</td>';
-            }).join('');
-            return '<tr><td>' + (i + 1) + '</td><td>' + esc(s.nama) + '</td><td>' + esc(s.kelas || '–') +
-              '</td><td style="font-size:11px;line-height:1.4;">' +
-              (jams.length ? jams.map(j => esc(j)).join('<br>') : '–') + '</td>' + cells + '</tr>';
+            const cells = sesiList.map(ses => cellSesi(findAbs('siswa', s.id, ses))).join('');
+            return '<tr>' +
+              '<td style="padding:6px 4px;font-size:11px;">' + (i + 1) + '</td>' +
+              '<td style="padding:6px 4px;font-size:11px;max-width:100px;overflow:hidden;text-overflow:ellipsis;">' + esc(s.nama) + '</td>' +
+              '<td style="padding:6px 2px;font-size:10px;text-align:center;">' + esc(s.kelas || '–') + '</td>' +
+              cells + '</tr>';
           }).join('');
         }
       } catch (e) {
