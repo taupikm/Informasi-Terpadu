@@ -1164,9 +1164,14 @@
           </div>
         </div>
       </div>
-      <div class="toolbar">
+      <div class="toolbar" id="toolbarRekapAdmin">
+        <button class="btn btn-secondary" id="btnEditRekap">✏️ Edit Status</button>
         <button class="btn btn-outline" id="btnHapusRekap" style="color:#ef4444;border-color:#fca5a5;">🗑️ Hapus</button>
         <span class="toolbar-info" id="infoRekap">0 data</span>
+      </div>
+      <div class="toolbar" id="toolbarRekapView" style="display:none;">
+        <span style="font-size:12px;color:#64748b;">Mode lihat saja (Guru)</span>
+        <span class="toolbar-info" id="infoRekapView">0 data</span>
       </div>
       <div class="table-wrap">
         <table id="tableRekap" style="min-width:0;table-layout:fixed;">
@@ -2094,6 +2099,39 @@
       <div class="modal-footer">
         <button class="btn btn-outline" data-close="modalIzin">Batal</button>
         <button class="btn btn-primary" id="btnSaveIzin">Simpan</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ========== MODAL EDIT STATUS REKAP ========== -->
+  <div class="modal-overlay" id="modalEditRekap">
+    <div class="modal">
+      <div class="modal-header">
+        <h3>Edit Status Absensi</h3>
+        <button class="modal-close" data-close="modalEditRekap">&times;</button>
+      </div>
+      <div class="modal-body">
+        <p id="editRekapInfo" style="font-size:12px;color:#64748b;margin-bottom:10px;"></p>
+        <div class="form-group">
+          <label>Status baru *</label>
+          <select id="editRekapStatus">
+            <option value="TW">TW – Tepat Waktu</option>
+            <option value="TL">TL – Terlambat</option>
+            <option value="Izin">Izin</option>
+            <option value="Sakit">Sakit</option>
+            <option value="A">A – Alpa</option>
+            <option value="B">B – Bolos</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Keterangan</label>
+          <input type="text" id="editRekapKet" placeholder="Opsional">
+        </div>
+        <p style="font-size:11px;color:#94a3b8;">Status ini diterapkan ke semua record absensi pada baris yang dicentang.</p>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-outline" data-close="modalEditRekap">Batal</button>
+        <button class="btn btn-primary" id="btnSaveEditRekap">Simpan</button>
       </div>
     </div>
   </div>
@@ -5194,6 +5232,12 @@
       await loadSesi();
       rekapSesiList = (dataSesi || []).filter(s => s.aktif !== false)
         .sort((a, b) => (a.urutan || 0) - (b.urutan || 0));
+      // Admin: edit/hapus | Guru: hanya lihat
+      const isAdmin = currentRole === 'admin';
+      const tbAdmin = document.getElementById('toolbarRekapAdmin');
+      const tbView = document.getElementById('toolbarRekapView');
+      if (tbAdmin) tbAdmin.style.display = isAdmin ? 'flex' : 'none';
+      if (tbView) tbView.style.display = isAdmin ? 'none' : 'flex';
       // default tanggal: hari ini
       const today = new Date().toISOString().slice(0, 10);
       const dari = document.getElementById('rekapDari');
@@ -5330,6 +5374,8 @@
         });
 
         document.getElementById('infoRekap').textContent = dataRekap.length + ' baris';
+        const iv = document.getElementById('infoRekapView');
+        if (iv) iv.textContent = dataRekap.length + ' baris';
 
         if (!dataRekap.length) {
           tbody.innerHTML = '<tr><td colspan="' + (5 + nSesi) + '" style="text-align:center;padding:16px;color:#94a3b8;">Tidak ada data</td></tr>';
@@ -5357,6 +5403,16 @@
             '<td style="padding:4px;font-size:10px;white-space:nowrap;">' + esc(row.tanggal) + '</td>' +
             '</tr>';
         }).join('');
+        // Guru: sembunyikan kolom checkbox
+        if (currentRole !== 'admin') {
+          document.querySelectorAll('#tableRekap .cb-rekap-row, #checkAllRekap').forEach(el => {
+            el.style.display = 'none';
+            if (el.closest('th') || el.closest('td')) {
+              const cell = el.closest('th') || el.closest('td');
+              if (cell) cell.style.display = 'none';
+            }
+          });
+        }
       } catch (e) {
         console.error(e);
         tbody.innerHTML = '<tr><td colspan="10" style="text-align:center;padding:16px;color:#ef4444;">Gagal: ' + esc(String(e.message || e)) + '</td></tr>';
@@ -5368,7 +5424,60 @@
       if (e.key === 'Enter') loadRekapData();
     });
 
+    function getRekapSelectedIds() {
+      const boxes = [...document.querySelectorAll('.cb-rekap-row:checked')];
+      const ids = [];
+      boxes.forEach(b => {
+        String(b.value).split(',').forEach(id => {
+          const n = Number(id);
+          if (!isNaN(n) && n) ids.push(n);
+        });
+      });
+      return ids;
+    }
+
+    document.getElementById('btnEditRekap')?.addEventListener('click', () => {
+      if (currentRole !== 'admin') {
+        alert('Hanya Admin yang dapat mengedit status absensi');
+        return;
+      }
+      const ids = getRekapSelectedIds();
+      if (!ids.length) { alert('Centang baris yang ingin diedit'); return; }
+      document.getElementById('editRekapInfo').textContent =
+        ids.length + ' record absensi akan diubah statusnya.';
+      document.getElementById('editRekapStatus').value = 'TW';
+      document.getElementById('editRekapKet').value = '';
+      openModal('modalEditRekap');
+    });
+
+    document.getElementById('btnSaveEditRekap')?.addEventListener('click', async () => {
+      if (currentRole !== 'admin') return;
+      const ids = getRekapSelectedIds();
+      if (!ids.length) { alert('Tidak ada data terpilih'); return; }
+      const status = document.getElementById('editRekapStatus').value;
+      const ket = document.getElementById('editRekapKet').value.trim() || null;
+      if (!status) { alert('Pilih status'); return; }
+      if (!(await showConfirm('Ubah status ' + ids.length + ' record menjadi "' + status + '"?', 'Edit Status', '✏️'))) return;
+      try {
+        if (supabaseClient) {
+          const payload = { status: status };
+          if (ket) payload.keterangan = ket;
+          const { error } = await supabaseClient.from('absensi').update(payload).in('id', ids);
+          if (error) throw error;
+        }
+        closeModal('modalEditRekap');
+        await loadRekapData();
+        alert('Status berhasil diubah');
+      } catch (e) {
+        alert('Gagal edit: ' + (e.message || e));
+      }
+    });
+
     document.getElementById('btnHapusRekap')?.addEventListener('click', async () => {
+      if (currentRole !== 'admin') {
+        alert('Hanya Admin yang dapat menghapus data absensi');
+        return;
+      }
       const boxes = [...document.querySelectorAll('.cb-rekap-row:checked')];
       if (!boxes.length) { alert('Centang data yang ingin dihapus'); return; }
       // value bisa berisi banyak id (pivot)
