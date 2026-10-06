@@ -4171,21 +4171,41 @@
       return nowMin > timeToMinutes(ses.jam_akhir);
     }
 
+    // Cocokkan record absensi ↔ sesi (id / nama / urutan)
+    function matchSesi(record, ses) {
+      if (!record || !ses) return false;
+      if (record.sesi_id != null && ses.id != null && Number(record.sesi_id) === Number(ses.id)) return true;
+      if (record.sesi_nama && ses.nama && String(record.sesi_nama).trim() === String(ses.nama).trim()) return true;
+      if (record.sesi_urutan != null && ses.urutan != null && Number(record.sesi_urutan) === Number(ses.urutan)) return true;
+      return false;
+    }
+
+    function findAbsRecord(absRows, tipe, refId, ses) {
+      const list = (absRows || []).filter(r =>
+        r.tipe === tipe && Number(r.ref_id) === Number(refId) && matchSesi(r, ses)
+      );
+      if (!list.length) return null;
+      // Prioritas: yang ada jam_scan (scan nyata), lalu yang punya id
+      list.sort((a, b) => {
+        const sa = a.jam_scan ? 2 : 0;
+        const sb = b.jam_scan ? 2 : 0;
+        const ia = a.id ? 1 : 0;
+        const ib = b.id ? 1 : 0;
+        return (sb + ib) - (sa + ia);
+      });
+      return list[0];
+    }
+
     function resolveAbsensi(tipe, refId, ses, absRows, sesiList, tanggal) {
-      // Hari libur: tidak ada absensi otomatis (A/B/TW/dll)
+      // Hari libur: tidak ada absensi otomatis
       if (tanggal && isTanggalLibur(tanggal)) return null;
 
-      const real = absRows.find(r =>
-        r.tipe === tipe &&
-        Number(r.ref_id) === Number(refId) &&
-        (Number(r.sesi_id) === Number(ses.id) || r.sesi_nama === ses.nama)
-      );
-      // Record nyata tetap ditampilkan jika ada (data lama), tapi idealnya tidak dibuat di hari libur
+      const real = findAbsRecord(absRows, tipe, refId, ses);
       if (real) return Object.assign({}, real, { _virtual: false });
 
       if (!sesiSudahBerakhir(ses, tanggal)) return null;
 
-      const dayRows = absRows.filter(r =>
+      const dayRows = (absRows || []).filter(r =>
         r.tipe === tipe && Number(r.ref_id) === Number(refId)
       );
       const hasA = dayRows.some(r => {
@@ -4196,12 +4216,9 @@
         const k = normStatusKey(r.status);
         return k === 'Bolos' || r.status === 'B';
       });
-      const earlier = sesiList.filter(s => (s.urutan || 0) < (ses.urutan || 0));
+      const earlier = (sesiList || []).filter(s => (s.urutan || 0) < (ses.urutan || 0));
       const scannedEarlier = earlier.some(s => {
-        const x = absRows.find(r =>
-          r.tipe === tipe && Number(r.ref_id) === Number(refId) &&
-          (Number(r.sesi_id) === Number(s.id) || r.sesi_nama === s.nama)
-        );
+        const x = findAbsRecord(absRows, tipe, refId, s);
         if (!x) return false;
         const k = normStatusKey(x.status);
         return k === 'TW' || k === 'TL';
@@ -4215,7 +4232,7 @@
 
       return {
         id: null, tipe: tipe, ref_id: refId, status: status,
-        sesi_id: ses.id, sesi_nama: ses.nama,
+        sesi_id: ses.id, sesi_nama: ses.nama, sesi_urutan: ses.urutan,
         jam_scan: null, _virtual: true
       };
     }
@@ -4257,11 +4274,7 @@
       const inserts = [];
 
       function hasRecord(tipe, refId, ses) {
-        return absRows.some(r =>
-          r.tipe === tipe &&
-          Number(r.ref_id) === Number(refId) &&
-          (Number(r.sesi_id) === Number(ses.id) || r.sesi_nama === ses.nama)
-        );
+        return !!findAbsRecord(absRows, tipe, refId, ses);
       }
 
       function pushVirtual(tipe, person, kode) {
@@ -4380,7 +4393,7 @@
         if (supabaseClient) {
           try {
             const [ab, g, s] = await Promise.all([
-              supabaseClient.from('absensi').select('id, tipe, ref_id, kode, nama, status, sesi_id, sesi_nama, jam_scan, tanggal').eq('tanggal', today),
+              supabaseClient.from('absensi').select('id, tipe, ref_id, kode, nama, status, sesi_id, sesi_nama, sesi_urutan, jam_scan, tanggal').eq('tanggal', today),
               supabaseClient.from('guru').select('id, nama').order('nama'),
               supabaseClient.from('siswa').select('id, nama, kelas').order('nama')
             ]);
@@ -5635,21 +5648,14 @@
           }
           const item = map.get(key);
           if (r.id && !item.ids.includes(r.id)) item.ids.push(r.id);
-          // match sesi
-          let matched = false;
+          // match sesi (id / nama / urutan) — sama dengan dashboard
           rekapSesiList.forEach(s => {
-            if (Number(s.id) === Number(r.sesi_id) || s.nama === r.sesi_nama) {
-              const prev = item.sesi[s.id];
-              if (!prev || (r.jam_scan && !prev.jam_scan) || (r.id && !prev.id)) {
-                item.sesi[s.id] = r;
-              }
-              matched = true;
+            if (!matchSesi(r, s)) return;
+            const prev = item.sesi[s.id];
+            if (!prev || (r.jam_scan && !prev.jam_scan) || (r.id && !prev.id)) {
+              item.sesi[s.id] = r;
             }
           });
-          if (!matched && r.sesi_urutan != null) {
-            const s = rekapSesiList.find(x => Number(x.urutan) === Number(r.sesi_urutan));
-            if (s) item.sesi[s.id] = r;
-          }
         });
 
         dataRekap = Array.from(map.values()).sort((a, b) => {
