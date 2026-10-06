@@ -4223,9 +4223,11 @@
 
 
     // Tulis A/B otomatis ke database setelah sesi berakhir (bukan hari libur)
-    async function materializeAbsensiForDate(tanggal) {
+    const _materializedDates = new Set();
+    async function materializeAbsensiForDate(tanggal, force) {
       if (!supabaseClient || !tanggal) return;
       if (isTanggalLibur(tanggal)) return;
+      if (!force && _materializedDates.has(tanggal)) return;
       await loadSesi();
       const sesiList = (dataSesi || []).filter(s => s.aktif !== false)
         .sort((a, b) => (a.urutan || 0) - (b.urutan || 0));
@@ -4275,13 +4277,13 @@
       (sRes.data || []).forEach(s => maybeInsert('siswa', s, 'nisn'));
 
       if (inserts.length) {
-        // batch insert (chunk 500)
         for (let i = 0; i < inserts.length; i += 500) {
           const chunk = inserts.slice(i, i + 500);
           const { error } = await supabaseClient.from('absensi').insert(chunk);
           if (error) console.warn('materialize', error);
         }
       }
+      _materializedDates.add(tanggal);
     }
 
     async function loadDashboard() {
@@ -5488,7 +5490,7 @@
       dataRekap = [];
     }
 
-    async function loadRekapData() {
+    async function loadRekapData(skipMaterialize) {
       const tbody = document.getElementById('tbodyRekap');
       const thead = document.getElementById('theadRekap');
       if (!tbody) return;
@@ -5556,10 +5558,12 @@
           }
         }
 
-        // Materialize A/B ke DB untuk tanggal dalam rentang (skip libur)
-        for (const tgl of dates) {
-          if (!isTanggalLibur(tgl)) {
-            try { await materializeAbsensiForDate(tgl); } catch (e) { console.warn('mat', tgl, e); }
+        // Materialize A/B ke DB (sekali per tanggal per sesi browser; skip setelah hapus)
+        if (!skipMaterialize) {
+          for (const tgl of dates) {
+            if (!isTanggalLibur(tgl)) {
+              try { await materializeAbsensiForDate(tgl); } catch (e) { console.warn('mat', tgl, e); }
+            }
           }
         }
 
@@ -5611,16 +5615,27 @@
           people = people.filter(p => p.tipe === tipe);
           rows = rows.filter(r => r.tipe === tipe);
         }
+        // Hilangkan orang dobel
+        {
+          const seen = new Set();
+          people = people.filter(p => {
+            const k = p.tipe + ':' + Number(p.id);
+            if (seen.has(k)) return false;
+            seen.add(k);
+            return true;
+          });
+        }
 
         // Tampilkan semua orang pada filter jika rentang wajar atau ada filter nama/kelas
         const showAllPeople = !!(qNama || kelas || dates.length <= 14 || people.length <= 80);
 
         const map = new Map();
         function ensureKey(tgl, person) {
-          const key = [tgl, person.tipe, person.id].join('|');
+          const rid = Number(person.id);
+          const key = [tgl, person.tipe, rid].join('|');
           if (!map.has(key)) {
             map.set(key, {
-              ids: [], tanggal: tgl, tipe: person.tipe, ref_id: person.id,
+              ids: [], tanggal: tgl, tipe: person.tipe, ref_id: rid,
               kode: person.kode, nama: person.nama, sesi: {}
             });
           }
@@ -5628,11 +5643,15 @@
         }
 
         rows.forEach(r => {
-          const person = { tipe: r.tipe, id: r.ref_id, kode: r.kode, nama: r.nama };
+          const person = { tipe: r.tipe, id: Number(r.ref_id), kode: r.kode, nama: r.nama };
           const item = ensureKey(r.tanggal, person);
-          if (r.id) item.ids.push(r.id);
+          if (r.id && !item.ids.includes(r.id)) item.ids.push(r.id);
           rekapSesiList.forEach(s => {
-            if (Number(s.id) === Number(r.sesi_id) || s.nama === r.sesi_nama) item.sesi[s.id] = r;
+            if (Number(s.id) === Number(r.sesi_id) || s.nama === r.sesi_nama) {
+              // jika sudah ada, jangan double — prioritaskan yang punya jam_scan
+              const prev = item.sesi[s.id];
+              if (!prev || (!prev.jam_scan && r.jam_scan) || (!prev.id && r.id)) item.sesi[s.id] = r;
+            }
           });
         });
 
@@ -5885,7 +5904,12 @@
           }
           if (!deleted) throw new Error('Tidak terhapus. Cek RLS policy DELETE pada tabel absensi.');
         }
-        await loadRekapData();
+        // Jangan materialize ulang tanggal yang baru dihapus di sesi ini
+        boxes.forEach(b => {
+          if (b.dataset.tgl) _materializedDates.add(b.dataset.tgl); // tetap di set agar tidak diisi A/B lagi
+        });
+        // Muat ulang TANPA materialize paksa
+        await loadRekapData(true); // skipMaterialize
         alert('Data absensi dihapus');
       } catch (e) {
         alert('Gagal hapus: ' + (e.message || e));
