@@ -4181,6 +4181,69 @@
     }
 
 
+
+    // Tulis A/B otomatis ke database setelah sesi berakhir (bukan hari libur)
+    async function materializeAbsensiForDate(tanggal) {
+      if (!supabaseClient || !tanggal) return;
+      if (isTanggalLibur(tanggal)) return;
+      await loadSesi();
+      const sesiList = (dataSesi || []).filter(s => s.aktif !== false)
+        .sort((a, b) => (a.urutan || 0) - (b.urutan || 0));
+      const ended = sesiList.filter(s => sesiSudahBerakhir(s, tanggal));
+      if (!ended.length) return;
+
+      if (!aktifPeriode) await loadAktifPeriode();
+
+      const [abRes, gRes, sRes] = await Promise.all([
+        supabaseClient.from('absensi').select('*').eq('tanggal', tanggal),
+        supabaseClient.from('guru').select('id, nama, nip, pin'),
+        supabaseClient.from('siswa').select('id, nama, nisn')
+      ]);
+      const absRows = abRes.data || [];
+      const inserts = [];
+
+      function maybeInsert(tipe, person, kodeField) {
+        for (const ses of ended) {
+          const existing = absRows.find(r =>
+            r.tipe === tipe && Number(r.ref_id) === Number(person.id) &&
+            (Number(r.sesi_id) === Number(ses.id) || r.sesi_nama === ses.nama)
+          );
+          if (existing) continue;
+          const virtual = resolveAbsensi(tipe, person.id, ses, absRows, sesiList, tanggal);
+          if (!virtual || !virtual._virtual) continue;
+          const row = {
+            periode_id: aktifPeriode ? aktifPeriode.id : null,
+            tanggal: tanggal,
+            sesi_id: ses.id,
+            sesi_nama: ses.nama,
+            sesi_urutan: ses.urutan || null,
+            tipe: tipe,
+            ref_id: person.id,
+            kode: person[kodeField] || person.nip || person.pin || person.nisn || '',
+            nama: person.nama,
+            jam_scan: null,
+            status: virtual.status,
+            keterangan: 'Otomatis ' + virtual.status
+          };
+          inserts.push(row);
+          // agar sesi berikutnya melihat status A/B yang baru
+          absRows.push(row);
+        }
+      }
+
+      (gRes.data || []).forEach(g => maybeInsert('guru', g, 'nip'));
+      (sRes.data || []).forEach(s => maybeInsert('siswa', s, 'nisn'));
+
+      if (inserts.length) {
+        // batch insert (chunk 500)
+        for (let i = 0; i < inserts.length; i += 500) {
+          const chunk = inserts.slice(i, i + 500);
+          const { error } = await supabaseClient.from('absensi').insert(chunk);
+          if (error) console.warn('materialize', error);
+        }
+      }
+    }
+
     async function loadDashboard() {
       const tbG = document.getElementById('tbodyDashGuru');
       const tbS = document.getElementById('tbodyDashSiswa');
@@ -4192,6 +4255,10 @@
         await loadLiburMap();
         const today = new Date().toISOString().slice(0, 10);
         const liburHariIni = isTanggalLibur(today);
+        // Tulis A/B ke DB untuk sesi yang sudah berakhir (kecuali hari libur)
+        if (!liburHariIni) {
+          try { await materializeAbsensiForDate(today); } catch (e) { console.warn('materialize', e); }
+        }
         const sesiList = (typeof dataSesi !== 'undefined' && dataSesi ? dataSesi : [])
           .filter(s => s.aktif !== false)
           .sort((a, b) => (a.urutan || 0) - (b.urutan || 0));
@@ -5436,7 +5503,7 @@
           if (dari) query = query.gte('tanggal', dari);
           if (sampai) query = query.lte('tanggal', sampai);
           if (tipe) query = query.eq('tipe', tipe);
-          if (aktifPeriode && aktifPeriode.id) query = query.eq('periode_id', aktifPeriode.id);
+          // periode_id opsional — data lama mungkin null
           const { data, error } = await query.limit(10000);
           if (error) throw error;
           rows = data || [];
