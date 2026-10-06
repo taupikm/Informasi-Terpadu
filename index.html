@@ -4191,18 +4191,46 @@
           .sort((a, b) => (a.urutan || 0) - (b.urutan || 0));
         const nSesi = Math.max(sesiList.length, 1);
 
-        // Info sesi berlangsung
+        // Info sesi: aktif / selesai + next / semua selesai / menunggu sesi 1
         const det = document.getElementById('dashSesiDetail');
-        let aktif = null;
-        try { aktif = getSesiAktifSekarang(); } catch (e) { aktif = null; }
+        function fmt3(s) {
+          if (!s) return '-';
+          const t1 = String(s.jam_mulai || '').slice(0, 5);
+          const t2 = String(s.jam_batas || '').slice(0, 5) || '-';
+          const t3 = String(s.jam_akhir || '').slice(0, 5);
+          return t1 + ' – ' + t2 + ' – ' + t3;
+        }
         if (det) {
+          const list = (sesiList || []).slice().sort((a, b) => (a.urutan || 0) - (b.urutan || 0));
+          let aktif = null;
+          try { aktif = getSesiAktifSekarang(); } catch (e) { aktif = null; }
+          const now = new Date();
+          const nowMin = now.getHours() * 60 + now.getMinutes();
+
           if (aktif) {
-            const t1 = String(aktif.jam_mulai || '').slice(0, 5);
-            const t2 = String(aktif.jam_batas || '').slice(0, 5) || '-';
-            const t3 = String(aktif.jam_akhir || '').slice(0, 5);
-            det.textContent = (aktif.nama || 'Sesi') + ' : ' + t1 + ' – ' + t2 + ' – ' + t3;
+            det.textContent = 'Sesi berlangsung: ' + (aktif.nama || 'Sesi') + ' (' + fmt3(aktif) + ')';
+          } else if (!list.length) {
+            det.textContent = 'Belum ada sesi yang diatur';
           } else {
-            det.textContent = 'Di luar jam sesi / tidak ada sesi aktif';
+            // Cari sesi berikutnya (belum mulai)
+            let next = null;
+            let lastEnded = null;
+            for (const s of list) {
+              const mulai = timeToMinutes(s.jam_mulai);
+              const akhir = timeToMinutes(s.jam_akhir);
+              if (nowMin > akhir) lastEnded = s;
+              else if (nowMin < mulai) { next = s; break; }
+            }
+            if (next && lastEnded) {
+              det.textContent = (lastEnded.nama || 'Sesi') + ' selesai, ' +
+                (next.nama || 'sesi berikutnya') + ' akan berlangsung pada ' + fmt3(next);
+            } else if (next && !lastEnded) {
+              // Sebelum sesi pertama hari ini
+              det.textContent = (next.nama || 'Sesi 1') + ' akan berlangsung pada ' + fmt3(next);
+            } else {
+              // Semua sesi hari ini sudah selesai (sampai 23:59)
+              det.textContent = 'Sesi Absen Hari Ini Telah Berakhir';
+            }
           }
         }
 
@@ -4237,7 +4265,8 @@
         if (elTS) elTS.textContent = siswaList.length;
 
         // Statistik termasuk A/B otomatis → total status per sesi = jumlah orang
-        function countStatusPerSesi(tipe, people, statusKey) {
+        // Angka vertikal: baris 1 = sesi 1, baris 2 = sesi 2, dst
+        function countStatusPerSesiHtml(tipe, people, statusKey) {
           if (!sesiList.length) return '0';
           return sesiList.map(ses => {
             let n = 0;
@@ -4246,8 +4275,8 @@
               if (!ab) return;
               if (normStatusKey(ab.status) === statusKey) n++;
             });
-            return n;
-          }).join(' | ');
+            return '<div style="line-height:1.35;">' + n + '</div>';
+          }).join('');
         }
         [
           ['TW', 'TW'], ['TL', 'TL'], ['Sakit', 'Sakit'],
@@ -4255,8 +4284,8 @@
         ].forEach(([label, key]) => {
           const elG = document.getElementById('stGuru' + label);
           const elS = document.getElementById('stSiswa' + label);
-          if (elG) elG.textContent = countStatusPerSesi('guru', guruList, key);
-          if (elS) elS.textContent = countStatusPerSesi('siswa', siswaList, key);
+          if (elG) elG.innerHTML = countStatusPerSesiHtml('guru', guruList, key);
+          if (elS) elS.innerHTML = countStatusPerSesiHtml('siswa', siswaList, key);
         });
 
         function shortSesiLabel(s, idx) {
