@@ -4222,35 +4222,54 @@
 
 
 
-    // Tulis A/B otomatis ke database setelah sesi berakhir (bukan hari libur)
+    // ============================================================
+    // Materialize A/B ke DB + track hapus admin
+    // ============================================================
     const _materializedDates = new Set();
+    const _rekapDeletedKeys = new Set(); // 'YYYY-MM-DD|tipe|ref_id'
+
+    function rekapPersonKey(tanggal, tipe, refId) {
+      return [tanggal, tipe, Number(refId)].join('|');
+    }
+
     async function materializeAbsensiForDate(tanggal, force) {
       if (!supabaseClient || !tanggal) return;
       if (isTanggalLibur(tanggal)) return;
       if (!force && _materializedDates.has(tanggal)) return;
+
       await loadSesi();
       const sesiList = (dataSesi || []).filter(s => s.aktif !== false)
         .sort((a, b) => (a.urutan || 0) - (b.urutan || 0));
       const ended = sesiList.filter(s => sesiSudahBerakhir(s, tanggal));
-      if (!ended.length) return;
-
+      if (!ended.length) {
+        _materializedDates.add(tanggal);
+        return;
+      }
       if (!aktifPeriode) await loadAktifPeriode();
 
       const [abRes, gRes, sRes] = await Promise.all([
-        supabaseClient.from('absensi').select('*').eq('tanggal', tanggal),
+        supabaseClient.from('absensi').select('id, tipe, ref_id, sesi_id, sesi_nama, status').eq('tanggal', tanggal),
         supabaseClient.from('guru').select('id, nama, nip, pin'),
         supabaseClient.from('siswa').select('id, nama, nisn')
       ]);
+      if (abRes.error) console.warn(abRes.error);
       const absRows = abRes.data || [];
       const inserts = [];
 
-      function maybeInsert(tipe, person, kodeField) {
+      function hasRecord(tipe, refId, ses) {
+        return absRows.some(r =>
+          r.tipe === tipe &&
+          Number(r.ref_id) === Number(refId) &&
+          (Number(r.sesi_id) === Number(ses.id) || r.sesi_nama === ses.nama)
+        );
+      }
+
+      function pushVirtual(tipe, person, kode) {
+        const key = rekapPersonKey(tanggal, tipe, person.id);
+        if (_rekapDeletedKeys.has(key)) return; // admin sudah hapus — jangan isi lagi
+
         for (const ses of ended) {
-          const existing = absRows.find(r =>
-            r.tipe === tipe && Number(r.ref_id) === Number(person.id) &&
-            (Number(r.sesi_id) === Number(ses.id) || r.sesi_nama === ses.nama)
-          );
-          if (existing) continue;
+          if (hasRecord(tipe, person.id, ses)) continue;
           const virtual = resolveAbsensi(tipe, person.id, ses, absRows, sesiList, tanggal);
           if (!virtual || !virtual._virtual) continue;
           const row = {
@@ -4260,27 +4279,28 @@
             sesi_nama: ses.nama,
             sesi_urutan: ses.urutan || null,
             tipe: tipe,
-            ref_id: person.id,
-            kode: person[kodeField] || person.nip || person.pin || person.nisn || '',
+            ref_id: Number(person.id),
+            kode: kode || '',
             nama: person.nama,
             jam_scan: null,
             status: virtual.status,
             keterangan: 'Otomatis ' + virtual.status
           };
           inserts.push(row);
-          // agar sesi berikutnya melihat status A/B yang baru
-          absRows.push(row);
+          absRows.push({
+            tipe: tipe, ref_id: person.id, sesi_id: ses.id, sesi_nama: ses.nama, status: virtual.status
+          });
         }
       }
 
-      (gRes.data || []).forEach(g => maybeInsert('guru', g, 'nip'));
-      (sRes.data || []).forEach(s => maybeInsert('siswa', s, 'nisn'));
+      (gRes.data || []).forEach(g => pushVirtual('guru', g, g.nip || g.pin || ''));
+      (sRes.data || []).forEach(s => pushVirtual('siswa', s, s.nisn || ''));
 
       if (inserts.length) {
-        for (let i = 0; i < inserts.length; i += 500) {
-          const chunk = inserts.slice(i, i + 500);
+        for (let i = 0; i < inserts.length; i += 300) {
+          const chunk = inserts.slice(i, i + 300);
           const { error } = await supabaseClient.from('absensi').insert(chunk);
-          if (error) console.warn('materialize', error);
+          if (error) console.warn('materialize insert', error.message || error);
         }
       }
       _materializedDates.add(tanggal);
@@ -5528,9 +5548,7 @@
 
       let h = '<tr>';
       h += '<th><input type="checkbox" id="checkAllRekap"></th>';
-      h += '<th>No</th>';
-      h += '<th>NISN/NIP</th>';
-      h += '<th>Nama</th>';
+      h += '<th>No</th><th>NISN/NIP</th><th>Nama</th>';
       rekapSesiList.forEach((s, i) => {
         h += '<th style="text-align:center;">S' + (s.urutan != null ? s.urutan : (i + 1)) + '</th>';
       });
@@ -5558,7 +5576,6 @@
           }
         }
 
-        // Materialize A/B ke DB (sekali per tanggal per sesi browser; skip setelah hapus)
         if (!skipMaterialize) {
           for (const tgl of dates) {
             if (!isTanggalLibur(tgl)) {
@@ -5567,114 +5584,75 @@
           }
         }
 
+        // Hanya data dari DATABASE (tanpa baris virtual)
         let rows = [];
         if (supabaseClient) {
           let query = supabaseClient.from('absensi').select('*')
             .gte('tanggal', dari).lte('tanggal', sampai)
             .order('tanggal', { ascending: false }).order('nama');
           if (tipe) query = query.eq('tipe', tipe);
-          const { data, error } = await query.limit(10000);
+          const { data, error } = await query.limit(15000);
           if (error) throw error;
           rows = data || [];
         }
 
-        let people = [];
-        if (supabaseClient) {
-          if (tipe === 'guru' || !tipe) {
-            const { data: gdata } = await supabaseClient.from('guru').select('id, nama, nip, pin').order('nama');
-            (gdata || []).forEach(g => people.push({
-              tipe: 'guru', id: g.id, nama: g.nama, kode: g.nip || g.pin || ''
-            }));
-          }
-          if (tipe === 'siswa' || !tipe) {
-            let sq = supabaseClient.from('siswa').select('id, nama, nisn, kelas');
-            if (kelas) sq = sq.eq('kelas', kelas);
-            const { data: sdata } = await sq.order('nama');
-            (sdata || []).forEach(s => people.push({
-              tipe: 'siswa', id: s.id, nama: s.nama, kode: s.nisn || '', kelas: s.kelas
-            }));
-          }
+        // Filter kelas via daftar siswa
+        let kelasIds = null;
+        if (kelas && supabaseClient) {
+          const { data: sk } = await supabaseClient.from('siswa').select('id').eq('kelas', kelas);
+          kelasIds = new Set((sk || []).map(s => Number(s.id)));
         }
 
         if (qNama) {
-          people = people.filter(p =>
-            String(p.nama || '').toLowerCase().includes(qNama) ||
-            String(p.kode || '').toLowerCase().includes(qNama)
-          );
           rows = rows.filter(r =>
             String(r.nama || '').toLowerCase().includes(qNama) ||
             String(r.kode || '').toLowerCase().includes(qNama)
           );
         }
-        if (kelas) {
-          const ids = new Set(people.filter(p => p.tipe === 'siswa').map(p => Number(p.id)));
-          people = people.filter(p => p.tipe === 'guru' || ids.has(Number(p.id)));
-          rows = rows.filter(r => r.tipe !== 'siswa' || ids.has(Number(r.ref_id)));
+        if (kelasIds) {
+          rows = rows.filter(r => r.tipe !== 'siswa' || kelasIds.has(Number(r.ref_id)));
         }
         if (tipe) {
-          people = people.filter(p => p.tipe === tipe);
           rows = rows.filter(r => r.tipe === tipe);
         }
-        // Hilangkan orang dobel
-        {
-          const seen = new Set();
-          people = people.filter(p => {
-            const k = p.tipe + ':' + Number(p.id);
-            if (seen.has(k)) return false;
-            seen.add(k);
-            return true;
-          });
-        }
 
-        // Tampilkan semua orang pada filter jika rentang wajar atau ada filter nama/kelas
-        const showAllPeople = !!(qNama || kelas || dates.length <= 14 || people.length <= 80);
-
+        // Pivot satu baris = satu orang + satu tanggal (tanpa dobel)
         const map = new Map();
-        function ensureKey(tgl, person) {
-          const rid = Number(person.id);
-          const key = [tgl, person.tipe, rid].join('|');
+        rows.forEach(r => {
+          const rid = Number(r.ref_id);
+          const key = rekapPersonKey(r.tanggal, r.tipe, rid);
+          if (_rekapDeletedKeys.has(key)) return;
           if (!map.has(key)) {
             map.set(key, {
-              ids: [], tanggal: tgl, tipe: person.tipe, ref_id: rid,
-              kode: person.kode, nama: person.nama, sesi: {}
+              ids: [],
+              tanggal: r.tanggal,
+              tipe: r.tipe,
+              ref_id: rid,
+              kode: r.kode || '',
+              nama: r.nama || '',
+              sesi: {}
             });
           }
-          return map.get(key);
-        }
-
-        rows.forEach(r => {
-          const person = { tipe: r.tipe, id: Number(r.ref_id), kode: r.kode, nama: r.nama };
-          const item = ensureKey(r.tanggal, person);
+          const item = map.get(key);
           if (r.id && !item.ids.includes(r.id)) item.ids.push(r.id);
+          // match sesi
+          let matched = false;
           rekapSesiList.forEach(s => {
             if (Number(s.id) === Number(r.sesi_id) || s.nama === r.sesi_nama) {
-              // jika sudah ada, jangan double — prioritaskan yang punya jam_scan
               const prev = item.sesi[s.id];
-              if (!prev || (!prev.jam_scan && r.jam_scan) || (!prev.id && r.id)) item.sesi[s.id] = r;
+              if (!prev || (r.jam_scan && !prev.jam_scan) || (r.id && !prev.id)) {
+                item.sesi[s.id] = r;
+              }
+              matched = true;
             }
           });
+          if (!matched && r.sesi_urutan != null) {
+            const s = rekapSesiList.find(x => Number(x.urutan) === Number(r.sesi_urutan));
+            if (s) item.sesi[s.id] = r;
+          }
         });
 
-        if (showAllPeople) {
-          people.forEach(person => {
-            dates.forEach(tgl => {
-              if (isTanggalLibur(tgl)) return;
-              const item = ensureKey(tgl, person);
-              const dayAbs = rows.filter(r =>
-                r.tanggal === tgl && r.tipe === person.tipe && Number(r.ref_id) === Number(person.id)
-              );
-              rekapSesiList.forEach(ses => {
-                if (item.sesi[ses.id]) return;
-                const ab = resolveAbsensi(person.tipe, person.id, ses, dayAbs, rekapSesiList, tgl);
-                if (ab) item.sesi[ses.id] = ab;
-              });
-            });
-          });
-        }
-
-        dataRekap = Array.from(map.values()).filter(row =>
-          rekapSesiList.some(s => row.sesi[s.id])
-        ).sort((a, b) => {
+        dataRekap = Array.from(map.values()).sort((a, b) => {
           if (a.tanggal === b.tanggal) return String(a.nama).localeCompare(String(b.nama));
           return a.tanggal < b.tanggal ? 1 : -1;
         });
@@ -5689,30 +5667,28 @@
         }
 
         tbody.innerHTML = dataRekap.map((row, i) => {
-          const dayAbsFlat = Object.values(row.sesi || {});
           const cells = rekapSesiList.map(s => {
-            const ab = row.sesi[s.id] || resolveAbsensi(row.tipe, row.ref_id, s, dayAbsFlat, rekapSesiList, row.tanggal);
-            if (!ab) return '<td style="text-align:center;padding:4px 2px;color:#cbd5e1;font-size:10px;">–</td>';
+            const ab = row.sesi[s.id];
+            if (!ab) return '<td style="text-align:center;color:#cbd5e1;">–</td>';
             const jam = fmtJam(ab.jam_scan);
             const jamShort = jam ? jam.slice(0, 5) : '';
-            return '<td style="text-align:center;padding:4px 2px;line-height:1.25;">' +
+            return '<td style="text-align:center;line-height:1.25;">' +
               badgeStatusDash(ab.status) +
               (jamShort ? '<div style="font-size:9px;color:#64748b;">' + jamShort + '</div>' : '') +
               '</td>';
           }).join('');
-          const idList = (row.ids || []).filter(Boolean).join(',');
+          const idList = (row.ids || []).join(',');
           return '<tr>' +
             '<td><input type="checkbox" class="cb-rekap-row" value="' + esc(idList) +
-            '" data-ref="' + esc(String(row.ref_id||'')) +
-            '" data-tipe="' + esc(row.tipe||'') +
-            '" data-tgl="' + esc(row.tanggal||'') +
-            '" data-kode="' + esc(row.kode||'') + '"></td>' +
+            '" data-ref="' + row.ref_id +
+            '" data-tipe="' + esc(row.tipe) +
+            '" data-tgl="' + esc(row.tanggal) +
+            '" data-kode="' + esc(row.kode) + '"></td>' +
             '<td>' + (i + 1) + '</td>' +
             '<td>' + esc(row.kode || '–') + '</td>' +
             '<td title="' + esc(row.nama) + '">' + esc(row.nama) + '</td>' +
             cells +
-            '<td>' + esc(row.tanggal) + '</td>' +
-            '</tr>';
+            '<td>' + esc(row.tanggal) + '</td></tr>';
         }).join('');
 
         if (currentRole !== 'admin') {
@@ -5859,58 +5835,52 @@
       const boxes = [...document.querySelectorAll('.cb-rekap-row:checked')];
       if (!boxes.length) { alert('Centang data yang ingin dihapus'); return; }
 
-      const ids = [];
-      const byKey = []; // hapus via ref_id + tanggal + tipe jika belum ada id di DB
-      boxes.forEach(b => {
-        let hasId = false;
-        String(b.value || '').split(',').forEach(id => {
-          const n = Number(id);
-          if (!isNaN(n) && n) { ids.push(n); hasId = true; }
-        });
-        if (!hasId && b.dataset.ref && b.dataset.tgl) {
-          byKey.push({
-            ref_id: Number(b.dataset.ref),
-            tanggal: b.dataset.tgl,
-            tipe: b.dataset.tipe || '',
-            kode: b.dataset.kode || ''
-          });
-        }
-      });
-
-      if (!ids.length && !byKey.length) {
-        alert('Tidak ada record yang bisa dihapus (belum tersimpan di database)');
-        return;
-      }
-      const totalEst = ids.length + byKey.length;
-      if (!(await showConfirm('Hapus ' + totalEst + ' baris absensi terpilih (semua sesi pada tanggal tersebut)?', 'Hapus Rekap', '🗑️'))) return;
+      if (!(await showConfirm(
+        'Hapus ' + boxes.length + ' baris (semua sesi absensi orang tersebut pada tanggal itu)?',
+        'Hapus Rekap', '🗑️'
+      ))) return;
 
       try {
-        if (supabaseClient) {
-          let deleted = 0;
+        if (!supabaseClient) { alert('Tidak terhubung Supabase'); return; }
+        let deleted = 0;
+        const errors = [];
+
+        for (const b of boxes) {
+          const tgl = b.dataset.tgl;
+          const tipe = b.dataset.tipe;
+          const refId = Number(b.dataset.ref);
+          const ids = String(b.value || '').split(',').map(Number).filter(n => !isNaN(n) && n);
+
+          // Catat agar materialize tidak mengisi ulang
+          if (tgl && tipe && refId) {
+            _rekapDeletedKeys.add(rekapPersonKey(tgl, tipe, refId));
+          }
+
+          // Prefer hapus by id
           if (ids.length) {
             const { data, error } = await supabaseClient.from('absensi').delete().in('id', ids).select('id');
-            if (error) throw error;
-            deleted += (data || []).length;
+            if (error) errors.push(error.message);
+            else deleted += (data || []).length;
           }
-          for (const k of byKey) {
-            let q = supabaseClient.from('absensi').delete()
-              .eq('tanggal', k.tanggal)
-              .eq('tipe', k.tipe)
-              .eq('ref_id', k.ref_id);
-            if (k.kode) q = q.eq('kode', k.kode);
-            const { data, error } = await q.select('id');
-            if (error) throw error;
-            deleted += (data || []).length;
+
+          // Pastikan semua sesi hari itu ikut terhapus
+          if (tgl && tipe && refId) {
+            const { data, error } = await supabaseClient.from('absensi').delete()
+              .eq('tanggal', tgl).eq('tipe', tipe).eq('ref_id', refId).select('id');
+            if (error) errors.push(error.message);
+            else deleted += (data || []).length;
           }
-          if (!deleted) throw new Error('Tidak terhapus. Cek RLS policy DELETE pada tabel absensi.');
         }
-        // Jangan materialize ulang tanggal yang baru dihapus di sesi ini
-        boxes.forEach(b => {
-          if (b.dataset.tgl) _materializedDates.add(b.dataset.tgl); // tetap di set agar tidak diisi A/B lagi
-        });
-        // Muat ulang TANPA materialize paksa
-        await loadRekapData(true); // skipMaterialize
-        alert('Data absensi dihapus');
+
+        if (deleted === 0 && errors.length) {
+          throw new Error(errors[0] + ' — Jalankan SQL policy DELETE di Supabase.');
+        }
+        if (deleted === 0) {
+          throw new Error('0 baris terhapus. Jalankan file SQL policy DELETE + unique index di Supabase SQL Editor.');
+        }
+
+        await loadRekapData(true);
+        alert('Berhasil menghapus ' + deleted + ' record absensi');
       } catch (e) {
         alert('Gagal hapus: ' + (e.message || e));
       }
