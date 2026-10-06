@@ -4132,11 +4132,15 @@
     }
 
     function resolveAbsensi(tipe, refId, ses, absRows, sesiList, tanggal) {
+      // Hari libur: tidak ada absensi otomatis (A/B/TW/dll)
+      if (tanggal && isTanggalLibur(tanggal)) return null;
+
       const real = absRows.find(r =>
         r.tipe === tipe &&
         Number(r.ref_id) === Number(refId) &&
         (Number(r.sesi_id) === Number(ses.id) || r.sesi_nama === ses.nama)
       );
+      // Record nyata tetap ditampilkan jika ada (data lama), tapi idealnya tidak dibuat di hari libur
       if (real) return Object.assign({}, real, { _virtual: false });
 
       if (!sesiSudahBerakhir(ses, tanggal)) return null;
@@ -4181,11 +4185,13 @@
       const tbG = document.getElementById('tbodyDashGuru');
       const tbS = document.getElementById('tbodyDashSiswa');
       try {
-        // Pastikan dataSesi terisi
+        // Pastikan dataSesi + hari libur terisi
         if (typeof loadSesi === 'function') {
           await loadSesi();
         }
+        await loadLiburMap();
         const today = new Date().toISOString().slice(0, 10);
+        const liburHariIni = isTanggalLibur(today);
         const sesiList = (typeof dataSesi !== 'undefined' && dataSesi ? dataSesi : [])
           .filter(s => s.aktif !== false)
           .sort((a, b) => (a.urutan || 0) - (b.urutan || 0));
@@ -4207,7 +4213,11 @@
           const now = new Date();
           const nowMin = now.getHours() * 60 + now.getMinutes();
 
-          if (aktif) {
+          if (liburHariIni) {
+            const ket = liburHariIni.keterangan || 'Hari Libur';
+            const tglStr = now.toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' });
+            det.innerHTML = '<span style="color:#dc2626;">' + ket + '</span><br><span style="font-weight:600;font-size:12px;">' + tglStr + '</span>';
+          } else if (aktif) {
             det.textContent = 'Sesi berlangsung: ' + (aktif.nama || 'Sesi') + ' (' + fmt3(aktif) + ')';
           } else if (!list.length) {
             det.textContent = 'Belum ada sesi yang diatur';
@@ -4769,6 +4779,12 @@
     }
 
     async function prosesScan(kode, fromFingerprint) {
+      const _liburScan = await isHariLiburHariIni();
+      if (_liburScan) {
+        tampilHasil(false, '', 'Hari Libur', (_liburScan.keterangan || 'Hari ini libur') + ' — absensi tidak dicatat');
+        return;
+      }
+
       kode = String(kode || '').trim();
       if (!kode) {
         tampilHasil(false, '', 'Gagal', 'Kode kosong');
@@ -5169,7 +5185,7 @@
         }
         closeModal('modalLibur');
         await loadLiburTable();
-        alert('Hari libur disimpan');
+        clearLiburCache(); alert('Hari libur disimpan');
       } catch (e) { alert('Gagal: ' + (e.message || e)); }
     });
     document.getElementById('btnHapusLibur')?.addEventListener('click', async () => {
@@ -5184,20 +5200,40 @@
           dataLibur = dataLibur.filter(x => !ids.includes(String(x.id)));
         }
         await loadLiburTable();
-        alert('Hari libur dihapus');
+        clearLiburCache(); alert('Hari libur dihapus');
       } catch (e) { alert('Gagal: ' + (e.message || e)); }
     });
 
-    async function isHariLiburHariIni() {
-      const today = new Date().toISOString().slice(0, 10);
+    let _cacheLiburMap = null; // tanggal -> { keterangan }
+
+    async function loadLiburMap() {
+      if (_cacheLiburMap) return _cacheLiburMap;
+      const map = {};
       try {
         if (supabaseClient) {
-          const { data } = await supabaseClient.from('hari_libur').select('id, keterangan').eq('tanggal', today).maybeSingle();
-          return data || null;
+          const { data } = await supabaseClient.from('hari_libur').select('tanggal, keterangan');
+          (data || []).forEach(r => { map[r.tanggal] = r; });
+        } else if (typeof dataLibur !== 'undefined') {
+          (dataLibur || []).forEach(r => { map[r.tanggal] = r; });
         }
-        return dataLibur.find(r => r.tanggal === today) || null;
-      } catch (e) { return null; }
+      } catch (e) { console.warn(e); }
+      _cacheLiburMap = map;
+      return map;
     }
+
+    function isTanggalLibur(tanggal) {
+      if (!_cacheLiburMap || !tanggal) return null;
+      return _cacheLiburMap[tanggal] || null;
+    }
+
+    async function isHariLiburHariIni() {
+      const today = new Date().toISOString().slice(0, 10);
+      await loadLiburMap();
+      return isTanggalLibur(today);
+    }
+
+    // Setelah CRUD hari libur, clear cache
+    function clearLiburCache() { _cacheLiburMap = null; }
 
     // ----- IZIN SIDIK JARI -----
     async function loadIzinFpList() {
