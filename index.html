@@ -5344,12 +5344,16 @@
       const tbView = document.getElementById('toolbarRekapView');
       if (tbAdmin) tbAdmin.style.display = isAdmin ? 'flex' : 'none';
       if (tbView) tbView.style.display = isAdmin ? 'none' : 'flex';
-      // default tanggal: hari ini
-      const today = new Date().toISOString().slice(0, 10);
+      // Default tanggal = rentang tahun ajaran aktif (boleh dikosongkan / diubah user)
+      await loadAktifPeriode();
       const dari = document.getElementById('rekapDari');
       const sampai = document.getElementById('rekapSampai');
-      if (dari && !dari.value) dari.value = today;
-      if (sampai && !sampai.value) sampai.value = today;
+      if (dari && !dari.value && aktifPeriode) {
+        dari.value = (aktifPeriode.tgl_mulai || '').toString().slice(0, 10);
+      }
+      if (sampai && !sampai.value && aktifPeriode) {
+        sampai.value = (aktifPeriode.tgl_akhir || '').toString().slice(0, 10);
+      }
       // isi kelas
       const sel = document.getElementById('rekapKelas');
       if (sel) {
@@ -5367,8 +5371,14 @@
           if (cur) sel.value = cur;
         } catch (e) { console.warn(e); }
       }
-      // auto cari sekali
-      await loadRekapData();
+      // Tabel default kosong — tampil setelah klik Cari
+      const tbody = document.getElementById('tbodyRekap');
+      if (tbody) {
+        tbody.innerHTML = '<tr><td colspan="10" style="text-align:center;padding:16px;color:#94a3b8;">Atur filter lalu klik Cari</td></tr>';
+      }
+      document.getElementById('infoRekap') && (document.getElementById('infoRekap').textContent = '0 data');
+      document.getElementById('infoRekapView') && (document.getElementById('infoRekapView').textContent = '0 data');
+      dataRekap = [];
     }
 
     async function loadRekapData() {
@@ -5377,11 +5387,20 @@
       if (!tbody) return;
       tbody.innerHTML = '<tr><td colspan="10" style="text-align:center;padding:16px;color:#94a3b8;">Memuat...</td></tr>';
 
-      const dari = document.getElementById('rekapDari')?.value || '';
-      const sampai = document.getElementById('rekapSampai')?.value || '';
+      let dari = document.getElementById('rekapDari')?.value || '';
+      let sampai = document.getElementById('rekapSampai')?.value || '';
       const qNama = (document.getElementById('rekapNama')?.value || '').trim().toLowerCase();
       const kelas = document.getElementById('rekapKelas')?.value || '';
       const tipe = document.getElementById('rekapTipe')?.value || '';
+
+      // Jika tanggal kosong → gunakan rentang tahun ajaran aktif
+      if (!dari || !sampai) {
+        if (!aktifPeriode) await loadAktifPeriode();
+        if (aktifPeriode) {
+          if (!dari) dari = (aktifPeriode.tgl_mulai || '').toString().slice(0, 10);
+          if (!sampai) sampai = (aktifPeriode.tgl_akhir || '').toString().slice(0, 10);
+        }
+      }
 
       rekapSesiList = (dataSesi || []).filter(s => s.aktif !== false)
         .sort((a, b) => (a.urutan || 0) - (b.urutan || 0));
@@ -5417,7 +5436,8 @@
           if (dari) query = query.gte('tanggal', dari);
           if (sampai) query = query.lte('tanggal', sampai);
           if (tipe) query = query.eq('tipe', tipe);
-          const { data, error } = await query.limit(2000);
+          if (aktifPeriode && aktifPeriode.id) query = query.eq('periode_id', aktifPeriode.id);
+          const { data, error } = await query.limit(10000);
           if (error) throw error;
           rows = data || [];
         }
