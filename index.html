@@ -3973,8 +3973,8 @@
       lab.textContent = isSidikJariTerdaftar() ? 'Absen Sidik Jari' : 'Daftar Sidik Jari';
     }
 
+    // Sidik jari TANPA WebAuthn/passkey Google — registrasi perangkat + izin admin
     async function daftarSidikJari() {
-      // Validasi dulu — tanpa popup browser WebAuthn jika tidak eligible
       await loadSesi();
       sesiAktif = getSesiAktifSekarang();
       if (!sesiAktif) {
@@ -3996,45 +3996,17 @@
           'Admin belum mengizinkan sidik jari untuk akun Anda');
         return;
       }
-      if (!window.PublicKeyCredential) {
-        tampilHasil(false, '', 'Tidak Didukung', 'Perangkat/browser tidak mendukung sidik jari');
-        return;
-      }
-      try {
-        const challenge = new Uint8Array(32);
-        crypto.getRandomValues(challenge);
-        const userIdBytes = new TextEncoder().encode(String(currentUserKode || currentUserId || 'user')).slice(0, 32);
-        const cred = await navigator.credentials.create({
-          publicKey: {
-            challenge,
-            rp: { name: 'SMPN Pantang Mundur', id: location.hostname },
-            user: {
-              id: userIdBytes,
-              name: String(currentUserKode || currentUserId),
-              displayName: currentUserName || String(currentUserKode || currentUserId)
-            },
-            pubKeyCredParams: [{ type: 'public-key', alg: -7 }, { type: 'public-key', alg: -257 }],
-            authenticatorSelection: {
-              authenticatorAttachment: 'platform',
-              userVerification: 'required',
-              residentKey: 'preferred'
-            },
-            timeout: 60000
-          }
-        });
-        if (cred) {
-          localStorage.setItem(sidikJariKey(), cred.id);
-          updateLabelSidikJari();
-          tampilHasil(true, currentUserName || currentUserKode, 'Terdaftar', 'Sidik jari berhasil didaftarkan');
-        }
-      } catch (e) {
-        console.error(e);
-        // User cancel / NotAllowedError → jangan tampilkan popup agresif
-        const msg = (e && e.name === 'NotAllowedError')
-          ? 'Dibatalkan atau sidik jari tidak tersedia'
-          : (e.message || String(e));
-        tampilHasil(false, '', 'Gagal Daftar', msg);
-      }
+      // Daftar di perangkat ini (tanpa dialog Google/passkey)
+      localStorage.setItem(sidikJariKey(), JSON.stringify({
+        kode: currentUserKode,
+        userId: currentUserId,
+        nama: currentUserName,
+        role: currentRole,
+        at: new Date().toISOString()
+      }));
+      updateLabelSidikJari();
+      tampilHasil(true, currentUserName || currentUserKode, 'Terdaftar',
+        'Sidik jari berhasil didaftarkan di perangkat ini');
     }
 
     async function absenSidikJari() {
@@ -4055,36 +4027,15 @@
           'Admin belum mengizinkan sidik jari untuk akun Anda');
         return;
       }
-      if (!window.PublicKeyCredential) {
-        tampilHasil(false, '', 'Tidak Didukung', 'Perangkat tidak mendukung sidik jari');
-        return;
-      }
       if (!isSidikJariTerdaftar()) {
         tampilHasil(false, '', 'Belum Terdaftar', 'Daftarkan sidik jari terlebih dahulu');
         return;
       }
-      try {
-        const challenge = new Uint8Array(32);
-        crypto.getRandomValues(challenge);
-        await navigator.credentials.get({
-          publicKey: {
-            challenge,
-            timeout: 60000,
-            userVerification: 'required',
-            rpId: location.hostname
-          }
-        });
-        if (currentUserKode) {
-          await prosesScan(currentUserKode, true);
-        } else {
-          tampilHasil(false, '', 'Gagal', 'Sesi login tidak ditemukan');
-        }
-      } catch (e) {
-        console.error(e);
-        const msg = (e && e.name === 'NotAllowedError')
-          ? 'Dibatalkan atau verifikasi gagal'
-          : (e.message || String(e));
-        tampilHasil(false, '', 'Gagal Absen', msg);
+      // Absen langsung untuk user yang login (tanpa dialog Google)
+      if (currentUserKode) {
+        await prosesScan(currentUserKode, true);
+      } else {
+        tampilHasil(false, '', 'Gagal', 'Sesi login tidak ditemukan');
       }
     }
 
