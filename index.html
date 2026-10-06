@@ -1918,6 +1918,22 @@
     </div>
   </div>
 
+
+  <!-- ========== MODAL DIALOG (alert / confirm) ========== -->
+  <div class="modal-overlay" id="modalDialog">
+    <div class="modal" style="max-width:320px;text-align:center;">
+      <div class="modal-body" style="padding:22px 18px 10px;">
+        <div id="dialogIcon" style="font-size:40px;line-height:1;"></div>
+        <div id="dialogTitle" style="font-weight:700;font-size:16px;margin-top:10px;"></div>
+        <div id="dialogMessage" style="font-size:13px;color:#64748b;margin-top:8px;line-height:1.45;white-space:pre-wrap;"></div>
+      </div>
+      <div class="modal-footer" id="dialogFooter" style="gap:10px;">
+        <button class="btn btn-outline" id="dialogBtnCancel" style="display:none;flex:1;">Batal</button>
+        <button class="btn btn-primary" id="dialogBtnOk" style="flex:1;">OK</button>
+      </div>
+    </div>
+  </div>
+
   <!-- ========== MODAL HASIL SCAN ========== -->
   <div class="modal-overlay" id="modalScanHasil">
     <div class="modal" style="max-width:320px;text-align:center;">
@@ -2131,6 +2147,59 @@
       document.getElementById(id).classList.remove('show');
     }
 
+
+    // ========== Custom Alert / Confirm (ganti bawaan browser) ==========
+    let _dialogResolver = null;
+
+    function showAlert(message, title, icon) {
+      return new Promise((resolve) => {
+        _dialogResolver = () => resolve();
+        document.getElementById('dialogIcon').textContent = icon || 'ℹ️';
+        document.getElementById('dialogTitle').textContent = title || 'Info';
+        document.getElementById('dialogMessage').textContent = message == null ? '' : String(message);
+        document.getElementById('dialogBtnCancel').style.display = 'none';
+        document.getElementById('dialogBtnOk').textContent = 'OK';
+        document.getElementById('dialogBtnOk').className = 'btn btn-primary';
+        document.getElementById('dialogBtnOk').style.flex = '1';
+        openModal('modalDialog');
+      });
+    }
+
+    function showConfirm(message, title, icon) {
+      return new Promise((resolve) => {
+        _dialogResolver = (ok) => resolve(!!ok);
+        document.getElementById('dialogIcon').textContent = icon || '❓';
+        document.getElementById('dialogTitle').textContent = title || 'Konfirmasi';
+        document.getElementById('dialogMessage').textContent = message == null ? '' : String(message);
+        const btnCancel = document.getElementById('dialogBtnCancel');
+        btnCancel.style.display = 'block';
+        btnCancel.style.flex = '1';
+        document.getElementById('dialogBtnOk').textContent = 'OK';
+        document.getElementById('dialogBtnOk').className = 'btn btn-primary';
+        document.getElementById('dialogBtnOk').style.flex = '1';
+        openModal('modalDialog');
+      });
+    }
+
+    document.getElementById('dialogBtnOk').addEventListener('click', () => {
+      closeModal('modalDialog');
+      const r = _dialogResolver;
+      _dialogResolver = null;
+      if (r) r(true);
+    });
+    document.getElementById('dialogBtnCancel').addEventListener('click', () => {
+      closeModal('modalDialog');
+      const r = _dialogResolver;
+      _dialogResolver = null;
+      if (r) r(false);
+    });
+
+    // Override alert bawaan browser (kecuali dialog sistem sidik jari WebAuthn)
+    window.alert = function (message) {
+      showAlert(message, 'Pemberitahuan', 'ℹ️');
+    };
+
+
     // Tombol buka modal
     document.getElementById('btnLogin').addEventListener('click', (e) => {
       e.preventDefault();
@@ -2140,9 +2209,9 @@
       e.preventDefault();
       openModal('modalEditProfil');
     });
-    document.getElementById('btnLogout').addEventListener('click', (e) => {
+    document.getElementById('btnLogout').addEventListener('click', async (e) => {
       e.preventDefault();
-      if (confirm('Yakin ingin logout?')) {
+      if (await showConfirm('Yakin ingin logout?', 'Logout', '🚪')) {
         applyRole('guest'); // saveSession akan menghapus localStorage
         alert('Anda telah logout.');
       }
@@ -2155,7 +2224,16 @@
     // Tutup modal jika klik di luar konten
     document.querySelectorAll('.modal-overlay').forEach(ov => {
       ov.addEventListener('click', (e) => {
-        if (e.target === ov) ov.classList.remove('show');
+        if (e.target !== ov) return;
+        // Jika dialog alert/confirm, treat as Batal agar Promise tidak menggantung
+        if (ov.id === 'modalDialog' && _dialogResolver) {
+          const r = _dialogResolver;
+          _dialogResolver = null;
+          ov.classList.remove('show');
+          r(false);
+          return;
+        }
+        ov.classList.remove('show');
       });
     });
 
@@ -2317,7 +2395,7 @@
       history.pushState({ page: currentPage, trap: Date.now() }, '', '#' + currentPage);
     }
 
-    window.addEventListener('popstate', function () {
+    window.addEventListener('popstate', async function () {
       // Tutup semua modal kalau terbuka
       document.querySelectorAll('.modal-overlay.show').forEach(m => m.classList.remove('show'));
 
@@ -2335,7 +2413,7 @@
       }
 
       // Sudah di Dashboard → tampilkan konfirmasi
-      const yakin = confirm('Yakin ingin keluar?');
+      const yakin = await showConfirm('Yakin ingin keluar dari aplikasi?', 'Keluar', '🚪');
 
       if (yakin) {
         // User setuju keluar
@@ -2559,7 +2637,7 @@
     document.getElementById('btnHapusSiswa').addEventListener('click', async () => {
       const ids = getChecked('cb-siswa');
       if (!ids.length) { alert('Centang data yang ingin dihapus'); return; }
-      if (!confirm('Hapus ' + ids.length + ' data siswa terpilih?')) return;
+      if (!(await showConfirm('Hapus ' + ids.length + ' data siswa terpilih?', 'Hapus Data', '🗑️'))) return;
       try {
         if (supabaseClient) {
           const idNums = ids.map(Number).filter(n => !isNaN(n));
@@ -2702,7 +2780,7 @@
         });
       }
       if (!rows.length) { alert('Tidak ada baris valid (nama & NISN wajib)'); return; }
-      if (!confirm('Import/Update ' + rows.length + ' data siswa?')) return;
+      if (!(await showConfirm('Import/Update ' + rows.length + ' data siswa?', 'Import Data', '📥'))) return;
       try {
         if (supabaseClient) {
           const { error } = await supabaseClient.from('siswa').upsert(rows, { onConflict: 'nisn' });
@@ -2901,7 +2979,7 @@
     document.getElementById('btnHapusGuru').addEventListener('click', async () => {
       const ids = getChecked('cb-guru');
       if (!ids.length) { alert('Centang data yang ingin dihapus'); return; }
-      if (!confirm('Hapus ' + ids.length + ' data guru terpilih?')) return;
+      if (!(await showConfirm('Hapus ' + ids.length + ' data guru terpilih?', 'Hapus Data', '🗑️'))) return;
       try {
         if (supabaseClient) {
           const idNums = ids.map(Number).filter(n => !isNaN(n));
@@ -2942,7 +3020,7 @@
         });
       }
       if (!rows.length) { alert('Tidak ada baris valid (nama & PIN wajib)'); return; }
-      if (!confirm('Import/Update ' + rows.length + ' data guru?')) return;
+      if (!(await showConfirm('Import/Update ' + rows.length + ' data guru?', 'Import Data', '📥'))) return;
       try {
         if (supabaseClient) {
           const { error } = await supabaseClient.from('guru').upsert(rows, { onConflict: 'pin' });
@@ -3106,7 +3184,7 @@
     document.getElementById('btnHapusLulusan').addEventListener('click', async () => {
       const ids = getChecked('cb-lulusan');
       if (!ids.length) { alert('Centang data yang ingin dihapus'); return; }
-      if (!confirm('Hapus ' + ids.length + ' data lulusan terpilih?')) return;
+      if (!(await showConfirm('Hapus ' + ids.length + ' data lulusan terpilih?', 'Hapus Data', '🗑️'))) return;
       try {
         if (supabaseClient) {
           const idNums = ids.map(Number).filter(n => !isNaN(n));
@@ -3149,7 +3227,7 @@
         });
       }
       if (!rows.length) { alert('Tidak ada baris valid (nama wajib)'); return; }
-      if (!confirm('Import ' + rows.length + ' data lulusan?')) return;
+      if (!(await showConfirm('Import ' + rows.length + ' data lulusan?', 'Import Data', '📥'))) return;
       try {
         if (supabaseClient) {
           const { error } = await supabaseClient.from('lulusan').insert(rows);
@@ -3328,7 +3406,7 @@
       });
 
       if (!rows.length) { alert('Tidak ada nilai yang diisi'); return; }
-      if (!confirm('Simpan ' + rows.length + ' nilai?')) return;
+      if (!(await showConfirm('Simpan ' + rows.length + ' nilai?', 'Simpan Nilai', '💾'))) return;
 
       try {
         if (supabaseClient) {
@@ -3564,7 +3642,7 @@
     document.getElementById('btnHapusMapel').addEventListener('click', async () => {
       const ids = getChecked('cb-mapel-row');
       if (!ids.length) { alert('Centang data yang ingin dihapus'); return; }
-      if (!confirm('Hapus ' + ids.length + ' mapel?')) return;
+      if (!(await showConfirm('Hapus ' + ids.length + ' mapel?', 'Hapus Data', '🗑️'))) return;
       try {
         if (supabaseClient) {
           const { error } = await supabaseClient.from('mapel').delete().in('id', ids.map(Number));
@@ -3655,7 +3733,7 @@
     document.getElementById('btnHapusKelas').addEventListener('click', async () => {
       const ids = getChecked('cb-kelas-row');
       if (!ids.length) { alert('Centang data yang ingin dihapus'); return; }
-      if (!confirm('Hapus ' + ids.length + ' kelas?')) return;
+      if (!(await showConfirm('Hapus ' + ids.length + ' kelas?', 'Hapus Data', '🗑️'))) return;
       try {
         if (supabaseClient) {
           const { error } = await supabaseClient.from('kelas').delete().in('id', ids.map(Number));
@@ -3772,7 +3850,7 @@
     document.getElementById('btnHapusPeriode').addEventListener('click', async () => {
       const ids = getChecked('cb-periode-row');
       if (!ids.length) { alert('Centang data yang ingin dihapus'); return; }
-      if (!confirm('Hapus ' + ids.length + ' periode?')) return;
+      if (!(await showConfirm('Hapus ' + ids.length + ' periode?', 'Hapus Data', '🗑️'))) return;
       try {
         if (supabaseClient) {
           const { error } = await supabaseClient.from('periode').delete().in('id', ids.map(Number));
@@ -3788,7 +3866,7 @@
     document.getElementById('btnAktifkanPeriode').addEventListener('click', async () => {
       const ids = getChecked('cb-periode-row');
       if (ids.length !== 1) { alert('Centang tepat 1 periode untuk diaktifkan'); return; }
-      if (!confirm('Jadikan periode ini sebagai periode aktif?')) return;
+      if (!(await showConfirm('Jadikan periode ini sebagai periode aktif?', 'Set Aktif', '✓'))) return;
       try {
         if (supabaseClient) {
           // Nonaktifkan semua dulu
@@ -4551,7 +4629,7 @@
     document.getElementById('btnHapusSesi')?.addEventListener('click', async () => {
       const ids = getChecked('cb-sesi-row');
       if (!ids.length) { alert('Centang sesi yang ingin dihapus'); return; }
-      if (!confirm('Hapus ' + ids.length + ' sesi?')) return;
+      if (!(await showConfirm('Hapus ' + ids.length + ' sesi?', 'Hapus Data', '🗑️'))) return;
       try {
         if (supabaseClient) {
           const { data, error } = await supabaseClient.from('sesi').delete().in('id', ids.map(Number)).select('id');
@@ -4619,7 +4697,7 @@
     document.getElementById('btnHapusLibur')?.addEventListener('click', async () => {
       const ids = getChecked('cb-libur-row');
       if (!ids.length) { alert('Centang data yang ingin dihapus'); return; }
-      if (!confirm('Hapus ' + ids.length + ' hari libur?')) return;
+      if (!(await showConfirm('Hapus ' + ids.length + ' hari libur?', 'Hapus Data', '🗑️'))) return;
       try {
         if (supabaseClient) {
           const { error } = await supabaseClient.from('hari_libur').delete().in('id', ids.map(Number));
@@ -4699,7 +4777,7 @@
         nama: cb.dataset.nama || null,
         aktif: true
       }));
-      if (!confirm('Simpan izin sidik jari untuk ' + checked.length + ' user?')) return;
+      if (!(await showConfirm('Simpan izin sidik jari untuk ' + checked.length + ' user?', 'Izin Sidik Jari', '👆'))) return;
       try {
         if (supabaseClient) {
           // Hapus semua lalu insert yang dicentang
