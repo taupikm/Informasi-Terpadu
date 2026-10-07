@@ -54,6 +54,26 @@
     .bs-q-preview p { margin: 0 0 4px; }
     tr.bs-row-preview { cursor: pointer; }
     tr.bs-row-preview:hover { background: #f1f5f9; }
+
+    .bs-soal-list { display:flex; flex-direction:column; gap:12px; }
+    .bs-soal-card {
+      background:#fff; border:1px solid #e2e8f0; border-radius:12px;
+      padding:12px 14px; position:relative;
+    }
+    .bs-soal-card.selected { border-color:#2563eb; box-shadow:0 0 0 2px rgba(37,99,235,.2); }
+    .bs-soal-card-head {
+      display:flex; align-items:center; gap:8px; margin-bottom:8px;
+      font-size:12px; color:#64748b;
+    }
+    .bs-soal-card-body { font-size:14px; line-height:1.55; color:#0f172a; }
+    .bs-soal-card-body img { max-width:100%; height:auto; }
+    .bs-soal-card-body .katex { font-size:1.05em; }
+    .bs-soal-card-body p { margin:0 0 6px; }
+    .bs-opsi-line {
+      margin:6px 0; padding:8px 10px; border-radius:8px;
+      border:1px solid #e2e8f0; background:#f8fafc; font-size:13px;
+    }
+    .bs-opsi-line.key { border-color:#86efac; background:#f0fdf4; }
     #bsPreviewBody img { max-width: 100%; }
     #bsPreviewBody .katex-display { overflow-x: auto; }
   </style>
@@ -1454,22 +1474,13 @@
         <button class="btn btn-outline" id="btnBsItemHapus" style="color:#ef4444;border-color:#fca5a5;">🗑️</button>
         <span class="toolbar-info" id="infoBsItem">0 soal</span>
       </div>
-      <div class="table-wrap">
-        <table>
-          <thead>
-            <tr>
-              <th style="width:36px;"><input type="checkbox" id="checkAllBsItem"></th>
-              <th>No</th>
-              <th>Jenis</th>
-              <th>Pertanyaan</th>
-              <th>Kunci</th>
-              <th>Skor</th>
-            </tr>
-          </thead>
-          <tbody id="tbodyBsItem">
-            <tr><td colspan="6" style="text-align:center;padding:16px;color:#94a3b8;">Belum ada soal</td></tr>
-          </tbody>
-        </table>
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;font-size:12px;">
+        <label style="display:flex;align-items:center;gap:4px;cursor:pointer;">
+          <input type="checkbox" id="checkAllBsItem"> Pilih semua
+        </label>
+      </div>
+      <div id="tbodyBsItem" class="bs-soal-list">
+        <div style="text-align:center;padding:16px;color:#94a3b8;">Belum ada soal</div>
       </div>
     </section>
 
@@ -6821,39 +6832,98 @@
       document.getElementById('infoBsItem').textContent = rows.length + ' soal';
       document.getElementById('checkAllBsItem').checked = false;
       if (!rows.length) {
-        tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;padding:16px;color:#94a3b8;">Belum ada soal</td></tr>';
+        tbody.innerHTML = '<div style="text-align:center;padding:16px;color:#94a3b8;">Belum ada soal</div>';
         return;
       }
-      function stripHtmlPreview(html) {
-        return String(html || '').replace(/<script[\s\S]*?<\/script>/gi, '');
+
+      // Perbaiki LaTeX yang rusak (\f dari \frac jadi form-feed)
+      function fixBrokenLatex(s) {
+        if (!s) return '';
+        let t = String(s);
+        // form-feed (dari \f di \frac), backspace, dll
+        t = t.replace(/\u000c/g, 'f').replace(/\u0008/g, '');
+        return t;
       }
-      function kunciPreview(k) {
-        if (!k) return '–';
-        const s = String(k);
-        if (s.indexOf('<') >= 0) return stripHtmlPreview(s);
-        return esc(s);
+
+      function renderMathInHtml(html) {
+        let h = fixBrokenLatex(html || '');
+        h = h.replace(/<script[\s\S]*?<\/script>/gi, '');
+        // Render $...$ dan $$...$$ jika masih latex mentah
+        h = h.replace(/\$\$([\s\S]+?)\$\$/g, (_, tex) => {
+          try {
+            return typeof katex !== 'undefined'
+              ? katex.renderToString(tex.trim(), { throwOnError: false, displayMode: true })
+              : tex;
+          } catch (e) { return tex; }
+        });
+        h = h.replace(/\$([^\$]+?)\$/g, (_, tex) => {
+          try {
+            return typeof katex !== 'undefined'
+              ? katex.renderToString(tex.trim(), { throwOnError: false, displayMode: false })
+              : tex;
+          } catch (e) { return tex; }
+        });
+        // \frac mentah di teks
+        h = h.replace(/\\frac\{([^{}]+)\}\{([^{}]+)\}/g, (_, a, b) => {
+          try {
+            return typeof katex !== 'undefined'
+              ? katex.renderToString('\\frac{' + a + '}{' + b + '}', { throwOnError: false })
+              : a + '/' + b;
+          } catch (e) { return a + '/' + b; }
+        });
+        return h;
       }
+
+      function isKeyOption(kunci, letter) {
+        const k = String(kunci || '').toUpperCase();
+        return k.split(/[,;\s]+/).map(x => x.trim()).includes(letter);
+      }
+
       tbody.innerHTML = rows.map((r, i) => {
-        return '<tr class="bs-row-preview" data-id="' + r.id + '">' +
-          '<td><input type="checkbox" class="cb-bs-item" value="' + r.id + '" onclick="event.stopPropagation()"></td>' +
-          '<td>' + (r.nomor || (i + 1)) + '</td>' +
-          '<td style="font-size:11px;white-space:nowrap;">' + esc(r.jenis || 'Pilihan Ganda') + '</td>' +
-          '<td class="bs-q-preview">' + stripHtmlPreview(r.pertanyaan || '') + '</td>' +
-          '<td class="bs-k-preview"><b>' + kunciPreview(r.kunci) + '</b></td>' +
-          '<td>' + (r.skor || 1) + '</td></tr>';
+        const no = r.nomor || (i + 1);
+        const jenis = r.jenis || 'Pilihan Ganda';
+        let body = '<div class="bs-soal-card-body">' + renderMathInHtml(r.pertanyaan) + '</div>';
+
+        if (jenis === 'Pilihan Ganda' || jenis === 'Checkbox') {
+          ['A', 'B', 'C', 'D'].forEach(L => {
+            const val = r['opsi_' + L.toLowerCase()];
+            if (!val) return;
+            const key = isKeyOption(r.kunci, L);
+            body += '<div class="bs-opsi-line' + (key ? ' key' : '') + '"><b>' + L + '.</b> ' +
+              renderMathInHtml(val) + (key ? ' <span style="color:#16a34a;font-size:11px;">✓</span>' : '') + '</div>';
+          });
+        } else if (jenis === 'Benar Salah') {
+          body += '<div class="bs-opsi-line' + (r.kunci === 'Benar' ? ' key' : '') + '">○ Benar</div>';
+          body += '<div class="bs-opsi-line' + (r.kunci === 'Salah' ? ' key' : '') + '">○ Salah</div>';
+        } else if (r.kunci) {
+          body += '<div style="margin-top:8px;padding:8px;background:#eff6ff;border-radius:8px;font-size:12px;">' +
+            '<span style="color:#1d4ed8;font-weight:700;">Kunci: </span>' + renderMathInHtml(r.kunci) + '</div>';
+        }
+
+        return '<div class="bs-soal-card" data-id="' + r.id + '">' +
+          '<div class="bs-soal-card-head">' +
+          '<input type="checkbox" class="cb-bs-item" value="' + r.id + '" onclick="event.stopPropagation()">' +
+          '<span style="font-weight:700;color:#0f172a;">No. ' + no + '</span>' +
+          '<span style="background:#f1f5f9;padding:2px 8px;border-radius:6px;">' + esc(jenis) + '</span>' +
+          '<span style="margin-left:auto;">Skor: <b>' + (r.skor || 1) + '</b></span>' +
+          '</div>' + body + '</div>';
       }).join('');
-      tbody.querySelectorAll('tr.bs-row-preview').forEach(tr => {
-        tr.addEventListener('click', (e) => {
+
+      tbody.querySelectorAll('.bs-soal-card').forEach(card => {
+        card.addEventListener('click', (e) => {
           if (e.target.closest('input[type=checkbox]')) return;
-          // centang baris ini (single select)
-          document.querySelectorAll('.cb-bs-item').forEach(c => { c.checked = false; });
-          const cb = tr.querySelector('.cb-bs-item');
-          if (cb) cb.checked = true;
-          const id = tr.getAttribute('data-id');
-          const r = dataBsItem.find(x => String(x.id) === String(id));
-          if (r) showBsSoalPreview(r);
+          const cb = card.querySelector('.cb-bs-item');
+          if (cb) {
+            // toggle
+            cb.checked = !cb.checked;
+          }
+          tbody.querySelectorAll('.bs-soal-card').forEach(c => {
+            const on = c.querySelector('.cb-bs-item')?.checked;
+            c.classList.toggle('selected', !!on);
+          });
         });
       });
+
       try {
         if (supabaseClient) {
           await supabaseClient.from('bank_soal').update({ jml_soal: dataBsItem.length }).eq('id', Number(currentBankId));
@@ -6866,7 +6936,10 @@
     });
 
     document.getElementById('checkAllBsItem')?.addEventListener('change', function () {
-      document.querySelectorAll('.cb-bs-item').forEach(c => { c.checked = this.checked; });
+      document.querySelectorAll('#tbodyBsItem .cb-bs-item').forEach(c => { c.checked = this.checked; });
+      document.querySelectorAll('#tbodyBsItem .bs-soal-card').forEach(c => {
+        c.classList.toggle('selected', this.checked);
+      });
     });
 
     document.getElementById('btnBsItemTambah')?.addEventListener('click', () => {
