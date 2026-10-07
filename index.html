@@ -95,6 +95,26 @@
     .bs-opsi-content p { margin:0; display:inline; }
     .bs-opsi-content .ql-editor, .bs-opsi-content p:only-child { margin:0; }
     .bs-opsi-check { color:#16a34a; font-size:12px; flex-shrink:0; }
+
+    .bs-soal-card-body table {
+      width: 100%; border-collapse: collapse; font-size: 12px; margin: 8px 0;
+      display: table; table-layout: auto;
+    }
+    .bs-soal-card-body table td,
+    .bs-soal-card-body table th {
+      border: 1px solid #e2e8f0; padding: 6px 8px; vertical-align: top;
+      white-space: normal; word-break: break-word;
+    }
+    .bs-soal-card-body {
+      overflow-x: auto;
+    }
+    .bs-kunci-admin {
+      margin-top: 8px; padding: 6px 10px; background: #f8fafc;
+      border-left: 3px solid #94a3b8; font-size: 11px; color: #475569;
+    }
+    .bs-kunci-admin span {
+      font-weight: 700; color: #64748b; margin-right: 6px;
+    }
     #bsPreviewBody img { max-width: 100%; }
     #bsPreviewBody .katex-display { overflow-x: auto; }
   </style>
@@ -7477,15 +7497,31 @@
         return k.split(/[,;\s]+/).map(x => x.trim()).includes(letter);
       }
 
+      function cleanSoalHtml(html, nomor) {
+        let h = String(html || '');
+        const n = String(nomor || '');
+        if (n) {
+          const re1 = new RegExp('(<(?:p|div|h[1-6])[^>]*>)\\s*(?:No\\.?\\s*)?' + n + '[\\.\\)]\\s*', 'i');
+          h = h.replace(re1, '$1');
+          const re2 = new RegExp('^\\s*(?:No\\.?\\s*)?' + n + '[\\.\\)]\\s*', 'i');
+          h = h.replace(re2, '');
+        }
+        h = h.replace(/<(?:p|div|li)[^>]*>\s*Kunci\s*[:.][\s\S]*?(?=(<(?:p|div|table)|$))/gi, '');
+        h = h.replace(/Kunci\s*[:.]\s*[^<]*/gi, '');
+        return h;
+      }
+
       tbody.innerHTML = rows.map((r, i) => {
         const no = r.nomor || (i + 1);
         const jenis = r.jenis || 'Pilihan Ganda';
-        let body = '<div class="bs-soal-card-body">' + renderMathInHtml(r.pertanyaan) + '</div>';
+        const qHtml = cleanSoalHtml(r.pertanyaan, no);
+        let body = '<div class="bs-soal-card-body">' + renderMathInHtml(qHtml) + '</div>';
 
         if (jenis === 'Pilihan Ganda' || jenis === 'Checkbox') {
           ['A', 'B', 'C', 'D'].forEach(L => {
-            const val = r['opsi_' + L.toLowerCase()];
+            let val = r['opsi_' + L.toLowerCase()];
             if (!val) return;
+            val = cleanSoalHtml(val, '');
             const key = isKeyOption(r.kunci, L);
             body += '<div class="bs-opsi-line' + (key ? ' key' : '') + '">' +
               '<span class="bs-opsi-letter">' + L + '.</span>' +
@@ -7496,9 +7532,12 @@
         } else if (jenis === 'Benar Salah') {
           body += '<div class="bs-opsi-line' + (r.kunci === 'Benar' ? ' key' : '') + '"><span class="bs-opsi-letter">○</span><div class="bs-opsi-content">Benar</div></div>';
           body += '<div class="bs-opsi-line' + (r.kunci === 'Salah' ? ' key' : '') + '"><span class="bs-opsi-letter">○</span><div class="bs-opsi-content">Salah</div></div>';
-        } else if (r.kunci) {
-          body += '<div style="margin-top:8px;padding:8px;background:#eff6ff;border-radius:8px;font-size:12px;">' +
-            '<span style="color:#1d4ed8;font-weight:700;">Kunci: </span>' + renderMathInHtml(r.kunci) + '</div>';
+        }
+
+        // Kunci admin: ringkas di footer, bukan menumpuk di isi
+        if (r.kunci) {
+          body += '<div class="bs-kunci-admin"><span>Kunci</span> ' +
+            renderMathInHtml(String(r.kunci).replace(/</g, '&lt;')) + '</div>';
         }
 
         return '<div class="bs-soal-card" data-id="' + r.id + '">' +
