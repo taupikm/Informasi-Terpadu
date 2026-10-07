@@ -1331,8 +1331,115 @@
       </div>
     </section>
     <section class="page" id="page-kelola-tugas">
-      <div class="placeholder"><div class="icon">📂</div><h2>Kelola Tugas / Ujian</h2><p>Halaman pengelolaan tugas dan ujian</p></div>
+      <div class="page-title">Bank Soal — Tugas / Ujian</div>
+
+      <!-- Filter -->
+      <div class="card" style="margin-bottom:10px;padding:12px;">
+        <div class="rekap-filter-row">
+          <label>Tahun Ajaran</label>
+          <select id="bsTahun"><option value="">Semua</option></select>
+        </div>
+        <div class="rekap-filter-row">
+          <label>Semester</label>
+          <select id="bsSemester">
+            <option value="">Semua</option>
+            <option value="Ganjil">Ganjil</option>
+            <option value="Genap">Genap</option>
+          </select>
+        </div>
+        <div class="rekap-filter-row">
+          <label>Cari</label>
+          <input type="text" id="bsCari" placeholder="Judul / mapel / kelas">
+        </div>
+      </div>
+
+      <div class="toolbar">
+        <button class="btn btn-primary" id="btnBsTambah">+ Tambah</button>
+        <button class="btn btn-secondary" id="btnBsEdit">✏️ Edit</button>
+        <button class="btn btn-outline" id="btnBsHapus" style="color:#ef4444;border-color:#fca5a5;">🗑️</button>
+        <button class="btn btn-outline" id="btnBsSoal">📝 Soal</button>
+        <button class="btn btn-outline" id="btnBsHasil">📊 Hasil</button>
+        <span class="toolbar-info" id="infoBs">0 data</span>
+      </div>
+
+      <div class="table-wrap">
+        <table id="tableBankSoal">
+          <thead>
+            <tr>
+              <th style="width:36px;"><input type="checkbox" id="checkAllBs"></th>
+              <th>No</th>
+              <th>Judul</th>
+              <th>Mapel</th>
+              <th>Kelas</th>
+              <th>Jenis</th>
+              <th>Jml Soal</th>
+              <th>Status</th>
+              <th>Periode</th>
+            </tr>
+          </thead>
+          <tbody id="tbodyBankSoal">
+            <tr><td colspan="9" style="text-align:center;padding:16px;color:#94a3b8;">Memuat...</td></tr>
+          </tbody>
+        </table>
+      </div>
     </section>
+
+    <!-- Sub: kelola soal dalam 1 bank -->
+    <section class="page" id="page-bank-soal-detail">
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;">
+        <button class="btn btn-outline" id="btnBsKembali" style="padding:6px 10px;">← Kembali</button>
+        <div class="page-title" style="margin:0;" id="bsDetailTitle">Soal</div>
+      </div>
+      <div class="toolbar">
+        <button class="btn btn-primary" id="btnBsItemTambah">+ Tambah Soal</button>
+        <button class="btn btn-secondary" id="btnBsItemEdit">✏️ Edit</button>
+        <button class="btn btn-outline" id="btnBsItemHapus" style="color:#ef4444;border-color:#fca5a5;">🗑️</button>
+        <span class="toolbar-info" id="infoBsItem">0 soal</span>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th style="width:36px;"><input type="checkbox" id="checkAllBsItem"></th>
+              <th>No</th>
+              <th>Pertanyaan</th>
+              <th>Kunci</th>
+              <th>Skor</th>
+            </tr>
+          </thead>
+          <tbody id="tbodyBsItem">
+            <tr><td colspan="5" style="text-align:center;padding:16px;color:#94a3b8;">Belum ada soal</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- Sub: hasil -->
+    <section class="page" id="page-bank-soal-hasil">
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;">
+        <button class="btn btn-outline" id="btnBsHasilKembali" style="padding:6px 10px;">← Kembali</button>
+        <div class="page-title" style="margin:0;" id="bsHasilTitle">Hasil</div>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>No</th>
+              <th>Nama</th>
+              <th>NISN</th>
+              <th>Kelas</th>
+              <th>Skor</th>
+              <th>Benar</th>
+              <th>Waktu</th>
+            </tr>
+          </thead>
+          <tbody id="tbodyBsHasil">
+            <tr><td colspan="7" style="text-align:center;padding:16px;color:#94a3b8;">Belum ada hasil</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
     <section class="page" id="page-download-absensi">
       <div class="placeholder"><div class="icon">⬇️</div><h2>Download Absensi</h2><p>Halaman unduh data absensi</p></div>
     </section>
@@ -2161,6 +2268,109 @@
       </div>
     </div>
   </div>
+
+  <!-- ========== MODAL BANK SOAL ========== -->
+  <div class="modal-overlay" id="modalBankSoal">
+    <div class="modal">
+      <div class="modal-header">
+        <h3 id="modalBsTitle">Tambah Bank Soal</h3>
+        <button class="modal-close" data-close="modalBankSoal">&times;</button>
+      </div>
+      <div class="modal-body">
+        <input type="hidden" id="bsId">
+        <div class="form-group">
+          <label>Judul *</label>
+          <input type="text" id="bsJudul" placeholder="Contoh: Ulangan Harian Bab 1">
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label>Mapel *</label>
+            <input type="text" id="bsMapel" placeholder="Matematika">
+          </div>
+          <div class="form-group">
+            <label>Kelas *</label>
+            <input type="text" id="bsKelas" placeholder="7A / Semua">
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label>Jenis *</label>
+            <select id="bsJenis">
+              <option value="Tugas">Tugas</option>
+              <option value="Ujian">Ujian</option>
+              <option value="UH">UH</option>
+              <option value="PTS">PTS</option>
+              <option value="PAS">PAS</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Status</label>
+            <select id="bsStatus">
+              <option value="Draft">Draft</option>
+              <option value="Aktif">Aktif</option>
+              <option value="Selesai">Selesai</option>
+            </select>
+          </div>
+        </div>
+        <div class="form-group">
+          <label>Periode (Tahun Ajaran)</label>
+          <select id="bsPeriodeId"></select>
+        </div>
+        <div class="form-group">
+          <label>Keterangan</label>
+          <input type="text" id="bsKet" placeholder="Opsional">
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-outline" data-close="modalBankSoal">Batal</button>
+        <button class="btn btn-primary" id="btnSaveBankSoal">Simpan</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ========== MODAL ITEM SOAL ========== -->
+  <div class="modal-overlay" id="modalBsItem">
+    <div class="modal">
+      <div class="modal-header">
+        <h3 id="modalBsItemTitle">Tambah Soal</h3>
+        <button class="modal-close" data-close="modalBsItem">&times;</button>
+      </div>
+      <div class="modal-body">
+        <input type="hidden" id="bsItemId">
+        <div class="form-group">
+          <label>Nomor</label>
+          <input type="number" id="bsItemNo" min="1" value="1">
+        </div>
+        <div class="form-group">
+          <label>Pertanyaan *</label>
+          <textarea id="bsItemTanya" rows="3" style="width:100%;padding:10px;border:1px solid var(--border);border-radius:8px;font-size:13px;" placeholder="Tuliskan pertanyaan..."></textarea>
+        </div>
+        <div class="form-group"><label>Opsi A</label><input type="text" id="bsItemA"></div>
+        <div class="form-group"><label>Opsi B</label><input type="text" id="bsItemB"></div>
+        <div class="form-group"><label>Opsi C</label><input type="text" id="bsItemC"></div>
+        <div class="form-group"><label>Opsi D</label><input type="text" id="bsItemD"></div>
+        <div class="form-row">
+          <div class="form-group">
+            <label>Kunci Jawaban *</label>
+            <select id="bsItemKunci">
+              <option value="A">A</option>
+              <option value="B">B</option>
+              <option value="C">C</option>
+              <option value="D">D</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Skor</label>
+            <input type="number" id="bsItemSkor" min="1" value="1">
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-outline" data-close="modalBsItem">Batal</button>
+        <button class="btn btn-primary" id="btnSaveBsItem">Simpan</button>
+      </div>
+    </div>
+  </div>
   <!-- ========== MODAL DIALOG (alert / confirm) ========== -->
   <div class="modal-overlay" id="modalDialog">
     <div class="modal" style="max-width:320px;text-align:center;">
@@ -2616,6 +2826,9 @@
       if (pageId === 'dashboard') loadDashboard();
       if (pageId === 'input-izin') initIzinPage();
       if (pageId === 'rekap-data') initRekapPage();
+      if (pageId === 'kelola-tugas') initBankSoalPage();
+      if (pageId === 'bank-soal-detail') { /* stay */ }
+      if (pageId === 'bank-soal-hasil') { /* stay */ }
     }
 
     // Klik menu
@@ -5469,6 +5682,436 @@
     }
 
 
+
+
+    // ============================================================
+    // BANK SOAL (Kelola Tugas / Ujian)
+    // ============================================================
+    let dataBankSoal = [];
+    let dataPeriodeAll = [];
+    let currentBankId = null;
+    let dataBsItem = [];
+
+    async function initBankSoalPage() {
+      await loadAktifPeriode();
+      await loadPeriodeOptionsBs();
+      await loadBankSoalTable();
+    }
+
+    async function loadPeriodeOptionsBs() {
+      const selTahun = document.getElementById('bsTahun');
+      const selPeriode = document.getElementById('bsPeriodeId');
+      try {
+        if (supabaseClient) {
+          const { data } = await supabaseClient.from('periode').select('*').order('tahun_ajaran', { ascending: false });
+          dataPeriodeAll = data || [];
+        } else {
+          dataPeriodeAll = [];
+        }
+      } catch (e) { dataPeriodeAll = []; }
+
+      const tahunSet = [...new Set(dataPeriodeAll.map(p => p.tahun_ajaran).filter(Boolean))];
+      if (selTahun) {
+        const cur = selTahun.value;
+        selTahun.innerHTML = '<option value="">Semua</option>' +
+          tahunSet.map(t => '<option value="' + esc(t) + '">' + esc(t) + '</option>').join('');
+        if (cur) selTahun.value = cur;
+      }
+      if (selPeriode) {
+        selPeriode.innerHTML = dataPeriodeAll.length
+          ? dataPeriodeAll.map(p =>
+              '<option value="' + p.id + '">' + esc(p.tahun_ajaran) + ' — ' + esc(p.semester) +
+              (p.aktif ? ' (Aktif)' : '') + '</option>'
+            ).join('')
+          : '<option value="">Belum ada periode</option>';
+        if (aktifPeriode) selPeriode.value = aktifPeriode.id;
+      }
+    }
+
+    async function loadBankSoalTable() {
+      const tbody = document.getElementById('tbodyBankSoal');
+      if (!tbody) return;
+      const fTahun = document.getElementById('bsTahun')?.value || '';
+      const fSem = document.getElementById('bsSemester')?.value || '';
+      const q = (document.getElementById('bsCari')?.value || '').trim().toLowerCase();
+
+      try {
+        if (supabaseClient) {
+          let query = supabaseClient.from('bank_soal').select('*, periode:periode_id(tahun_ajaran, semester)').order('id', { ascending: false });
+          const { data, error } = await query;
+          if (error) throw error;
+          dataBankSoal = data || [];
+        } else {
+          dataBankSoal = JSON.parse(localStorage.getItem('bank_soal') || '[]');
+        }
+      } catch (e) {
+        console.warn(e);
+        // fallback local
+        dataBankSoal = JSON.parse(localStorage.getItem('bank_soal') || '[]');
+        if (e.message && String(e.message).includes('relation')) {
+          tbody.innerHTML = '<tr><td colspan="9" style="text-align:center;padding:16px;color:#f59e0b;">Tabel bank_soal belum ada. Jalankan SQL di Supabase.</td></tr>';
+          return;
+        }
+      }
+
+      let rows = dataBankSoal.slice();
+      if (fTahun) {
+        rows = rows.filter(r => {
+          const th = r.periode?.tahun_ajaran || r.tahun_ajaran || '';
+          return th === fTahun;
+        });
+      }
+      if (fSem) {
+        rows = rows.filter(r => {
+          const sm = r.periode?.semester || r.semester || '';
+          return sm === fSem;
+        });
+      }
+      if (q) {
+        rows = rows.filter(r =>
+          String(r.judul || '').toLowerCase().includes(q) ||
+          String(r.mapel || '').toLowerCase().includes(q) ||
+          String(r.kelas || '').toLowerCase().includes(q)
+        );
+      }
+
+      document.getElementById('infoBs').textContent = rows.length + ' data';
+      document.getElementById('checkAllBs').checked = false;
+
+      if (!rows.length) {
+        tbody.innerHTML = '<tr><td colspan="9" style="text-align:center;padding:16px;color:#94a3b8;">Belum ada bank soal</td></tr>';
+        return;
+      }
+
+      tbody.innerHTML = rows.map((r, i) => {
+        const periode = r.periode
+          ? (r.periode.tahun_ajaran + ' / ' + r.periode.semester)
+          : (r.tahun_ajaran ? r.tahun_ajaran + ' / ' + (r.semester || '') : '-');
+        const st = r.status || 'Draft';
+        const badge = st === 'Aktif' ? 'badge-hadir' : (st === 'Selesai' ? 'badge-izin' : 'badge-alpha');
+        return '<tr data-id="' + r.id + '">' +
+          '<td><input type="checkbox" class="cb-bs-row" value="' + r.id + '"></td>' +
+          '<td>' + (i + 1) + '</td>' +
+          '<td>' + esc(r.judul) + '</td>' +
+          '<td>' + esc(r.mapel) + '</td>' +
+          '<td>' + esc(r.kelas) + '</td>' +
+          '<td>' + esc(r.jenis) + '</td>' +
+          '<td>' + (r.jml_soal != null ? r.jml_soal : (r._jml || 0)) + '</td>' +
+          '<td><span class="badge-status ' + badge + '">' + esc(st) + '</span></td>' +
+          '<td style="font-size:11px;">' + esc(periode) + '</td></tr>';
+      }).join('');
+    }
+
+    document.getElementById('bsTahun')?.addEventListener('change', () => loadBankSoalTable());
+    document.getElementById('bsSemester')?.addEventListener('change', () => loadBankSoalTable());
+    document.getElementById('bsCari')?.addEventListener('input', () => loadBankSoalTable());
+    document.getElementById('checkAllBs')?.addEventListener('change', function () {
+      document.querySelectorAll('.cb-bs-row').forEach(c => { c.checked = this.checked; });
+    });
+
+    function getCheckedBs() {
+      return [...document.querySelectorAll('.cb-bs-row:checked')].map(c => c.value);
+    }
+
+    document.getElementById('btnBsTambah')?.addEventListener('click', async () => {
+      await loadPeriodeOptionsBs();
+      document.getElementById('modalBsTitle').textContent = 'Tambah Bank Soal';
+      document.getElementById('bsId').value = '';
+      document.getElementById('bsJudul').value = '';
+      document.getElementById('bsMapel').value = '';
+      document.getElementById('bsKelas').value = '';
+      document.getElementById('bsJenis').value = 'Tugas';
+      document.getElementById('bsStatus').value = 'Draft';
+      document.getElementById('bsKet').value = '';
+      openModal('modalBankSoal');
+    });
+
+    document.getElementById('btnBsEdit')?.addEventListener('click', async () => {
+      const ids = getCheckedBs();
+      if (ids.length !== 1) { alert('Centang tepat 1 data untuk diedit'); return; }
+      const r = dataBankSoal.find(x => String(x.id) === ids[0]);
+      if (!r) { alert('Data tidak ditemukan'); return; }
+      await loadPeriodeOptionsBs();
+      document.getElementById('modalBsTitle').textContent = 'Edit Bank Soal';
+      document.getElementById('bsId').value = r.id;
+      document.getElementById('bsJudul').value = r.judul || '';
+      document.getElementById('bsMapel').value = r.mapel || '';
+      document.getElementById('bsKelas').value = r.kelas || '';
+      document.getElementById('bsJenis').value = r.jenis || 'Tugas';
+      document.getElementById('bsStatus').value = r.status || 'Draft';
+      document.getElementById('bsKet').value = r.keterangan || '';
+      if (r.periode_id) document.getElementById('bsPeriodeId').value = r.periode_id;
+      openModal('modalBankSoal');
+    });
+
+    document.getElementById('btnSaveBankSoal')?.addEventListener('click', async () => {
+      const id = document.getElementById('bsId').value;
+      const payload = {
+        judul: document.getElementById('bsJudul').value.trim(),
+        mapel: document.getElementById('bsMapel').value.trim(),
+        kelas: document.getElementById('bsKelas').value.trim(),
+        jenis: document.getElementById('bsJenis').value,
+        status: document.getElementById('bsStatus').value,
+        periode_id: document.getElementById('bsPeriodeId').value
+          ? Number(document.getElementById('bsPeriodeId').value) : null,
+        keterangan: document.getElementById('bsKet').value.trim() || null,
+        jml_soal: 0
+      };
+      if (!payload.judul || !payload.mapel || !payload.kelas) {
+        alert('Judul, Mapel, Kelas wajib diisi'); return;
+      }
+      try {
+        if (supabaseClient) {
+          if (id) {
+            const { error } = await supabaseClient.from('bank_soal').update(payload).eq('id', id);
+            if (error) throw error;
+          } else {
+            const { error } = await supabaseClient.from('bank_soal').insert([payload]);
+            if (error) throw error;
+          }
+        } else {
+          let list = JSON.parse(localStorage.getItem('bank_soal') || '[]');
+          if (id) {
+            const i = list.findIndex(x => String(x.id) === id);
+            if (i >= 0) list[i] = { ...list[i], ...payload };
+          } else {
+            payload.id = Date.now();
+            list.unshift(payload);
+          }
+          localStorage.setItem('bank_soal', JSON.stringify(list));
+        }
+        closeModal('modalBankSoal');
+        await loadBankSoalTable();
+        alert('Bank soal disimpan');
+      } catch (e) {
+        alert('Gagal simpan: ' + (e.message || e) + '\n\nJika tabel belum ada, jalankan SQL bank_soal di Supabase.');
+      }
+    });
+
+    document.getElementById('btnBsHapus')?.addEventListener('click', async () => {
+      const ids = getCheckedBs();
+      if (!ids.length) { alert('Centang data yang ingin dihapus'); return; }
+      if (!(await showConfirm('Hapus ' + ids.length + ' bank soal beserta soalnya?', 'Hapus', '🗑️'))) return;
+      try {
+        if (supabaseClient) {
+          await supabaseClient.from('bank_soal_item').delete().in('bank_id', ids.map(Number));
+          const { error } = await supabaseClient.from('bank_soal').delete().in('id', ids.map(Number));
+          if (error) throw error;
+        } else {
+          let list = JSON.parse(localStorage.getItem('bank_soal') || '[]');
+          list = list.filter(x => !ids.includes(String(x.id)));
+          localStorage.setItem('bank_soal', JSON.stringify(list));
+          let items = JSON.parse(localStorage.getItem('bank_soal_item') || '[]');
+          items = items.filter(x => !ids.includes(String(x.bank_id)));
+          localStorage.setItem('bank_soal_item', JSON.stringify(items));
+        }
+        await loadBankSoalTable();
+        alert('Data dihapus');
+      } catch (e) {
+        alert('Gagal hapus: ' + (e.message || e));
+      }
+    });
+
+    // ----- SOAL (detail) -----
+    document.getElementById('btnBsSoal')?.addEventListener('click', async () => {
+      const ids = getCheckedBs();
+      if (ids.length !== 1) { alert('Centang tepat 1 bank soal untuk kelola soal'); return; }
+      currentBankId = ids[0];
+      const r = dataBankSoal.find(x => String(x.id) === currentBankId);
+      document.getElementById('bsDetailTitle').textContent = 'Soal: ' + (r?.judul || '');
+      showPage('bank-soal-detail', true);
+      await loadBsItemTable();
+    });
+
+    document.getElementById('btnBsKembali')?.addEventListener('click', () => {
+      showPage('kelola-tugas', true);
+      loadBankSoalTable();
+    });
+
+    async function loadBsItemTable() {
+      const tbody = document.getElementById('tbodyBsItem');
+      if (!tbody || !currentBankId) return;
+      try {
+        if (supabaseClient) {
+          const { data, error } = await supabaseClient.from('bank_soal_item')
+            .select('*').eq('bank_id', Number(currentBankId)).order('nomor');
+          if (error) throw error;
+          dataBsItem = data || [];
+        } else {
+          dataBsItem = JSON.parse(localStorage.getItem('bank_soal_item') || '[]')
+            .filter(x => String(x.bank_id) === String(currentBankId))
+            .sort((a, b) => (a.nomor || 0) - (b.nomor || 0));
+        }
+      } catch (e) {
+        console.warn(e);
+        dataBsItem = [];
+      }
+      document.getElementById('infoBsItem').textContent = dataBsItem.length + ' soal';
+      document.getElementById('checkAllBsItem').checked = false;
+      if (!dataBsItem.length) {
+        tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;padding:16px;color:#94a3b8;">Belum ada soal</td></tr>';
+        return;
+      }
+      tbody.innerHTML = dataBsItem.map((r, i) =>
+        '<tr><td><input type="checkbox" class="cb-bs-item" value="' + r.id + '"></td>' +
+        '<td>' + (r.nomor || (i + 1)) + '</td>' +
+        '<td style="max-width:220px;white-space:normal;">' + esc(r.pertanyaan) + '</td>' +
+        '<td><b>' + esc(r.kunci) + '</b></td>' +
+        '<td>' + (r.skor || 1) + '</td></tr>'
+      ).join('');
+      // update jml_soal di bank
+      try {
+        if (supabaseClient) {
+          await supabaseClient.from('bank_soal').update({ jml_soal: dataBsItem.length }).eq('id', Number(currentBankId));
+        }
+      } catch (e) {}
+    }
+
+    document.getElementById('checkAllBsItem')?.addEventListener('change', function () {
+      document.querySelectorAll('.cb-bs-item').forEach(c => { c.checked = this.checked; });
+    });
+
+    document.getElementById('btnBsItemTambah')?.addEventListener('click', () => {
+      document.getElementById('modalBsItemTitle').textContent = 'Tambah Soal';
+      document.getElementById('bsItemId').value = '';
+      document.getElementById('bsItemNo').value = (dataBsItem.length + 1);
+      document.getElementById('bsItemTanya').value = '';
+      document.getElementById('bsItemA').value = '';
+      document.getElementById('bsItemB').value = '';
+      document.getElementById('bsItemC').value = '';
+      document.getElementById('bsItemD').value = '';
+      document.getElementById('bsItemKunci').value = 'A';
+      document.getElementById('bsItemSkor').value = '1';
+      openModal('modalBsItem');
+    });
+
+    document.getElementById('btnBsItemEdit')?.addEventListener('click', () => {
+      const ids = [...document.querySelectorAll('.cb-bs-item:checked')].map(c => c.value);
+      if (ids.length !== 1) { alert('Centang tepat 1 soal'); return; }
+      const r = dataBsItem.find(x => String(x.id) === ids[0]);
+      if (!r) return;
+      document.getElementById('modalBsItemTitle').textContent = 'Edit Soal';
+      document.getElementById('bsItemId').value = r.id;
+      document.getElementById('bsItemNo').value = r.nomor || 1;
+      document.getElementById('bsItemTanya').value = r.pertanyaan || '';
+      document.getElementById('bsItemA').value = r.opsi_a || '';
+      document.getElementById('bsItemB').value = r.opsi_b || '';
+      document.getElementById('bsItemC').value = r.opsi_c || '';
+      document.getElementById('bsItemD').value = r.opsi_d || '';
+      document.getElementById('bsItemKunci').value = r.kunci || 'A';
+      document.getElementById('bsItemSkor').value = r.skor || 1;
+      openModal('modalBsItem');
+    });
+
+    document.getElementById('btnSaveBsItem')?.addEventListener('click', async () => {
+      const id = document.getElementById('bsItemId').value;
+      const payload = {
+        bank_id: Number(currentBankId),
+        nomor: Number(document.getElementById('bsItemNo').value) || 1,
+        pertanyaan: document.getElementById('bsItemTanya').value.trim(),
+        opsi_a: document.getElementById('bsItemA').value.trim(),
+        opsi_b: document.getElementById('bsItemB').value.trim(),
+        opsi_c: document.getElementById('bsItemC').value.trim(),
+        opsi_d: document.getElementById('bsItemD').value.trim(),
+        kunci: document.getElementById('bsItemKunci').value,
+        skor: Number(document.getElementById('bsItemSkor').value) || 1
+      };
+      if (!payload.pertanyaan) { alert('Pertanyaan wajib'); return; }
+      try {
+        if (supabaseClient) {
+          if (id) {
+            const { error } = await supabaseClient.from('bank_soal_item').update(payload).eq('id', id);
+            if (error) throw error;
+          } else {
+            const { error } = await supabaseClient.from('bank_soal_item').insert([payload]);
+            if (error) throw error;
+          }
+        } else {
+          let list = JSON.parse(localStorage.getItem('bank_soal_item') || '[]');
+          if (id) {
+            const i = list.findIndex(x => String(x.id) === id);
+            if (i >= 0) list[i] = { ...list[i], ...payload };
+          } else {
+            payload.id = Date.now();
+            list.push(payload);
+          }
+          localStorage.setItem('bank_soal_item', JSON.stringify(list));
+        }
+        closeModal('modalBsItem');
+        await loadBsItemTable();
+        alert('Soal disimpan');
+      } catch (e) {
+        alert('Gagal: ' + (e.message || e));
+      }
+    });
+
+    document.getElementById('btnBsItemHapus')?.addEventListener('click', async () => {
+      const ids = [...document.querySelectorAll('.cb-bs-item:checked')].map(c => c.value);
+      if (!ids.length) { alert('Centang soal yang dihapus'); return; }
+      if (!(await showConfirm('Hapus ' + ids.length + ' soal?', 'Hapus', '🗑️'))) return;
+      try {
+        if (supabaseClient) {
+          const { error } = await supabaseClient.from('bank_soal_item').delete().in('id', ids.map(Number));
+          if (error) throw error;
+        } else {
+          let list = JSON.parse(localStorage.getItem('bank_soal_item') || '[]');
+          list = list.filter(x => !ids.includes(String(x.id)));
+          localStorage.setItem('bank_soal_item', JSON.stringify(list));
+        }
+        await loadBsItemTable();
+        alert('Soal dihapus');
+      } catch (e) {
+        alert('Gagal: ' + (e.message || e));
+      }
+    });
+
+    // ----- HASIL -----
+    document.getElementById('btnBsHasil')?.addEventListener('click', async () => {
+      const ids = getCheckedBs();
+      if (ids.length !== 1) { alert('Centang tepat 1 bank soal untuk melihat hasil'); return; }
+      currentBankId = ids[0];
+      const r = dataBankSoal.find(x => String(x.id) === currentBankId);
+      document.getElementById('bsHasilTitle').textContent = 'Hasil: ' + (r?.judul || '');
+      showPage('bank-soal-hasil', true);
+      await loadBsHasilTable();
+    });
+
+    document.getElementById('btnBsHasilKembali')?.addEventListener('click', () => {
+      showPage('kelola-tugas', true);
+    });
+
+    async function loadBsHasilTable() {
+      const tbody = document.getElementById('tbodyBsHasil');
+      if (!tbody || !currentBankId) return;
+      let rows = [];
+      try {
+        if (supabaseClient) {
+          const { data, error } = await supabaseClient.from('bank_soal_hasil')
+            .select('*').eq('bank_id', Number(currentBankId)).order('submitted_at', { ascending: false });
+          if (error) throw error;
+          rows = data || [];
+        } else {
+          rows = JSON.parse(localStorage.getItem('bank_soal_hasil') || '[]')
+            .filter(x => String(x.bank_id) === String(currentBankId));
+        }
+      } catch (e) {
+        console.warn(e);
+        rows = [];
+      }
+      if (!rows.length) {
+        tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;padding:16px;color:#94a3b8;">Belum ada siswa yang mengerjakan</td></tr>';
+        return;
+      }
+      tbody.innerHTML = rows.map((r, i) =>
+        '<tr><td>' + (i + 1) + '</td>' +
+        '<td>' + esc(r.nama || '-') + '</td>' +
+        '<td>' + esc(r.nisn || '-') + '</td>' +
+        '<td>' + esc(r.kelas || '-') + '</td>' +
+        '<td><b>' + (r.skor != null ? r.skor : '-') + '</b></td>' +
+        '<td>' + (r.benar != null ? r.benar : '-') + '/' + (r.total != null ? r.total : '-') + '</td>' +
+        '<td style="font-size:11px;">' + (r.submitted_at ? new Date(r.submitted_at).toLocaleString('id-ID') : '-') + '</td></tr>'
+      ).join('');
+    }
 
     // ============================================================
     // REKAP DATA ABSENSI
