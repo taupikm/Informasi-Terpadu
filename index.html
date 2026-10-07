@@ -18,6 +18,13 @@
     .ql-toolbar.ql-snow { border-radius: 8px 8px 0 0; border-color: #e2e8f0; flex-wrap: wrap; }
     .ql-container.ql-snow { border-radius: 0 0 8px 8px; border-color: #e2e8f0; min-height: 140px; font-size: 14px; }
     .ql-editor { min-height: 140px; }
+
+    .bs-editor-mount { border:1px solid #e2e8f0; border-radius:8px; overflow:hidden; background:#fff; }
+    .bs-editor-mount .ql-toolbar.ql-snow { border:none; border-bottom:1px solid #e2e8f0; }
+    .bs-editor-mount .ql-container.ql-snow { border:none; min-height:130px; }
+    .bs-mini-editor { border:1px solid #e2e8f0; border-radius:8px; overflow:hidden; background:#fff; margin-top:4px; }
+    .bs-mini-editor .ql-toolbar.ql-snow { border:none; border-bottom:1px solid #e2e8f0; padding:4px; }
+    .bs-mini-editor .ql-container.ql-snow { border:none; min-height:48px; }
     .bs-jenis-filter { display:flex; flex-wrap:wrap; gap:6px; margin-bottom:10px; }
     .bs-jenis-filter label { font-size:11px; display:flex; align-items:center; gap:3px; background:#f8fafc; border:1px solid #e2e8f0; border-radius:6px; padding:4px 8px; cursor:pointer; }
     #bsOpsiBox .form-group { margin-bottom:8px; }
@@ -2482,8 +2489,7 @@
         </div>
         <div class="form-group">
           <label>Pertanyaan *</label>
-          <div id="bsItemEditorToolbar"></div>
-          <div id="bsItemEditor"></div>
+          <div id="bsItemEditorMount" class="bs-editor-mount"></div>
           <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:6px;">
             <button type="button" class="btn btn-outline" id="btnBsEq" style="padding:4px 8px;font-size:11px;">∑ Equation</button>
             <button type="button" class="btn btn-outline" id="btnBsImg" style="padding:4px 8px;font-size:11px;">🖼 Gambar</button>
@@ -6342,38 +6348,40 @@
 
     let bsQuill = null;
 
+    function resetEditorMount(mountId) {
+      const mount = document.getElementById(mountId);
+      if (!mount) return null;
+      // Hapus semua toolbar/sisa Quill di dalam mount
+      mount.innerHTML = '';
+      const editor = document.createElement('div');
+      editor.className = 'bs-quill-target';
+      mount.appendChild(editor);
+      return editor;
+    }
+
     function initBsQuill() {
-      const el = document.getElementById('bsItemEditor');
-      if (!el) return;
-      if (bsQuill) {
-        try { bsQuill.off('text-change'); } catch (e) {}
-        // destroy by clearing
-        el.innerHTML = '';
-        const tb = document.getElementById('bsItemEditorToolbar');
-        if (tb) tb.innerHTML = '';
-        bsQuill = null;
-      }
+      // destroy instance lama
+      bsQuill = null;
+      const target = resetEditorMount('bsItemEditorMount');
+      if (!target) return;
       if (typeof Quill === 'undefined') {
-        el.innerHTML = '<textarea id="bsItemTanyaFallback" style="width:100%;min-height:120px;padding:10px;border:1px solid #e2e8f0;border-radius:8px;"></textarea>';
+        target.innerHTML = '<textarea id="bsItemTanyaFallback" style="width:100%;min-height:120px;padding:10px;border:1px solid #e2e8f0;border-radius:8px;"></textarea>';
         return;
       }
-      bsQuill = new Quill('#bsItemEditor', {
+      bsQuill = new Quill(target, {
         theme: 'snow',
-        placeholder: 'Tulis pertanyaan seperti di Word...',
+        placeholder: 'Tulis pertanyaan... Gunakan tombol ∑ Equation untuk rumus.',
         modules: {
-          toolbar: {
-            container: [
-              [{ header: [1, 2, 3, false] }],
-              ['bold', 'italic', 'underline', 'strike'],
-              [{ script: 'sub' }, { script: 'super' }],
-              [{ color: [] }, { background: [] }],
-              [{ list: 'ordered' }, { list: 'bullet' }],
-              [{ align: [] }],
-              ['blockquote', 'code-block'],
-              ['link', 'image', 'video'],
-              ['clean']
-            ]
-          }
+          toolbar: [
+            [{ header: [1, 2, 3, false] }],
+            ['bold', 'italic', 'underline', 'strike'],
+            [{ script: 'sub' }, { script: 'super' }],
+            [{ color: [] }, { background: [] }],
+            [{ list: 'ordered' }, { list: 'bullet' }],
+            [{ align: [] }],
+            ['link', 'image'],
+            ['clean']
+          ]
         }
       });
     }
@@ -6400,43 +6408,55 @@
       Object.keys(bsOpsiQuills).forEach(k => {
         try {
           const el = document.getElementById(k);
-          if (el) el.innerHTML = '';
+          if (el) {
+            const p = el.parentElement;
+            if (p) p.querySelectorAll('.ql-toolbar').forEach(t => t.remove());
+            el.innerHTML = '';
+            el.className = 'bs-mini-editor';
+          }
         } catch (e) {}
         delete bsOpsiQuills[k];
       });
+      // bersihkan toolbar yatim di kotak opsi
+      const box = document.getElementById('bsOpsiBox');
+      if (box) box.querySelectorAll('.ql-toolbar').forEach(t => t.remove());
     }
 
     function makeMiniQuill(containerId, placeholder) {
       const el = document.getElementById(containerId);
       if (!el) return null;
+      // Reset total: hapus toolbar sibling sisa Quill
+      const parent = el.parentElement;
+      if (parent) {
+        parent.querySelectorAll('.ql-toolbar').forEach(t => t.remove());
+      }
+      el.className = 'bs-mini-editor';
       el.innerHTML = '';
+      // mount bersih di dalam el
+      const target = document.createElement('div');
+      el.appendChild(target);
+
       if (typeof Quill === 'undefined') {
-        el.innerHTML = '<textarea style="width:100%;min-height:56px;padding:8px;border:1px solid #e2e8f0;border-radius:8px;" placeholder="' +
+        el.innerHTML = '<textarea style="width:100%;min-height:48px;padding:8px;border:1px solid #e2e8f0;border-radius:8px;" placeholder="' +
           (placeholder || '') + '"></textarea>';
         return null;
       }
-      const q = new Quill('#' + containerId, {
+      // Toolbar RINGKAS — hindari tumpukan
+      const q = new Quill(target, {
         theme: 'snow',
         placeholder: placeholder || '',
         modules: {
           toolbar: [
-            ['bold', 'italic', 'underline'],
-            [{ script: 'sub' }, { script: 'super' }],
+            ['bold', 'italic', { script: 'sub' }, { script: 'super' }],
             [{ color: [] }],
-            ['link', 'image'],
             ['clean']
           ]
         }
       });
-      // compact
-      const root = el.parentElement;
-      const toolbar = el.previousElementSibling;
-      if (el.querySelector) {
-        const c = el.querySelector('.ql-container');
-        if (c) c.style.minHeight = '56px';
-        const ed = el.querySelector('.ql-editor');
-        if (ed) ed.style.minHeight = '56px';
-      }
+      const container = el.querySelector('.ql-container');
+      if (container) container.style.minHeight = '48px';
+      const editor = el.querySelector('.ql-editor');
+      if (editor) editor.style.minHeight = '48px';
       bsOpsiQuills[containerId] = q;
       return q;
     }
