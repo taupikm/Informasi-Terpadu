@@ -10,6 +10,18 @@
   <script src="https://cdn.jsdelivr.net/npm/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
   <!-- SheetJS untuk Excel (.xlsx) -->
   <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+  <link href="https://cdn.jsdelivr.net/npm/quill@2.0.2/dist/quill.snow.css" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/quill@2.0.2/dist/quill.js"></script>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css">
+  <script src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js"></script>
+  <style>
+    .ql-toolbar.ql-snow { border-radius: 8px 8px 0 0; border-color: #e2e8f0; flex-wrap: wrap; }
+    .ql-container.ql-snow { border-radius: 0 0 8px 8px; border-color: #e2e8f0; min-height: 140px; font-size: 14px; }
+    .ql-editor { min-height: 140px; }
+    .bs-jenis-filter { display:flex; flex-wrap:wrap; gap:6px; margin-bottom:10px; }
+    .bs-jenis-filter label { font-size:11px; display:flex; align-items:center; gap:3px; background:#f8fafc; border:1px solid #e2e8f0; border-radius:6px; padding:4px 8px; cursor:pointer; }
+    #bsOpsiBox .form-group { margin-bottom:8px; }
+  </style>
   <style>
     :root {
       --primary: #1a56db;
@@ -1390,6 +1402,17 @@
         <button class="btn btn-outline" id="btnBsKembali" style="padding:6px 10px;">← Kembali</button>
         <div class="page-title" style="margin:0;" id="bsDetailTitle">Soal</div>
       </div>
+      <div class="card" style="padding:10px;margin-bottom:10px;">
+        <div style="font-size:12px;font-weight:600;margin-bottom:6px;">Filter Jenis Soal</div>
+        <div class="bs-jenis-filter" id="bsJenisFilter">
+          <label><input type="checkbox" class="cb-bs-jenis-f" value="Pilihan Ganda" checked> Pilihan Ganda</label>
+          <label><input type="checkbox" class="cb-bs-jenis-f" value="Isian Singkat" checked> Isian Singkat</label>
+          <label><input type="checkbox" class="cb-bs-jenis-f" value="Esai" checked> Esai</label>
+          <label><input type="checkbox" class="cb-bs-jenis-f" value="Benar Salah" checked> Benar/Salah</label>
+          <label><input type="checkbox" class="cb-bs-jenis-f" value="Checkbox" checked> Checkbox</label>
+          <label><input type="checkbox" class="cb-bs-jenis-f" value="Menjodohkan" checked> Menjodohkan</label>
+        </div>
+      </div>
       <div class="toolbar">
         <button class="btn btn-primary" id="btnBsItemTambah">+ Tambah Soal</button>
         <button class="btn btn-secondary" id="btnBsItemEdit">✏️ Edit</button>
@@ -1402,13 +1425,14 @@
             <tr>
               <th style="width:36px;"><input type="checkbox" id="checkAllBsItem"></th>
               <th>No</th>
+              <th>Jenis</th>
               <th>Pertanyaan</th>
               <th>Kunci</th>
               <th>Skor</th>
             </tr>
           </thead>
           <tbody id="tbodyBsItem">
-            <tr><td colspan="5" style="text-align:center;padding:16px;color:#94a3b8;">Belum ada soal</td></tr>
+            <tr><td colspan="6" style="text-align:center;padding:16px;color:#94a3b8;">Belum ada soal</td></tr>
           </tbody>
         </table>
       </div>
@@ -2380,39 +2404,48 @@
 
   <!-- ========== MODAL ITEM SOAL ========== -->
   <div class="modal-overlay" id="modalBsItem">
-    <div class="modal">
+    <div class="modal" style="max-width:520px;max-height:92vh;overflow-y:auto;">
       <div class="modal-header">
         <h3 id="modalBsItemTitle">Tambah Soal</h3>
         <button class="modal-close" data-close="modalBsItem">&times;</button>
       </div>
       <div class="modal-body">
         <input type="hidden" id="bsItemId">
-        <div class="form-group">
-          <label>Nomor</label>
-          <input type="number" id="bsItemNo" min="1" value="1">
+        <div class="form-row">
+          <div class="form-group">
+            <label>Nomor</label>
+            <input type="number" id="bsItemNo" min="1" value="1">
+          </div>
+          <div class="form-group">
+            <label>Jenis Soal *</label>
+            <select id="bsItemJenis">
+              <option value="Pilihan Ganda">Pilihan Ganda</option>
+              <option value="Isian Singkat">Isian Singkat</option>
+              <option value="Esai">Esai</option>
+              <option value="Benar Salah">Benar / Salah</option>
+              <option value="Checkbox">Checkbox (multi jawaban)</option>
+              <option value="Menjodohkan">Menjodohkan</option>
+            </select>
+          </div>
         </div>
         <div class="form-group">
           <label>Pertanyaan *</label>
-          <textarea id="bsItemTanya" rows="3" style="width:100%;padding:10px;border:1px solid var(--border);border-radius:8px;font-size:13px;" placeholder="Tuliskan pertanyaan..."></textarea>
+          <div id="bsItemEditorToolbar"></div>
+          <div id="bsItemEditor"></div>
+          <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:6px;">
+            <button type="button" class="btn btn-outline" id="btnBsEq" style="padding:4px 8px;font-size:11px;">∑ Equation</button>
+            <button type="button" class="btn btn-outline" id="btnBsImg" style="padding:4px 8px;font-size:11px;">🖼 Gambar</button>
+            <button type="button" class="btn btn-outline" id="btnBsVid" style="padding:4px 8px;font-size:11px;">▶ Video</button>
+            <button type="button" class="btn btn-outline" id="btnBsTbl" style="padding:4px 8px;font-size:11px;">▦ Tabel</button>
+          </div>
+          <input type="file" id="bsItemImgFile" accept="image/*" style="display:none;">
         </div>
-        <div class="form-group"><label>Opsi A</label><input type="text" id="bsItemA"></div>
-        <div class="form-group"><label>Opsi B</label><input type="text" id="bsItemB"></div>
-        <div class="form-group"><label>Opsi C</label><input type="text" id="bsItemC"></div>
-        <div class="form-group"><label>Opsi D</label><input type="text" id="bsItemD"></div>
-        <div class="form-row">
-          <div class="form-group">
-            <label>Kunci Jawaban *</label>
-            <select id="bsItemKunci">
-              <option value="A">A</option>
-              <option value="B">B</option>
-              <option value="C">C</option>
-              <option value="D">D</option>
-            </select>
-          </div>
-          <div class="form-group">
-            <label>Skor</label>
-            <input type="number" id="bsItemSkor" min="1" value="1">
-          </div>
+        <div id="bsOpsiBox">
+          <!-- diisi dinamis sesuai jenis -->
+        </div>
+        <div class="form-group">
+          <label>Skor</label>
+          <input type="number" id="bsItemSkor" min="1" value="1">
         </div>
       </div>
       <div class="modal-footer">
@@ -6111,6 +6144,170 @@
       loadBankSoalTable();
     });
 
+    let bsQuill = null;
+
+    function initBsQuill() {
+      const el = document.getElementById('bsItemEditor');
+      if (!el) return;
+      if (bsQuill) {
+        try { bsQuill.off('text-change'); } catch (e) {}
+        // destroy by clearing
+        el.innerHTML = '';
+        const tb = document.getElementById('bsItemEditorToolbar');
+        if (tb) tb.innerHTML = '';
+        bsQuill = null;
+      }
+      if (typeof Quill === 'undefined') {
+        el.innerHTML = '<textarea id="bsItemTanyaFallback" style="width:100%;min-height:120px;padding:10px;border:1px solid #e2e8f0;border-radius:8px;"></textarea>';
+        return;
+      }
+      bsQuill = new Quill('#bsItemEditor', {
+        theme: 'snow',
+        placeholder: 'Tulis pertanyaan seperti di Word...',
+        modules: {
+          toolbar: {
+            container: [
+              [{ header: [1, 2, 3, false] }],
+              ['bold', 'italic', 'underline', 'strike'],
+              [{ script: 'sub' }, { script: 'super' }],
+              [{ color: [] }, { background: [] }],
+              [{ list: 'ordered' }, { list: 'bullet' }],
+              [{ align: [] }],
+              ['blockquote', 'code-block'],
+              ['link', 'image', 'video'],
+              ['clean']
+            ]
+          }
+        }
+      });
+    }
+
+    function getBsPertanyaanHtml() {
+      if (bsQuill) return bsQuill.root.innerHTML;
+      const fb = document.getElementById('bsItemTanyaFallback');
+      return fb ? fb.value : '';
+    }
+
+    function setBsPertanyaanHtml(html) {
+      if (bsQuill) {
+        bsQuill.root.innerHTML = html || '';
+      } else {
+        const fb = document.getElementById('bsItemTanyaFallback');
+        if (fb) fb.value = html || '';
+      }
+    }
+
+    function renderBsOpsiBox(jenis, data) {
+      const box = document.getElementById('bsOpsiBox');
+      if (!box) return;
+      data = data || {};
+      const j = jenis || 'Pilihan Ganda';
+      if (j === 'Pilihan Ganda') {
+        box.innerHTML =
+          '<div class="form-group"><label>Opsi A</label><input type="text" id="bsItemA" value="' + esc(data.opsi_a||'') + '"></div>' +
+          '<div class="form-group"><label>Opsi B</label><input type="text" id="bsItemB" value="' + esc(data.opsi_b||'') + '"></div>' +
+          '<div class="form-group"><label>Opsi C</label><input type="text" id="bsItemC" value="' + esc(data.opsi_c||'') + '"></div>' +
+          '<div class="form-group"><label>Opsi D</label><input type="text" id="bsItemD" value="' + esc(data.opsi_d||'') + '"></div>' +
+          '<div class="form-group"><label>Kunci Jawaban *</label><select id="bsItemKunci">' +
+          ['A','B','C','D'].map(x => '<option value="'+x+'"'+(data.kunci===x?' selected':'')+'>'+x+'</option>').join('') +
+          '</select></div>';
+      } else if (j === 'Benar Salah') {
+        box.innerHTML =
+          '<div class="form-group"><label>Kunci *</label><select id="bsItemKunci">' +
+          '<option value="Benar"'+(data.kunci==='Benar'?' selected':'')+'>Benar</option>' +
+          '<option value="Salah"'+(data.kunci==='Salah'?' selected':'')+'>Salah</option></select></div>';
+      } else if (j === 'Isian Singkat') {
+        box.innerHTML =
+          '<div class="form-group"><label>Jawaban Benar *</label>' +
+          '<input type="text" id="bsItemKunci" value="' + esc(data.kunci||'') + '" placeholder="Teks jawaban yang benar"></div>' +
+          '<p style="font-size:11px;color:#94a3b8;">Boleh beberapa jawaban dipisah tanda | contoh: Jakarta|DKI</p>';
+      } else if (j === 'Esai') {
+        box.innerHTML =
+          '<div class="form-group"><label>Kunci / Pedoman Penilaian</label>' +
+          '<textarea id="bsItemKunci" rows="3" style="width:100%;padding:8px;border:1px solid var(--border);border-radius:8px;">' +
+          esc(data.kunci||'') + '</textarea></div>';
+      } else if (j === 'Checkbox') {
+        box.innerHTML =
+          '<div class="form-group"><label>Opsi A</label><input type="text" id="bsItemA" value="' + esc(data.opsi_a||'') + '"></div>' +
+          '<div class="form-group"><label>Opsi B</label><input type="text" id="bsItemB" value="' + esc(data.opsi_b||'') + '"></div>' +
+          '<div class="form-group"><label>Opsi C</label><input type="text" id="bsItemC" value="' + esc(data.opsi_c||'') + '"></div>' +
+          '<div class="form-group"><label>Opsi D</label><input type="text" id="bsItemD" value="' + esc(data.opsi_d||'') + '"></div>' +
+          '<div class="form-group"><label>Kunci (boleh multi, contoh: A,C)</label>' +
+          '<input type="text" id="bsItemKunci" value="' + esc(data.kunci||'') + '" placeholder="A,C"></div>';
+      } else if (j === 'Menjodohkan') {
+        box.innerHTML =
+          '<p style="font-size:12px;color:#64748b;margin-bottom:6px;">Isi pasangan kiri = kanan, satu baris satu pasangan (pisah dengan =)</p>' +
+          '<div class="form-group"><label>Pasangan</label>' +
+          '<textarea id="bsItemKunci" rows="4" style="width:100%;padding:8px;border:1px solid var(--border);border-radius:8px;" placeholder="Ibukota Indonesia = Jakarta\n2+2 = 4">' +
+          esc(data.kunci||'') + '</textarea></div>';
+      } else {
+        box.innerHTML = '';
+      }
+    }
+
+    document.getElementById('bsItemJenis')?.addEventListener('change', function () {
+      renderBsOpsiBox(this.value, {});
+    });
+
+    // Equation / media helpers
+    document.getElementById('btnBsEq')?.addEventListener('click', () => {
+      const latex = prompt('Masukkan rumus LaTeX (contoh: x^2 + y^2 = z^2)');
+      if (!latex || !bsQuill) return;
+      let html = latex;
+      try {
+        if (typeof katex !== 'undefined') {
+          html = katex.renderToString(latex, { throwOnError: false });
+        }
+      } catch (e) {}
+      const range = bsQuill.getSelection(true);
+      bsQuill.clipboard.dangerouslyPasteHTML(range ? range.index : bsQuill.getLength(), html);
+    });
+    document.getElementById('btnBsImg')?.addEventListener('click', () => {
+      document.getElementById('bsItemImgFile')?.click();
+    });
+    document.getElementById('bsItemImgFile')?.addEventListener('change', function () {
+      const f = this.files && this.files[0];
+      if (!f || !bsQuill) return;
+      const reader = new FileReader();
+      reader.onload = () => {
+        const range = bsQuill.getSelection(true) || { index: bsQuill.getLength() };
+        bsQuill.insertEmbed(range.index, 'image', reader.result);
+      };
+      reader.readAsDataURL(f);
+      this.value = '';
+    });
+    document.getElementById('btnBsVid')?.addEventListener('click', () => {
+      const url = prompt('URL video (YouTube / link langsung)');
+      if (!url || !bsQuill) return;
+      const range = bsQuill.getSelection(true) || { index: bsQuill.getLength() };
+      // embed as link + iframe if youtube
+      let embed = url;
+      const yt = url.match(/(?:youtu\.be\/|v=)([A-Za-z0-9_-]{6,})/);
+      if (yt) {
+        embed = 'https://www.youtube.com/embed/' + yt[1];
+        bsQuill.clipboard.dangerouslyPasteHTML(range.index,
+          '<iframe width="320" height="180" src="' + embed + '" frameborder="0" allowfullscreen></iframe>');
+      } else {
+        bsQuill.insertEmbed(range.index, 'video', url);
+      }
+    });
+    document.getElementById('btnBsTbl')?.addEventListener('click', () => {
+      if (!bsQuill) return;
+      const r = prompt('Jumlah baris', '2');
+      const c = prompt('Jumlah kolom', '2');
+      const rows = Math.min(10, Math.max(1, Number(r) || 2));
+      const cols = Math.min(6, Math.max(1, Number(c) || 2));
+      let html = '<table border="1" style="border-collapse:collapse;width:100%;"><tbody>';
+      for (let i = 0; i < rows; i++) {
+        html += '<tr>';
+        for (let j = 0; j < cols; j++) html += '<td style="padding:4px 8px;">&nbsp;</td>';
+        html += '</tr>';
+      }
+      html += '</tbody></table><p><br></p>';
+      const range = bsQuill.getSelection(true) || { index: bsQuill.getLength() };
+      bsQuill.clipboard.dangerouslyPasteHTML(range.index, html);
+    });
+
     async function loadBsItemTable() {
       const tbody = document.getElementById('tbodyBsItem');
       if (!tbody || !currentBankId) return;
@@ -6129,26 +6326,39 @@
         console.warn(e);
         dataBsItem = [];
       }
-      document.getElementById('infoBsItem').textContent = dataBsItem.length + ' soal';
+
+      const jenisAktif = [...document.querySelectorAll('.cb-bs-jenis-f:checked')].map(c => c.value);
+      let rows = dataBsItem;
+      if (jenisAktif.length && jenisAktif.length < 6) {
+        rows = dataBsItem.filter(r => jenisAktif.includes(r.jenis || 'Pilihan Ganda'));
+      }
+
+      document.getElementById('infoBsItem').textContent = rows.length + ' soal';
       document.getElementById('checkAllBsItem').checked = false;
-      if (!dataBsItem.length) {
-        tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;padding:16px;color:#94a3b8;">Belum ada soal</td></tr>';
+      if (!rows.length) {
+        tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;padding:16px;color:#94a3b8;">Belum ada soal</td></tr>';
         return;
       }
-      tbody.innerHTML = dataBsItem.map((r, i) =>
-        '<tr><td><input type="checkbox" class="cb-bs-item" value="' + r.id + '"></td>' +
-        '<td>' + (r.nomor || (i + 1)) + '</td>' +
-        '<td style="max-width:220px;white-space:normal;">' + esc(r.pertanyaan) + '</td>' +
-        '<td><b>' + esc(r.kunci) + '</b></td>' +
-        '<td>' + (r.skor || 1) + '</td></tr>'
-      ).join('');
-      // update jml_soal di bank
+      tbody.innerHTML = rows.map((r, i) => {
+        const plain = String(r.pertanyaan || '').replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
+        const short = plain.length > 80 ? plain.slice(0, 80) + '…' : plain;
+        return '<tr><td><input type="checkbox" class="cb-bs-item" value="' + r.id + '"></td>' +
+          '<td>' + (r.nomor || (i + 1)) + '</td>' +
+          '<td style="font-size:11px;">' + esc(r.jenis || 'Pilihan Ganda') + '</td>' +
+          '<td style="max-width:200px;white-space:normal;font-size:12px;">' + esc(short) + '</td>' +
+          '<td><b>' + esc(r.kunci || '-') + '</b></td>' +
+          '<td>' + (r.skor || 1) + '</td></tr>';
+      }).join('');
       try {
         if (supabaseClient) {
           await supabaseClient.from('bank_soal').update({ jml_soal: dataBsItem.length }).eq('id', Number(currentBankId));
         }
       } catch (e) {}
     }
+
+    document.querySelectorAll('.cb-bs-jenis-f').forEach(cb => {
+      cb.addEventListener('change', () => loadBsItemTable());
+    });
 
     document.getElementById('checkAllBsItem')?.addEventListener('change', function () {
       document.querySelectorAll('.cb-bs-item').forEach(c => { c.checked = this.checked; });
@@ -6158,14 +6368,14 @@
       document.getElementById('modalBsItemTitle').textContent = 'Tambah Soal';
       document.getElementById('bsItemId').value = '';
       document.getElementById('bsItemNo').value = (dataBsItem.length + 1);
-      document.getElementById('bsItemTanya').value = '';
-      document.getElementById('bsItemA').value = '';
-      document.getElementById('bsItemB').value = '';
-      document.getElementById('bsItemC').value = '';
-      document.getElementById('bsItemD').value = '';
-      document.getElementById('bsItemKunci').value = 'A';
+      document.getElementById('bsItemJenis').value = 'Pilihan Ganda';
       document.getElementById('bsItemSkor').value = '1';
       openModal('modalBsItem');
+      setTimeout(() => {
+        initBsQuill();
+        setBsPertanyaanHtml('');
+        renderBsOpsiBox('Pilihan Ganda', {});
+      }, 50);
     });
 
     document.getElementById('btnBsItemEdit')?.addEventListener('click', () => {
@@ -6176,30 +6386,36 @@
       document.getElementById('modalBsItemTitle').textContent = 'Edit Soal';
       document.getElementById('bsItemId').value = r.id;
       document.getElementById('bsItemNo').value = r.nomor || 1;
-      document.getElementById('bsItemTanya').value = r.pertanyaan || '';
-      document.getElementById('bsItemA').value = r.opsi_a || '';
-      document.getElementById('bsItemB').value = r.opsi_b || '';
-      document.getElementById('bsItemC').value = r.opsi_c || '';
-      document.getElementById('bsItemD').value = r.opsi_d || '';
-      document.getElementById('bsItemKunci').value = r.kunci || 'A';
+      document.getElementById('bsItemJenis').value = r.jenis || 'Pilihan Ganda';
       document.getElementById('bsItemSkor').value = r.skor || 1;
       openModal('modalBsItem');
+      setTimeout(() => {
+        initBsQuill();
+        setBsPertanyaanHtml(r.pertanyaan || '');
+        renderBsOpsiBox(r.jenis || 'Pilihan Ganda', r);
+      }, 50);
     });
 
     document.getElementById('btnSaveBsItem')?.addEventListener('click', async () => {
       const id = document.getElementById('bsItemId').value;
+      const jenis = document.getElementById('bsItemJenis').value;
+      const pertanyaan = getBsPertanyaanHtml();
+      const plain = pertanyaan.replace(/<[^>]+>/g, '').trim();
+      if (!plain) { alert('Pertanyaan wajib diisi'); return; }
+
+      const kunciEl = document.getElementById('bsItemKunci');
       const payload = {
         bank_id: Number(currentBankId),
         nomor: Number(document.getElementById('bsItemNo').value) || 1,
-        pertanyaan: document.getElementById('bsItemTanya').value.trim(),
-        opsi_a: document.getElementById('bsItemA').value.trim(),
-        opsi_b: document.getElementById('bsItemB').value.trim(),
-        opsi_c: document.getElementById('bsItemC').value.trim(),
-        opsi_d: document.getElementById('bsItemD').value.trim(),
-        kunci: document.getElementById('bsItemKunci').value,
+        jenis: jenis,
+        pertanyaan: pertanyaan,
+        opsi_a: document.getElementById('bsItemA')?.value?.trim() || null,
+        opsi_b: document.getElementById('bsItemB')?.value?.trim() || null,
+        opsi_c: document.getElementById('bsItemC')?.value?.trim() || null,
+        opsi_d: document.getElementById('bsItemD')?.value?.trim() || null,
+        kunci: kunciEl ? kunciEl.value.trim() : null,
         skor: Number(document.getElementById('bsItemSkor').value) || 1
       };
-      if (!payload.pertanyaan) { alert('Pertanyaan wajib'); return; }
       try {
         if (supabaseClient) {
           if (id) {
