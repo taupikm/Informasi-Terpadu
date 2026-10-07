@@ -1167,7 +1167,28 @@
       <div class="placeholder"><div class="icon">📋</div><h2>Cek Syarat Naik Kelas / Lulus</h2><p>Halaman pengecekan syarat naik kelas atau kelulusan</p></div>
     </section>
     <section class="page" id="page-tugas-ujian">
-      <div class="placeholder"><div class="icon">📝</div><h2>Kerjakan Tugas / Ujian</h2><p>Halaman pengerjaan tugas dan ujian online</p></div>
+      <div class="page-title">Kerjakan Tugas / Ujian</div>
+      <div class="card" style="padding:12px;margin-bottom:10px;font-size:13px;">
+        Siswa: <b id="tuSiswaNama">-</b> · Kelas: <b id="tuSiswaKelas">-</b>
+      </div>
+      <div id="tuList" class="bs-soal-list">
+        <div style="text-align:center;padding:20px;color:#94a3b8;">Memuat daftar tugas...</div>
+      </div>
+    </section>
+
+    <section class="page" id="page-kerjakan-ujian">
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;flex-wrap:wrap;">
+        <button class="btn btn-outline" id="btnTuKembali" style="padding:6px 10px;">← Daftar</button>
+        <div class="page-title" style="margin:0;flex:1;" id="tuJudulKerjakan">Ujian</div>
+        <div id="tuTimer" style="font-weight:700;font-size:14px;color:#dc2626;background:#fef2f2;padding:6px 10px;border-radius:8px;">--:--</div>
+      </div>
+      <div id="tuProgress" style="font-size:12px;color:#64748b;margin-bottom:8px;"></div>
+      <div id="tuSoalArea"></div>
+      <div style="position:sticky;bottom:12px;margin-top:16px;display:flex;gap:8px;">
+        <button class="btn btn-outline" id="btnTuPrev" style="flex:1;">← Prev</button>
+        <button class="btn btn-outline" id="btnTuNext" style="flex:1;">Next →</button>
+        <button class="btn btn-primary" id="btnTuSubmit" style="flex:1.2;">Kirim Jawaban</button>
+      </div>
     </section>
     <section class="page" id="page-nilai-saya">
       <div class="placeholder"><div class="icon">📈</div><h2>Lihat Nilai Saya</h2><p>Halaman melihat nilai pribadi siswa</p></div>
@@ -2757,6 +2778,7 @@
     let currentUserName = 'Tamu (Belum Login)';
     let currentUserId = null; // id di tabel siswa/guru/admin
     let currentUserKode = null; // NISN atau PIN/NIP
+    let currentUserKelas = null;
     const SESSION_KEY = 'smpn_session';
 
     const ROLE_DATA = {
@@ -2776,7 +2798,8 @@
         label: ROLE_DATA[currentRole]?.label || '',
         avatar: ROLE_DATA[currentRole]?.avatar || '?',
         userId: currentUserId,
-        kode: currentUserKode
+        kode: currentUserKode,
+        kelas: currentUserKelas
       }));
     }
 
@@ -3025,6 +3048,8 @@
         }
         currentUserId = userId;
         currentUserKode = kode;
+        currentUserKelas = window._loginKelas || null;
+        if (window._loginNisn) currentUserKode = window._loginNisn;
 
         // Update nama di ROLE_DATA agar tampil nama asli dari database
         if (userName) ROLE_DATA[role].name = userName;
@@ -3094,6 +3119,8 @@
       if (pageId === 'input-izin') initIzinPage();
       if (pageId === 'rekap-data') initRekapPage();
       if (pageId === 'kelola-tugas') initBankSoalPage();
+      if (pageId === 'tugas-ujian') initTugasSiswaPage();
+      if (pageId === 'kerjakan-ujian') { /* stay */ }
       if (pageId === 'bank-soal-detail') {
         const bid = getCurrentBankId();
         if (!bid) {
@@ -5960,6 +5987,444 @@
 
 
 
+
+    // --- Math render (global) ---
+    // Perbaiki LaTeX yang rusak (\f dari \frac jadi form-feed di JS/HTML)
+    function fixBrokenLatex(s) {
+      if (!s) return '';
+      let t = String(s);
+      t = t.replace(/\u000c/g, 'f').replace(/\u0008/g, '').replace(/\u000b/g, '');
+      // "\rac" sisa form-feed → "\frac"
+      t = t.replace(/\\rac\{/g, '\\frac{');
+      t = t.replace(/(^|[^a-zA-Z\\])rac\{/g, '$1\\frac{');
+      t = t.replace(/(^|[^a-zA-Z\\])frac\{/g, '$1\\frac{');
+      return t;
+    }
+
+    function katexOr(tex, display) {
+      try {
+        if (typeof katex === 'undefined') return tex;
+        return katex.renderToString(tex, { throwOnError: false, displayMode: !!display });
+      } catch (e) { return tex; }
+    }
+
+    function renderMathInHtml(html) {
+      let h = fixBrokenLatex(html || '');
+      h = h.replace(/<script[\s\S]*?<\/script>/gi, '');
+
+      // Sudah ada output katex → biarkan
+      if (h.indexOf('class="katex') >= 0) return h;
+
+      // $...$ / $$...$$
+      h = h.replace(/\$\$([\s\S]+?)\$\$/g, (_, tex) => katexOr(tex.trim(), true));
+      h = h.replace(/\$([^\$]+?)\$/g, (_, tex) => katexOr(tex.trim(), false));
+
+      // \frac{a}{b}, \dfrac, \tfrac
+      h = h.replace(/\\(?:d|t)?frac\{([^{}]+)\}\{([^{}]+)\}/g, (_, a, b) =>
+        katexOr('\\frac{' + a + '}{' + b + '}', false));
+
+      // \sqrt{x}, \sqrt[n]{x}
+      h = h.replace(/\\sqrt\[([^\]]+)\]\{([^{}]+)\}/g, (_, n, x) =>
+        katexOr('\\sqrt[' + n + ']{' + x + '}', false));
+      h = h.replace(/\\sqrt\{([^{}]+)\}/g, (_, x) => katexOr('\\sqrt{' + x + '}', false));
+
+      // x^{2}, x_{i} sederhana di teks polos (hindari dalam tag)
+      h = h.replace(/(^|>)([^<]*?)([A-Za-z0-9])\^(\{[^}]+\}|\w)/g, (m, a, pre, base, exp) => {
+        const tex = base + '^' + exp;
+        return a + pre + katexOr(tex, false);
+      });
+
+      return h;
+    }
+
+    function isKeyOption(kunci, letter) {
+      const k = String(kunci || '').toUpperCase();
+      return k.split(/[,;\s]+/).map(x => x.trim()).includes(letter);
+    }
+
+
+    // ============================================================
+    // SISWA: KERJAKAN TUGAS / UJIAN
+    // ============================================================
+    let _tuBanks = [];
+    let _tuExam = null; // bank meta
+    let _tuSoals = [];
+    let _tuAnswers = {}; // { soalId: value }
+    let _tuIdx = 0;
+    let _tuTimerIv = null;
+    let _tuDeadline = null;
+
+    async function initTugasSiswaPage() {
+      const list = document.getElementById('tuList');
+      if (!list) return;
+      if (currentRole !== 'siswa') {
+        list.innerHTML = '<div style="text-align:center;padding:20px;color:#f59e0b;">Login sebagai <b>siswa</b> untuk mengerjakan tugas/ujian.</div>';
+        return;
+      }
+      document.getElementById('tuSiswaNama').textContent = currentUserName || '-';
+      document.getElementById('tuSiswaKelas').textContent = currentUserKelas || '-';
+      list.innerHTML = '<div style="text-align:center;padding:20px;color:#94a3b8;">Memuat...</div>';
+
+      try {
+        let banks = [];
+        if (supabaseClient) {
+          const { data, error } = await supabaseClient.from('bank_soal')
+            .select('*').eq('status', 'Aktif').order('id', { ascending: false });
+          if (error) throw error;
+          banks = data || [];
+        } else {
+          banks = JSON.parse(localStorage.getItem('bank_soal') || '[]').filter(b => b.status === 'Aktif');
+        }
+        // Filter kelas siswa
+        const kelas = String(currentUserKelas || '').trim().toLowerCase();
+        if (kelas) {
+          banks = banks.filter(b => {
+            const k = String(b.kelas || '').toLowerCase();
+            if (!k || k === 'semua' || k.includes('semua')) return true;
+            return k.split(/[,;|]/).map(s => s.trim()).some(x => x === kelas || kelas.startsWith(x) || x.startsWith(kelas));
+          });
+        }
+        // Cek attempt
+        let hasil = [];
+        if (supabaseClient && currentUserId) {
+          const { data } = await supabaseClient.from('bank_soal_hasil')
+            .select('bank_id, skor, submitted_at').eq('siswa_id', currentUserId);
+          hasil = data || [];
+        }
+        _tuBanks = banks;
+        if (!banks.length) {
+          list.innerHTML = '<div style="text-align:center;padding:20px;color:#94a3b8;">Belum ada tugas/ujian aktif untuk kelas Anda.</div>';
+          return;
+        }
+        list.innerHTML = banks.map(b => {
+          const attempts = hasil.filter(h => Number(h.bank_id) === Number(b.id)).length;
+          const maxA = b.max_attempt != null ? b.max_attempt : 1;
+          const sisa = Math.max(0, maxA - attempts);
+          const last = hasil.filter(h => Number(h.bank_id) === Number(b.id)).sort((a,c) =>
+            String(c.submitted_at).localeCompare(String(a.submitted_at)))[0];
+          const disabled = sisa <= 0;
+          // waktu
+          let waktuInfo = '';
+          if (b.waktu_mulai || b.waktu_selesai) {
+            waktuInfo = '<div style="font-size:11px;color:#64748b;margin-top:4px;">';
+            if (b.waktu_mulai) waktuInfo += 'Mulai: ' + new Date(b.waktu_mulai).toLocaleString('id-ID') + ' · ';
+            if (b.waktu_selesai) waktuInfo += 'Selesai: ' + new Date(b.waktu_selesai).toLocaleString('id-ID');
+            waktuInfo += '</div>';
+          }
+          return '<div class="bs-soal-card" style="cursor:default;">' +
+            '<div style="font-weight:700;font-size:15px;">' + esc(b.judul) + '</div>' +
+            '<div style="font-size:12px;color:#64748b;margin-top:4px;">' +
+            esc(b.mapel || '') + ' · ' + esc(b.jenis || '') + ' · ' + esc(b.kelas || '') +
+            ' · ' + (b.jml_soal || 0) + ' soal · ' + (b.durasi || 60) + ' mnt</div>' +
+            waktuInfo +
+            '<div style="font-size:12px;margin-top:6px;">Percobaan: <b>' + attempts + '/' + maxA + '</b>' +
+            (last && last.skor != null ? ' · Skor terakhir: <b>' + last.skor + '</b>' : '') + '</div>' +
+            '<button class="btn ' + (disabled ? 'btn-outline' : 'btn-primary') +
+            '" style="width:100%;margin-top:10px;" data-tu-start="' + b.id + '"' +
+            (disabled ? ' disabled' : '') + '>' +
+            (disabled ? 'Kesempatan habis' : 'Kerjakan') + '</button></div>';
+        }).join('');
+
+        list.querySelectorAll('[data-tu-start]').forEach(btn => {
+          btn.addEventListener('click', () => startKerjakanUjian(btn.getAttribute('data-tu-start')));
+        });
+      } catch (e) {
+        list.innerHTML = '<div style="color:#ef4444;padding:16px;">Gagal muat: ' + esc(e.message || e) + '</div>';
+      }
+    }
+
+    async function startKerjakanUjian(bankId) {
+      bankId = Number(bankId);
+      const bank = _tuBanks.find(b => Number(b.id) === bankId);
+      if (!bank) { alert('Bank soal tidak ditemukan'); return; }
+
+      // Cek jendela waktu
+      const now = Date.now();
+      if (bank.waktu_mulai && now < new Date(bank.waktu_mulai).getTime()) {
+        alert('Ujian belum dimulai.\nMulai: ' + new Date(bank.waktu_mulai).toLocaleString('id-ID'));
+        return;
+      }
+      if (bank.waktu_selesai && now > new Date(bank.waktu_selesai).getTime()) {
+        alert('Waktu ujian sudah berakhir.');
+        return;
+      }
+
+      let soals = [];
+      try {
+        if (supabaseClient) {
+          const { data, error } = await supabaseClient.from('bank_soal_item')
+            .select('*').eq('bank_id', bankId).order('nomor');
+          if (error) throw error;
+          soals = data || [];
+        } else {
+          soals = JSON.parse(localStorage.getItem('bank_soal_item') || '[]')
+            .filter(x => Number(x.bank_id) === bankId)
+            .sort((a, b) => (a.nomor || 0) - (b.nomor || 0));
+        }
+      } catch (e) {
+        alert('Gagal muat soal: ' + (e.message || e));
+        return;
+      }
+      if (!soals.length) {
+        alert('Bank soal ini belum memiliki soal.');
+        return;
+      }
+
+      // Mode acak
+      const mode = bank.mode_soal || 'Normal';
+      if (/acak soal/i.test(mode)) {
+        soals = soals.slice().sort(() => Math.random() - 0.5);
+      }
+      if (/acak opsi/i.test(mode)) {
+        soals = soals.map(s => {
+          const pairs = ['a','b','c','d'].map(L => ({ L, v: s['opsi_' + L] })).filter(p => p.v);
+          pairs.sort(() => Math.random() - 0.5);
+          const copy = Object.assign({}, s);
+          ['a','b','c','d'].forEach((L, i) => { copy['opsi_' + L] = pairs[i] ? pairs[i].v : null; });
+          // kunci mapping complicates — keep original keys by letter content match later
+          copy._optOrder = pairs.map(p => p.L);
+          return copy;
+        });
+      }
+
+      _tuExam = bank;
+      _tuSoals = soals;
+      _tuAnswers = {};
+      _tuIdx = 0;
+
+      // Timer
+      if (_tuTimerIv) clearInterval(_tuTimerIv);
+      const durMin = Number(bank.durasi) || 60;
+      let end = Date.now() + durMin * 60 * 1000;
+      if (bank.waktu_selesai) {
+        const ws = new Date(bank.waktu_selesai).getTime();
+        if (ws < end) end = ws;
+      }
+      _tuDeadline = end;
+      _tuTimerIv = setInterval(updateTuTimer, 1000);
+      updateTuTimer();
+
+      document.getElementById('tuJudulKerjakan').textContent = bank.judul || 'Ujian';
+      showPage('kerjakan-ujian', true);
+      renderTuSoal();
+    }
+
+    function updateTuTimer() {
+      const el = document.getElementById('tuTimer');
+      if (!el || !_tuDeadline) return;
+      const sisa = Math.max(0, Math.floor((_tuDeadline - Date.now()) / 1000));
+      const m = String(Math.floor(sisa / 60)).padStart(2, '0');
+      const s = String(sisa % 60).padStart(2, '0');
+      el.textContent = m + ':' + s;
+      if (sisa <= 0) {
+        clearInterval(_tuTimerIv);
+        _tuTimerIv = null;
+        alert('Waktu habis. Jawaban akan dikirim otomatis.');
+        submitTuJawaban(true);
+      }
+    }
+
+    function renderTuSoal() {
+      const area = document.getElementById('tuSoalArea');
+      const prog = document.getElementById('tuProgress');
+      if (!area || !_tuSoals.length) return;
+      const s = _tuSoals[_tuIdx];
+      prog.textContent = 'Soal ' + (_tuIdx + 1) + ' / ' + _tuSoals.length;
+
+      let html = '<div class="bs-soal-card">';
+      html += '<div class="bs-soal-card-head"><span style="font-weight:700;">No. ' +
+        (s.nomor || (_tuIdx + 1)) + '</span>';
+      html += '<span style="background:#f1f5f9;padding:2px 8px;border-radius:6px;">' +
+        esc(s.jenis || 'Pilihan Ganda') + '</span>';
+      html += '<span style="margin-left:auto;">Skor: ' + (s.skor || 1) + '</span></div>';
+      html += '<div class="bs-soal-card-body">' + (typeof renderMathInHtml === 'function' ? renderMathInHtml(s.pertanyaan) : s.pertanyaan) + '</div>';
+
+      const jenis = s.jenis || 'Pilihan Ganda';
+      const ans = _tuAnswers[s.id];
+
+      if (jenis === 'Pilihan Ganda' || jenis === 'Benar Salah') {
+        const opts = jenis === 'Benar Salah'
+          ? [{ L: 'Benar', v: 'Benar' }, { L: 'Salah', v: 'Salah' }]
+          : ['A','B','C','D'].map(L => ({ L, v: s['opsi_' + L.toLowerCase()] })).filter(o => o.v);
+        opts.forEach(o => {
+          const checked = ans === o.L ? 'checked' : '';
+          const content = jenis === 'Benar Salah' ? o.v :
+            (typeof renderMathInHtml === 'function' ? renderMathInHtml(o.v) : o.v);
+          html += '<label class="bs-opsi-line" style="cursor:pointer;">' +
+            '<input type="radio" name="tuAns" value="' + esc(o.L) + '" ' + checked + ' style="margin-right:8px;">' +
+            (jenis === 'Benar Salah' ? '' : '<span class="bs-opsi-letter">' + o.L + '.</span>') +
+            '<div class="bs-opsi-content">' + content + '</div></label>';
+        });
+      } else if (jenis === 'Checkbox') {
+        const selected = Array.isArray(ans) ? ans : (ans ? String(ans).split(',') : []);
+        ['A','B','C','D'].forEach(L => {
+          const v = s['opsi_' + L.toLowerCase()];
+          if (!v) return;
+          const checked = selected.includes(L) ? 'checked' : '';
+          html += '<label class="bs-opsi-line" style="cursor:pointer;">' +
+            '<input type="checkbox" class="tu-cb" value="' + L + '" ' + checked + ' style="margin-right:8px;">' +
+            '<span class="bs-opsi-letter">' + L + '.</span>' +
+            '<div class="bs-opsi-content">' + (typeof renderMathInHtml === 'function' ? renderMathInHtml(v) : v) + '</div></label>';
+        });
+      } else if (jenis === 'Isian Singkat') {
+        html += '<div class="form-group" style="margin-top:10px;"><input type="text" id="tuIsian" value="' +
+          esc(ans || '') + '" placeholder="Tulis jawaban singkat" style="width:100%;padding:10px;border:1px solid #e2e8f0;border-radius:8px;"></div>';
+      } else if (jenis === 'Esai') {
+        html += '<div class="form-group" style="margin-top:10px;"><textarea id="tuEsai" rows="5" placeholder="Tulis jawaban esai..." style="width:100%;padding:10px;border:1px solid #e2e8f0;border-radius:8px;">' +
+          esc(ans || '') + '</textarea></div>';
+      } else if (jenis === 'Menjodohkan') {
+        html += '<div class="form-group" style="margin-top:10px;"><textarea id="tuEsai" rows="4" placeholder="Tulis pasangan, contoh: 1-b, 2-d, 3-a" style="width:100%;padding:10px;border:1px solid #e2e8f0;border-radius:8px;">' +
+          esc(ans || '') + '</textarea></div>';
+      }
+
+      html += '</div>';
+      area.innerHTML = html;
+
+      // bind save answer
+      area.querySelectorAll('input[name=tuAns]').forEach(inp => {
+        inp.addEventListener('change', () => { _tuAnswers[s.id] = inp.value; });
+      });
+      area.querySelectorAll('.tu-cb').forEach(inp => {
+        inp.addEventListener('change', () => {
+          _tuAnswers[s.id] = [...area.querySelectorAll('.tu-cb:checked')].map(c => c.value);
+        });
+      });
+      const isian = document.getElementById('tuIsian');
+      if (isian) isian.addEventListener('input', () => { _tuAnswers[s.id] = isian.value; });
+      const esai = document.getElementById('tuEsai');
+      if (esai) esai.addEventListener('input', () => { _tuAnswers[s.id] = esai.value; });
+
+      document.getElementById('btnTuPrev').disabled = _tuIdx <= 0;
+      document.getElementById('btnTuNext').disabled = _tuIdx >= _tuSoals.length - 1;
+    }
+
+    function saveCurrentTuAnswer() {
+      if (!_tuSoals[_tuIdx]) return;
+      const s = _tuSoals[_tuIdx];
+      const area = document.getElementById('tuSoalArea');
+      const radio = area && area.querySelector('input[name=tuAns]:checked');
+      if (radio) _tuAnswers[s.id] = radio.value;
+      const cbs = area && area.querySelectorAll('.tu-cb:checked');
+      if (cbs && cbs.length) _tuAnswers[s.id] = [...cbs].map(c => c.value);
+      const isian = document.getElementById('tuIsian');
+      if (isian) _tuAnswers[s.id] = isian.value;
+      const esai = document.getElementById('tuEsai');
+      if (esai) _tuAnswers[s.id] = esai.value;
+    }
+
+    document.getElementById('btnTuPrev')?.addEventListener('click', () => {
+      saveCurrentTuAnswer();
+      if (_tuIdx > 0) { _tuIdx--; renderTuSoal(); }
+    });
+    document.getElementById('btnTuNext')?.addEventListener('click', () => {
+      saveCurrentTuAnswer();
+      if (_tuIdx < _tuSoals.length - 1) { _tuIdx++; renderTuSoal(); }
+    });
+    document.getElementById('btnTuKembali')?.addEventListener('click', async () => {
+      if (!(await showConfirm('Keluar dari ujian? Jawaban yang belum dikirim akan hilang.', 'Keluar', '⚠️'))) return;
+      if (_tuTimerIv) { clearInterval(_tuTimerIv); _tuTimerIv = null; }
+      showPage('tugas-ujian', true);
+    });
+    document.getElementById('btnTuSubmit')?.addEventListener('click', () => submitTuJawaban(false));
+
+    function normAns(v) {
+      return String(v || '').replace(/<[^>]+>/g, '').replace(/\s+/g, ' ').trim().toLowerCase();
+    }
+
+    function gradeSoal(s, ans) {
+      const jenis = s.jenis || 'Pilihan Ganda';
+      const skor = Number(s.skor) || 1;
+      if (ans == null || ans === '') return { benar: false, skor: 0 };
+
+      if (jenis === 'Pilihan Ganda' || jenis === 'Benar Salah') {
+        const k = String(s.kunci || '').trim();
+        const ok = String(ans).trim().toUpperCase() === k.toUpperCase() ||
+          (k.toLowerCase() === 'benar' && String(ans).toLowerCase() === 'benar') ||
+          (k.toLowerCase() === 'salah' && String(ans).toLowerCase() === 'salah');
+        return { benar: ok, skor: ok ? skor : 0 };
+      }
+      if (jenis === 'Checkbox') {
+        const keys = String(s.kunci || '').toUpperCase().split(/[,;\s]+/).map(x => x.trim()).filter(Boolean).sort();
+        const got = (Array.isArray(ans) ? ans : String(ans).split(/[,;\s]+/)).map(x => String(x).trim().toUpperCase()).filter(Boolean).sort();
+        const ok = keys.length && keys.join() === got.join();
+        return { benar: ok, skor: ok ? skor : 0 };
+      }
+      if (jenis === 'Isian Singkat') {
+        const keys = String(s.kunci || '').split('|').map(normAns);
+        const ok = keys.some(k => k && k === normAns(ans));
+        return { benar: ok, skor: ok ? skor : 0 };
+      }
+      if (jenis === 'Menjodohkan') {
+        const k = normAns(s.kunci).replace(/\s/g, '');
+        const a = normAns(ans).replace(/\s/g, '');
+        const ok = k && a && (k === a || k.split(',').sort().join() === a.split(',').sort().join());
+        return { benar: ok, skor: ok ? skor : 0 };
+      }
+      // Esai: tidak auto
+      return { benar: null, skor: 0 };
+    }
+
+    async function submitTuJawaban(auto) {
+      saveCurrentTuAnswer();
+      if (!auto) {
+        const unanswered = _tuSoals.filter(s => {
+          const a = _tuAnswers[s.id];
+          return a == null || a === '' || (Array.isArray(a) && !a.length);
+        }).length;
+        const msg = unanswered
+          ? 'Masih ada ' + unanswered + ' soal belum dijawab. Kirim sekarang?'
+          : 'Kirim semua jawaban sekarang?';
+        if (!(await showConfirm(msg, 'Kirim Jawaban', '📤'))) return;
+      }
+      if (_tuTimerIv) { clearInterval(_tuTimerIv); _tuTimerIv = null; }
+
+      let totalSkor = 0, maxSkor = 0, benar = 0, total = _tuSoals.length;
+      const detail = [];
+      _tuSoals.forEach(s => {
+        maxSkor += Number(s.skor) || 1;
+        const g = gradeSoal(s, _tuAnswers[s.id]);
+        totalSkor += g.skor;
+        if (g.benar === true) benar++;
+        detail.push({
+          soal_id: s.id, nomor: s.nomor, jenis: s.jenis,
+          jawaban: _tuAnswers[s.id] ?? null,
+          kunci: s.kunci, benar: g.benar, skor: g.skor
+        });
+      });
+
+      const payload = {
+        bank_id: Number(_tuExam.id),
+        siswa_id: currentUserId,
+        nisn: currentUserKode,
+        nama: currentUserName,
+        kelas: currentUserKelas,
+        skor: totalSkor,
+        benar: benar,
+        total: total,
+        detail: detail,
+        submitted_at: new Date().toISOString()
+      };
+
+      try {
+        if (supabaseClient) {
+          const { error } = await supabaseClient.from('bank_soal_hasil').insert([payload]);
+          if (error) throw error;
+        } else {
+          const list = JSON.parse(localStorage.getItem('bank_soal_hasil') || '[]');
+          payload.id = Date.now();
+          list.push(payload);
+          localStorage.setItem('bank_soal_hasil', JSON.stringify(list));
+        }
+        alert('Jawaban terkirim!\n\nSkor otomatis: ' + totalSkor + ' / ' + maxSkor +
+          '\nBenar: ' + benar + ' / ' + total +
+          '\n(Esai dinilai manual oleh guru bila ada)');
+        showPage('tugas-ujian', true);
+        initTugasSiswaPage();
+      } catch (e) {
+        alert('Gagal kirim: ' + (e.message || e));
+      }
+    }
+
     // ============================================================
     // IMPORT SOAL DARI MS WORD (.docx)
     // ============================================================
@@ -7444,59 +7909,6 @@
         return;
       }
 
-      // Perbaiki LaTeX yang rusak (\f dari \frac jadi form-feed di JS/HTML)
-      function fixBrokenLatex(s) {
-        if (!s) return '';
-        let t = String(s);
-        t = t.replace(/\u000c/g, 'f').replace(/\u0008/g, '').replace(/\u000b/g, '');
-        // "\rac" sisa form-feed → "\frac"
-        t = t.replace(/\\rac\{/g, '\\frac{');
-        t = t.replace(/(^|[^a-zA-Z\\])rac\{/g, '$1\\frac{');
-        t = t.replace(/(^|[^a-zA-Z\\])frac\{/g, '$1\\frac{');
-        return t;
-      }
-
-      function katexOr(tex, display) {
-        try {
-          if (typeof katex === 'undefined') return tex;
-          return katex.renderToString(tex, { throwOnError: false, displayMode: !!display });
-        } catch (e) { return tex; }
-      }
-
-      function renderMathInHtml(html) {
-        let h = fixBrokenLatex(html || '');
-        h = h.replace(/<script[\s\S]*?<\/script>/gi, '');
-
-        // Sudah ada output katex → biarkan
-        if (h.indexOf('class="katex') >= 0) return h;
-
-        // $...$ / $$...$$
-        h = h.replace(/\$\$([\s\S]+?)\$\$/g, (_, tex) => katexOr(tex.trim(), true));
-        h = h.replace(/\$([^\$]+?)\$/g, (_, tex) => katexOr(tex.trim(), false));
-
-        // \frac{a}{b}, \dfrac, \tfrac
-        h = h.replace(/\\(?:d|t)?frac\{([^{}]+)\}\{([^{}]+)\}/g, (_, a, b) =>
-          katexOr('\\frac{' + a + '}{' + b + '}', false));
-
-        // \sqrt{x}, \sqrt[n]{x}
-        h = h.replace(/\\sqrt\[([^\]]+)\]\{([^{}]+)\}/g, (_, n, x) =>
-          katexOr('\\sqrt[' + n + ']{' + x + '}', false));
-        h = h.replace(/\\sqrt\{([^{}]+)\}/g, (_, x) => katexOr('\\sqrt{' + x + '}', false));
-
-        // x^{2}, x_{i} sederhana di teks polos (hindari dalam tag)
-        h = h.replace(/(^|>)([^<]*?)([A-Za-z0-9])\^(\{[^}]+\}|\w)/g, (m, a, pre, base, exp) => {
-          const tex = base + '^' + exp;
-          return a + pre + katexOr(tex, false);
-        });
-
-        return h;
-      }
-
-      function isKeyOption(kunci, letter) {
-        const k = String(kunci || '').toUpperCase();
-        return k.split(/[,;\s]+/).map(x => x.trim()).includes(letter);
-      }
-
       function cleanSoalHtml(html, nomor) {
         let h = String(html || '');
         const n = String(nomor || '');
@@ -8460,6 +8872,7 @@
         if (ses.avatar) ROLE_DATA[ses.role].avatar = ses.avatar;
         currentUserId = ses.userId || null;
         currentUserKode = ses.kode || null;
+        currentUserKelas = ses.kelas || null;
         applyRole(ses.role, true); // skipRedirect → tetap di halaman hash saat ini
       }
     })();
