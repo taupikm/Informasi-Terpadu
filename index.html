@@ -2271,37 +2271,57 @@
 
   <!-- ========== MODAL BANK SOAL ========== -->
   <div class="modal-overlay" id="modalBankSoal">
-    <div class="modal">
+    <div class="modal" style="max-width:420px;">
       <div class="modal-header">
         <h3 id="modalBsTitle">Tambah Bank Soal</h3>
         <button class="modal-close" data-close="modalBankSoal">&times;</button>
       </div>
       <div class="modal-body">
         <input type="hidden" id="bsId">
+        <div class="periode-bar" style="margin-bottom:12px;">
+          Tahun Ajaran || Semester : <b id="bsLabelPeriode">-</b>
+        </div>
         <div class="form-group">
           <label>Judul *</label>
           <input type="text" id="bsJudul" placeholder="Contoh: Ulangan Harian Bab 1">
         </div>
         <div class="form-row">
           <div class="form-group">
-            <label>Mapel *</label>
-            <input type="text" id="bsMapel" placeholder="Matematika">
+            <label>Jenis Penilaian *</label>
+            <select id="bsJenis">
+              <option value="NH">NH (Nilai Harian)</option>
+              <option value="TGS">TGS (Tugas)</option>
+              <option value="PTS">PTS</option>
+              <option value="ASAS">ASAS</option>
+              <option value="ASAJ">ASAJ</option>
+              <option value="ASAT">ASAT</option>
+              <option value="Ujian">Ujian</option>
+            </select>
           </div>
           <div class="form-group">
-            <label>Kelas *</label>
-            <input type="text" id="bsKelas" placeholder="7A / Semua">
+            <label>Penilaian Ke</label>
+            <select id="bsKe">
+              <option value="1">1</option><option value="2">2</option><option value="3">3</option>
+              <option value="4">4</option><option value="5">5</option><option value="6">6</option>
+              <option value="7">7</option><option value="8">8</option><option value="9">9</option>
+              <option value="10">10</option>
+            </select>
           </div>
         </div>
         <div class="form-row">
           <div class="form-group">
-            <label>Jenis *</label>
-            <select id="bsJenis">
-              <option value="Tugas">Tugas</option>
-              <option value="Ujian">Ujian</option>
-              <option value="UH">UH</option>
-              <option value="PTS">PTS</option>
-              <option value="PAS">PAS</option>
-            </select>
+            <label>Mapel *</label>
+            <select id="bsMapel"><option value="">- Pilih Mapel -</option></select>
+          </div>
+          <div class="form-group">
+            <label>Kelas *</label>
+            <select id="bsKelas"><option value="">- Pilih Kelas -</option></select>
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label>Periode</label>
+            <select id="bsPeriodeId"></select>
           </div>
           <div class="form-group">
             <label>Status</label>
@@ -2312,9 +2332,34 @@
             </select>
           </div>
         </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label>Durasi (menit)</label>
+            <input type="number" id="bsDurasi" min="1" value="60" placeholder="60">
+          </div>
+          <div class="form-group">
+            <label>Max Attempt</label>
+            <input type="number" id="bsMaxAttempt" min="1" value="1" placeholder="1">
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label>Waktu Mulai</label>
+            <input type="datetime-local" id="bsWaktuMulai">
+          </div>
+          <div class="form-group">
+            <label>Waktu Selesai</label>
+            <input type="datetime-local" id="bsWaktuSelesai">
+          </div>
+        </div>
         <div class="form-group">
-          <label>Periode (Tahun Ajaran)</label>
-          <select id="bsPeriodeId"></select>
+          <label>Mode Soal</label>
+          <select id="bsMode">
+            <option value="Normal">Normal</option>
+            <option value="Acak Soal">Acak Soal</option>
+            <option value="Acak Opsi">Acak Opsi</option>
+            <option value="Acak Soal & Opsi">Acak Soal & Opsi</option>
+          </select>
         </div>
         <div class="form-group">
           <label>Keterangan</label>
@@ -5813,16 +5858,77 @@
       return [...document.querySelectorAll('.cb-bs-row:checked')].map(c => c.value);
     }
 
+    async function fillBsMapelKelas() {
+      const selM = document.getElementById('bsMapel');
+      const selK = document.getElementById('bsKelas');
+      if (!selM || !selK) return;
+      try {
+        if (typeof loadMapel === 'function') await loadMapel();
+        if (typeof loadKelas === 'function') await loadKelas();
+      } catch (e) {}
+      const mapels = (typeof masterMapel !== 'undefined' && masterMapel.length)
+        ? masterMapel
+        : (typeof dataMapel !== 'undefined' ? dataMapel : []);
+      const kelas = (typeof masterKelas !== 'undefined' && masterKelas.length)
+        ? masterKelas
+        : (typeof dataKelas !== 'undefined' ? dataKelas : []);
+
+      // Fallback fetch
+      if (supabaseClient && !mapels.length) {
+        const { data } = await supabaseClient.from('mapel').select('id, mapel, nama').order('mapel');
+        selM.innerHTML = '<option value="">- Pilih Mapel -</option>' +
+          (data || []).map(m => '<option value="' + esc(m.mapel || m.nama) + '">' + esc(m.mapel || m.nama) + '</option>').join('');
+      } else {
+        selM.innerHTML = '<option value="">- Pilih Mapel -</option>' +
+          mapels.map(m => {
+            const n = m.mapel || m.nama || m;
+            return '<option value="' + esc(n) + '">' + esc(n) + '</option>';
+          }).join('');
+      }
+      if (supabaseClient && !kelas.length) {
+        const { data } = await supabaseClient.from('kelas').select('kelas').order('kelas');
+        selK.innerHTML = '<option value="">- Pilih Kelas -</option>' +
+          (data || []).map(k => '<option value="' + esc(k.kelas) + '">' + esc(k.kelas) + '</option>').join('');
+      } else {
+        selK.innerHTML = '<option value="">- Pilih Kelas -</option>' +
+          kelas.map(k => {
+            const n = k.kelas || k;
+            return '<option value="' + esc(n) + '">' + esc(n) + '</option>';
+          }).join('');
+      }
+    }
+
+    function toDatetimeLocal(v) {
+      if (!v) return '';
+      try {
+        const d = new Date(v);
+        if (isNaN(d)) return '';
+        const pad = n => String(n).padStart(2, '0');
+        return d.getFullYear() + '-' + pad(d.getMonth()+1) + '-' + pad(d.getDate()) +
+          'T' + pad(d.getHours()) + ':' + pad(d.getMinutes());
+      } catch (e) { return ''; }
+    }
+
     document.getElementById('btnBsTambah')?.addEventListener('click', async () => {
       await loadPeriodeOptionsBs();
+      await fillBsMapelKelas();
       document.getElementById('modalBsTitle').textContent = 'Tambah Bank Soal';
       document.getElementById('bsId').value = '';
       document.getElementById('bsJudul').value = '';
+      document.getElementById('bsJenis').value = 'TGS';
+      document.getElementById('bsKe').value = '1';
       document.getElementById('bsMapel').value = '';
       document.getElementById('bsKelas').value = '';
-      document.getElementById('bsJenis').value = 'Tugas';
       document.getElementById('bsStatus').value = 'Draft';
+      document.getElementById('bsDurasi').value = '60';
+      document.getElementById('bsMaxAttempt').value = '1';
+      document.getElementById('bsWaktuMulai').value = '';
+      document.getElementById('bsWaktuSelesai').value = '';
+      document.getElementById('bsMode').value = 'Normal';
       document.getElementById('bsKet').value = '';
+      const lp = document.getElementById('bsLabelPeriode');
+      if (lp && aktifPeriode) lp.textContent = aktifPeriode.tahun_ajaran + ' || ' + aktifPeriode.semester;
+      else if (lp) lp.textContent = '-';
       openModal('modalBankSoal');
     });
 
@@ -5832,31 +5938,52 @@
       const r = dataBankSoal.find(x => String(x.id) === ids[0]);
       if (!r) { alert('Data tidak ditemukan'); return; }
       await loadPeriodeOptionsBs();
+      await fillBsMapelKelas();
       document.getElementById('modalBsTitle').textContent = 'Edit Bank Soal';
       document.getElementById('bsId').value = r.id;
       document.getElementById('bsJudul').value = r.judul || '';
+      document.getElementById('bsJenis').value = r.jenis || 'TGS';
+      document.getElementById('bsKe').value = r.penilaian_ke || '1';
       document.getElementById('bsMapel').value = r.mapel || '';
       document.getElementById('bsKelas').value = r.kelas || '';
-      document.getElementById('bsJenis').value = r.jenis || 'Tugas';
       document.getElementById('bsStatus').value = r.status || 'Draft';
+      document.getElementById('bsDurasi').value = r.durasi != null ? r.durasi : 60;
+      document.getElementById('bsMaxAttempt').value = r.max_attempt != null ? r.max_attempt : 1;
+      document.getElementById('bsWaktuMulai').value = toDatetimeLocal(r.waktu_mulai);
+      document.getElementById('bsWaktuSelesai').value = toDatetimeLocal(r.waktu_selesai);
+      document.getElementById('bsMode').value = r.mode_soal || 'Normal';
       document.getElementById('bsKet').value = r.keterangan || '';
       if (r.periode_id) document.getElementById('bsPeriodeId').value = r.periode_id;
+      const lp = document.getElementById('bsLabelPeriode');
+      if (lp) {
+        if (r.periode) lp.textContent = r.periode.tahun_ajaran + ' || ' + r.periode.semester;
+        else if (aktifPeriode) lp.textContent = aktifPeriode.tahun_ajaran + ' || ' + aktifPeriode.semester;
+        else lp.textContent = '-';
+      }
       openModal('modalBankSoal');
     });
 
     document.getElementById('btnSaveBankSoal')?.addEventListener('click', async () => {
       const id = document.getElementById('bsId').value;
+      const wm = document.getElementById('bsWaktuMulai').value;
+      const ws = document.getElementById('bsWaktuSelesai').value;
       const payload = {
         judul: document.getElementById('bsJudul').value.trim(),
         mapel: document.getElementById('bsMapel').value.trim(),
         kelas: document.getElementById('bsKelas').value.trim(),
         jenis: document.getElementById('bsJenis').value,
+        penilaian_ke: Number(document.getElementById('bsKe').value) || 1,
         status: document.getElementById('bsStatus').value,
         periode_id: document.getElementById('bsPeriodeId').value
           ? Number(document.getElementById('bsPeriodeId').value) : null,
-        keterangan: document.getElementById('bsKet').value.trim() || null,
-        jml_soal: 0
+        durasi: Number(document.getElementById('bsDurasi').value) || 60,
+        max_attempt: Number(document.getElementById('bsMaxAttempt').value) || 1,
+        waktu_mulai: wm ? new Date(wm).toISOString() : null,
+        waktu_selesai: ws ? new Date(ws).toISOString() : null,
+        mode_soal: document.getElementById('bsMode').value || 'Normal',
+        keterangan: document.getElementById('bsKet').value.trim() || null
       };
+      if (!id) payload.jml_soal = 0;
       if (!payload.judul || !payload.mapel || !payload.kelas) {
         alert('Judul, Mapel, Kelas wajib diisi'); return;
       }
