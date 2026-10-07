@@ -1640,29 +1640,73 @@
 
     <!-- Sub: hasil -->
     <section class="page" id="page-bank-soal-hasil">
-      <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;">
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;flex-wrap:wrap;">
         <button class="btn btn-outline" id="btnBsHasilKembali" style="padding:6px 10px;">← Kembali</button>
-        <div class="page-title" style="margin:0;" id="bsHasilTitle">Hasil</div>
+        <div class="page-title" style="margin:0;flex:1;" id="bsHasilTitle">Monitoring</div>
       </div>
+
+      <div class="card" style="padding:12px;margin-bottom:10px;">
+        <div class="rekap-filter-row">
+          <label>Kelas</label>
+          <select id="monKelas"><option value="">Semua Kelas</option></select>
+        </div>
+        <div class="rekap-filter-row">
+          <label>Status</label>
+          <select id="monStatus">
+            <option value="">Semua Status</option>
+            <option value="sedang">Sedang Ujian</option>
+            <option value="timeout">Timeout</option>
+            <option value="selesai">Selesai</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="toolbar" style="flex-wrap:wrap;gap:6px;">
+        <button class="btn" id="btnMonBuka" style="background:#2563eb;color:#fff;border:none;padding:6px 10px;font-size:12px;">Buka Kembali</button>
+        <button class="btn" id="btnMonSelesai" style="background:#16a34a;color:#fff;border:none;padding:6px 10px;font-size:12px;">Selesaikan</button>
+        <button class="btn" id="btnMonDetail" style="background:#0ea5e9;color:#fff;border:none;padding:6px 10px;font-size:12px;">Detail</button>
+        <button class="btn" id="btnMonPerpanjang" style="background:#f59e0b;color:#fff;border:none;padding:6px 10px;font-size:12px;">Perpanjang</button>
+        <button class="btn" id="btnMonReset" style="background:#ef4444;color:#fff;border:none;padding:6px 10px;font-size:12px;">Reset</button>
+        <button class="btn" id="btnMonSync" style="background:#7c3aed;color:#fff;border:none;padding:6px 10px;font-size:12px;">Sinkronisasi</button>
+        <button class="btn btn-outline" id="btnMonRefresh" style="padding:6px 10px;font-size:12px;">↻</button>
+        <span class="toolbar-info" id="infoMon">0 data</span>
+      </div>
+
       <div class="table-wrap">
         <table>
           <thead>
             <tr>
+              <th style="width:36px;"><input type="checkbox" id="checkAllMon"></th>
               <th>No</th>
-              <th>Nama</th>
               <th>NISN</th>
+              <th>Nama</th>
               <th>Kelas</th>
               <th>Skor</th>
-              <th>Benar</th>
-              <th>Waktu</th>
+              <th>Status</th>
+              <th>Sisa Waktu</th>
             </tr>
           </thead>
           <tbody id="tbodyBsHasil">
-            <tr><td colspan="7" style="text-align:center;padding:16px;color:#94a3b8;">Belum ada hasil</td></tr>
+            <tr><td colspan="8" style="text-align:center;padding:16px;color:#94a3b8;">Belum ada data</td></tr>
           </tbody>
         </table>
       </div>
     </section>
+
+    <!-- Modal detail jawaban siswa -->
+    <div class="modal-overlay" id="modalMonDetail">
+      <div class="modal" style="max-width:560px;max-height:92vh;overflow-y:auto;">
+        <div class="modal-header">
+          <h3 id="monDetailTitle">Detail Jawaban</h3>
+          <button class="modal-close" data-close="modalMonDetail">&times;</button>
+        </div>
+        <div class="modal-body" id="monDetailBody"></div>
+        <div class="modal-footer">
+          <button class="btn btn-outline" data-close="modalMonDetail">Tutup</button>
+          <button class="btn btn-primary" id="btnMonSaveEsai">Simpan Nilai Esai</button>
+        </div>
+      </div>
+    </div>
 
     <section class="page" id="page-download-absensi">
       <div class="placeholder"><div class="icon">⬇️</div><h2>Download Absensi</h2><p>Halaman unduh data absensi</p></div>
@@ -2589,6 +2633,15 @@
             <option value="Acak Opsi">Acak Opsi</option>
             <option value="Acak Soal & Opsi">Acak Soal & Opsi</option>
           </select>
+        </div>
+        <div class="form-group" style="background:#fef2f2;border:1px solid #fecaca;border-radius:8px;padding:10px;">
+          <label style="display:flex;align-items:center;gap:8px;cursor:pointer;margin:0;">
+            <input type="checkbox" id="bsAntiCurang" style="width:18px;height:18px;">
+            <span style="font-weight:700;color:#991b1b;">🔒 Anti Curang</span>
+          </label>
+          <div style="font-size:11px;color:#7f1d1d;margin-top:6px;line-height:1.4;">
+            Aktif = layar penuh + deteksi pindah tab/app saat siswa mengerjakan.
+          </div>
         </div>
         <div class="form-group">
           <label>Keterangan</label>
@@ -6293,6 +6346,42 @@
       } else {
         disableTuAntiCurang();
       }
+      // Catat sesi monitoring "sedang"
+      try {
+        await createTuSession(bank, end);
+      } catch (e) { console.warn('session', e); }
+    }
+
+    async function createTuSession(bank, deadlineMs) {
+      const payload = {
+        bank_id: Number(bank.id),
+        siswa_id: currentUserId,
+        nisn: currentUserKode,
+        nama: currentUserName,
+        kelas: currentUserKelas,
+        status: 'sedang',
+        skor: null,
+        benar: null,
+        total: null,
+        detail: [],
+        deadline_at: deadlineMs ? new Date(deadlineMs).toISOString() : null,
+        submitted_at: null,
+        cheat_count: 0
+      };
+      if (supabaseClient) {
+        // hapus sesi sedang lama untuk bank+siswa yang sama
+        await supabaseClient.from('bank_soal_hasil')
+          .delete().eq('bank_id', payload.bank_id).eq('siswa_id', currentUserId).eq('status', 'sedang');
+        const { data, error } = await supabaseClient.from('bank_soal_hasil').insert([payload]).select().single();
+        if (!error && data) window._tuSessionId = data.id;
+      } else {
+        const list = JSON.parse(localStorage.getItem('bank_soal_hasil') || '[]');
+        const filtered = list.filter(x => !(Number(x.bank_id) === payload.bank_id && x.siswa_id === currentUserId && x.status === 'sedang'));
+        payload.id = Date.now();
+        filtered.push(payload);
+        localStorage.setItem('bank_soal_hasil', JSON.stringify(filtered));
+        window._tuSessionId = payload.id;
+      }
     }
 
     function updateTuTimer() {
@@ -6662,6 +6751,7 @@
         });
       });
 
+      const isTimeout = !!auto && _tuDeadline && Date.now() >= _tuDeadline;
       const payload = {
         bank_id: Number(_tuExam.id),
         siswa_id: currentUserId,
@@ -6673,18 +6763,33 @@
         total: total,
         detail: detail,
         cheat_count: _tuCheatCount || 0,
+        status: isTimeout ? 'timeout' : 'selesai',
         submitted_at: new Date().toISOString()
       };
 
       try {
         if (supabaseClient) {
-          const { error } = await supabaseClient.from('bank_soal_hasil').insert([payload]);
-          if (error) throw error;
+          if (window._tuSessionId) {
+            const { error } = await supabaseClient.from('bank_soal_hasil').update(payload).eq('id', window._tuSessionId);
+            if (error) {
+              const { error: e2 } = await supabaseClient.from('bank_soal_hasil').insert([payload]);
+              if (e2) throw e2;
+            }
+          } else {
+            const { error } = await supabaseClient.from('bank_soal_hasil').insert([payload]);
+            if (error) throw error;
+          }
+          window._tuSessionId = null;
         } else {
-          const list = JSON.parse(localStorage.getItem('bank_soal_hasil') || '[]');
-          payload.id = Date.now();
-          list.push(payload);
+          let list = JSON.parse(localStorage.getItem('bank_soal_hasil') || '[]');
+          if (window._tuSessionId) {
+            list = list.map(x => String(x.id) === String(window._tuSessionId) ? Object.assign({}, x, payload) : x);
+          } else {
+            payload.id = Date.now();
+            list.push(payload);
+          }
           localStorage.setItem('bank_soal_hasil', JSON.stringify(list));
+          window._tuSessionId = null;
         }
         alert('Jawaban terkirim!\n\nSkor otomatis: ' + totalSkor + ' / ' + maxSkor +
           '\nBenar: ' + benar + ' / ' + total +
@@ -8404,13 +8509,15 @@
       }
     });
 
-    // ----- HASIL -----
+    // ----- MONITORING HASIL UJIAN -----
+    let dataMonHasil = [];
+
     document.getElementById('btnBsHasil')?.addEventListener('click', async () => {
       const ids = getCheckedBs();
-      if (ids.length !== 1) { alert('Centang tepat 1 bank soal untuk melihat hasil'); return; }
+      if (ids.length !== 1) { alert('Centang tepat 1 bank soal untuk monitoring'); return; }
       setCurrentBankId(ids[0]);
       const r = dataBankSoal.find(x => String(x.id) === String(getCurrentBankId()));
-      document.getElementById('bsHasilTitle').textContent = 'Hasil: ' + (r?.judul || '');
+      document.getElementById('bsHasilTitle').textContent = 'Monitoring: ' + (r?.judul || '');
       showPage('bank-soal-hasil', true);
       await loadBsHasilTable();
     });
@@ -8418,6 +8525,28 @@
     document.getElementById('btnBsHasilKembali')?.addEventListener('click', () => {
       showPage('kelola-tugas', true);
     });
+
+    function getCheckedMon() {
+      return [...document.querySelectorAll('#tbodyBsHasil .cb-mon:checked')].map(c => c.value);
+    }
+
+    function monStatusLabel(st) {
+      const s = String(st || 'selesai').toLowerCase();
+      if (s === 'sedang') return '<span style="background:#dbeafe;color:#1d4ed8;padding:2px 8px;border-radius:8px;font-size:11px;font-weight:600;">Sedang Ujian</span>';
+      if (s === 'timeout') return '<span style="background:#fee2e2;color:#b91c1c;padding:2px 8px;border-radius:8px;font-size:11px;font-weight:600;">Timeout</span>';
+      return '<span style="background:#dcfce7;color:#166534;padding:2px 8px;border-radius:8px;font-size:11px;font-weight:600;">Selesai</span>';
+    }
+
+    function monSisaWaktu(r) {
+      if (!r.deadline_at) return '-';
+      const st = String(r.status || '').toLowerCase();
+      if (st === 'selesai' || st === 'timeout') return '-';
+      const sisa = Math.floor((new Date(r.deadline_at).getTime() - Date.now()) / 1000);
+      if (sisa <= 0) return '0:00';
+      const m = Math.floor(sisa / 60);
+      const s = sisa % 60;
+      return m + ':' + String(s).padStart(2, '0');
+    }
 
     async function loadBsHasilTable() {
       const tbody = document.getElementById('tbodyBsHasil');
@@ -8432,26 +8561,234 @@
           rows = data || [];
         } else {
           rows = JSON.parse(localStorage.getItem('bank_soal_hasil') || '[]')
-            .filter(x => String(x.bank_id) === String(getCurrentBankId()));
+            .filter(x => String(x.bank_id) === String(bankId));
         }
       } catch (e) {
         console.warn(e);
         rows = [];
       }
-      if (!rows.length) {
-        tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;padding:16px;color:#94a3b8;">Belum ada siswa yang mengerjakan</td></tr>';
+
+      // Filter kelas & status
+      const fKelas = document.getElementById('monKelas')?.value || '';
+      const fStatus = document.getElementById('monStatus')?.value || '';
+      const kelasSet = new Set();
+      rows.forEach(r => { if (r.kelas) kelasSet.add(r.kelas); });
+      const selKelas = document.getElementById('monKelas');
+      if (selKelas) {
+        const cur = selKelas.value;
+        selKelas.innerHTML = '<option value="">Semua Kelas</option>' +
+          [...kelasSet].sort().map(k => '<option value="' + esc(k) + '">' + esc(k) + '</option>').join('');
+        if (cur) selKelas.value = cur;
+      }
+
+      dataMonHasil = rows.filter(r => {
+        if (fKelas && String(r.kelas) !== fKelas) return false;
+        if (fStatus && String(r.status || 'selesai').toLowerCase() !== fStatus) return false;
+        return true;
+      });
+
+      const info = document.getElementById('infoMon');
+      if (info) info.textContent = dataMonHasil.length + ' data';
+
+      if (!dataMonHasil.length) {
+        tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;padding:16px;color:#94a3b8;">Belum ada data monitoring</td></tr>';
         return;
       }
-      tbody.innerHTML = rows.map((r, i) =>
-        '<tr><td>' + (i + 1) + '</td>' +
-        '<td>' + esc(r.nama || '-') + '</td>' +
+      tbody.innerHTML = dataMonHasil.map((r, i) =>
+        '<tr data-id="' + r.id + '">' +
+        '<td><input type="checkbox" class="cb-mon" value="' + r.id + '"></td>' +
+        '<td>' + (i + 1) + '</td>' +
         '<td>' + esc(r.nisn || '-') + '</td>' +
+        '<td>' + esc(r.nama || '-') + '</td>' +
         '<td>' + esc(r.kelas || '-') + '</td>' +
         '<td><b>' + (r.skor != null ? r.skor : '-') + '</b></td>' +
-        '<td>' + (r.benar != null ? r.benar : '-') + '/' + (r.total != null ? r.total : '-') + '</td>' +
-        '<td style="font-size:11px;">' + (r.submitted_at ? new Date(r.submitted_at).toLocaleString('id-ID') : '-') + '</td></tr>'
+        '<td>' + monStatusLabel(r.status) + '</td>' +
+        '<td style="font-size:12px;white-space:nowrap;">' + monSisaWaktu(r) + '</td></tr>'
       ).join('');
     }
+
+    document.getElementById('monKelas')?.addEventListener('change', () => loadBsHasilTable());
+    document.getElementById('monStatus')?.addEventListener('change', () => loadBsHasilTable());
+    document.getElementById('btnMonRefresh')?.addEventListener('click', () => loadBsHasilTable());
+    document.getElementById('checkAllMon')?.addEventListener('change', function () {
+      document.querySelectorAll('#tbodyBsHasil .cb-mon').forEach(c => { c.checked = this.checked; });
+    });
+
+    async function updateMonRows(ids, patch) {
+      for (const id of ids) {
+        if (supabaseClient) {
+          const { error } = await supabaseClient.from('bank_soal_hasil').update(patch).eq('id', id);
+          if (error) throw error;
+        } else {
+          let list = JSON.parse(localStorage.getItem('bank_soal_hasil') || '[]');
+          list = list.map(x => String(x.id) === String(id) ? Object.assign({}, x, patch) : x);
+          localStorage.setItem('bank_soal_hasil', JSON.stringify(list));
+        }
+      }
+    }
+
+    async function deleteMonRows(ids) {
+      for (const id of ids) {
+        if (supabaseClient) {
+          const { error } = await supabaseClient.from('bank_soal_hasil').delete().eq('id', id);
+          if (error) throw error;
+        } else {
+          let list = JSON.parse(localStorage.getItem('bank_soal_hasil') || '[]');
+          list = list.filter(x => String(x.id) !== String(id));
+          localStorage.setItem('bank_soal_hasil', JSON.stringify(list));
+        }
+      }
+    }
+
+    // Buka Kembali = izinkan ulang (status selesai/timeout → boleh kerjakan lagi: hapus record ATAU set flag)
+    // Sesuai keterangan: jawaban tetap ada dan dapat diubah → set status sedang + buka kembali attempt
+    document.getElementById('btnMonBuka')?.addEventListener('click', async () => {
+      const ids = getCheckedMon();
+      if (!ids.length) { alert('Centang siswa dulu'); return; }
+      if (!(await showConfirm('Buka kembali ujian untuk ' + ids.length + ' siswa?\nJawaban yang ada tetap tersimpan.', 'Buka Kembali', '🔓'))) return;
+      try {
+        await updateMonRows(ids, { status: 'sedang', submitted_at: null });
+        alert('Ujian dibuka kembali. Siswa dapat melanjutkan/mengubah jawaban.');
+        await loadBsHasilTable();
+      } catch (e) { alert('Gagal: ' + (e.message || e)); }
+    });
+
+    // Selesaikan = paksa selesai
+    document.getElementById('btnMonSelesai')?.addEventListener('click', async () => {
+      const ids = getCheckedMon();
+      if (!ids.length) { alert('Centang siswa dulu'); return; }
+      if (!(await showConfirm('Selesaikan paksa ' + ids.length + ' siswa?', 'Selesaikan', '✅'))) return;
+      try {
+        await updateMonRows(ids, { status: 'selesai', submitted_at: new Date().toISOString() });
+        alert('Status diubah menjadi Selesai.');
+        await loadBsHasilTable();
+      } catch (e) { alert('Gagal: ' + (e.message || e)); }
+    });
+
+    // Perpanjang waktu
+    document.getElementById('btnMonPerpanjang')?.addEventListener('click', async () => {
+      const ids = getCheckedMon();
+      if (!ids.length) { alert('Centang siswa dulu'); return; }
+      const mnt = prompt('Perpanjang berapa menit?', '15');
+      if (mnt == null) return;
+      const addMs = (Number(mnt) || 0) * 60 * 1000;
+      if (addMs <= 0) { alert('Menit tidak valid'); return; }
+      try {
+        for (const id of ids) {
+          const r = dataMonHasil.find(x => String(x.id) === String(id));
+          let base = r && r.deadline_at ? new Date(r.deadline_at).getTime() : Date.now();
+          if (base < Date.now()) base = Date.now();
+          const deadline = new Date(base + addMs).toISOString();
+          await updateMonRows([id], { deadline_at: deadline, status: 'sedang' });
+        }
+        alert('Waktu diperpanjang ' + mnt + ' menit.');
+        await loadBsHasilTable();
+      } catch (e) { alert('Gagal: ' + (e.message || e)); }
+    });
+
+    // Reset = hapus jawaban, kembali ke awal
+    document.getElementById('btnMonReset')?.addEventListener('click', async () => {
+      const ids = getCheckedMon();
+      if (!ids.length) { alert('Centang siswa dulu'); return; }
+      if (!(await showConfirm('RESET ' + ids.length + ' siswa?\nSemua jawaban akan terhapus.', 'Reset', '⚠️'))) return;
+      try {
+        await deleteMonRows(ids);
+        alert('Data direset.');
+        await loadBsHasilTable();
+      } catch (e) { alert('Gagal: ' + (e.message || e)); }
+    });
+
+    // Detail
+    document.getElementById('btnMonDetail')?.addEventListener('click', async () => {
+      const ids = getCheckedMon();
+      if (ids.length !== 1) { alert('Centang tepat 1 siswa untuk Detail'); return; }
+      const r = dataMonHasil.find(x => String(x.id) === String(ids[0]));
+      if (!r) return;
+      document.getElementById('monDetailTitle').textContent = 'Detail: ' + (r.nama || '') + ' (' + (r.nisn || '') + ')';
+      const detail = Array.isArray(r.detail) ? r.detail : (typeof r.detail === 'string' ? JSON.parse(r.detail || '[]') : []);
+      let html = '<div style="font-size:12px;margin-bottom:8px;">Skor: <b>' + (r.skor != null ? r.skor : '-') +
+        '</b> · Status: ' + esc(r.status || 'selesai') +
+        (r.cheat_count ? ' · ⚠ Pelanggaran: ' + r.cheat_count : '') + '</div>';
+      if (!detail.length) {
+        html += '<p style="color:#94a3b8;">Tidak ada detail jawaban.</p>';
+      } else {
+        detail.forEach((d, i) => {
+          html += '<div style="border:1px solid #e2e8f0;border-radius:8px;padding:8px;margin-bottom:8px;font-size:12px;">';
+          html += '<b>No. ' + (d.nomor || (i + 1)) + '</b> · ' + esc(d.jenis || '') +
+            (d.benar === true ? ' · <span style="color:#16a34a;">✓</span>' :
+             d.benar === false ? ' · <span style="color:#ef4444;">✗</span>' : ' · <span style="color:#f59e0b;">Esai</span>');
+          html += '<div style="margin-top:4px;"><b>Jawaban:</b> ' + esc(Array.isArray(d.jawaban) ? d.jawaban.join(', ') : String(d.jawaban ?? '-')) + '</div>';
+          if (d.kunci) html += '<div><b>Kunci:</b> ' + esc(String(d.kunci)) + '</div>';
+          if (d.jenis === 'Esai' || d.benar === null) {
+            html += '<div class="form-group" style="margin-top:6px;"><label>Nilai esai</label>' +
+              '<input type="number" class="mon-esai-skor" data-idx="' + i + '" value="' + (d.skor || 0) +
+              '" min="0" style="width:100px;padding:6px;border:1px solid #e2e8f0;border-radius:6px;"></div>';
+          }
+          html += '</div>';
+        });
+      }
+      document.getElementById('monDetailBody').innerHTML = html;
+      document.getElementById('btnMonSaveEsai').dataset.id = r.id;
+      openModal('modalMonDetail');
+    });
+
+    document.getElementById('btnMonSaveEsai')?.addEventListener('click', async () => {
+      const id = document.getElementById('btnMonSaveEsai').dataset.id;
+      const r = dataMonHasil.find(x => String(x.id) === String(id));
+      if (!r) return;
+      let detail = Array.isArray(r.detail) ? r.detail.slice() : [];
+      document.querySelectorAll('.mon-esai-skor').forEach(inp => {
+        const idx = Number(inp.dataset.idx);
+        if (detail[idx]) detail[idx].skor = Number(inp.value) || 0;
+      });
+      const totalSkor = detail.reduce((a, d) => a + (Number(d.skor) || 0), 0);
+      try {
+        await updateMonRows([id], { detail: detail, skor: totalSkor });
+        alert('Nilai esai disimpan. Skor total: ' + totalSkor);
+        closeModal('modalMonDetail');
+        await loadBsHasilTable();
+      } catch (e) { alert('Gagal: ' + (e.message || e)); }
+    });
+
+    // Sinkronisasi ke nilai (best-effort)
+    document.getElementById('btnMonSync')?.addEventListener('click', async () => {
+      const ids = getCheckedMon();
+      if (!ids.length) { alert('Centang siswa yang akan disinkronkan'); return; }
+      if (!(await showConfirm('Sinkronisasi skor ' + ids.length + ' siswa ke data nilai?', 'Sinkronisasi', '📊'))) return;
+      const bank = dataBankSoal.find(x => String(x.id) === String(getCurrentBankId()));
+      let ok = 0, fail = 0;
+      for (const id of ids) {
+        const r = dataMonHasil.find(x => String(x.id) === String(id));
+        if (!r || r.skor == null) { fail++; continue; }
+        try {
+          if (supabaseClient) {
+            // Coba insert ke tabel nilai bila ada
+            const payload = {
+              nisn: r.nisn,
+              nama: r.nama,
+              kelas: r.kelas,
+              mapel: bank?.mapel || null,
+              jenis: bank?.jenis || null,
+              ke: bank?.penilaian_ke || bank?.ke || 1,
+              nilai: r.skor,
+              bank_id: bank?.id,
+              periode_id: bank?.periode_id || null
+            };
+            const { error } = await supabaseClient.from('nilai').upsert([payload], { onConflict: 'nisn,mapel,jenis,ke' });
+            if (error) {
+              // fallback insert biasa
+              const { error: e2 } = await supabaseClient.from('nilai').insert([payload]);
+              if (e2) throw e2;
+            }
+          }
+          ok++;
+        } catch (e) {
+          console.warn(e);
+          fail++;
+        }
+      }
+      alert('Sinkronisasi: ' + ok + ' berhasil' + (fail ? ', ' + fail + ' gagal (cek tabel nilai di Supabase)' : ''));
+    });
 
     // ============================================================
     // REKAP DATA ABSENSI
