@@ -6144,131 +6144,142 @@
       const jenisDefault = document.getElementById('iwJenisDefault')?.value || 'Pilihan Ganda';
       let h = String(html || '');
 
-      // Marker split di depan nomor soal (1. / 1) / No.1)
-      h = h.replace(/(<(?:p|h[1-6]|li|div)[^>]*>)\s*(?:No\.?\s*)?(\d{1,3})[\.\)]\s+/gi,
-        '<!--SOAL_SPLIT:$2-->$1');
+      // 1) Amankan tabel — jangan dipecah jadi soal
+      const tables = [];
+      h = h.replace(/<table[\s\S]*?<\/table>/gi, (m) => {
+        tables.push(m);
+        return '<p><!--TABLE_' + (tables.length - 1) + '--></p>';
+      });
 
-      const parts = [];
-      const chunks = h.split(/<!--SOAL_SPLIT:(\d{1,3})-->/);
+      // 2) Pecah ke blok paragraf-ish
+      const rawBlocks = h.split(/(?=<p[\s>])|(?=<h[1-6][\s>])|(?=<li[\s>])/i).filter(b => b.trim());
 
-      for (let i = 1; i < chunks.length; i += 2) {
-        const nomor = parseInt(chunks[i], 10) || (parts.length + 1);
-        let body = chunks[i + 1] || '';
-        if (!body.trim()) continue;
+      function blockText(b) {
+        return b.replace(/<[^>]+>/g, ' ').replace(/&nbsp;/g, ' ').replace(/\s+/g, ' ').trim();
+      }
+      function restoreTables(s) {
+        return s.replace(/<!--TABLE_(\d+)-->/g, (_, i) => tables[Number(i)] || '');
+      }
+      function stripKunci(s) {
+        // hapus dari label Kunci sampai akhir
+        return s
+          .replace(/<(?:p|div|li|h[1-6])[^>]*>\s*Kunci\s*[:.][\s\S]*$/i, '')
+          .replace(/Kunci\s*[:.]\s*[^<]*/gi, '')
+          .trim();
+      }
 
-        const opsi = { a: null, b: null, c: null, d: null, e: null };
-        let pertanyaan = body;
-        let kunci = null;
+      const soals = [];
+      let cur = null;
 
-        // Cari opsi A–E (paragraf/list)
-        const optRegex = /<(?:p|div|li)[^>]*>\s*([A-Ea-e])[\.\)]\s+/gi;
-        const indices = [];
-        let m;
-        while ((m = optRegex.exec(body)) !== null) {
-          indices.push({ letter: m[1].toUpperCase(), index: m.index, full: m[0] });
+      function flush() {
+        if (!cur) return;
+        cur.pertanyaan = restoreTables(stripKunci(cur.pertanyaan || ''));
+        ['a', 'b', 'c', 'd', 'e'].forEach(L => {
+          if (cur['opsi_' + L]) cur['opsi_' + L] = restoreTables(stripKunci(cur['opsi_' + L]));
+        });
+        const plain = blockText(cur.pertanyaan);
+        if (plain.length >= 3 || /<img|<table|<svg/i.test(cur.pertanyaan)) {
+          // deteksi jenis
+          const allPlain = plain + ' ' + blockText(cur.opsi_a || '') + ' ' + (cur.kunci || '');
+          const hasOpts = !!(cur.opsi_a && cur.opsi_b);
+          const kunciLetters = cur.kunci ? (cur.kunci.toUpperCase().match(/\b[A-E]\b/g) || []) : [];
+          const isBS = hasOpts && /benar/i.test(cur.opsi_a || '') && /salah/i.test(cur.opsi_b || '');
+          const isMatch = /jodohkan|menjodohkan|kolom a|kolom b/i.test(allPlain) ||
+            /\d+\s*[-–]\s*[a-e]/i.test(cur.kunci || '');
+          const isCheckbox = /pilih semua|semua yang benar/i.test(allPlain) ||
+            (hasOpts && kunciLetters.length > 1);
+          const isIsian = !hasOpts && /_{3,}/.test(allPlain);
+          const isEsai = !hasOpts && /jelaskan|hitung|tentukan|uraikan|langkah/i.test(plain);
+
+          if (isMatch) cur.jenis = 'Menjodohkan';
+          else if (isBS) cur.jenis = 'Benar Salah';
+          else if (isCheckbox) cur.jenis = 'Checkbox';
+          else if (hasOpts) cur.jenis = 'Pilihan Ganda';
+          else if (isIsian) cur.jenis = 'Isian Singkat';
+          else if (isEsai) cur.jenis = 'Esai';
+          else if (!hasOpts) cur.jenis = 'Esai';
+          else cur.jenis = jenisDefault;
+
+          if (cur.jenis === 'Benar Salah' && cur.kunci) {
+            if (/benar/i.test(cur.kunci)) cur.kunci = 'Benar';
+            else if (/salah/i.test(cur.kunci)) cur.kunci = 'Salah';
+          }
+          if (cur.jenis === 'Checkbox' && kunciLetters.length) {
+            cur.kunci = [...new Set(kunciLetters)].join(',');
+          }
+          if (cur.jenis === 'Pilihan Ganda' && kunciLetters.length === 1) {
+            cur.kunci = kunciLetters[0];
+          }
+          // opsi E tempel di pertanyaan
+          if (cur.opsi_e) {
+            cur.pertanyaan += '<p><b>E.</b> ' + cur.opsi_e + '</p>';
+          }
+          soals.push(cur);
         }
+        cur = null;
+      }
 
-        if (indices.length >= 2) {
-          pertanyaan = body.substring(0, indices[0].index);
-          for (let j = 0; j < indices.length; j++) {
-            const L = indices[j].letter.toLowerCase();
-            const startPos = indices[j].index + indices[j].full.length;
-            const endPos = j + 1 < indices.length ? indices[j + 1].index : body.length;
-            let content = body.substring(startPos, endPos);
-            // Potong sebelum baris Kunci:
-            content = content.replace(/<(?:p|div|li)[^>]*>\s*Kunci\s*[:.][\s\S]*$/i, '');
-            content = content.trim();
-            if ('abcde'.includes(L)) opsi[L] = content;
+      for (const block of rawBlocks) {
+        const t = blockText(block);
+
+        // Soal baru: nomor di AWAL + teks cukup panjang (hindari "1. Persegi" di tabel)
+        // min 12 karakter setelah nomor, atau ada gambar/table placeholder
+        const qm = t.match(/^(?:No\.?\s*)?(\d{1,3})[\.\)]\s+(.+)$/i);
+        const optm = t.match(/^([A-Ea-e])[\.\)]\s+(.+)$/);
+        const isKunci = /^Kunci\s*[:.]/i.test(t);
+
+        if (qm) {
+          const after = qm[2] || '';
+          const afterLen = after.replace(/\s+/g, ' ').trim().length;
+          // Item tabel menjodohkan biasanya pendek (< 40) dan hanya 1-2 kata
+          // Soal sungguhan biasanya kalimat lebih panjang ATAU ada media
+          const hasMedia = /<!--TABLE_|<img/i.test(block);
+          const looksLikeQuestion = afterLen >= 25 || hasMedia ||
+            /berikut|adalah|perhatikan|hasil|jika|dari|tentukan|jelaskan|hitung|yang|pada/i.test(after);
+
+          if (looksLikeQuestion) {
+            flush();
+            cur = {
+              nomor: parseInt(qm[1], 10),
+              jenis: jenisDefault,
+              pertanyaan: block,
+              opsi_a: null, opsi_b: null, opsi_c: null, opsi_d: null, opsi_e: null,
+              kunci: null,
+              skor: Number(document.getElementById('iwSkorDefault')?.value) || 1
+            };
+            continue;
           }
         }
 
-        // Ambil Kunci: (teks setelah label, bisa multi-baris sampai soal berikutnya sudah terpotong)
-        const kunciBlock = body.match(/Kunci\s*[:.]?\s*([\s\S]+?)(?=$)/i);
-        if (kunciBlock) {
-          let kraw = kunciBlock[1]
-            .replace(/<[^>]+>/g, ' ')
-            .replace(/&nbsp;/g, ' ')
-            .replace(/\s+/g, ' ')
-            .trim();
-          // batasi panjang wajar
-          if (kraw.length > 800) kraw = kraw.slice(0, 800);
-          kunci = kraw;
+        if (!cur) {
+          // preamble / orphan — skip or start implicit
+          continue;
         }
 
-        // Deteksi jenis
-        let jenis = jenisDefault;
-        const plainBody = body.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ');
-        const plainQ = pertanyaan.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
-        const hasOpts = !!(opsi.a && opsi.b);
-        const kunciLetters = kunci ? (kunci.toUpperCase().match(/\b[A-E]\b/g) || []) : [];
-        const multiKey = kunciLetters.length > 1 || /,/g.test(kunci || '');
-        const isBS = hasOpts && /benar/i.test(opsi.a || '') && /salah/i.test(opsi.b || '');
-        const isMatch = /jodohkan|menjodohkan|kolom a|kolom b/i.test(plainBody) ||
-          /^\s*\d+\s*[-–=]\s*[a-e]/im.test(kunci || '') ||
-          /\d+\s*[-–]\s*[a-e]/i.test(kunci || '');
-        const isIsian = !hasOpts && /_{3,}|isian|titik-titik/i.test(plainBody + plainQ);
-        const isEsai = !hasOpts && /jelaskan|hitunglah|tentukan|uraikan|langkah/i.test(plainQ);
-        const isCheckbox = /pilih semua|semua yang benar|lebih dari satu/i.test(plainBody) ||
-          (hasOpts && multiKey && kunciLetters.length > 1);
-
-        if (isMatch) jenis = 'Menjodohkan';
-        else if (isBS) jenis = 'Benar Salah';
-        else if (isCheckbox) jenis = 'Checkbox';
-        else if (hasOpts) jenis = 'Pilihan Ganda';
-        else if (isIsian) jenis = 'Isian Singkat';
-        else if (isEsai) jenis = 'Esai';
-        else if (!hasOpts) jenis = (jenisDefault === 'Pilihan Ganda' ? 'Esai' : jenisDefault);
-
-        // Normalisasi kunci Benar/Salah
-        if (jenis === 'Benar Salah' && kunci) {
-          if (/benar/i.test(kunci)) kunci = 'Benar';
-          else if (/salah/i.test(kunci)) kunci = 'Salah';
-        }
-        // Checkbox: rapikan "A, C, E"
-        if (jenis === 'Checkbox' && kunciLetters.length) {
-          kunci = [...new Set(kunciLetters)].join(',');
-        }
-        // PG: ambil huruf pertama
-        if (jenis === 'Pilihan Ganda' && kunciLetters.length === 1) {
-          kunci = kunciLetters[0];
+        if (isKunci) {
+          cur.kunci = t.replace(/^Kunci\s*[:.]?\s*/i, '').trim();
+          continue;
         }
 
-        // Opsi E digabung ke opsi_d note jika kolom hanya A-D — simpan di pertanyaan sebagai tambahan
-        // Lebih baik simpan opsi_e di field (akan di-alter) atau append
-        let pertanyaanFinal = pertanyaan.trim();
-        if (opsi.e) {
-          // sertakan E di HTML pertanyaan agar tidak hilang
-          pertanyaanFinal += '<p><b>E.</b> ' + opsi.e + '</p>';
+        if (optm) {
+          const L = optm[1].toLowerCase();
+          if ('abcde'.includes(L)) {
+            cur['opsi_' + L] = block;
+            continue;
+          }
         }
 
-        const plain = pertanyaanFinal.replace(/<[^>]+>/g, '').replace(/&nbsp;/g, ' ').trim();
-        if (!plain && !/img|table|svg/i.test(pertanyaanFinal)) continue;
-
-        parts.push({
-          nomor: nomor,
-          jenis: jenis,
-          pertanyaan: pertanyaanFinal,
-          opsi_a: opsi.a,
-          opsi_b: opsi.b,
-          opsi_c: opsi.c,
-          opsi_d: opsi.d,
-          opsi_e: opsi.e,
-          kunci: kunci,
-          skor: Number(document.getElementById('iwSkorDefault')?.value) || 1
-        });
+        // Lanjutan pertanyaan / tabel / gambar
+        cur.pertanyaan += block;
       }
+      flush();
 
-      if (!parts.length && h.replace(/<[^>]+>/g, '').trim().length > 5) {
-        parts.push({
-          nomor: 1,
-          jenis: jenisDefault,
-          pertanyaan: h,
-          opsi_a: null, opsi_b: null, opsi_c: null, opsi_d: null, opsi_e: null,
-          kunci: null,
-          skor: Number(document.getElementById('iwSkorDefault')?.value) || 1
-        });
-      }
-      return parts;
+      // Rapikan pertanyaan: buang prefix nomor murni di teks (opsional biarkan)
+      soals.forEach(s => {
+        s.pertanyaan = restoreTables(stripKunci(s.pertanyaan));
+      });
+
+      return soals;
     }
 
     document.getElementById('btnIwSimpan')?.addEventListener('click', async () => {
