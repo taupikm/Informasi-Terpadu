@@ -10,6 +10,7 @@
   <script src="https://cdn.jsdelivr.net/npm/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
   <!-- SheetJS untuk Excel (.xlsx) -->
   <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/mammoth@1.8.0/mammoth.browser.min.js"></script>
   <link href="https://cdn.jsdelivr.net/npm/quill@2.0.2/dist/quill.snow.css" rel="stylesheet">
   <script src="https://cdn.jsdelivr.net/npm/quill@2.0.2/dist/quill.js"></script>
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css">
@@ -1492,12 +1493,26 @@
         <button class="btn btn-primary" id="btnBsItemTambah">+ Tambah Soal</button>
         <button class="btn btn-secondary" id="btnBsItemEdit">✏️ Edit</button>
         <button class="btn btn-outline" id="btnBsItemHapus" style="color:#ef4444;border-color:#fca5a5;">🗑️</button>
+        <button class="btn btn-outline" id="btnBsImportWord">📄 Import Word</button>
+        <button class="btn btn-outline" id="btnBsContohFormat">⬇️ Contoh Format</button>
         <span class="toolbar-info" id="infoBsItem">0 soal</span>
+        <input type="file" id="fileBsWord" accept=".docx,application/vnd.openxmlformats-officedocument.wordprocessingml.document" style="display:none;">
       </div>
-      <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;font-size:12px;">
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;font-size:12px;flex-wrap:wrap;">
         <label style="display:flex;align-items:center;gap:4px;cursor:pointer;">
           <input type="checkbox" id="checkAllBsItem"> Pilih semua
         </label>
+        <button type="button" id="btnBsTogglePanduan" class="btn btn-outline" style="padding:3px 8px;font-size:11px;margin-left:auto;">❓ Panduan format</button>
+      </div>
+      <div id="bsPanduanFormat" class="card" style="display:none;padding:12px;margin-bottom:10px;font-size:12px;line-height:1.5;color:#334155;">
+        <b>Format nomor:</b> 1. &nbsp; 2. &nbsp; atau No.1<br>
+        <b>Pilihan Ganda:</b> A. B. C. D. + baris <code>Kunci: B</code><br>
+        <b>Benar/Salah:</b> A. Benar &nbsp; B. Salah + <code>Kunci: Benar</code><br>
+        <b>Checkbox:</b> A–D + <code>Kunci: A,C</code> (boleh multi)<br>
+        <b>Isian Singkat:</b> tanpa A–D + <code>Kunci: 144</code><br>
+        <b>Esai:</b> tanpa A–D + pedoman di <code>Kunci:</code><br>
+        <b>Menjodohkan:</b> <code>Kunci:</code> lalu baris <code>kiri = kanan</code><br>
+        <span style="color:#64748b;">Gambar, tabel, equation Word ikut ter-import. Unduh contoh lengkap lewat tombol <b>Contoh Format</b>.</span>
       </div>
       <div id="tbodyBsItem" class="bs-soal-list">
         <div style="text-align:center;padding:16px;color:#94a3b8;">Belum ada soal</div>
@@ -2521,6 +2536,42 @@
   </div>
 
 
+
+  <!-- ========== MODAL IMPORT WORD ========== -->
+  <div class="modal-overlay" id="modalImportWord">
+    <div class="modal" style="max-width:560px;max-height:92vh;overflow-y:auto;">
+      <div class="modal-header">
+        <h3>Import Soal dari Word</h3>
+        <button class="modal-close" data-close="modalImportWord">&times;</button>
+      </div>
+      <div class="modal-body">
+        <p style="font-size:12px;color:#64748b;line-height:1.45;margin-bottom:10px;">
+          Upload file <b>.docx</b>. Gambar, tabel, dan equation di Word akan ikut tersimpan (tanpa upload ulang).
+          Soalkan dinomori <b>1.</b> <b>2.</b> atau <b>No.1</b>, opsi <b>A.</b> <b>B.</b> <b>C.</b> <b>D.</b>
+        </p>
+        <div class="form-group">
+          <label>Jenis soal default</label>
+          <select id="iwJenisDefault">
+            <option value="Pilihan Ganda">Pilihan Ganda</option>
+            <option value="Isian Singkat">Isian Singkat</option>
+            <option value="Esai">Esai</option>
+            <option value="Benar Salah">Benar / Salah</option>
+            <option value="Checkbox">Checkbox</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Skor default</label>
+          <input type="number" id="iwSkorDefault" value="1" min="1">
+        </div>
+        <div id="iwStatus" style="font-size:12px;color:#64748b;margin:8px 0;"></div>
+        <div id="iwPreview" style="max-height:40vh;overflow-y:auto;border:1px solid #e2e8f0;border-radius:8px;padding:8px;background:#f8fafc;"></div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-outline" data-close="modalImportWord">Batal</button>
+        <button class="btn btn-primary" id="btnIwSimpan" disabled>Simpan ke Bank Soal</button>
+      </div>
+    </div>
+  </div>
   <!-- ========== MODAL PREVIEW SOAL ========== -->
   <div class="modal-overlay" id="modalBsPreview">
     <div class="modal" style="max-width:520px;max-height:90vh;overflow-y:auto;">
@@ -5887,6 +5938,349 @@
 
 
 
+
+
+    // ============================================================
+    // IMPORT SOAL DARI MS WORD (.docx)
+    // ============================================================
+    let _importWordSoals = [];
+
+
+    document.getElementById('btnBsTogglePanduan')?.addEventListener('click', () => {
+      const el = document.getElementById('bsPanduanFormat');
+      if (!el) return;
+      el.style.display = el.style.display === 'none' ? 'block' : 'none';
+    });
+
+    document.getElementById('btnBsContohFormat')?.addEventListener('click', () => {
+      const contoh = [
+        'CONTOH FORMAT SOAL — Bank Soal (Import Word)',
+        '============================================',
+        'Simpan file ini sebagai .docx di Microsoft Word sebelum di-import.',
+        'Gunakan nomor 1. 2. 3. atau No.1 — opsi A. B. C. D. — baris Kunci:',
+        '',
+        '---------- PILIHAN GANDA ----------',
+        '1. Ibu kota negara Indonesia adalah…',
+        '   A. Bandung',
+        '   B. Jakarta',
+        '   C. Surabaya',
+        '   D. Medan',
+        '   Kunci: B',
+        '',
+        '---------- BENAR / SALAH ----------',
+        '2. Bumi berputar mengelilingi matahari.',
+        '   A. Benar',
+        '   B. Salah',
+        '   Kunci: Benar',
+        '',
+        '---------- CHECKBOX (multi jawaban) ----------',
+        '3. Yang termasuk bilangan prima adalah…',
+        '   A. 2',
+        '   B. 4',
+        '   C. 5',
+        '   D. 9',
+        '   Kunci: A,C',
+        '',
+        '---------- ISIAN SINGKAT ----------',
+        '4. Hasil dari 12 × 12 adalah ____.',
+        '   Kunci: 144',
+        '',
+        '   (Beberapa jawaban benar, pisahkan dengan | )',
+        '   Kunci: Jakarta|DKI Jakarta',
+        '',
+        '---------- ESAI ----------',
+        '5. Jelaskan perbedaan energi kinetik dan energi potensial.',
+        '   Kunci: Energi kinetik berhubungan dengan gerak benda;',
+        '   energi potensial berhubungan dengan posisi atau ketinggian.',
+        '',
+        '---------- MENJODOHKAN ----------',
+        '6. Jodohkan istilah berikut dengan artinya.',
+        '   Kunci:',
+        '   Fotosintesis = proses tumbuhan membuat makanan',
+        '   Respirasi = proses pelepasan energi dari makanan',
+        '   Osmosis = perpindahan air melalui membran semipermeabel',
+        '',
+        '---------- TIPS ----------',
+        '- Gambar, tabel, grafik, equation Word: sisipkan di badan soal; ikut ter-import.',
+        '- Satu file boleh campur berbagai jenis soal.',
+        '- Selalu tulis "Kunci:" di akhir setiap soal.',
+        '- Simpan sebagai .docx (Word 2007+), lalu Import Word di aplikasi.',
+        ''
+      ].join('\n');
+
+      // File teks
+      const blobTxt = new Blob([contoh], { type: 'text/plain;charset=utf-8' });
+      const a1 = document.createElement('a');
+      a1.href = URL.createObjectURL(blobTxt);
+      a1.download = 'Contoh_Format_Soal_Bank_Soal.txt';
+      a1.click();
+      URL.revokeObjectURL(a1.href);
+
+      // HTML yang mudah dibuka di Word lalu "Save as docx"
+      const html = '<!DOCTYPE html><html><head><meta charset="utf-8"><title>Contoh Format Soal</title>' +
+        '<style>body{font-family:Calibri,Arial,sans-serif;font-size:12pt;line-height:1.5;max-width:700px;margin:24px auto;}' +
+        'h1{font-size:16pt;}h2{font-size:13pt;color:#1e40af;margin-top:20px;}' +
+        'pre,code{font-family:Consolas,monospace;} .tip{background:#f0f9ff;padding:10px;border-radius:8px;}</style></head><body>' +
+        '<h1>Contoh Format Soal — Bank Soal</h1>' +
+        '<p class="tip">Buka file ini di <b>Microsoft Word</b> → File → Save As → format <b>Word Document (.docx)</b>, ' +
+        'lalu gunakan tombol <b>Import Word</b> di aplikasi. Gambar/tabel/equation boleh ditambahkan di bawah teks soal.</p>' +
+        '<h2>1. Pilihan Ganda</h2>' +
+        '<p>1. Ibu kota negara Indonesia adalah…</p>' +
+        '<p>A. Bandung</p><p>B. Jakarta</p><p>C. Surabaya</p><p>D. Medan</p>' +
+        '<p>Kunci: B</p>' +
+        '<h2>2. Benar / Salah</h2>' +
+        '<p>2. Bumi berputar mengelilingi matahari.</p>' +
+        '<p>A. Benar</p><p>B. Salah</p>' +
+        '<p>Kunci: Benar</p>' +
+        '<h2>3. Checkbox (multi jawaban)</h2>' +
+        '<p>3. Yang termasuk bilangan prima adalah…</p>' +
+        '<p>A. 2</p><p>B. 4</p><p>C. 5</p><p>D. 9</p>' +
+        '<p>Kunci: A,C</p>' +
+        '<h2>4. Isian Singkat</h2>' +
+        '<p>4. Hasil dari 12 × 12 adalah ____.</p>' +
+        '<p>Kunci: 144</p>' +
+        '<h2>5. Esai</h2>' +
+        '<p>5. Jelaskan perbedaan energi kinetik dan energi potensial.</p>' +
+        '<p>Kunci: Energi kinetik berhubungan dengan gerak benda; energi potensial berhubungan dengan posisi atau ketinggian.</p>' +
+        '<h2>6. Menjodohkan</h2>' +
+        '<p>6. Jodohkan istilah berikut dengan artinya.</p>' +
+        '<p>Kunci:</p>' +
+        '<p>Fotosintesis = proses tumbuhan membuat makanan</p>' +
+        '<p>Respirasi = proses pelepasan energi dari makanan</p>' +
+        '<p>Osmosis = perpindahan air melalui membran semipermeabel</p>' +
+        '<h2>Tips</h2>' +
+        '<ul><li>Nomor soal: 1. 2. atau No.1</li>' +
+        '<li>Gambar, tabel, grafik, equation Word: sisipkan di badan soal</li>' +
+        '<li>Satu file boleh campur jenis soal</li>' +
+        '<li>Selalu tulis baris Kunci: di akhir setiap soal</li></ul>' +
+        '</body></html>';
+      const blobHtml = new Blob([html], { type: 'application/msword' });
+      const a2 = document.createElement('a');
+      a2.href = URL.createObjectURL(blobHtml);
+      a2.download = 'Contoh_Format_Soal_Bank_Soal.doc';
+      setTimeout(() => {
+        a2.click();
+        URL.revokeObjectURL(a2.href);
+      }, 300);
+    });
+
+    document.getElementById('btnBsImportWord')?.addEventListener('click', () => {
+      const bankId = getCurrentBankId();
+      if (!bankId) {
+        alert('Pilih bank soal dulu');
+        return;
+      }
+      document.getElementById('fileBsWord')?.click();
+    });
+
+    document.getElementById('fileBsWord')?.addEventListener('change', async function () {
+      const file = this.files && this.files[0];
+      this.value = '';
+      if (!file) return;
+      if (!/\.docx$/i.test(file.name)) {
+        alert('Hanya file .docx (Word 2007+). Simpan ulang dari Word sebagai .docx');
+        return;
+      }
+      if (typeof mammoth === 'undefined') {
+        alert('Library mammoth belum termuat. Cek koneksi internet lalu refresh.');
+        return;
+      }
+
+      document.getElementById('iwStatus').textContent = 'Membaca file Word...';
+      document.getElementById('iwPreview').innerHTML = '';
+      document.getElementById('btnIwSimpan').disabled = true;
+      _importWordSoals = [];
+      openModal('modalImportWord');
+
+      try {
+        const ab = await file.arrayBuffer();
+        const result = await mammoth.convertToHtml(
+          { arrayBuffer: ab },
+          {
+            convertImage: mammoth.images.imgElement(function (image) {
+              return image.read('base64').then(function (imageBuffer) {
+                return {
+                  src: 'data:' + image.contentType + ';base64,' + imageBuffer
+                };
+              });
+            })
+          }
+        );
+        const html = result.value || '';
+        const messages = (result.messages || []).map(m => m.message).join('; ');
+        _importWordSoals = parseSoalFromWordHtml(html);
+
+        const prev = document.getElementById('iwPreview');
+        if (!_importWordSoals.length) {
+          document.getElementById('iwStatus').textContent =
+            'Tidak ada soal terdeteksi. Pastikan nomor soal: 1. 2. atau No.1';
+          prev.innerHTML = '<div style="font-size:12px;color:#94a3b8;padding:8px;">Preview HTML mentah:</div>' +
+            '<div style="font-size:12px;max-height:200px;overflow:auto;">' + html + '</div>';
+        } else {
+          document.getElementById('iwStatus').textContent =
+            'Ditemukan ' + _importWordSoals.length + ' soal.' +
+            (messages ? ' Catatan: ' + messages : '');
+          prev.innerHTML = _importWordSoals.map((s, i) =>
+            '<div style="background:#fff;border:1px solid #e2e8f0;border-radius:8px;padding:10px;margin-bottom:8px;">' +
+            '<div style="font-size:11px;color:#64748b;margin-bottom:4px;"><b>No. ' + s.nomor +
+            '</b> · ' + esc(s.jenis) +
+            (s.kunci ? ' · Kunci: ' + esc(s.kunci) : '') + '</div>' +
+            '<div style="font-size:13px;">' + s.pertanyaan + '</div>' +
+            (s.opsi_a ? '<div style="font-size:12px;margin-top:4px;"><b>A.</b> ' + s.opsi_a + '</div>' : '') +
+            (s.opsi_b ? '<div style="font-size:12px;"><b>B.</b> ' + s.opsi_b + '</div>' : '') +
+            (s.opsi_c ? '<div style="font-size:12px;"><b>C.</b> ' + s.opsi_c + '</div>' : '') +
+            (s.opsi_d ? '<div style="font-size:12px;"><b>D.</b> ' + s.opsi_d + '</div>' : '') +
+            '</div>'
+          ).join('');
+          document.getElementById('btnIwSimpan').disabled = false;
+        }
+      } catch (e) {
+        document.getElementById('iwStatus').textContent = 'Gagal: ' + (e.message || e);
+        console.error(e);
+      }
+    });
+
+    function parseSoalFromWordHtml(html) {
+      const jenisDefault = document.getElementById('iwJenisDefault')?.value || 'Pilihan Ganda';
+      // Pecah berdasarkan nomor soal di awal blok
+      // Normalisasi
+      let h = String(html || '');
+      // Ganti OMML/equation images tetap ada di img
+
+      // Split by patterns: <p>1.  or <p>1) or <p>No. 1
+      // Work on text with markers
+      const parts = [];
+      // Insert split markers before nomor
+      h = h.replace(/(<(?:p|h[1-6]|li)[^>]*>)\s*(?:No\.?\s*)?(\d{1,3})[\.\)]\s+/gi,
+        '<!--SOAL_SPLIT:$2-->$1');
+
+      const chunks = h.split(/<!--SOAL_SPLIT:(\d{1,3})-->/);
+      // chunks: [preamble, num1, body1, num2, body2, ...]
+      for (let i = 1; i < chunks.length; i += 2) {
+        const nomor = parseInt(chunks[i], 10) || (parts.length + 1);
+        const body = chunks[i + 1] || '';
+        if (!body.trim()) continue;
+
+        // Extract options A-D from body
+        const opsi = { a: null, b: null, c: null, d: null };
+        let pertanyaan = body;
+        let kunci = null;
+
+        // Split options - look for A. B. C. D. in paragraphs
+        const optRegex = /<(?:p|div|li)[^>]*>\s*([A-Da-d])[\.\)]\s+/gi;
+        const indices = [];
+        let m;
+        const bodyCopy = body;
+        while ((m = optRegex.exec(bodyCopy)) !== null) {
+          indices.push({ letter: m[1].toUpperCase(), index: m.index, full: m[0] });
+        }
+
+        if (indices.length >= 2) {
+          pertanyaan = body.substring(0, indices[0].index);
+          for (let j = 0; j < indices.length; j++) {
+            const L = indices[j].letter.toLowerCase();
+            const start = indices[j].index + indices[j].full.length;
+            const end = j + 1 < indices.length ? indices[j + 1].index : body.length;
+            let content = body.substring(start, end);
+            // close unclosed tags roughly - strip leading
+            content = content.replace(/^<\/[^>]+>/, '');
+            if ('abcd'.includes(L)) opsi[L] = content.trim();
+          }
+        }
+
+        // Detect kunci: *A* or kunci: A or jawaban: B
+        const kunciMatch = body.match(/(?:kunci|jawaban)\s*[:\.]?\s*([A-Da-d]|Benar|Salah)/i);
+        if (kunciMatch) kunci = kunciMatch[1].toUpperCase() === 'BENAR' ? 'Benar'
+          : kunciMatch[1].toUpperCase() === 'SALAH' ? 'Salah'
+          : kunciMatch[1].toUpperCase();
+
+        // Detect jenis
+        let jenis = jenisDefault;
+        if (opsi.a && opsi.b) jenis = 'Pilihan Ganda';
+        else if (/benar\s*\/\s*salah|benar atau salah/i.test(body)) jenis = 'Benar Salah';
+        else if (!opsi.a && !opsi.b) {
+          if (jenisDefault === 'Pilihan Ganda') jenis = 'Esai';
+        }
+
+        // Clean empty pertanyaan
+        const plain = pertanyaan.replace(/<[^>]+>/g, '').replace(/&nbsp;/g, ' ').trim();
+        if (!plain && !/img|table|svg/i.test(pertanyaan)) continue;
+
+        parts.push({
+          nomor: nomor,
+          jenis: jenis,
+          pertanyaan: pertanyaan.trim(),
+          opsi_a: opsi.a,
+          opsi_b: opsi.b,
+          opsi_c: opsi.c,
+          opsi_d: opsi.d,
+          kunci: kunci,
+          skor: Number(document.getElementById('iwSkorDefault')?.value) || 1
+        });
+      }
+
+      // Jika tidak ketemu split, anggap 1 soal penuh
+      if (!parts.length && h.replace(/<[^>]+>/g, '').trim().length > 5) {
+        parts.push({
+          nomor: 1,
+          jenis: jenisDefault,
+          pertanyaan: h,
+          opsi_a: null, opsi_b: null, opsi_c: null, opsi_d: null,
+          kunci: null,
+          skor: Number(document.getElementById('iwSkorDefault')?.value) || 1
+        });
+      }
+      return parts;
+    }
+
+    document.getElementById('btnIwSimpan')?.addEventListener('click', async () => {
+      const bankId = getCurrentBankId();
+      if (!bankId) { alert('Bank soal tidak valid'); return; }
+      if (!_importWordSoals.length) { alert('Tidak ada soal'); return; }
+
+      const btn = document.getElementById('btnIwSimpan');
+      btn.disabled = true;
+      btn.textContent = 'Menyimpan...';
+      let ok = 0, fail = 0;
+
+      try {
+        for (const s of _importWordSoals) {
+          const payload = {
+            bank_id: bankId,
+            nomor: s.nomor,
+            jenis: s.jenis,
+            pertanyaan: s.pertanyaan,
+            opsi_a: s.opsi_a,
+            opsi_b: s.opsi_b,
+            opsi_c: s.opsi_c,
+            opsi_d: s.opsi_d,
+            kunci: s.kunci,
+            skor: s.skor || 1
+          };
+          try {
+            if (supabaseClient) {
+              const { error } = await supabaseClient.from('bank_soal_item').insert([payload]);
+              if (error) throw error;
+            } else {
+              let list = JSON.parse(localStorage.getItem('bank_soal_item') || '[]');
+              payload.id = Date.now() + ok;
+              list.push(payload);
+              localStorage.setItem('bank_soal_item', JSON.stringify(list));
+            }
+            ok++;
+          } catch (e) {
+            console.warn(e);
+            fail++;
+          }
+        }
+        closeModal('modalImportWord');
+        await loadBsItemTable();
+        alert('Import selesai: ' + ok + ' soal tersimpan' + (fail ? ', ' + fail + ' gagal' : ''));
+      } finally {
+        btn.disabled = false;
+        btn.textContent = 'Simpan ke Bank Soal';
+      }
+    });
 
     // ============================================================
     // BANK SOAL (Kelola Tugas / Ujian)
