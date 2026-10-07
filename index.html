@@ -6186,6 +6186,26 @@
     let _tuTimerIv = null;
     let _tuDeadline = null;
 
+    async function ensureSiswaKelas() {
+      if (currentUserKelas) return currentUserKelas;
+      if (currentRole !== 'siswa') return null;
+      try {
+        if (supabaseClient && (currentUserId || currentUserKode)) {
+          let q = supabaseClient.from('siswa').select('*');
+          if (currentUserId) q = q.eq('id', currentUserId);
+          else q = q.eq('nisn', currentUserKode);
+          const { data } = await q.maybeSingle();
+          if (data) {
+            currentUserKelas = data.kelas || data.kelas_nama || data.rombel || data.nama_kelas || '';
+            if (data.nama) currentUserName = data.nama;
+            if (data.nisn) currentUserKode = data.nisn;
+            try { saveSession(); } catch (e) {}
+          }
+        }
+      } catch (e) { console.warn(e); }
+      return currentUserKelas;
+    }
+
     async function initTugasSiswaPage() {
       const list = document.getElementById('tuList');
       if (!list) return;
@@ -6193,6 +6213,7 @@
         list.innerHTML = '<div style="text-align:center;padding:20px;color:#f59e0b;">Login sebagai <b>siswa</b> untuk mengerjakan tugas/ujian.</div>';
         return;
       }
+      await ensureSiswaKelas();
       document.getElementById('tuSiswaNama').textContent = currentUserName || '-';
       document.getElementById('tuSiswaKelas').textContent = currentUserKelas || '-';
       list.innerHTML = '<div style="text-align:center;padding:20px;color:#94a3b8;">Memuat...</div>';
@@ -6458,18 +6479,28 @@
       area.innerHTML = html;
 
       // bind save answer
+      function refreshTuSubmitBtn() {
+        const allDone = _tuSoals.every(isTuAnswered);
+        const btnSub = document.getElementById('btnTuSubmit');
+        if (btnSub) btnSub.style.display = allDone ? '' : 'none';
+        const answeredN = _tuSoals.filter(isTuAnswered).length;
+        const prog = document.getElementById('tuProgress');
+        if (prog) prog.textContent = 'Soal ' + (_tuIdx + 1) + ' / ' + _tuSoals.length +
+          ' · Terjawab ' + answeredN + (_tuFlags[s.id] ? ' · ⚑ Ragu' : '');
+      }
       area.querySelectorAll('input[name=tuAns]').forEach(inp => {
-        inp.addEventListener('change', () => { _tuAnswers[s.id] = inp.value; });
+        inp.addEventListener('change', () => { _tuAnswers[s.id] = inp.value; refreshTuSubmitBtn(); });
       });
       area.querySelectorAll('.tu-cb').forEach(inp => {
         inp.addEventListener('change', () => {
           _tuAnswers[s.id] = [...area.querySelectorAll('.tu-cb:checked')].map(c => c.value);
+          refreshTuSubmitBtn();
         });
       });
       const isian = document.getElementById('tuIsian');
-      if (isian) isian.addEventListener('input', () => { _tuAnswers[s.id] = isian.value; });
+      if (isian) isian.addEventListener('input', () => { _tuAnswers[s.id] = isian.value; refreshTuSubmitBtn(); });
       const esai = document.getElementById('tuEsai');
-      if (esai) esai.addEventListener('input', () => { _tuAnswers[s.id] = esai.value; });
+      if (esai) esai.addEventListener('input', () => { _tuAnswers[s.id] = esai.value; refreshTuSubmitBtn(); });
 
       // Tombol ragu
       const flagged = !!_tuFlags[s.id];
@@ -6485,6 +6516,12 @@
 
       document.getElementById('btnTuPrev').disabled = _tuIdx <= 0;
       document.getElementById('btnTuNext').disabled = _tuIdx >= _tuSoals.length - 1;
+      // Tombol Kirim hanya jika SEMUA soal sudah dijawab
+      const allDone = _tuSoals.every(isTuAnswered);
+      const btnSub = document.getElementById('btnTuSubmit');
+      if (btnSub) {
+        btnSub.style.display = allDone ? '' : 'none';
+      }
     }
 
     function isTuAnswered(s) {
@@ -6769,13 +6806,31 @@
 
       try {
         if (supabaseClient) {
+          // Hindari data ganda: update sesi sedang, atau hapus sedang lalu insert 1 baris
+          let done = false;
           if (window._tuSessionId) {
             const { error } = await supabaseClient.from('bank_soal_hasil').update(payload).eq('id', window._tuSessionId);
-            if (error) {
-              const { error: e2 } = await supabaseClient.from('bank_soal_hasil').insert([payload]);
-              if (e2) throw e2;
+            if (!error) done = true;
+          }
+          if (!done) {
+            // cari sesi sedang milik siswa ini
+            const { data: existing } = await supabaseClient.from('bank_soal_hasil')
+              .select('id').eq('bank_id', payload.bank_id).eq('siswa_id', currentUserId).eq('status', 'sedang');
+            if (existing && existing.length) {
+              const { error } = await supabaseClient.from('bank_soal_hasil').update(payload).eq('id', existing[0].id);
+              if (!error) {
+                // hapus sisa sedang ganda
+                for (let i = 1; i < existing.length; i++) {
+                  await supabaseClient.from('bank_soal_hasil').delete().eq('id', existing[i].id);
+                }
+                done = true;
+              }
             }
-          } else {
+          }
+          if (!done) {
+            // bersihkan sedang lalu insert sekali
+            await supabaseClient.from('bank_soal_hasil')
+              .delete().eq('bank_id', payload.bank_id).eq('siswa_id', currentUserId).eq('status', 'sedang');
             const { error } = await supabaseClient.from('bank_soal_hasil').insert([payload]);
             if (error) throw error;
           }
@@ -6785,8 +6840,19 @@
           if (window._tuSessionId) {
             list = list.map(x => String(x.id) === String(window._tuSessionId) ? Object.assign({}, x, payload) : x);
           } else {
-            payload.id = Date.now();
-            list.push(payload);
+            // update sedang existing
+            let found = false;
+            list = list.map(x => {
+              if (Number(x.bank_id) === Number(payload.bank_id) && x.siswa_id === currentUserId && x.status === 'sedang') {
+                found = true;
+                return Object.assign({}, x, payload);
+              }
+              return x;
+            });
+            if (!found) {
+              payload.id = Date.now();
+              list.push(payload);
+            }
           }
           localStorage.setItem('bank_soal_hasil', JSON.stringify(list));
           window._tuSessionId = null;
@@ -8580,6 +8646,27 @@
           [...kelasSet].sort().map(k => '<option value="' + esc(k) + '">' + esc(k) + '</option>').join('');
         if (cur) selKelas.value = cur;
       }
+
+      // Dedup: jika ada ganda (sedang+selesai), prioritaskan status non-sedang terbaru
+      const byKey = new Map();
+      rows.forEach(r => {
+        const key = String(r.siswa_id || r.nisn || r.id);
+        const prev = byKey.get(key);
+        if (!prev) { byKey.set(key, r); return; }
+        const rank = (x) => {
+          const st = String(x.status || 'selesai').toLowerCase();
+          if (st === 'selesai') return 3;
+          if (st === 'timeout') return 2;
+          return 1;
+        };
+        if (rank(r) > rank(prev)) byKey.set(key, r);
+        else if (rank(r) === rank(prev)) {
+          const t1 = new Date(r.submitted_at || r.deadline_at || 0).getTime();
+          const t2 = new Date(prev.submitted_at || prev.deadline_at || 0).getTime();
+          if (t1 >= t2) byKey.set(key, r);
+        }
+      });
+      rows = [...byKey.values()];
 
       dataMonHasil = rows.filter(r => {
         if (fKelas && String(r.kelas) !== fKelas) return false;
