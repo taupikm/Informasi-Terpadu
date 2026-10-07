@@ -6194,7 +6194,8 @@
             '<div style="font-weight:700;font-size:15px;">' + esc(b.judul) + '</div>' +
             '<div style="font-size:12px;color:#64748b;margin-top:4px;">' +
             esc(b.mapel || '') + ' · ' + esc(b.jenis || '') + ' · ' + esc(b.kelas || '') +
-            ' · ' + (b.jml_soal || 0) + ' soal · ' + (b.durasi || 60) + ' mnt</div>' +
+            ' · ' + (b.jml_soal || 0) + ' soal · ' + (b.durasi || 60) + ' mnt' +
+            ((b.anti_curang === true || b.anti_curang === 1) ? ' · 🔒 Anti curang' : '') + '</div>' +
             waktuInfo +
             '<div style="font-size:12px;margin-top:6px;">Percobaan: <b>' + attempts + '/' + maxA + '</b>' +
             (last && last.skor != null ? ' · Skor terakhir: <b>' + last.skor + '</b>' : '') + '</div>' +
@@ -6287,6 +6288,11 @@
       document.getElementById('tuJudulKerjakan').textContent = bank.judul || 'Ujian';
       showPage('kerjakan-ujian', true);
       renderTuSoal();
+      if (bank.anti_curang === true || bank.anti_curang === 'true' || bank.anti_curang === 1) {
+        enableTuAntiCurang();
+      } else {
+        disableTuAntiCurang();
+      }
     }
 
     function updateTuTimer() {
@@ -6470,6 +6476,7 @@
     document.getElementById('btnTuKembali')?.addEventListener('click', async () => {
       if (!(await showConfirm('Keluar dari ujian? Jawaban yang belum dikirim akan hilang.', 'Keluar', '⚠️'))) return;
       if (_tuTimerIv) { clearInterval(_tuTimerIv); _tuTimerIv = null; }
+      disableTuAntiCurang();
       showPage('tugas-ujian', true);
     });
     document.getElementById('btnTuSubmit')?.addEventListener('click', () => submitTuJawaban(false));
@@ -6511,6 +6518,122 @@
       return { benar: null, skor: 0 };
     }
 
+
+    // ----- Anti Curang -----
+    let _tuAntiOn = false;
+    let _tuCheatCount = 0;
+    let _tuCheatMax = 3; // setelah 3x pindah tab → auto submit
+    let _tuAntiHandlers = [];
+
+    function tuRequestFullscreen() {
+      const el = document.documentElement;
+      const req = el.requestFullscreen || el.webkitRequestFullscreen || el.msRequestFullscreen;
+      if (req) {
+        try { req.call(el); } catch (e) {}
+      }
+    }
+
+    function tuExitFullscreen() {
+      const exit = document.exitFullscreen || document.webkitExitFullscreen || document.msExitFullscreen;
+      if (exit && (document.fullscreenElement || document.webkitFullscreenElement)) {
+        try { exit.call(document); } catch (e) {}
+      }
+    }
+
+    function onTuCheatViolation(reason) {
+      if (!_tuAntiOn || !_tuExam) return;
+      _tuCheatCount++;
+      const sisa = Math.max(0, _tuCheatMax - _tuCheatCount);
+      if (_tuCheatCount >= _tuCheatMax) {
+        alert('Pelanggaran anti-curang (' + reason + ').\nKesempatan habis. Jawaban dikirim otomatis.');
+        disableTuAntiCurang();
+        submitTuJawaban(true);
+        return;
+      }
+      alert('⚠️ Anti-curang: terdeteksi ' + reason + '.\nPeringatan ' + _tuCheatCount + '/' + _tuCheatMax +
+        (sisa ? ' (sisa ' + sisa + ')' : '') + '\nJangan pindah tab/aplikasi saat ujian.');
+      // coba fullscreen lagi
+      setTimeout(tuRequestFullscreen, 300);
+    }
+
+    function enableTuAntiCurang() {
+      disableTuAntiCurang(); // clear dulu
+      _tuAntiOn = true;
+      _tuCheatCount = 0;
+      tuRequestFullscreen();
+
+      const onVis = () => {
+        if (document.hidden) onTuCheatViolation('pindah tab / minimize');
+      };
+      const onBlur = () => {
+        // delay: fokus focus ke alert sendiri
+        setTimeout(() => {
+          if (_tuAntiOn && document.hidden) return; // sudah di-handle visibility
+          if (_tuAntiOn && !document.hasFocus()) onTuCheatViolation('keluar fokus jendela ujian');
+        }, 200);
+      };
+      const onFs = () => {
+        if (!_tuAntiOn) return;
+        if (!document.fullscreenElement && !document.webkitFullscreenElement) {
+          onTuCheatViolation('keluar dari mode layar penuh');
+        }
+      };
+      const onCtx = (e) => { e.preventDefault(); };
+      const onCopy = (e) => { e.preventDefault(); };
+      const onKey = (e) => {
+        // blokir beberapa shortcut umum
+        if (e.ctrlKey || e.metaKey) {
+          const k = e.key.toLowerCase();
+          if (['c','v','x','u','s','p','a'].includes(k)) e.preventDefault();
+        }
+        if (e.key === 'F12') e.preventDefault();
+      };
+
+      document.addEventListener('visibilitychange', onVis);
+      window.addEventListener('blur', onBlur);
+      document.addEventListener('fullscreenchange', onFs);
+      document.addEventListener('webkitfullscreenchange', onFs);
+      document.addEventListener('contextmenu', onCtx);
+      document.addEventListener('copy', onCopy);
+      document.addEventListener('cut', onCopy);
+      document.addEventListener('paste', onCopy);
+      document.addEventListener('keydown', onKey);
+
+      _tuAntiHandlers = [
+        ['visibilitychange', document, onVis],
+        ['blur', window, onBlur],
+        ['fullscreenchange', document, onFs],
+        ['webkitfullscreenchange', document, onFs],
+        ['contextmenu', document, onCtx],
+        ['copy', document, onCopy],
+        ['cut', document, onCopy],
+        ['paste', document, onCopy],
+        ['keydown', document, onKey]
+      ];
+
+      // badge
+      let badge = document.getElementById('tuAntiBadge');
+      if (!badge) {
+        badge = document.createElement('div');
+        badge.id = 'tuAntiBadge';
+        badge.style.cssText = 'position:fixed;top:8px;left:50%;transform:translateX(-50%);z-index:1300;background:#7f1d1d;color:#fff;font-size:11px;font-weight:700;padding:4px 10px;border-radius:20px;';
+        badge.textContent = '🔒 Mode Anti Curang';
+        document.body.appendChild(badge);
+      }
+      badge.style.display = 'block';
+    }
+
+    function disableTuAntiCurang() {
+      _tuAntiOn = false;
+      (_tuAntiHandlers || []).forEach(([ev, target, fn]) => {
+        try { target.removeEventListener(ev, fn); } catch (e) {}
+      });
+      _tuAntiHandlers = [];
+      const badge = document.getElementById('tuAntiBadge');
+      if (badge) badge.style.display = 'none';
+      tuExitFullscreen();
+    }
+
     async function submitTuJawaban(auto) {
       saveCurrentTuAnswer();
       if (!auto) {
@@ -6549,6 +6672,7 @@
         benar: benar,
         total: total,
         detail: detail,
+        cheat_count: _tuCheatCount || 0,
         submitted_at: new Date().toISOString()
       };
 
@@ -7251,6 +7375,7 @@
       document.getElementById('bsWaktuMulai').value = '';
       document.getElementById('bsWaktuSelesai').value = '';
       document.getElementById('bsMode').value = 'Normal';
+      if (document.getElementById('bsAntiCurang')) document.getElementById('bsAntiCurang').checked = false;
       document.getElementById('bsKet').value = '';
       const lp = document.getElementById('bsLabelPeriode');
       if (lp && aktifPeriode) lp.textContent = aktifPeriode.tahun_ajaran + ' || ' + aktifPeriode.semester;
@@ -7288,6 +7413,8 @@
       document.getElementById('bsWaktuMulai').value = toDatetimeLocal(r.waktu_mulai);
       document.getElementById('bsWaktuSelesai').value = toDatetimeLocal(r.waktu_selesai);
       document.getElementById('bsMode').value = r.mode_soal || 'Normal';
+      if (document.getElementById('bsAntiCurang'))
+        document.getElementById('bsAntiCurang').checked = !!(r.anti_curang === true || r.anti_curang === 'true' || r.anti_curang === 1);
       document.getElementById('bsKet').value = r.keterangan || '';
       if (r.periode_id) document.getElementById('bsPeriodeId').value = r.periode_id;
       const lp = document.getElementById('bsLabelPeriode');
@@ -7317,6 +7444,7 @@
         waktu_mulai: wm ? new Date(wm).toISOString() : null,
         waktu_selesai: ws ? new Date(ws).toISOString() : null,
         mode_soal: document.getElementById('bsMode').value || 'Normal',
+        anti_curang: !!document.getElementById('bsAntiCurang')?.checked,
         keterangan: document.getElementById('bsKet').value.trim() || null
       };
       if (!id) payload.jml_soal = 0;
