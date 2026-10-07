@@ -21,6 +21,29 @@
     .bs-jenis-filter { display:flex; flex-wrap:wrap; gap:6px; margin-bottom:10px; }
     .bs-jenis-filter label { font-size:11px; display:flex; align-items:center; gap:3px; background:#f8fafc; border:1px solid #e2e8f0; border-radius:6px; padding:4px 8px; cursor:pointer; }
     #bsOpsiBox .form-group { margin-bottom:8px; }
+
+    .bs-mini-editor .ql-toolbar.ql-snow { padding: 4px; }
+    .bs-mini-editor .ql-container.ql-snow { min-height: 56px; }
+    .bs-mini-editor .ql-editor { min-height: 56px; padding: 8px; font-size: 13px; }
+    .bs-mini-editor .ql-editor.ql-blank::before { font-style: normal; font-size: 12px; }
+
+    .eq-tabs { display:flex; flex-wrap:wrap; gap:4px; margin-bottom:10px; }
+    .eq-tab {
+      border:1px solid #e2e8f0; background:#f8fafc; border-radius:6px;
+      padding:5px 8px; font-size:11px; font-weight:600; cursor:pointer; color:#334155;
+    }
+    .eq-tab.active { background:#2563eb; color:#fff; border-color:#2563eb; }
+    .eq-panel {
+      display:grid; grid-template-columns:repeat(4,1fr); gap:8px;
+      min-height:100px; padding:8px; background:#f1f5f9; border-radius:8px;
+    }
+    .eq-item {
+      background:#fff; border:1px solid #cbd5e1; border-radius:8px;
+      min-height:56px; display:flex; align-items:center; justify-content:center;
+      cursor:pointer; padding:6px; font-size:16px; transition:0.15s;
+    }
+    .eq-item:hover { border-color:#2563eb; box-shadow:0 0 0 2px rgba(37,99,235,.2); }
+    .eq-item .katex { font-size:1.05em; }
   </style>
   <style>
     :root {
@@ -2451,6 +2474,39 @@
       <div class="modal-footer">
         <button class="btn btn-outline" data-close="modalBsItem">Batal</button>
         <button class="btn btn-primary" id="btnSaveBsItem">Simpan</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ========== MODAL EQUATION (visual seperti Word) ========== -->
+  <div class="modal-overlay" id="modalEquation">
+    <div class="modal" style="max-width:480px;max-height:90vh;overflow-y:auto;">
+      <div class="modal-header">
+        <h3>Insert Equation</h3>
+        <button class="modal-close" data-close="modalEquation">&times;</button>
+      </div>
+      <div class="modal-body" style="padding-top:8px;">
+        <div class="eq-tabs" id="eqTabs">
+          <button type="button" class="eq-tab active" data-tab="fraction">Fraction</button>
+          <button type="button" class="eq-tab" data-tab="script">Script</button>
+          <button type="button" class="eq-tab" data-tab="radical">Radical</button>
+          <button type="button" class="eq-tab" data-tab="integral">Integral</button>
+          <button type="button" class="eq-tab" data-tab="large">Large Op</button>
+          <button type="button" class="eq-tab" data-tab="bracket">Bracket</button>
+          <button type="button" class="eq-tab" data-tab="function">Function</button>
+          <button type="button" class="eq-tab" data-tab="accent">Accent</button>
+          <button type="button" class="eq-tab" data-tab="symbol">Symbol</button>
+        </div>
+        <div id="eqPanel" class="eq-panel"></div>
+        <div class="form-group" style="margin-top:12px;">
+          <label>Preview / Edit LaTeX</label>
+          <input type="text" id="eqLatex" placeholder="Contoh: \frac{a}{b}" style="font-family:monospace;">
+          <div id="eqPreview" style="min-height:40px;margin-top:8px;padding:10px;background:#f8fafc;border-radius:8px;text-align:center;border:1px solid #e2e8f0;"></div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-outline" data-close="modalEquation">Batal</button>
+        <button class="btn btn-primary" id="btnInsertEq">Sisipkan</button>
       </div>
     </div>
   </div>
@@ -6197,71 +6253,362 @@
       }
     }
 
+    // Mini Quill editors untuk opsi/jawaban
+    const bsOpsiQuills = {};
+
+    function destroyBsOpsiQuills() {
+      Object.keys(bsOpsiQuills).forEach(k => {
+        try {
+          const el = document.getElementById(k);
+          if (el) el.innerHTML = '';
+        } catch (e) {}
+        delete bsOpsiQuills[k];
+      });
+    }
+
+    function makeMiniQuill(containerId, placeholder) {
+      const el = document.getElementById(containerId);
+      if (!el) return null;
+      el.innerHTML = '';
+      if (typeof Quill === 'undefined') {
+        el.innerHTML = '<textarea style="width:100%;min-height:56px;padding:8px;border:1px solid #e2e8f0;border-radius:8px;" placeholder="' +
+          (placeholder || '') + '"></textarea>';
+        return null;
+      }
+      const q = new Quill('#' + containerId, {
+        theme: 'snow',
+        placeholder: placeholder || '',
+        modules: {
+          toolbar: [
+            ['bold', 'italic', 'underline'],
+            [{ script: 'sub' }, { script: 'super' }],
+            [{ color: [] }],
+            ['link', 'image'],
+            ['clean']
+          ]
+        }
+      });
+      // compact
+      const root = el.parentElement;
+      const toolbar = el.previousElementSibling;
+      if (el.querySelector) {
+        const c = el.querySelector('.ql-container');
+        if (c) c.style.minHeight = '56px';
+        const ed = el.querySelector('.ql-editor');
+        if (ed) ed.style.minHeight = '56px';
+      }
+      bsOpsiQuills[containerId] = q;
+      return q;
+    }
+
+    function setMiniHtml(id, html) {
+      if (bsOpsiQuills[id]) {
+        bsOpsiQuills[id].root.innerHTML = html || '';
+      } else {
+        const el = document.getElementById(id);
+        const ta = el && el.querySelector('textarea');
+        if (ta) ta.value = html || '';
+      }
+    }
+
+    function getMiniHtml(id) {
+      if (bsOpsiQuills[id]) return bsOpsiQuills[id].root.innerHTML;
+      const el = document.getElementById(id);
+      const ta = el && el.querySelector('textarea');
+      return ta ? ta.value : '';
+    }
+
+    function getMiniPlain(id) {
+      const h = getMiniHtml(id) || '';
+      return h.replace(/<[^>]+>/g, '').replace(/&nbsp;/g, ' ').trim();
+    }
+
     function renderBsOpsiBox(jenis, data) {
       const box = document.getElementById('bsOpsiBox');
       if (!box) return;
+      destroyBsOpsiQuills();
       data = data || {};
       const j = jenis || 'Pilihan Ganda';
+
+      function block(label, id) {
+        return '<div class="form-group"><label>' + label + '</label>' +
+          '<div id="' + id + '" class="bs-mini-editor"></div></div>';
+      }
+
       if (j === 'Pilihan Ganda') {
         box.innerHTML =
-          '<div class="form-group"><label>Opsi A</label><input type="text" id="bsItemA" value="' + esc(data.opsi_a||'') + '"></div>' +
-          '<div class="form-group"><label>Opsi B</label><input type="text" id="bsItemB" value="' + esc(data.opsi_b||'') + '"></div>' +
-          '<div class="form-group"><label>Opsi C</label><input type="text" id="bsItemC" value="' + esc(data.opsi_c||'') + '"></div>' +
-          '<div class="form-group"><label>Opsi D</label><input type="text" id="bsItemD" value="' + esc(data.opsi_d||'') + '"></div>' +
+          block('Opsi A', 'bsEdA') + block('Opsi B', 'bsEdB') +
+          block('Opsi C', 'bsEdC') + block('Opsi D', 'bsEdD') +
           '<div class="form-group"><label>Kunci Jawaban *</label><select id="bsItemKunci">' +
           ['A','B','C','D'].map(x => '<option value="'+x+'"'+(data.kunci===x?' selected':'')+'>'+x+'</option>').join('') +
           '</select></div>';
+        setTimeout(() => {
+          makeMiniQuill('bsEdA', 'Opsi A'); makeMiniQuill('bsEdB', 'Opsi B');
+          makeMiniQuill('bsEdC', 'Opsi C'); makeMiniQuill('bsEdD', 'Opsi D');
+          setMiniHtml('bsEdA', data.opsi_a); setMiniHtml('bsEdB', data.opsi_b);
+          setMiniHtml('bsEdC', data.opsi_c); setMiniHtml('bsEdD', data.opsi_d);
+        }, 30);
       } else if (j === 'Benar Salah') {
         box.innerHTML =
           '<div class="form-group"><label>Kunci *</label><select id="bsItemKunci">' +
           '<option value="Benar"'+(data.kunci==='Benar'?' selected':'')+'>Benar</option>' +
           '<option value="Salah"'+(data.kunci==='Salah'?' selected':'')+'>Salah</option></select></div>';
       } else if (j === 'Isian Singkat') {
-        box.innerHTML =
-          '<div class="form-group"><label>Jawaban Benar *</label>' +
-          '<input type="text" id="bsItemKunci" value="' + esc(data.kunci||'') + '" placeholder="Teks jawaban yang benar"></div>' +
-          '<p style="font-size:11px;color:#94a3b8;">Boleh beberapa jawaban dipisah tanda | contoh: Jakarta|DKI</p>';
+        box.innerHTML = block('Jawaban Benar *', 'bsEdKunci') +
+          '<p style="font-size:11px;color:#94a3b8;">Boleh beberapa jawaban (simpan terpisah baris). Bisa pakai equation.</p>';
+        setTimeout(() => {
+          makeMiniQuill('bsEdKunci', 'Jawaban benar');
+          setMiniHtml('bsEdKunci', data.kunci);
+        }, 30);
       } else if (j === 'Esai') {
-        box.innerHTML =
-          '<div class="form-group"><label>Kunci / Pedoman Penilaian</label>' +
-          '<textarea id="bsItemKunci" rows="3" style="width:100%;padding:8px;border:1px solid var(--border);border-radius:8px;">' +
-          esc(data.kunci||'') + '</textarea></div>';
+        box.innerHTML = block('Kunci / Pedoman Penilaian', 'bsEdKunci');
+        setTimeout(() => {
+          makeMiniQuill('bsEdKunci', 'Pedoman penilaian');
+          setMiniHtml('bsEdKunci', data.kunci);
+        }, 30);
       } else if (j === 'Checkbox') {
         box.innerHTML =
-          '<div class="form-group"><label>Opsi A</label><input type="text" id="bsItemA" value="' + esc(data.opsi_a||'') + '"></div>' +
-          '<div class="form-group"><label>Opsi B</label><input type="text" id="bsItemB" value="' + esc(data.opsi_b||'') + '"></div>' +
-          '<div class="form-group"><label>Opsi C</label><input type="text" id="bsItemC" value="' + esc(data.opsi_c||'') + '"></div>' +
-          '<div class="form-group"><label>Opsi D</label><input type="text" id="bsItemD" value="' + esc(data.opsi_d||'') + '"></div>' +
-          '<div class="form-group"><label>Kunci (boleh multi, contoh: A,C)</label>' +
+          block('Opsi A', 'bsEdA') + block('Opsi B', 'bsEdB') +
+          block('Opsi C', 'bsEdC') + block('Opsi D', 'bsEdD') +
+          '<div class="form-group"><label>Kunci (multi, contoh: A,C)</label>' +
           '<input type="text" id="bsItemKunci" value="' + esc(data.kunci||'') + '" placeholder="A,C"></div>';
+        setTimeout(() => {
+          makeMiniQuill('bsEdA', 'Opsi A'); makeMiniQuill('bsEdB', 'Opsi B');
+          makeMiniQuill('bsEdC', 'Opsi C'); makeMiniQuill('bsEdD', 'Opsi D');
+          setMiniHtml('bsEdA', data.opsi_a); setMiniHtml('bsEdB', data.opsi_b);
+          setMiniHtml('bsEdC', data.opsi_c); setMiniHtml('bsEdD', data.opsi_d);
+        }, 30);
       } else if (j === 'Menjodohkan') {
-        box.innerHTML =
-          '<p style="font-size:12px;color:#64748b;margin-bottom:6px;">Isi pasangan kiri = kanan, satu baris satu pasangan (pisah dengan =)</p>' +
-          '<div class="form-group"><label>Pasangan</label>' +
-          '<textarea id="bsItemKunci" rows="4" style="width:100%;padding:8px;border:1px solid var(--border);border-radius:8px;" placeholder="Ibukota Indonesia = Jakarta\n2+2 = 4">' +
-          esc(data.kunci||'') + '</textarea></div>';
+        box.innerHTML = block('Pasangan (kiri = kanan, satu baris satu pasangan)', 'bsEdKunci') +
+          '<p style="font-size:11px;color:#94a3b8;">Contoh: Ibukota Indonesia = Jakarta</p>';
+        setTimeout(() => {
+          makeMiniQuill('bsEdKunci', 'pasangan');
+          setMiniHtml('bsEdKunci', data.kunci);
+        }, 30);
       } else {
         box.innerHTML = '';
       }
+      setTimeout(attachEqButtonsToOpsi, 100);
     }
 
     document.getElementById('bsItemJenis')?.addEventListener('change', function () {
       renderBsOpsiBox(this.value, {});
+      setTimeout(attachEqButtonsToOpsi, 80);
     });
 
+    const _origRenderBsOpsiBox = null; // marker
+
+
     // Equation / media helpers
-    document.getElementById('btnBsEq')?.addEventListener('click', () => {
-      const latex = prompt('Masukkan rumus LaTeX (contoh: x^2 + y^2 = z^2)');
-      if (!latex || !bsQuill) return;
+    // ========== EQUATION PANEL (seperti Word) ==========
+    let _eqTarget = 'main'; // 'main' | mini editor id
+
+    const EQ_TEMPLATES = {
+      fraction: [
+        { latex: '\\frac{a}{b}', label: 'a/b' },
+        { latex: '\\dfrac{a}{b}', label: 'display' },
+        { latex: '\\tfrac{a}{b}', label: 'small' },
+        { latex: 'a/b', label: 'slash' },
+        { latex: '\\frac{\\partial f}{\\partial x}', label: 'partial' },
+        { latex: '\\frac{dy}{dx}', label: 'dy/dx' },
+        { latex: '\\cfrac{1}{1+\\cfrac{1}{x}}', label: 'cont' },
+        { latex: '\\frac{x+1}{x-1}', label: 'x±1' }
+      ],
+      script: [
+        { latex: 'x^{2}', label: 'sup' },
+        { latex: 'x_{i}', label: 'sub' },
+        { latex: 'x_{i}^{2}', label: 'both' },
+        { latex: '{}_{n}^{m}P', label: 'pre' },
+        { latex: 'e^{x}', label: 'e^x' },
+        { latex: 'a^{n}', label: 'a^n' },
+        { latex: 'x_{1}, x_{2}, \\ldots, x_{n}', label: 'seq' },
+        { latex: 'f^{(n)}(x)', label: "f'" }
+      ],
+      radical: [
+        { latex: '\\sqrt{x}', label: 'sqrt' },
+        { latex: '\\sqrt[n]{x}', label: 'n-root' },
+        { latex: '\\sqrt[3]{x}', label: 'cbrt' },
+        { latex: '\\sqrt{a^{2}+b^{2}}', label: 'hypot' },
+        { latex: '\\sqrt{\\frac{a}{b}}', label: 'sqrt frac' },
+        { latex: '\\sqrt[n]{\\frac{a}{b}}', label: 'n frac' }
+      ],
+      integral: [
+        { latex: '\\int f(x)\\,dx', label: 'int' },
+        { latex: '\\int_{a}^{b} f(x)\\,dx', label: 'def' },
+        { latex: '\\oint f(x)\\,dx', label: 'oint' },
+        { latex: '\\iint f(x,y)\\,dx\\,dy', label: 'iint' },
+        { latex: '\\iiint f\\,dV', label: 'iiint' },
+        { latex: '\\int_{0}^{\\infty} e^{-x}\\,dx', label: '0-inf' }
+      ],
+      large: [
+        { latex: '\\sum_{i=1}^{n} a_{i}', label: 'sum' },
+        { latex: '\\prod_{i=1}^{n} a_{i}', label: 'prod' },
+        { latex: '\\coprod_{i=1}^{n} a_{i}', label: 'coprod' },
+        { latex: '\\bigcup_{i=1}^{n} A_{i}', label: 'union' },
+        { latex: '\\bigcap_{i=1}^{n} A_{i}', label: 'inter' },
+        { latex: '\\lim_{x \\to 0} f(x)', label: 'lim' },
+        { latex: '\\lim_{x \\to \\infty} f(x)', label: 'lim inf' },
+        { latex: '\\max_{x} f(x)', label: 'max' }
+      ],
+      bracket: [
+        { latex: '\\left( x \\right)', label: '()' },
+        { latex: '\\left[ x \\right]', label: '[]' },
+        { latex: '\\left\\{ x \\right\\}', label: '{}' },
+        { latex: '\\left| x \\right|', label: '||' },
+        { latex: '\\left\\| x \\right\\|', label: 'norm' },
+        { latex: '\\left\\langle x \\right\\rangle', label: '<>' },
+        { latex: '\\begin{cases} a & x>0 \\\\ b & x<0 \\end{cases}', label: 'cases' },
+        { latex: '\\binom{n}{k}', label: 'binom' }
+      ],
+      function: [
+        { latex: '\\sin\\theta', label: 'sin' },
+        { latex: '\\cos\\theta', label: 'cos' },
+        { latex: '\\tan\\theta', label: 'tan' },
+        { latex: '\\log x', label: 'log' },
+        { latex: '\\ln x', label: 'ln' },
+        { latex: '\\exp(x)', label: 'exp' },
+        { latex: '\\sin^{2}\\theta + \\cos^{2}\\theta = 1', label: 'trig id' },
+        { latex: '\\arcsin x', label: 'arcsin' }
+      ],
+      accent: [
+        { latex: '\\hat{a}', label: 'hat' },
+        { latex: '\\bar{a}', label: 'bar' },
+        { latex: '\\vec{a}', label: 'vec' },
+        { latex: '\\dot{a}', label: 'dot' },
+        { latex: '\\ddot{a}', label: 'ddot' },
+        { latex: '\\tilde{a}', label: 'tilde' },
+        { latex: '\\overline{ABC}', label: 'over' },
+        { latex: '\\underline{ABC}', label: 'under' }
+      ],
+      symbol: [
+        { latex: '\\alpha', label: 'α' }, { latex: '\\beta', label: 'β' },
+        { latex: '\\gamma', label: 'γ' }, { latex: '\\delta', label: 'δ' },
+        { latex: '\\theta', label: 'θ' }, { latex: '\\pi', label: 'π' },
+        { latex: '\\sigma', label: 'σ' }, { latex: '\\omega', label: 'ω' },
+        { latex: '\\pm', label: '±' }, { latex: '\\times', label: '×' },
+        { latex: '\\div', label: '÷' }, { latex: '\\cdot', label: '·' },
+        { latex: '\\neq', label: '≠' }, { latex: '\\leq', label: '≤' },
+        { latex: '\\geq', label: '≥' }, { latex: '\\approx', label: '≈' },
+        { latex: '\\infty', label: '∞' }, { latex: '\\rightarrow', label: '→' },
+        { latex: '\\Rightarrow', label: '⇒' }, { latex: '\\in', label: '∈' },
+        { latex: '\\subset', label: '⊂' }, { latex: '\\cup', label: '∪' },
+        { latex: '\\cap', label: '∩' }, { latex: '\\emptyset', label: '∅' }
+      ]
+    };
+
+    function renderEqPanel(tab) {
+      const panel = document.getElementById('eqPanel');
+      if (!panel) return;
+      const items = EQ_TEMPLATES[tab] || [];
+      panel.innerHTML = items.map((it, i) =>
+        '<button type="button" class="eq-item" data-latex="' +
+        String(it.latex).replace(/"/g, '&quot;') + '" title="' + it.label + '">' +
+        '<span class="eq-render" data-i="' + i + '"></span></button>'
+      ).join('');
+      panel.querySelectorAll('.eq-item').forEach(btn => {
+        const span = btn.querySelector('.eq-render');
+        const latex = btn.getAttribute('data-latex');
+        try {
+          if (typeof katex !== 'undefined') {
+            span.innerHTML = katex.renderToString(latex, { throwOnError: false, displayMode: false });
+          } else {
+            span.textContent = latex;
+          }
+        } catch (e) {
+          span.textContent = latex;
+        }
+        btn.addEventListener('click', () => {
+          document.getElementById('eqLatex').value = latex;
+          updateEqPreview();
+        });
+      });
+    }
+
+    function updateEqPreview() {
+      const latex = document.getElementById('eqLatex')?.value || '';
+      const prev = document.getElementById('eqPreview');
+      if (!prev) return;
+      if (!latex.trim()) { prev.innerHTML = '<span style="color:#94a3b8;">Preview</span>'; return; }
+      try {
+        if (typeof katex !== 'undefined') {
+          prev.innerHTML = katex.renderToString(latex, { throwOnError: false, displayMode: true });
+        } else {
+          prev.textContent = latex;
+        }
+      } catch (e) {
+        prev.textContent = latex;
+      }
+    }
+
+    document.getElementById('eqTabs')?.addEventListener('click', (e) => {
+      const btn = e.target.closest('.eq-tab');
+      if (!btn) return;
+      document.querySelectorAll('.eq-tab').forEach(t => t.classList.remove('active'));
+      btn.classList.add('active');
+      renderEqPanel(btn.dataset.tab);
+    });
+
+    document.getElementById('eqLatex')?.addEventListener('input', updateEqPreview);
+
+    function openEquationPanel(target) {
+      _eqTarget = target || 'main';
+      document.getElementById('eqLatex').value = '';
+      updateEqPreview();
+      document.querySelectorAll('.eq-tab').forEach(t => t.classList.remove('active'));
+      const first = document.querySelector('.eq-tab[data-tab="fraction"]');
+      if (first) first.classList.add('active');
+      renderEqPanel('fraction');
+      openModal('modalEquation');
+    }
+
+    document.getElementById('btnBsEq')?.addEventListener('click', () => openEquationPanel('main'));
+
+    // Tombol equation juga di area opsi (event delegation)
+    document.getElementById('bsOpsiBox')?.addEventListener('click', (e) => {
+      // tidak perlu — equation dari toolbar utama / tombol ∑
+    });
+
+    document.getElementById('btnInsertEq')?.addEventListener('click', () => {
+      const latex = (document.getElementById('eqLatex')?.value || '').trim();
+      if (!latex) { alert('Pilih atau ketik equation dulu'); return; }
       let html = latex;
       try {
         if (typeof katex !== 'undefined') {
-          html = katex.renderToString(latex, { throwOnError: false });
+          html = katex.renderToString(latex, { throwOnError: false, displayMode: false });
         }
       } catch (e) {}
-      const range = bsQuill.getSelection(true);
-      bsQuill.clipboard.dangerouslyPasteHTML(range ? range.index : bsQuill.getLength(), html);
+      // wrap for spacing
+      html = '<span class="eq-embed" contenteditable="false"> ' + html + ' </span>';
+
+      let targetQuill = null;
+      if (_eqTarget === 'main' && bsQuill) targetQuill = bsQuill;
+      else if (_eqTarget && bsOpsiQuills[_eqTarget]) targetQuill = bsOpsiQuills[_eqTarget];
+      else if (bsQuill) targetQuill = bsQuill;
+
+      if (targetQuill) {
+        const range = targetQuill.getSelection(true) || { index: targetQuill.getLength() };
+        targetQuill.clipboard.dangerouslyPasteHTML(range.index, html);
+        targetQuill.setSelection(range.index + 1);
+      }
+      closeModal('modalEquation');
     });
+
+    // Tambah tombol ∑ kecil di setiap mini editor via renderBsOpsiBox - handled after render
+    function attachEqButtonsToOpsi() {
+      document.querySelectorAll('#bsOpsiBox .form-group').forEach(g => {
+        if (g.querySelector('.btn-eq-mini')) return;
+        const ed = g.querySelector('.bs-mini-editor, [id^="bsEd"]');
+        if (!ed || !ed.id) return;
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = 'btn btn-outline btn-eq-mini';
+        btn.style.cssText = 'padding:2px 6px;font-size:10px;margin-top:4px;';
+        btn.textContent = '∑ Equation';
+        btn.addEventListener('click', () => openEquationPanel(ed.id));
+        g.appendChild(btn);
+      });
+    }
+
     document.getElementById('btnBsImg')?.addEventListener('click', () => {
       document.getElementById('bsItemImgFile')?.click();
     });
@@ -6375,6 +6722,7 @@
         initBsQuill();
         setBsPertanyaanHtml('');
         renderBsOpsiBox('Pilihan Ganda', {});
+        setTimeout(attachEqButtonsToOpsi, 100);
       }, 50);
     });
 
@@ -6393,6 +6741,7 @@
         initBsQuill();
         setBsPertanyaanHtml(r.pertanyaan || '');
         renderBsOpsiBox(r.jenis || 'Pilihan Ganda', r);
+        setTimeout(attachEqButtonsToOpsi, 100);
       }, 50);
     });
 
@@ -6404,16 +6753,20 @@
       if (!plain) { alert('Pertanyaan wajib diisi'); return; }
 
       const kunciEl = document.getElementById('bsItemKunci');
+      let kunciVal = null;
+      if (kunciEl) kunciVal = kunciEl.value.trim();
+      else if (document.getElementById('bsEdKunci')) kunciVal = getMiniHtml('bsEdKunci');
+
       const payload = {
         bank_id: Number(currentBankId),
         nomor: Number(document.getElementById('bsItemNo').value) || 1,
         jenis: jenis,
         pertanyaan: pertanyaan,
-        opsi_a: document.getElementById('bsItemA')?.value?.trim() || null,
-        opsi_b: document.getElementById('bsItemB')?.value?.trim() || null,
-        opsi_c: document.getElementById('bsItemC')?.value?.trim() || null,
-        opsi_d: document.getElementById('bsItemD')?.value?.trim() || null,
-        kunci: kunciEl ? kunciEl.value.trim() : null,
+        opsi_a: document.getElementById('bsEdA') ? getMiniHtml('bsEdA') : null,
+        opsi_b: document.getElementById('bsEdB') ? getMiniHtml('bsEdB') : null,
+        opsi_c: document.getElementById('bsEdC') ? getMiniHtml('bsEdC') : null,
+        opsi_d: document.getElementById('bsEdD') ? getMiniHtml('bsEdD') : null,
+        kunci: kunciVal,
         skor: Number(document.getElementById('bsItemSkor').value) || 1
       };
       try {
