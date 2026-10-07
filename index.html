@@ -44,6 +44,18 @@
     }
     .eq-item:hover { border-color:#2563eb; box-shadow:0 0 0 2px rgba(37,99,235,.2); }
     .eq-item .katex { font-size:1.05em; }
+
+    .bs-q-preview, .bs-k-preview {
+      max-width: 220px; white-space: normal; font-size: 12px; line-height: 1.4;
+      vertical-align: middle;
+    }
+    .bs-q-preview img, .bs-k-preview img { max-width: 80px; max-height: 60px; }
+    .bs-q-preview .katex, .bs-k-preview .katex { font-size: 1em; }
+    .bs-q-preview p { margin: 0 0 4px; }
+    tr.bs-row-preview { cursor: pointer; }
+    tr.bs-row-preview:hover { background: #f1f5f9; }
+    #bsPreviewBody img { max-width: 100%; }
+    #bsPreviewBody .katex-display { overflow-x: auto; }
   </style>
   <style>
     :root {
@@ -2478,6 +2490,21 @@
     </div>
   </div>
 
+
+  <!-- ========== MODAL PREVIEW SOAL ========== -->
+  <div class="modal-overlay" id="modalBsPreview">
+    <div class="modal" style="max-width:520px;max-height:90vh;overflow-y:auto;">
+      <div class="modal-header">
+        <h3 id="bsPreviewTitle">Preview Soal</h3>
+        <button class="modal-close" data-close="modalBsPreview">&times;</button>
+      </div>
+      <div class="modal-body" id="bsPreviewBody" style="font-size:14px;line-height:1.5;"></div>
+      <div class="modal-footer">
+        <button class="btn btn-outline" data-close="modalBsPreview" style="flex:1;">Tutup</button>
+        <button class="btn btn-secondary" id="btnBsPreviewEdit" style="flex:1;">✏️ Edit</button>
+      </div>
+    </div>
+  </div>
   <!-- ========== MODAL EQUATION (visual seperti Word) ========== -->
   <div class="modal-overlay" id="modalEquation">
     <div class="modal" style="max-width:480px;max-height:90vh;overflow-y:auto;">
@@ -5922,23 +5949,40 @@
         return;
       }
 
+      function stripHtmlPreview(html) {
+        // biarkan katex & format, hapus script
+        let h = String(html || '');
+        h = h.replace(/<script[\s\S]*?<\/script>/gi, '');
+        return h;
+      }
+      function kunciPreview(k) {
+        if (!k) return '–';
+        const s = String(k);
+        if (s.indexOf('<') >= 0) return stripHtmlPreview(s);
+        return esc(s);
+      }
       tbody.innerHTML = rows.map((r, i) => {
-        const periode = r.periode
-          ? (r.periode.tahun_ajaran + ' / ' + r.periode.semester)
-          : (r.tahun_ajaran ? r.tahun_ajaran + ' / ' + (r.semester || '') : '-');
-        const st = r.status || 'Draft';
-        const badge = st === 'Aktif' ? 'badge-hadir' : (st === 'Selesai' ? 'badge-izin' : 'badge-alpha');
-        return '<tr data-id="' + r.id + '">' +
-          '<td><input type="checkbox" class="cb-bs-row" value="' + r.id + '"></td>' +
-          '<td>' + (i + 1) + '</td>' +
-          '<td>' + esc(r.judul) + '</td>' +
-          '<td>' + esc(r.mapel) + '</td>' +
-          '<td>' + esc(r.kelas) + '</td>' +
-          '<td>' + esc(r.jenis) + '</td>' +
-          '<td>' + (r.jml_soal != null ? r.jml_soal : (r._jml || 0)) + '</td>' +
-          '<td><span class="badge-status ' + badge + '">' + esc(st) + '</span></td>' +
-          '<td style="font-size:11px;">' + esc(periode) + '</td></tr>';
+        const qHtml = stripHtmlPreview(r.pertanyaan || '');
+        const kHtml = kunciPreview(r.kunci);
+        return '<tr class="bs-row-preview" data-id="' + r.id + '">' +
+          '<td><input type="checkbox" class="cb-bs-item" value="' + r.id + '"></td>' +
+          '<td>' + (r.nomor || (i + 1)) + '</td>' +
+          '<td style="font-size:11px;white-space:nowrap;">' + esc(r.jenis || 'Pilihan Ganda') + '</td>' +
+          '<td class="bs-q-preview">' + qHtml + '</td>' +
+          '<td class="bs-k-preview"><b>' + kHtml + '</b></td>' +
+          '<td>' + (r.skor || 1) + '</td></tr>';
       }).join('');
+
+      // Klik baris (bukan checkbox) → preview penuh
+      tbody.querySelectorAll('tr.bs-row-preview').forEach(tr => {
+        tr.addEventListener('click', (e) => {
+          if (e.target.closest('input')) return;
+          const id = tr.getAttribute('data-id');
+          const r = dataBsItem.find(x => String(x.id) === String(id));
+          if (r) showBsSoalPreview(r);
+        });
+      });
+
     }
 
     document.getElementById('bsTahun')?.addEventListener('change', () => loadBankSoalTable());
@@ -6653,6 +6697,54 @@
       html += '</tbody></table><p><br></p>';
       const range = bsQuill.getSelection(true) || { index: bsQuill.getLength() };
       bsQuill.clipboard.dangerouslyPasteHTML(range.index, html);
+    });
+
+
+    let _previewSoalId = null;
+    function showBsSoalPreview(r) {
+      _previewSoalId = r.id;
+      document.getElementById('bsPreviewTitle').textContent =
+        'Preview Soal No. ' + (r.nomor || '') + ' — ' + (r.jenis || '');
+      let html = '';
+      html += '<div style="font-size:12px;color:#64748b;margin-bottom:8px;">Jenis: <b>' + esc(r.jenis || 'Pilihan Ganda') +
+        '</b> · Skor: <b>' + (r.skor || 1) + '</b></div>';
+      html += '<div style="margin-bottom:12px;padding:12px;background:#f8fafc;border-radius:8px;border:1px solid #e2e8f0;">' +
+        '<div style="font-size:11px;font-weight:700;color:#64748b;margin-bottom:6px;">PERTANYAAN</div>' +
+        (r.pertanyaan || '<i style="color:#94a3b8;">(kosong)</i>') + '</div>';
+
+      const jenis = r.jenis || 'Pilihan Ganda';
+      if (jenis === 'Pilihan Ganda' || jenis === 'Checkbox') {
+        html += '<div style="font-size:11px;font-weight:700;color:#64748b;margin-bottom:6px;">OPSI</div>';
+        ['A','B','C','D'].forEach(L => {
+          const key = 'opsi_' + L.toLowerCase();
+          const val = r[key];
+          if (!val) return;
+          const isKey = String(r.kunci || '').toUpperCase().split(/[,;\\s]+/).includes(L);
+          html += '<div style="padding:8px;margin-bottom:4px;border-radius:8px;border:1px solid ' +
+            (isKey ? '#86efac' : '#e2e8f0') + ';background:' + (isKey ? '#f0fdf4' : '#fff') + ';">' +
+            '<b>' + L + '.</b> ' + val + (isKey ? ' <span style="color:#16a34a;font-size:11px;">✓ kunci</span>' : '') +
+            '</div>';
+        });
+      }
+      if (r.kunci && jenis !== 'Pilihan Ganda') {
+        html += '<div style="margin-top:10px;padding:12px;background:#eff6ff;border-radius:8px;border:1px solid #bfdbfe;">' +
+          '<div style="font-size:11px;font-weight:700;color:#1d4ed8;margin-bottom:6px;">KUNCI / PEDOMAN</div>' +
+          r.kunci + '</div>';
+      } else if (r.kunci && jenis === 'Pilihan Ganda') {
+        html += '<div style="margin-top:8px;font-size:12px;">Kunci: <b>' + esc(String(r.kunci)) + '</b></div>';
+      }
+      document.getElementById('bsPreviewBody').innerHTML = html;
+      openModal('modalBsPreview');
+    }
+
+    document.getElementById('btnBsPreviewEdit')?.addEventListener('click', () => {
+      closeModal('modalBsPreview');
+      if (!_previewSoalId) return;
+      // centang item lalu trigger edit
+      document.querySelectorAll('.cb-bs-item').forEach(c => {
+        c.checked = String(c.value) === String(_previewSoalId);
+      });
+      document.getElementById('btnBsItemEdit')?.click();
     });
 
     async function loadBsItemTable() {
