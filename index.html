@@ -5903,8 +5903,13 @@
 
       try {
         if (supabaseClient) {
-          let query = supabaseClient.from('bank_soal').select('*, periode:periode_id(tahun_ajaran, semester)').order('id', { ascending: false });
-          const { data, error } = await query;
+          // Coba dengan join periode; jika gagal, select sederhana
+          let { data, error } = await supabaseClient.from('bank_soal').select('*, periode:periode_id(tahun_ajaran, semester)').order('id', { ascending: false });
+          if (error) {
+            const retry = await supabaseClient.from('bank_soal').select('*').order('id', { ascending: false });
+            data = retry.data;
+            error = retry.error;
+          }
           if (error) throw error;
           dataBankSoal = data || [];
         } else {
@@ -5912,12 +5917,14 @@
         }
       } catch (e) {
         console.warn(e);
-        // fallback local
-        dataBankSoal = JSON.parse(localStorage.getItem('bank_soal') || '[]');
-        if (e.message && String(e.message).includes('relation')) {
+        dataBankSoal = [];
+        const msg = String(e.message || e);
+        if (/relation|does not exist|42P01/i.test(msg)) {
           tbody.innerHTML = '<tr><td colspan="9" style="text-align:center;padding:16px;color:#f59e0b;">Tabel bank_soal belum ada. Jalankan SQL di Supabase.</td></tr>';
           return;
         }
+        tbody.innerHTML = '<tr><td colspan="9" style="text-align:center;padding:16px;color:#ef4444;">Gagal muat: ' + esc(msg) + '</td></tr>';
+        return;
       }
 
       let rows = dataBankSoal.slice();
@@ -6179,11 +6186,28 @@
       try {
         if (supabaseClient) {
           if (id) {
-            const { error } = await supabaseClient.from('bank_soal').update(payload).eq('id', id);
+            const { data, error } = await supabaseClient.from('bank_soal').update(payload).eq('id', id).select('id').maybeSingle();
             if (error) throw error;
           } else {
-            const { error } = await supabaseClient.from('bank_soal').insert([payload]);
+            let { data, error } = await supabaseClient.from('bank_soal').insert([payload]).select('id').single();
+            // Jika kolom baru belum ada, coba payload minimal
+            if (error && /column|schema/i.test(error.message || '')) {
+              const minimal = {
+                judul: payload.judul,
+                mapel: payload.mapel,
+                kelas: payload.kelas,
+                jenis: payload.jenis,
+                status: payload.status,
+                periode_id: payload.periode_id,
+                jml_soal: 0,
+                keterangan: payload.keterangan
+              };
+              const retry = await supabaseClient.from('bank_soal').insert([minimal]).select('id').single();
+              data = retry.data;
+              error = retry.error;
+            }
             if (error) throw error;
+            if (!data || !data.id) throw new Error('Bank soal tersimpan tanpa ID. Cek RLS INSERT.');
           }
         } else {
           let list = JSON.parse(localStorage.getItem('bank_soal') || '[]');
@@ -6200,7 +6224,7 @@
         await loadBankSoalTable();
         alert('Bank soal disimpan');
       } catch (e) {
-        alert('Gagal simpan: ' + (e.message || e) + '\n\nJika tabel belum ada, jalankan SQL bank_soal di Supabase.');
+        alert('Gagal simpan: ' + (e.message || e) + '\n\nPastikan SQL bank_soal sudah dijalankan di Supabase.');
       }
     });
 
@@ -6232,9 +6256,26 @@
     document.getElementById('btnBsSoal')?.addEventListener('click', async () => {
       const ids = getCheckedBs();
       if (ids.length !== 1) { alert('Centang tepat 1 bank soal untuk kelola soal'); return; }
-      currentBankId = ids[0];
-      const r = dataBankSoal.find(x => String(x.id) === currentBankId);
-      document.getElementById('bsDetailTitle').textContent = 'Soal: ' + (r?.judul || '');
+      const bid = Number(ids[0]);
+      if (!bid || isNaN(bid)) {
+        alert('ID bank soal tidak valid. Simpan ulang bank soal di Supabase.');
+        return;
+      }
+      // Pastikan bank ada di database
+      if (supabaseClient) {
+        const { data, error } = await supabaseClient.from('bank_soal').select('id, judul').eq('id', bid).maybeSingle();
+        if (error) { alert('Gagal cek bank soal: ' + error.message); return; }
+        if (!data) {
+          alert('Bank soal ini belum ada di database. Hapus lalu buat ulang, atau pastikan penyimpanan bank soal berhasil.');
+          return;
+        }
+        currentBankId = data.id;
+        document.getElementById('bsDetailTitle').textContent = 'Soal: ' + (data.judul || '');
+      } else {
+        currentBankId = bid;
+        const r = dataBankSoal.find(x => String(x.id) === String(bid));
+        document.getElementById('bsDetailTitle').textContent = 'Soal: ' + (r?.judul || '');
+      }
       showPage('bank-soal-detail', true);
       await loadBsItemTable();
     });
@@ -6862,7 +6903,15 @@
         skor: Number(document.getElementById('bsItemSkor').value) || 1
       };
       try {
+        if (!payload.bank_id || isNaN(payload.bank_id)) {
+          throw new Error('bank_id tidak valid. Kembali ke daftar, pilih bank soal, lalu buka Soal lagi.');
+        }
         if (supabaseClient) {
+          // Pastikan parent ada
+          const { data: parent } = await supabaseClient.from('bank_soal').select('id').eq('id', payload.bank_id).maybeSingle();
+          if (!parent) {
+            throw new Error('Bank soal (id=' + payload.bank_id + ') tidak ditemukan di database. Simpan bank soal dulu, lalu coba lagi.');
+          }
           if (id) {
             const { error } = await supabaseClient.from('bank_soal_item').update(payload).eq('id', id);
             if (error) throw error;
