@@ -5956,40 +5956,38 @@
         return;
       }
 
-      function stripHtmlPreview(html) {
-        // biarkan katex & format, hapus script
-        let h = String(html || '');
-        h = h.replace(/<script[\s\S]*?<\/script>/gi, '');
-        return h;
-      }
-      function kunciPreview(k) {
-        if (!k) return '–';
-        const s = String(k);
-        if (s.indexOf('<') >= 0) return stripHtmlPreview(s);
-        return esc(s);
-      }
       tbody.innerHTML = rows.map((r, i) => {
-        const qHtml = stripHtmlPreview(r.pertanyaan || '');
-        const kHtml = kunciPreview(r.kunci);
-        return '<tr class="bs-row-preview" data-id="' + r.id + '">' +
-          '<td><input type="checkbox" class="cb-bs-item" value="' + r.id + '"></td>' +
-          '<td>' + (r.nomor || (i + 1)) + '</td>' +
-          '<td style="font-size:11px;white-space:nowrap;">' + esc(r.jenis || 'Pilihan Ganda') + '</td>' +
-          '<td class="bs-q-preview">' + qHtml + '</td>' +
-          '<td class="bs-k-preview"><b>' + kHtml + '</b></td>' +
-          '<td>' + (r.skor || 1) + '</td></tr>';
+        const periode = r.periode
+          ? (r.periode.tahun_ajaran + ' / ' + r.periode.semester)
+          : (r.tahun_ajaran ? r.tahun_ajaran + ' / ' + (r.semester || '') : '-');
+        const st = r.status || 'Draft';
+        const badge = st === 'Aktif' ? 'badge-hadir' : (st === 'Selesai' ? 'badge-izin' : 'badge-alpha');
+        return '<tr class="bs-bank-row" data-id="' + r.id + '" style="cursor:pointer;">' +
+          '<td><input type="checkbox" class="cb-bs-row" value="' + r.id + '" onclick="event.stopPropagation()"></td>' +
+          '<td>' + (i + 1) + '</td>' +
+          '<td>' + esc(r.judul) + '</td>' +
+          '<td>' + esc(r.mapel) + '</td>' +
+          '<td>' + esc(r.kelas) + '</td>' +
+          '<td>' + esc(r.jenis) + '</td>' +
+          '<td>' + (r.jml_soal != null ? r.jml_soal : 0) + '</td>' +
+          '<td><span class="badge-status ' + badge + '">' + esc(st) + '</span></td>' +
+          '<td style="font-size:11px;">' + esc(periode) + '</td></tr>';
       }).join('');
 
-      // Klik baris (bukan checkbox) → preview penuh
-      tbody.querySelectorAll('tr.bs-row-preview').forEach(tr => {
+      tbody.querySelectorAll('tr.bs-bank-row').forEach(tr => {
         tr.addEventListener('click', (e) => {
-          if (e.target.closest('input')) return;
-          const id = tr.getAttribute('data-id');
-          const r = dataBsItem.find(x => String(x.id) === String(id));
-          if (r) showBsSoalPreview(r);
+          if (e.target.closest('input[type=checkbox]')) return;
+          document.querySelectorAll('.cb-bs-row').forEach(c => { c.checked = false; });
+          const cb = tr.querySelector('.cb-bs-row');
+          if (cb) cb.checked = true;
+        });
+        tr.addEventListener('dblclick', () => {
+          document.querySelectorAll('.cb-bs-row').forEach(c => { c.checked = false; });
+          const cb = tr.querySelector('.cb-bs-row');
+          if (cb) cb.checked = true;
+          document.getElementById('btnBsEdit')?.click();
         });
       });
-
     }
 
     document.getElementById('bsTahun')?.addEventListener('change', () => loadBankSoalTable());
@@ -6000,7 +5998,9 @@
     });
 
     function getCheckedBs() {
-      return [...document.querySelectorAll('.cb-bs-row:checked')].map(c => c.value);
+      return [...document.querySelectorAll('#tbodyBankSoal .cb-bs-row:checked')]
+        .map(c => c.value)
+        .filter(v => v !== undefined && v !== null && v !== '');
     }
 
     async function fillBsMapelKelas() {
@@ -6098,8 +6098,8 @@
     }
 
     document.getElementById('btnBsTambah')?.addEventListener('click', async () => {
-      await loadPeriodeOptionsBs();
-      await fillBsMapelKelas();
+      try { await loadPeriodeOptionsBs(); } catch (e) { console.warn(e); }
+      try { await fillBsMapelKelas(); } catch (e) { console.warn(e); }
       document.getElementById('modalBsTitle').textContent = 'Tambah Bank Soal';
       document.getElementById('bsId').value = '';
       document.getElementById('bsJudul').value = '';
@@ -6121,12 +6121,17 @@
     });
 
     document.getElementById('btnBsEdit')?.addEventListener('click', async () => {
-      const ids = getCheckedBs();
-      if (ids.length !== 1) { alert('Centang tepat 1 data untuk diedit'); return; }
-      const r = dataBankSoal.find(x => String(x.id) === ids[0]);
-      if (!r) { alert('Data tidak ditemukan'); return; }
-      await loadPeriodeOptionsBs();
-      await fillBsMapelKelas();
+      let ids = getCheckedBs();
+      if (ids.length === 0) {
+        const all = [...document.querySelectorAll('#tbodyBankSoal .cb-bs-row')];
+        if (all.length === 1) { all[0].checked = true; ids = [all[0].value]; }
+      }
+      if (ids.length === 0) { alert('Klik/centang 1 baris data, lalu tekan Edit (atau double-klik baris)'); return; }
+      if (ids.length > 1) { alert('Centang hanya 1 data untuk diedit'); return; }
+      const r = dataBankSoal.find(x => String(x.id) === String(ids[0]));
+      if (!r) { alert('Data tidak ditemukan. Refresh halaman bank soal.'); return; }
+      try { await loadPeriodeOptionsBs(); } catch (e) { console.warn(e); }
+      try { await fillBsMapelKelas(); } catch (e) { console.warn(e); }
       document.getElementById('modalBsTitle').textContent = 'Edit Bank Soal';
       document.getElementById('bsId').value = r.id;
       document.getElementById('bsJudul').value = r.judul || '';
@@ -6819,16 +6824,36 @@
         tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;padding:16px;color:#94a3b8;">Belum ada soal</td></tr>';
         return;
       }
+      function stripHtmlPreview(html) {
+        return String(html || '').replace(/<script[\s\S]*?<\/script>/gi, '');
+      }
+      function kunciPreview(k) {
+        if (!k) return '–';
+        const s = String(k);
+        if (s.indexOf('<') >= 0) return stripHtmlPreview(s);
+        return esc(s);
+      }
       tbody.innerHTML = rows.map((r, i) => {
-        const plain = String(r.pertanyaan || '').replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
-        const short = plain.length > 80 ? plain.slice(0, 80) + '…' : plain;
-        return '<tr><td><input type="checkbox" class="cb-bs-item" value="' + r.id + '"></td>' +
+        return '<tr class="bs-row-preview" data-id="' + r.id + '">' +
+          '<td><input type="checkbox" class="cb-bs-item" value="' + r.id + '" onclick="event.stopPropagation()"></td>' +
           '<td>' + (r.nomor || (i + 1)) + '</td>' +
-          '<td style="font-size:11px;">' + esc(r.jenis || 'Pilihan Ganda') + '</td>' +
-          '<td style="max-width:200px;white-space:normal;font-size:12px;">' + esc(short) + '</td>' +
-          '<td><b>' + esc(r.kunci || '-') + '</b></td>' +
+          '<td style="font-size:11px;white-space:nowrap;">' + esc(r.jenis || 'Pilihan Ganda') + '</td>' +
+          '<td class="bs-q-preview">' + stripHtmlPreview(r.pertanyaan || '') + '</td>' +
+          '<td class="bs-k-preview"><b>' + kunciPreview(r.kunci) + '</b></td>' +
           '<td>' + (r.skor || 1) + '</td></tr>';
       }).join('');
+      tbody.querySelectorAll('tr.bs-row-preview').forEach(tr => {
+        tr.addEventListener('click', (e) => {
+          if (e.target.closest('input[type=checkbox]')) return;
+          // centang baris ini (single select)
+          document.querySelectorAll('.cb-bs-item').forEach(c => { c.checked = false; });
+          const cb = tr.querySelector('.cb-bs-item');
+          if (cb) cb.checked = true;
+          const id = tr.getAttribute('data-id');
+          const r = dataBsItem.find(x => String(x.id) === String(id));
+          if (r) showBsSoalPreview(r);
+        });
+      });
       try {
         if (supabaseClient) {
           await supabaseClient.from('bank_soal').update({ jml_soal: dataBsItem.length }).eq('id', Number(currentBankId));
@@ -6860,10 +6885,15 @@
     });
 
     document.getElementById('btnBsItemEdit')?.addEventListener('click', () => {
-      const ids = [...document.querySelectorAll('.cb-bs-item:checked')].map(c => c.value);
-      if (ids.length !== 1) { alert('Centang tepat 1 soal'); return; }
-      const r = dataBsItem.find(x => String(x.id) === ids[0]);
-      if (!r) return;
+      let ids = [...document.querySelectorAll('#tbodyBsItem .cb-bs-item:checked')].map(c => c.value).filter(Boolean);
+      if (ids.length === 0) {
+        const all = [...document.querySelectorAll('#tbodyBsItem .cb-bs-item')];
+        if (all.length === 1) { all[0].checked = true; ids = [all[0].value]; }
+      }
+      if (ids.length === 0) { alert('Centang atau klik 1 baris soal, lalu tekan Edit'); return; }
+      if (ids.length > 1) { alert('Centang hanya 1 soal untuk diedit'); return; }
+      const r = dataBsItem.find(x => String(x.id) === String(ids[0]));
+      if (!r) { alert('Data soal tidak ditemukan. Muat ulang daftar soal.'); return; }
       document.getElementById('modalBsItemTitle').textContent = 'Edit Soal';
       document.getElementById('bsItemId').value = r.id;
       document.getElementById('bsItemNo').value = r.nomor || 1;
