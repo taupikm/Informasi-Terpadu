@@ -6142,36 +6142,29 @@
 
     function parseSoalFromWordHtml(html) {
       const jenisDefault = document.getElementById('iwJenisDefault')?.value || 'Pilihan Ganda';
-      // Pecah berdasarkan nomor soal di awal blok
-      // Normalisasi
       let h = String(html || '');
-      // Ganti OMML/equation images tetap ada di img
 
-      // Split by patterns: <p>1.  or <p>1) or <p>No. 1
-      // Work on text with markers
-      const parts = [];
-      // Insert split markers before nomor
-      h = h.replace(/(<(?:p|h[1-6]|li)[^>]*>)\s*(?:No\.?\s*)?(\d{1,3})[\.\)]\s+/gi,
+      // Marker split di depan nomor soal (1. / 1) / No.1)
+      h = h.replace(/(<(?:p|h[1-6]|li|div)[^>]*>)\s*(?:No\.?\s*)?(\d{1,3})[\.\)]\s+/gi,
         '<!--SOAL_SPLIT:$2-->$1');
 
+      const parts = [];
       const chunks = h.split(/<!--SOAL_SPLIT:(\d{1,3})-->/);
-      // chunks: [preamble, num1, body1, num2, body2, ...]
+
       for (let i = 1; i < chunks.length; i += 2) {
         const nomor = parseInt(chunks[i], 10) || (parts.length + 1);
-        const body = chunks[i + 1] || '';
+        let body = chunks[i + 1] || '';
         if (!body.trim()) continue;
 
-        // Extract options A-D from body
-        const opsi = { a: null, b: null, c: null, d: null };
+        const opsi = { a: null, b: null, c: null, d: null, e: null };
         let pertanyaan = body;
         let kunci = null;
 
-        // Split options - look for A. B. C. D. in paragraphs
-        const optRegex = /<(?:p|div|li)[^>]*>\s*([A-Da-d])[\.\)]\s+/gi;
+        // Cari opsi A–E (paragraf/list)
+        const optRegex = /<(?:p|div|li)[^>]*>\s*([A-Ea-e])[\.\)]\s+/gi;
         const indices = [];
         let m;
-        const bodyCopy = body;
-        while ((m = optRegex.exec(bodyCopy)) !== null) {
+        while ((m = optRegex.exec(body)) !== null) {
           indices.push({ letter: m[1].toUpperCase(), index: m.index, full: m[0] });
         }
 
@@ -6179,53 +6172,98 @@
           pertanyaan = body.substring(0, indices[0].index);
           for (let j = 0; j < indices.length; j++) {
             const L = indices[j].letter.toLowerCase();
-            const start = indices[j].index + indices[j].full.length;
-            const end = j + 1 < indices.length ? indices[j + 1].index : body.length;
-            let content = body.substring(start, end);
-            // close unclosed tags roughly - strip leading
-            content = content.replace(/^<\/[^>]+>/, '');
-            if ('abcd'.includes(L)) opsi[L] = content.trim();
+            const startPos = indices[j].index + indices[j].full.length;
+            const endPos = j + 1 < indices.length ? indices[j + 1].index : body.length;
+            let content = body.substring(startPos, endPos);
+            // Potong sebelum baris Kunci:
+            content = content.replace(/<(?:p|div|li)[^>]*>\s*Kunci\s*[:.][\s\S]*$/i, '');
+            content = content.trim();
+            if ('abcde'.includes(L)) opsi[L] = content;
           }
         }
 
-        // Detect kunci: *A* or kunci: A or jawaban: B
-        const kunciMatch = body.match(/(?:kunci|jawaban)\s*[:\.]?\s*([A-Da-d]|Benar|Salah)/i);
-        if (kunciMatch) kunci = kunciMatch[1].toUpperCase() === 'BENAR' ? 'Benar'
-          : kunciMatch[1].toUpperCase() === 'SALAH' ? 'Salah'
-          : kunciMatch[1].toUpperCase();
-
-        // Detect jenis
-        let jenis = jenisDefault;
-        if (opsi.a && opsi.b) jenis = 'Pilihan Ganda';
-        else if (/benar\s*\/\s*salah|benar atau salah/i.test(body)) jenis = 'Benar Salah';
-        else if (!opsi.a && !opsi.b) {
-          if (jenisDefault === 'Pilihan Ganda') jenis = 'Esai';
+        // Ambil Kunci: (teks setelah label, bisa multi-baris sampai soal berikutnya sudah terpotong)
+        const kunciBlock = body.match(/Kunci\s*[:.]?\s*([\s\S]+?)(?=$)/i);
+        if (kunciBlock) {
+          let kraw = kunciBlock[1]
+            .replace(/<[^>]+>/g, ' ')
+            .replace(/&nbsp;/g, ' ')
+            .replace(/\s+/g, ' ')
+            .trim();
+          // batasi panjang wajar
+          if (kraw.length > 800) kraw = kraw.slice(0, 800);
+          kunci = kraw;
         }
 
-        // Clean empty pertanyaan
-        const plain = pertanyaan.replace(/<[^>]+>/g, '').replace(/&nbsp;/g, ' ').trim();
-        if (!plain && !/img|table|svg/i.test(pertanyaan)) continue;
+        // Deteksi jenis
+        let jenis = jenisDefault;
+        const plainBody = body.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ');
+        const plainQ = pertanyaan.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
+        const hasOpts = !!(opsi.a && opsi.b);
+        const kunciLetters = kunci ? (kunci.toUpperCase().match(/\b[A-E]\b/g) || []) : [];
+        const multiKey = kunciLetters.length > 1 || /,/g.test(kunci || '');
+        const isBS = hasOpts && /benar/i.test(opsi.a || '') && /salah/i.test(opsi.b || '');
+        const isMatch = /jodohkan|menjodohkan|kolom a|kolom b/i.test(plainBody) ||
+          /^\s*\d+\s*[-–=]\s*[a-e]/im.test(kunci || '') ||
+          /\d+\s*[-–]\s*[a-e]/i.test(kunci || '');
+        const isIsian = !hasOpts && /_{3,}|isian|titik-titik/i.test(plainBody + plainQ);
+        const isEsai = !hasOpts && /jelaskan|hitunglah|tentukan|uraikan|langkah/i.test(plainQ);
+        const isCheckbox = /pilih semua|semua yang benar|lebih dari satu/i.test(plainBody) ||
+          (hasOpts && multiKey && kunciLetters.length > 1);
+
+        if (isMatch) jenis = 'Menjodohkan';
+        else if (isBS) jenis = 'Benar Salah';
+        else if (isCheckbox) jenis = 'Checkbox';
+        else if (hasOpts) jenis = 'Pilihan Ganda';
+        else if (isIsian) jenis = 'Isian Singkat';
+        else if (isEsai) jenis = 'Esai';
+        else if (!hasOpts) jenis = (jenisDefault === 'Pilihan Ganda' ? 'Esai' : jenisDefault);
+
+        // Normalisasi kunci Benar/Salah
+        if (jenis === 'Benar Salah' && kunci) {
+          if (/benar/i.test(kunci)) kunci = 'Benar';
+          else if (/salah/i.test(kunci)) kunci = 'Salah';
+        }
+        // Checkbox: rapikan "A, C, E"
+        if (jenis === 'Checkbox' && kunciLetters.length) {
+          kunci = [...new Set(kunciLetters)].join(',');
+        }
+        // PG: ambil huruf pertama
+        if (jenis === 'Pilihan Ganda' && kunciLetters.length === 1) {
+          kunci = kunciLetters[0];
+        }
+
+        // Opsi E digabung ke opsi_d note jika kolom hanya A-D — simpan di pertanyaan sebagai tambahan
+        // Lebih baik simpan opsi_e di field (akan di-alter) atau append
+        let pertanyaanFinal = pertanyaan.trim();
+        if (opsi.e) {
+          // sertakan E di HTML pertanyaan agar tidak hilang
+          pertanyaanFinal += '<p><b>E.</b> ' + opsi.e + '</p>';
+        }
+
+        const plain = pertanyaanFinal.replace(/<[^>]+>/g, '').replace(/&nbsp;/g, ' ').trim();
+        if (!plain && !/img|table|svg/i.test(pertanyaanFinal)) continue;
 
         parts.push({
           nomor: nomor,
           jenis: jenis,
-          pertanyaan: pertanyaan.trim(),
+          pertanyaan: pertanyaanFinal,
           opsi_a: opsi.a,
           opsi_b: opsi.b,
           opsi_c: opsi.c,
           opsi_d: opsi.d,
+          opsi_e: opsi.e,
           kunci: kunci,
           skor: Number(document.getElementById('iwSkorDefault')?.value) || 1
         });
       }
 
-      // Jika tidak ketemu split, anggap 1 soal penuh
       if (!parts.length && h.replace(/<[^>]+>/g, '').trim().length > 5) {
         parts.push({
           nomor: 1,
           jenis: jenisDefault,
           pertanyaan: h,
-          opsi_a: null, opsi_b: null, opsi_c: null, opsi_d: null,
+          opsi_a: null, opsi_b: null, opsi_c: null, opsi_d: null, opsi_e: null,
           kunci: null,
           skor: Number(document.getElementById('iwSkorDefault')?.value) || 1
         });
