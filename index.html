@@ -72,8 +72,14 @@
     .bs-opsi-line {
       margin:6px 0; padding:8px 10px; border-radius:8px;
       border:1px solid #e2e8f0; background:#f8fafc; font-size:13px;
+      display:flex; align-items:flex-start; gap:8px;
     }
     .bs-opsi-line.key { border-color:#86efac; background:#f0fdf4; }
+    .bs-opsi-letter { font-weight:700; flex-shrink:0; min-width:1.2em; line-height:1.5; }
+    .bs-opsi-content { flex:1; min-width:0; line-height:1.5; }
+    .bs-opsi-content p { margin:0; display:inline; }
+    .bs-opsi-content .ql-editor, .bs-opsi-content p:only-child { margin:0; }
+    .bs-opsi-check { color:#16a34a; font-size:12px; flex-shrink:0; }
     #bsPreviewBody img { max-width: 100%; }
     #bsPreviewBody .katex-display { overflow-x: auto; }
   </style>
@@ -6705,14 +6711,15 @@
     document.getElementById('btnInsertEq')?.addEventListener('click', () => {
       const latex = (document.getElementById('eqLatex')?.value || '').trim();
       if (!latex) { alert('Pilih atau ketik equation dulu'); return; }
-      let html = latex;
+      let rendered = latex;
       try {
         if (typeof katex !== 'undefined') {
-          html = katex.renderToString(latex, { throwOnError: false, displayMode: false });
+          rendered = katex.renderToString(latex, { throwOnError: false, displayMode: false });
         }
       } catch (e) {}
-      // wrap for spacing
-      html = '<span class="eq-embed" contenteditable="false"> ' + html + ' </span>';
+      // data-latex pakai encode agar \frac tidak rusak saat dibaca ulang
+      const enc = encodeURIComponent(latex);
+      const html = '<span class="eq-embed" contenteditable="false" data-latex="' + enc + '">' + rendered + '</span>&nbsp;';
 
       let targetQuill = null;
       if (_eqTarget === 'main' && bsQuill) targetQuill = bsQuill;
@@ -6722,7 +6729,7 @@
       if (targetQuill) {
         const range = targetQuill.getSelection(true) || { index: targetQuill.getLength() };
         targetQuill.clipboard.dangerouslyPasteHTML(range.index, html);
-        targetQuill.setSelection(range.index + 1);
+        try { targetQuill.setSelection(range.index + 1); } catch (e) {}
       }
       closeModal('modalEquation');
     });
@@ -6874,41 +6881,51 @@
         return;
       }
 
-      // Perbaiki LaTeX yang rusak (\f dari \frac jadi form-feed)
+      // Perbaiki LaTeX yang rusak (\f dari \frac jadi form-feed di JS/HTML)
       function fixBrokenLatex(s) {
         if (!s) return '';
         let t = String(s);
-        // form-feed (dari \f di \frac), backspace, dll
-        t = t.replace(/\u000c/g, 'f').replace(/\u0008/g, '');
+        t = t.replace(/\u000c/g, 'f').replace(/\u0008/g, '').replace(/\u000b/g, '');
+        // "\rac" sisa form-feed → "\frac"
+        t = t.replace(/\\rac\{/g, '\\frac{');
+        t = t.replace(/(^|[^a-zA-Z\\])rac\{/g, '$1\\frac{');
+        t = t.replace(/(^|[^a-zA-Z\\])frac\{/g, '$1\\frac{');
         return t;
+      }
+
+      function katexOr(tex, display) {
+        try {
+          if (typeof katex === 'undefined') return tex;
+          return katex.renderToString(tex, { throwOnError: false, displayMode: !!display });
+        } catch (e) { return tex; }
       }
 
       function renderMathInHtml(html) {
         let h = fixBrokenLatex(html || '');
         h = h.replace(/<script[\s\S]*?<\/script>/gi, '');
-        // Render $...$ dan $$...$$ jika masih latex mentah
-        h = h.replace(/\$\$([\s\S]+?)\$\$/g, (_, tex) => {
-          try {
-            return typeof katex !== 'undefined'
-              ? katex.renderToString(tex.trim(), { throwOnError: false, displayMode: true })
-              : tex;
-          } catch (e) { return tex; }
+
+        // Sudah ada output katex → biarkan
+        if (h.indexOf('class="katex') >= 0) return h;
+
+        // $...$ / $$...$$
+        h = h.replace(/\$\$([\s\S]+?)\$\$/g, (_, tex) => katexOr(tex.trim(), true));
+        h = h.replace(/\$([^\$]+?)\$/g, (_, tex) => katexOr(tex.trim(), false));
+
+        // \frac{a}{b}, \dfrac, \tfrac
+        h = h.replace(/\\(?:d|t)?frac\{([^{}]+)\}\{([^{}]+)\}/g, (_, a, b) =>
+          katexOr('\\frac{' + a + '}{' + b + '}', false));
+
+        // \sqrt{x}, \sqrt[n]{x}
+        h = h.replace(/\\sqrt\[([^\]]+)\]\{([^{}]+)\}/g, (_, n, x) =>
+          katexOr('\\sqrt[' + n + ']{' + x + '}', false));
+        h = h.replace(/\\sqrt\{([^{}]+)\}/g, (_, x) => katexOr('\\sqrt{' + x + '}', false));
+
+        // x^{2}, x_{i} sederhana di teks polos (hindari dalam tag)
+        h = h.replace(/(^|>)([^<]*?)([A-Za-z0-9])\^(\{[^}]+\}|\w)/g, (m, a, pre, base, exp) => {
+          const tex = base + '^' + exp;
+          return a + pre + katexOr(tex, false);
         });
-        h = h.replace(/\$([^\$]+?)\$/g, (_, tex) => {
-          try {
-            return typeof katex !== 'undefined'
-              ? katex.renderToString(tex.trim(), { throwOnError: false, displayMode: false })
-              : tex;
-          } catch (e) { return tex; }
-        });
-        // \frac mentah di teks
-        h = h.replace(/\\frac\{([^{}]+)\}\{([^{}]+)\}/g, (_, a, b) => {
-          try {
-            return typeof katex !== 'undefined'
-              ? katex.renderToString('\\frac{' + a + '}{' + b + '}', { throwOnError: false })
-              : a + '/' + b;
-          } catch (e) { return a + '/' + b; }
-        });
+
         return h;
       }
 
@@ -6927,12 +6944,15 @@
             const val = r['opsi_' + L.toLowerCase()];
             if (!val) return;
             const key = isKeyOption(r.kunci, L);
-            body += '<div class="bs-opsi-line' + (key ? ' key' : '') + '"><b>' + L + '.</b> ' +
-              renderMathInHtml(val) + (key ? ' <span style="color:#16a34a;font-size:11px;">✓</span>' : '') + '</div>';
+            body += '<div class="bs-opsi-line' + (key ? ' key' : '') + '">' +
+              '<span class="bs-opsi-letter">' + L + '.</span>' +
+              '<div class="bs-opsi-content">' + renderMathInHtml(val) + '</div>' +
+              (key ? '<span class="bs-opsi-check">✓</span>' : '') +
+              '</div>';
           });
         } else if (jenis === 'Benar Salah') {
-          body += '<div class="bs-opsi-line' + (r.kunci === 'Benar' ? ' key' : '') + '">○ Benar</div>';
-          body += '<div class="bs-opsi-line' + (r.kunci === 'Salah' ? ' key' : '') + '">○ Salah</div>';
+          body += '<div class="bs-opsi-line' + (r.kunci === 'Benar' ? ' key' : '') + '"><span class="bs-opsi-letter">○</span><div class="bs-opsi-content">Benar</div></div>';
+          body += '<div class="bs-opsi-line' + (r.kunci === 'Salah' ? ' key' : '') + '"><span class="bs-opsi-letter">○</span><div class="bs-opsi-content">Salah</div></div>';
         } else if (r.kunci) {
           body += '<div style="margin-top:8px;padding:8px;background:#eff6ff;border-radius:8px;font-size:12px;">' +
             '<span style="color:#1d4ed8;font-weight:700;">Kunci: </span>' + renderMathInHtml(r.kunci) + '</div>';
