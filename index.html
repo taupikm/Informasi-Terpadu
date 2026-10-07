@@ -3004,7 +3004,15 @@
       if (pageId === 'input-izin') initIzinPage();
       if (pageId === 'rekap-data') initRekapPage();
       if (pageId === 'kelola-tugas') initBankSoalPage();
-      if (pageId === 'bank-soal-detail') { /* stay */ }
+      if (pageId === 'bank-soal-detail') {
+        const bid = getCurrentBankId();
+        if (!bid) {
+          alert('Pilih bank soal dulu dari menu Kelola Tugas/Ujian');
+          showPage('kelola-tugas', true);
+        } else {
+          loadBsItemTable();
+        }
+      }
       if (pageId === 'bank-soal-hasil') { /* stay */ }
     }
 
@@ -5869,6 +5877,31 @@
     let currentBankId = null;
     let dataBsItem = [];
 
+    function setCurrentBankId(id) {
+      const n = Number(id);
+      if (!n || isNaN(n)) {
+        currentBankId = null;
+        try { sessionStorage.removeItem('bs_current_bank_id'); } catch (e) {}
+        return null;
+      }
+      currentBankId = n;
+      try { sessionStorage.setItem('bs_current_bank_id', String(n)); } catch (e) {}
+      return n;
+    }
+
+    function getCurrentBankId() {
+      let n = Number(currentBankId);
+      if (n && !isNaN(n)) return n;
+      try {
+        n = Number(sessionStorage.getItem('bs_current_bank_id'));
+        if (n && !isNaN(n)) {
+          currentBankId = n;
+          return n;
+        }
+      } catch (e) {}
+      return null;
+    }
+
     async function initBankSoalPage() {
       await loadAktifPeriode();
       await loadPeriodeOptionsBs();
@@ -6285,10 +6318,10 @@
           alert('Bank soal ini belum ada di database. Hapus lalu buat ulang, atau pastikan penyimpanan bank soal berhasil.');
           return;
         }
-        currentBankId = data.id;
+        setCurrentBankId(data.id);
         document.getElementById('bsDetailTitle').textContent = 'Soal: ' + (data.judul || '');
       } else {
-        currentBankId = bid;
+        setCurrentBankId(bid);
         const r = dataBankSoal.find(x => String(x.id) === String(bid));
         document.getElementById('bsDetailTitle').textContent = 'Soal: ' + (r?.judul || '');
       }
@@ -6806,16 +6839,21 @@
 
     async function loadBsItemTable() {
       const tbody = document.getElementById('tbodyBsItem');
-      if (!tbody || !currentBankId) return;
+      const bankId = getCurrentBankId();
+      if (!tbody) return;
+      if (!bankId) {
+        tbody.innerHTML = '<div style="text-align:center;padding:16px;color:#ef4444;">Bank soal tidak dipilih. Kembali ke daftar, centang 1 bank, lalu klik Soal.</div>';
+        return;
+      }
       try {
         if (supabaseClient) {
           const { data, error } = await supabaseClient.from('bank_soal_item')
-            .select('*').eq('bank_id', Number(currentBankId)).order('nomor');
+            .select('*').eq('bank_id', bankId).order('nomor');
           if (error) throw error;
           dataBsItem = data || [];
         } else {
           dataBsItem = JSON.parse(localStorage.getItem('bank_soal_item') || '[]')
-            .filter(x => String(x.bank_id) === String(currentBankId))
+            .filter(x => String(x.bank_id) === String(getCurrentBankId()))
             .sort((a, b) => (a.nomor || 0) - (b.nomor || 0));
         }
       } catch (e) {
@@ -6926,7 +6964,7 @@
 
       try {
         if (supabaseClient) {
-          await supabaseClient.from('bank_soal').update({ jml_soal: dataBsItem.length }).eq('id', Number(currentBankId));
+          await supabaseClient.from('bank_soal').update({ jml_soal: dataBsItem.length }).eq('id', getCurrentBankId());
         }
       } catch (e) {}
     }
@@ -6942,7 +6980,22 @@
       });
     });
 
-    document.getElementById('btnBsItemTambah')?.addEventListener('click', () => {
+    document.getElementById('btnBsItemTambah')?.addEventListener('click', async () => {
+      const bankId = getCurrentBankId();
+      if (!bankId) {
+        alert('Bank soal tidak valid. Kembali ke daftar, centang 1 bank soal, lalu buka Soal.');
+        showPage('kelola-tugas', true);
+        return;
+      }
+      if (supabaseClient) {
+        const { data } = await supabaseClient.from('bank_soal').select('id').eq('id', bankId).maybeSingle();
+        if (!data) {
+          alert('Bank soal id=' + bankId + ' tidak ada di database. Buat/simpan bank soal dulu.');
+          showPage('kelola-tugas', true);
+          await loadBankSoalTable();
+          return;
+        }
+      }
       document.getElementById('modalBsItemTitle').textContent = 'Tambah Soal';
       document.getElementById('bsItemId').value = '';
       document.getElementById('bsItemNo').value = (dataBsItem.length + 1);
@@ -6993,8 +7046,9 @@
       if (kunciEl) kunciVal = kunciEl.value.trim();
       else if (document.getElementById('bsEdKunci')) kunciVal = getMiniHtml('bsEdKunci');
 
+      const bankIdSave = getCurrentBankId();
       const payload = {
-        bank_id: Number(currentBankId),
+        bank_id: bankIdSave,
         nomor: Number(document.getElementById('bsItemNo').value) || 1,
         jenis: jenis,
         pertanyaan: pertanyaan,
@@ -7006,8 +7060,8 @@
         skor: Number(document.getElementById('bsItemSkor').value) || 1
       };
       try {
-        if (!payload.bank_id || isNaN(payload.bank_id)) {
-          throw new Error('bank_id tidak valid. Kembali ke daftar, pilih bank soal, lalu buka Soal lagi.');
+        if (!payload.bank_id || isNaN(Number(payload.bank_id))) {
+          throw new Error('bank_id tidak valid (nilai: ' + payload.bank_id + '). Kembali ke daftar → centang bank → klik Soal.');
         }
         if (supabaseClient) {
           // Pastikan parent ada
@@ -7065,8 +7119,8 @@
     document.getElementById('btnBsHasil')?.addEventListener('click', async () => {
       const ids = getCheckedBs();
       if (ids.length !== 1) { alert('Centang tepat 1 bank soal untuk melihat hasil'); return; }
-      currentBankId = ids[0];
-      const r = dataBankSoal.find(x => String(x.id) === currentBankId);
+      setCurrentBankId(ids[0]);
+      const r = dataBankSoal.find(x => String(x.id) === String(getCurrentBankId()));
       document.getElementById('bsHasilTitle').textContent = 'Hasil: ' + (r?.judul || '');
       showPage('bank-soal-hasil', true);
       await loadBsHasilTable();
@@ -7078,17 +7132,18 @@
 
     async function loadBsHasilTable() {
       const tbody = document.getElementById('tbodyBsHasil');
-      if (!tbody || !currentBankId) return;
+      const bankId = getCurrentBankId();
+      if (!tbody || !bankId) return;
       let rows = [];
       try {
         if (supabaseClient) {
           const { data, error } = await supabaseClient.from('bank_soal_hasil')
-            .select('*').eq('bank_id', Number(currentBankId)).order('submitted_at', { ascending: false });
+            .select('*').eq('bank_id', bankId).order('submitted_at', { ascending: false });
           if (error) throw error;
           rows = data || [];
         } else {
           rows = JSON.parse(localStorage.getItem('bank_soal_hasil') || '[]')
-            .filter(x => String(x.bank_id) === String(currentBankId));
+            .filter(x => String(x.bank_id) === String(getCurrentBankId()));
         }
       } catch (e) {
         console.warn(e);
