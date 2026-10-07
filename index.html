@@ -115,6 +115,61 @@
     .bs-kunci-admin span {
       font-weight: 700; color: #64748b; margin-right: 6px;
     }
+
+    .tu-nav-overlay {
+      position: fixed; inset: 0; background: rgba(15,23,42,.45);
+      z-index: 1200; display: flex; align-items: flex-end; justify-content: center;
+    }
+    .tu-nav-panel {
+      width: 100%; max-width: 480px; max-height: 78vh;
+      background: #fff; border-radius: 16px 16px 0 0;
+      padding: 14px 14px 18px; box-shadow: 0 -8px 30px rgba(0,0,0,.15);
+      display: flex; flex-direction: column;
+    }
+    .tu-nav-head {
+      display: flex; align-items: center; justify-content: space-between;
+      margin-bottom: 10px; font-size: 15px;
+    }
+    .tu-nav-legend {
+      display: flex; flex-wrap: wrap; gap: 10px; font-size: 11px; color: #64748b;
+      margin-bottom: 10px;
+    }
+    .tu-nav-legend span { display: flex; align-items: center; gap: 4px; }
+    .tu-dot {
+      display: inline-block; width: 12px; height: 12px; border-radius: 4px;
+      border: 1px solid #cbd5e1; background: #fff;
+    }
+    .tu-dot-cur { background: #2563eb; border-color: #2563eb; }
+    .tu-dot-done { background: #dcfce7; border-color: #86efac; }
+    .tu-dot-empty { background: #fff; }
+    .tu-dot-flag { background: #fef3c7; border-color: #fbbf24; }
+    .tu-nav-grid {
+      display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px;
+      overflow-y: auto; flex: 1; padding-bottom: 8px;
+    }
+    .tu-nav-btn {
+      position: relative;
+      height: 42px; border-radius: 10px; border: 1.5px solid #e2e8f0;
+      background: #fff; font-weight: 700; font-size: 14px; color: #0f172a;
+      cursor: pointer;
+    }
+    .tu-nav-btn.done { background: #dcfce7; border-color: #86efac; }
+    .tu-nav-btn.cur { background: #2563eb; border-color: #2563eb; color: #fff; }
+    .tu-nav-btn.flag { background: #fef3c7; border-color: #fbbf24; }
+    .tu-nav-btn.cur.flag { background: #2563eb; box-shadow: inset 0 0 0 2px #fbbf24; }
+    .tu-nav-flag {
+      position: absolute; top: 2px; right: 3px; font-size: 10px; line-height: 1;
+    }
+    .tu-nav-foot {
+      display: flex; align-items: center; justify-content: space-between;
+      gap: 8px; margin-top: 10px; padding-top: 10px; border-top: 1px solid #e2e8f0;
+    }
+    .tu-flag-btn {
+      margin-top: 10px; width: 100%;
+      padding: 8px; border-radius: 8px; border: 1px dashed #fbbf24;
+      background: #fffbeb; color: #92400e; font-size: 12px; font-weight: 600; cursor: pointer;
+    }
+    .tu-flag-btn.on { background: #fef3c7; border-style: solid; }
     #bsPreviewBody img { max-width: 100%; }
     #bsPreviewBody .katex-display { overflow-x: auto; }
   </style>
@@ -1179,15 +1234,38 @@
     <section class="page" id="page-kerjakan-ujian">
       <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;flex-wrap:wrap;">
         <button class="btn btn-outline" id="btnTuKembali" style="padding:6px 10px;">← Daftar</button>
-        <div class="page-title" style="margin:0;flex:1;" id="tuJudulKerjakan">Ujian</div>
+        <div class="page-title" style="margin:0;flex:1;font-size:15px;" id="tuJudulKerjakan">Ujian</div>
         <div id="tuTimer" style="font-weight:700;font-size:14px;color:#dc2626;background:#fef2f2;padding:6px 10px;border-radius:8px;">--:--</div>
+        <button class="btn btn-outline" id="btnTuNavToggle" style="padding:6px 10px;font-weight:700;" title="Nomor soal">☰</button>
       </div>
       <div id="tuProgress" style="font-size:12px;color:#64748b;margin-bottom:8px;"></div>
       <div id="tuSoalArea"></div>
-      <div style="position:sticky;bottom:12px;margin-top:16px;display:flex;gap:8px;">
+      <div style="position:sticky;bottom:12px;margin-top:16px;display:flex;gap:8px;z-index:5;">
         <button class="btn btn-outline" id="btnTuPrev" style="flex:1;">← Prev</button>
+        <button class="btn btn-outline" id="btnTuNavToggle2" style="flex:0.8;font-weight:700;">☰ No.</button>
         <button class="btn btn-outline" id="btnTuNext" style="flex:1;">Next →</button>
-        <button class="btn btn-primary" id="btnTuSubmit" style="flex:1.2;">Kirim Jawaban</button>
+        <button class="btn btn-primary" id="btnTuSubmit" style="flex:1.2;">Kirim</button>
+      </div>
+
+      <!-- Overlay navigasi nomor soal -->
+      <div id="tuNavOverlay" class="tu-nav-overlay" style="display:none;">
+        <div class="tu-nav-panel">
+          <div class="tu-nav-head">
+            <b>Nomor Soal</b>
+            <button type="button" id="btnTuNavClose" class="modal-close" style="position:static;">&times;</button>
+          </div>
+          <div class="tu-nav-legend">
+            <span><i class="tu-dot tu-dot-cur"></i> Sekarang</span>
+            <span><i class="tu-dot tu-dot-done"></i> Terjawab</span>
+            <span><i class="tu-dot tu-dot-empty"></i> Belum</span>
+            <span><i class="tu-dot tu-dot-flag"></i> Ragu</span>
+          </div>
+          <div id="tuNavGrid" class="tu-nav-grid"></div>
+          <div class="tu-nav-foot">
+            <span id="tuNavStats" style="font-size:12px;color:#64748b;"></span>
+            <button class="btn btn-primary" id="btnTuNavClose2" style="padding:6px 14px;">Tutup</button>
+          </div>
+        </div>
       </div>
     </section>
     <section class="page" id="page-nilai-saya">
@@ -6050,6 +6128,7 @@
     let _tuExam = null; // bank meta
     let _tuSoals = [];
     let _tuAnswers = {}; // { soalId: value }
+    let _tuFlags = {}; // { soalId: true } ragu
     let _tuIdx = 0;
     let _tuTimerIv = null;
     let _tuDeadline = null;
@@ -6190,6 +6269,7 @@
       _tuExam = bank;
       _tuSoals = soals;
       _tuAnswers = {};
+      _tuFlags = {};
       _tuIdx = 0;
 
       // Timer
@@ -6229,7 +6309,9 @@
       const prog = document.getElementById('tuProgress');
       if (!area || !_tuSoals.length) return;
       const s = _tuSoals[_tuIdx];
-      prog.textContent = 'Soal ' + (_tuIdx + 1) + ' / ' + _tuSoals.length;
+      const answeredN = _tuSoals.filter(isTuAnswered).length;
+      prog.textContent = 'Soal ' + (_tuIdx + 1) + ' / ' + _tuSoals.length +
+        ' · Terjawab ' + answeredN + (_tuFlags[_tuSoals[_tuIdx].id] ? ' · ⚑ Ragu' : '');
 
       let html = '<div class="bs-soal-card">';
       html += '<div class="bs-soal-card-head"><span style="font-weight:700;">No. ' +
@@ -6294,9 +6376,74 @@
       const esai = document.getElementById('tuEsai');
       if (esai) esai.addEventListener('input', () => { _tuAnswers[s.id] = esai.value; });
 
+      // Tombol ragu
+      const flagged = !!_tuFlags[s.id];
+      const flagHtml = document.createElement('div');
+      area.insertAdjacentHTML('beforeend',
+        '<button type="button" class="tu-flag-btn' + (flagged ? ' on' : '') + '" id="btnTuFlag">' +
+        (flagged ? '🚩 Ditandai ragu — ketuk untuk batal' : '⚑ Tandai ragu') + '</button>');
+      document.getElementById('btnTuFlag')?.addEventListener('click', () => {
+        if (_tuFlags[s.id]) delete _tuFlags[s.id];
+        else _tuFlags[s.id] = true;
+        renderTuSoal();
+      });
+
       document.getElementById('btnTuPrev').disabled = _tuIdx <= 0;
       document.getElementById('btnTuNext').disabled = _tuIdx >= _tuSoals.length - 1;
     }
+
+    function isTuAnswered(s) {
+      const a = _tuAnswers[s.id];
+      if (a == null || a === '') return false;
+      if (Array.isArray(a) && !a.length) return false;
+      return true;
+    }
+
+    function openTuNav() {
+      saveCurrentTuAnswer();
+      const grid = document.getElementById('tuNavGrid');
+      const ov = document.getElementById('tuNavOverlay');
+      if (!grid || !ov) return;
+      let done = 0, flag = 0;
+      grid.innerHTML = _tuSoals.map((s, i) => {
+        const answered = isTuAnswered(s);
+        if (answered) done++;
+        if (_tuFlags[s.id]) flag++;
+        let cls = 'tu-nav-btn';
+        if (i === _tuIdx) cls += ' cur';
+        else if (_tuFlags[s.id]) cls += ' flag';
+        else if (answered) cls += ' done';
+        const label = s.nomor != null ? s.nomor : (i + 1);
+        return '<button type="button" class="' + cls + '" data-tu-i="' + i + '">' +
+          label + (_tuFlags[s.id] ? '<span class="tu-nav-flag">⚑</span>' : '') + '</button>';
+      }).join('');
+      const total = _tuSoals.length;
+      document.getElementById('tuNavStats').textContent =
+        'Terjawab ' + done + '/' + total + (flag ? ' · Ragu ' + flag : '');
+      grid.querySelectorAll('[data-tu-i]').forEach(btn => {
+        btn.addEventListener('click', () => {
+          const i = Number(btn.getAttribute('data-tu-i'));
+          _tuIdx = i;
+          closeTuNav();
+          renderTuSoal();
+          window.scrollTo(0, 0);
+        });
+      });
+      ov.style.display = 'flex';
+    }
+
+    function closeTuNav() {
+      const ov = document.getElementById('tuNavOverlay');
+      if (ov) ov.style.display = 'none';
+    }
+
+    document.getElementById('btnTuNavToggle')?.addEventListener('click', openTuNav);
+    document.getElementById('btnTuNavToggle2')?.addEventListener('click', openTuNav);
+    document.getElementById('btnTuNavClose')?.addEventListener('click', closeTuNav);
+    document.getElementById('btnTuNavClose2')?.addEventListener('click', closeTuNav);
+    document.getElementById('tuNavOverlay')?.addEventListener('click', (e) => {
+      if (e.target.id === 'tuNavOverlay') closeTuNav();
+    });
 
     function saveCurrentTuAnswer() {
       if (!_tuSoals[_tuIdx]) return;
