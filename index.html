@@ -2068,13 +2068,73 @@
           <div id="arsipHasil" style="font-size:12px;margin-top:10px;color:#64748b;"></div>
         </div>
       </div>
+
+      <div class="accordion">
+        <button type="button" class="accordion-header" data-acc="accNaikLulusBody">
+          <span>🎓 Naik Kelas &amp; Kelulusan</span>
+          <span class="acc-icon">▼</span>
+        </button>
+        <div class="accordion-body" id="accNaikLulusBody">
+          <p style="font-size:12px;color:#64748b;line-height:1.45;margin-bottom:10px;">
+            <b>Naikkan</b>: kelas 7→8, 8→9 (huruf rombel dipertahankan, mis. 7A→8A).<br>
+            <b>Luluskan</b>: siswa kelas 9 dipindah ke Data Lulusan dengan status yang dipilih.
+          </p>
+          <div class="rekap-filter-row">
+            <label>Tingkat</label>
+            <select id="nlFilterTingkat">
+              <option value="">Semua (7–9)</option>
+              <option value="7">Kelas 7</option>
+              <option value="8">Kelas 8</option>
+              <option value="9">Kelas 9</option>
+            </select>
+          </div>
+          <div class="rekap-filter-row">
+            <label>Status Kelulusan</label>
+            <select id="nlFilterStatus">
+              <option value="belum">Belum ditentukan</option>
+              <option value="Lulus">Lulus</option>
+              <option value="Ditangguhkan">Ditangguhkan</option>
+              <option value="Tidak Lulus">Tidak Lulus</option>
+            </select>
+          </div>
+          <div class="rekap-filter-row">
+            <label>Cari</label>
+            <input type="text" id="nlCari" placeholder="Nama / NISN">
+          </div>
+          <div class="toolbar" style="flex-wrap:wrap;gap:6px;">
+            <button class="btn btn-primary" id="btnNlNaik" style="background:#2563eb;border:none;">⬆️ Naikkan</button>
+            <button class="btn" id="btnNlLulus" style="background:#16a34a;color:#fff;border:none;">🎓 Luluskan</button>
+            <button class="btn btn-outline" id="btnNlUbahStatus" style="padding:6px 10px;font-size:12px;">Ubah Status</button>
+            <button class="btn btn-outline" id="btnNlRefresh" style="padding:6px 10px;">↻</button>
+            <span class="toolbar-info" id="infoNl">0 data</span>
+          </div>
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th style="width:36px;"><input type="checkbox" id="checkAllNl"></th>
+                  <th>No</th>
+                  <th>NISN</th>
+                  <th>Nama</th>
+                  <th>L/P</th>
+                  <th>Kelas</th>
+                  <th>Status</th>
+                </tr>
+              </thead>
+              <tbody id="tbodyNl">
+                <tr><td colspan="7" style="text-align:center;padding:16px;color:#94a3b8;">Buka filter lalu muat data</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
     </section>
 
   </main>
 
   <!-- FOOTER -->
   <footer class="footer">
-    © 2026 SMPN PANTANG MUNDUR * <span style="opacity:.7">· v2026.10.08c</span>
+    © 2026 SMPN PANTANG MUNDUR * <span style="opacity:.7">· v2026.10.08d</span>
   </footer>
 
   <!-- ========== MODAL LOGIN ========== -->
@@ -4520,6 +4580,7 @@
         loadSesiTable(), loadLiburTable(), loadIzinFpList()
       ]);
       try { await refreshArsipInfo(); } catch (e) {}
+      try { await loadNaikLulusTable(); } catch (e) {}
     }
 
     // ----- MAPEL -----
@@ -9163,6 +9224,274 @@
     });
 
 
+
+
+    // ============================================================
+    // NAIK KELAS & KELULUSAN (Pengaturan)
+    // ============================================================
+    let dataNlRows = []; // mixed: { _src: 'siswa'|'lulusan', ... }
+
+    function nextKelasNama(kelas) {
+      const s = String(kelas || '').trim();
+      const m = s.match(/^(\d+)(.*)$/);
+      if (!m) return null;
+      const n = parseInt(m[1], 10);
+      if (n < 7 || n >= 9) return null;
+      return String(n + 1) + (m[2] || '');
+    }
+    function tingkatDariKelas(kelas) {
+      const m = String(kelas || '').match(/^(\d+)/);
+      return m ? m[1] : '';
+    }
+
+    async function loadNaikLulusTable() {
+      const tbody = document.getElementById('tbodyNl');
+      if (!tbody) return;
+      tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;padding:12px;color:#94a3b8;">Memuat...</td></tr>';
+      const fTingkat = document.getElementById('nlFilterTingkat')?.value || '';
+      const fStatus = document.getElementById('nlFilterStatus')?.value || 'belum';
+      const q = (document.getElementById('nlCari')?.value || '').trim().toLowerCase();
+
+      try {
+        if (fStatus === 'belum') {
+          // Siswa aktif kelas 7-9
+          let siswa = [];
+          if (supabaseClient) {
+            const { data, error } = await supabaseClient.from('siswa').select('*').order('kelas').order('nama');
+            if (error) throw error;
+            siswa = data || [];
+          } else {
+            if (!dataSiswa.length) await loadSiswa();
+            siswa = dataSiswa.slice();
+          }
+          siswa = siswa.filter(s => {
+            const st = String(s.status || 'Aktif').toLowerCase();
+            if (st && st !== 'aktif' && st !== 'active') return false;
+            const t = tingkatDariKelas(s.kelas);
+            if (!['7', '8', '9'].includes(t)) return false;
+            if (fTingkat && t !== fTingkat) return false;
+            if (q) {
+              const n = String(s.nama || '').toLowerCase();
+              const k = String(s.nisn || '').toLowerCase();
+              if (!n.includes(q) && !k.includes(q)) return false;
+            }
+            return true;
+          });
+          dataNlRows = siswa.map(s => Object.assign({}, s, {
+            _src: 'siswa',
+            _status: 'Belum ditentukan'
+          }));
+        } else {
+          // Dari tabel lulusan
+          let lulus = [];
+          if (supabaseClient) {
+            const { data, error } = await supabaseClient.from('lulusan').select('*').order('nama');
+            if (error) throw error;
+            lulus = data || [];
+          } else {
+            if (!dataLulusan.length) await loadLulusan();
+            lulus = dataLulusan.slice();
+          }
+          lulus = lulus.filter(s => {
+            const st = String(s.status_kelulusan || s.status_lulus || 'Lulus');
+            if (st !== fStatus) return false;
+            if (q) {
+              const n = String(s.nama || '').toLowerCase();
+              const k = String(s.nisn || '').toLowerCase();
+              if (!n.includes(q) && !k.includes(q)) return false;
+            }
+            return true;
+          });
+          dataNlRows = lulus.map(s => Object.assign({}, s, {
+            _src: 'lulusan',
+            kelas: s.kelas || '9',
+            _status: s.status_kelulusan || s.status_lulus || 'Lulus'
+          }));
+        }
+      } catch (e) {
+        tbody.innerHTML = '<tr><td colspan="7" style="color:#ef4444;padding:12px;">Gagal: ' + esc(e.message || e) + '</td></tr>';
+        return;
+      }
+
+      const info = document.getElementById('infoNl');
+      if (info) info.textContent = dataNlRows.length + ' data';
+      const chk = document.getElementById('checkAllNl');
+      if (chk) chk.checked = false;
+
+      if (!dataNlRows.length) {
+        tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;padding:16px;color:#94a3b8;">Tidak ada data</td></tr>';
+        return;
+      }
+      tbody.innerHTML = dataNlRows.map((s, i) =>
+        '<tr data-id="' + s.id + '" data-src="' + s._src + '">' +
+        '<td><input type="checkbox" class="cb-nl" value="' + s.id + '" data-src="' + s._src + '"></td>' +
+        '<td>' + (i + 1) + '</td>' +
+        '<td>' + esc(s.nisn || '-') + '</td>' +
+        '<td>' + esc(s.nama || '-') + '</td>' +
+        '<td>' + esc(s.lp || '-') + '</td>' +
+        '<td>' + esc(s.kelas || '-') + '</td>' +
+        '<td style="font-size:12px;">' + esc(s._status) + '</td></tr>'
+      ).join('');
+    }
+
+    document.getElementById('nlFilterTingkat')?.addEventListener('change', () => loadNaikLulusTable());
+    document.getElementById('nlFilterStatus')?.addEventListener('change', () => loadNaikLulusTable());
+    document.getElementById('nlCari')?.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') loadNaikLulusTable();
+    });
+    document.getElementById('btnNlRefresh')?.addEventListener('click', () => loadNaikLulusTable());
+    document.getElementById('checkAllNl')?.addEventListener('change', function () {
+      document.querySelectorAll('.cb-nl').forEach(c => { c.checked = this.checked; });
+    });
+
+    function getCheckedNl() {
+      return [...document.querySelectorAll('.cb-nl:checked')].map(c => ({
+        id: c.value,
+        src: c.dataset.src
+      }));
+    }
+
+    // Naikkan kelas
+    document.getElementById('btnNlNaik')?.addEventListener('click', async () => {
+      const sel = getCheckedNl().filter(x => x.src === 'siswa');
+      if (!sel.length) {
+        alert('Centang siswa (status Belum ditentukan) yang akan dinaikkan.\nHanya kelas 7 dan 8.');
+        return;
+      }
+      const targets = sel.map(x => dataNlRows.find(r => String(r.id) === String(x.id) && r._src === 'siswa')).filter(Boolean);
+      const naik = targets.filter(s => {
+        const t = tingkatDariKelas(s.kelas);
+        return t === '7' || t === '8';
+      });
+      if (!naik.length) {
+        alert('Tidak ada siswa kelas 7/8 terpilih. Kelas 9 gunakan tombol Luluskan.');
+        return;
+      }
+      if (!(await showConfirm('Naikkan ' + naik.length + ' siswa ke kelas berikutnya?', 'Naik Kelas', '⬆️'))) return;
+      let ok = 0, fail = 0;
+      for (const s of naik) {
+        const next = nextKelasNama(s.kelas);
+        if (!next) { fail++; continue; }
+        try {
+          if (supabaseClient) {
+            const { error } = await supabaseClient.from('siswa').update({ kelas: next }).eq('id', s.id);
+            if (error) throw error;
+          } else {
+            const idx = dataSiswa.findIndex(x => String(x.id) === String(s.id));
+            if (idx >= 0) dataSiswa[idx].kelas = next;
+          }
+          ok++;
+        } catch (e) {
+          console.warn(e);
+          fail++;
+        }
+      }
+      alert('Naik kelas: ' + ok + ' berhasil' + (fail ? ', ' + fail + ' gagal' : ''));
+      await loadNaikLulusTable();
+      try { await loadSiswa(); } catch (e) {}
+    });
+
+    // Luluskan
+    document.getElementById('btnNlLulus')?.addEventListener('click', async () => {
+      const sel = getCheckedNl().filter(x => x.src === 'siswa');
+      if (!sel.length) {
+        alert('Centang siswa kelas 9 (Belum ditentukan) yang akan diluluskan.');
+        return;
+      }
+      const targets = sel.map(x => dataNlRows.find(r => String(r.id) === String(x.id) && r._src === 'siswa')).filter(Boolean);
+      const k9 = targets.filter(s => tingkatDariKelas(s.kelas) === '9');
+      if (!k9.length) {
+        alert('Hanya siswa kelas 9 yang bisa diluluskan.');
+        return;
+      }
+      const status = prompt('Status kelulusan untuk ' + k9.length + ' siswa:\nKetik: Lulus / Ditangguhkan / Tidak Lulus', 'Lulus');
+      if (status == null) return;
+      const st = String(status).trim();
+      if (!['Lulus', 'Ditangguhkan', 'Tidak Lulus'].includes(st)) {
+        alert('Status harus: Lulus, Ditangguhkan, atau Tidak Lulus');
+        return;
+      }
+      if (!(await showConfirm('Luluskan ' + k9.length + ' siswa dengan status \"' + st + '\"?\nData pindah ke tabel Lulusan.', 'Kelulusan', '🎓'))) return;
+
+      if (!aktifPeriode) await loadAktifPeriode();
+      const tglLulus = (aktifPeriode && aktifPeriode.tgl_kelulusan)
+        ? String(aktifPeriode.tgl_kelulusan).slice(0, 10)
+        : new Date().toISOString().slice(0, 10);
+      const tahun = aktifPeriode && aktifPeriode.tahun_ajaran
+        ? parseInt(String(aktifPeriode.tahun_ajaran).split('/')[0], 10) || new Date().getFullYear()
+        : new Date().getFullYear();
+
+      let ok = 0, fail = 0;
+      for (const s of k9) {
+        const payload = {
+          nisn: s.nisn || null,
+          nama: s.nama,
+          lp: s.lp || null,
+          tmp_lahir: s.tmp_lahir || null,
+          tgl_lahir: s.tgl_lahir || null,
+          tgl_mulai_sekolah: s.tgl_mulai_sekolah || null,
+          tanggal_lulus: tglLulus,
+          tahun_lulus: tahun,
+          lama_belajar: '3 Tahun',
+          status_awal: s.status || 'Aktif',
+          asal_sekolah: s.asal_sekolah || null,
+          status_kelulusan: st,
+          kelas: s.kelas || '9'
+        };
+        try {
+          if (supabaseClient) {
+            const { error } = await supabaseClient.from('lulusan').insert([payload]);
+            if (error) throw error;
+            // hapus / nonaktifkan dari siswa
+            await supabaseClient.from('siswa').delete().eq('id', s.id);
+          } else {
+            payload.id = Date.now() + Math.random();
+            dataLulusan.push(payload);
+            dataSiswa = dataSiswa.filter(x => String(x.id) !== String(s.id));
+          }
+          ok++;
+        } catch (e) {
+          console.warn(e);
+          fail++;
+        }
+      }
+      alert('Kelulusan: ' + ok + ' berhasil' + (fail ? ', ' + fail + ' gagal' : ''));
+      await loadNaikLulusTable();
+      try { await loadSiswa(); } catch (e) {}
+      try { await loadLulusan(); } catch (e) {}
+    });
+
+    // Ubah status lulusan
+    document.getElementById('btnNlUbahStatus')?.addEventListener('click', async () => {
+      const sel = getCheckedNl().filter(x => x.src === 'lulusan');
+      if (!sel.length) {
+        alert('Centang data lulusan (filter status Lulus/Ditangguhkan/Tidak Lulus) untuk diubah statusnya.');
+        return;
+      }
+      const status = prompt('Status baru:\nLulus / Ditangguhkan / Tidak Lulus', 'Lulus');
+      if (status == null) return;
+      const st = String(status).trim();
+      if (!['Lulus', 'Ditangguhkan', 'Tidak Lulus'].includes(st)) {
+        alert('Status tidak valid');
+        return;
+      }
+      let ok = 0;
+      for (const x of sel) {
+        try {
+          if (supabaseClient) {
+            const { error } = await supabaseClient.from('lulusan')
+              .update({ status_kelulusan: st }).eq('id', x.id);
+            if (error) throw error;
+          } else {
+            const idx = dataLulusan.findIndex(r => String(r.id) === String(x.id));
+            if (idx >= 0) dataLulusan[idx].status_kelulusan = st;
+          }
+          ok++;
+        } catch (e) { console.warn(e); }
+      }
+      alert('Status diubah: ' + ok + ' data');
+      await loadNaikLulusTable();
+    });
 
     // ============================================================
     // ABSENSI + HISTORIS
