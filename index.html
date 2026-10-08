@@ -2,7 +2,7 @@
 <html lang="id">
 <head>
   <meta charset="UTF-8" />
-  <!-- CACHE_BUST 2026-10-08-m -->
+  <!-- CACHE_BUST 2026-10-08-n -->
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
   <title>SMPN PANTANG MUNDUR</title>
   <!-- Supabase JS Client (CDN) -->
@@ -1463,12 +1463,34 @@
     </section>
     <section class="page" id="page-rekap-data">
       <div class="page-title">Rekap Data Absensi</div>
+
+      <!-- Switch Edit / Rekap -->
+      <div style="display:flex;border-radius:10px;overflow:hidden;border:1px solid #1e40af;margin-bottom:12px;">
+        <button type="button" class="rekap-mode-btn active" data-mode="edit" id="btnRekapModeEdit"
+          style="flex:1;padding:10px 8px;border:none;font-weight:700;font-size:12px;cursor:pointer;background:#38bdf8;color:#0f172a;">✏️ Edit Kehadiran</button>
+        <button type="button" class="rekap-mode-btn" data-mode="rekap" id="btnRekapModeRekap"
+          style="flex:1;padding:10px 8px;border:none;font-weight:700;font-size:12px;cursor:pointer;background:#1e40af;color:white;">📊 Rekap Kehadiran</button>
+      </div>
+
+      <!-- Filter bersama -->
       <div class="card" style="margin-bottom:10px;padding:12px;">
         <div class="rekap-filter-row">
+          <label>Tahun Ajaran</label>
+          <select id="rekapTahunAjaran"><option value="">Semua</option></select>
+        </div>
+        <div class="rekap-filter-row">
+          <label>Semester</label>
+          <select id="rekapSemester">
+            <option value="">Semua</option>
+            <option value="Ganjil">Ganjil</option>
+            <option value="Genap">Genap</option>
+          </select>
+        </div>
+        <div class="rekap-filter-row" id="rekapRowDari">
           <label>Dari Tanggal</label>
           <input type="date" id="rekapDari">
         </div>
-        <div class="rekap-filter-row">
+        <div class="rekap-filter-row" id="rekapRowSampai">
           <label>Sampai Tanggal</label>
           <input type="date" id="rekapSampai">
         </div>
@@ -1490,30 +1512,64 @@
         </div>
         <button class="btn btn-primary" id="btnCariRekap" style="width:100%;margin-top:8px;">🔍 Cari</button>
       </div>
-      <div class="toolbar" id="toolbarRekapAdmin">
-        <button class="btn btn-secondary" id="btnEditRekap">✏️ Edit Status</button>
-        <button class="btn btn-outline" id="btnHapusRekap" style="color:#ef4444;border-color:#fca5a5;">🗑️ Hapus</button>
-        <span class="toolbar-info" id="infoRekap">0 data</span>
+
+      <!-- PANEL: Edit Kehadiran (tabel per hari/sesi) -->
+      <div id="rekapPanelEdit">
+        <div class="toolbar" id="toolbarRekapAdmin">
+          <button class="btn btn-secondary" id="btnEditRekap">✏️ Edit Status</button>
+          <button class="btn btn-outline" id="btnHapusRekap" style="color:#ef4444;border-color:#fca5a5;">🗑️ Hapus</button>
+          <span class="toolbar-info" id="infoRekap">0 data</span>
+        </div>
+        <div class="toolbar" id="toolbarRekapView" style="display:none;">
+          <span style="font-size:12px;color:#64748b;">Mode lihat saja (Guru)</span>
+          <span class="toolbar-info" id="infoRekapView">0 data</span>
+        </div>
+        <div class="table-wrap">
+          <table id="tableRekap">
+            <thead id="theadRekap">
+              <tr>
+                <th style="width:32px;"><input type="checkbox" id="checkAllRekap"></th>
+                <th>No</th>
+                <th>NISN/NIP</th>
+                <th>Nama</th>
+                <th>Tanggal</th>
+              </tr>
+            </thead>
+            <tbody id="tbodyRekap">
+              <tr><td colspan="5" style="text-align:center;padding:16px;color:#94a3b8;">Pilih filter lalu klik Cari</td></tr>
+            </tbody>
+          </table>
+        </div>
       </div>
-      <div class="toolbar" id="toolbarRekapView" style="display:none;">
-        <span style="font-size:12px;color:#64748b;">Mode lihat saja (Guru)</span>
-        <span class="toolbar-info" id="infoRekapView">0 data</span>
-      </div>
-      <div class="table-wrap">
-        <table id="tableRekap">
-          <thead id="theadRekap">
-            <tr>
-              <th style="width:32px;"><input type="checkbox" id="checkAllRekap"></th>
-              <th>No</th>
-              <th>NISN/NIP</th>
-              <th>Nama</th>
-              <th>Tanggal</th>
-            </tr>
-          </thead>
-          <tbody id="tbodyRekap">
-            <tr><td colspan="5" style="text-align:center;padding:16px;color:#94a3b8;">Pilih filter lalu klik Cari</td></tr>
-          </tbody>
-        </table>
+
+      <!-- PANEL: Rekap Kehadiran (agregat) -->
+      <div id="rekapPanelRekap" style="display:none;">
+        <div class="toolbar">
+          <span class="toolbar-info" id="infoRekapAgregat">0 data</span>
+        </div>
+        <div class="table-wrap">
+          <table id="tableRekapAgregat" style="min-width:720px;font-size:11px;">
+            <thead>
+              <tr>
+                <th>ID</th>
+                <th>Nama</th>
+                <th>Kelas</th>
+                <th style="text-align:center;">TW</th>
+                <th style="text-align:center;">TL</th>
+                <th style="text-align:center;">Izin</th>
+                <th style="text-align:center;">Sakit</th>
+                <th style="text-align:center;">Alpa</th>
+                <th style="text-align:center;">Bolos</th>
+                <th style="text-align:center;">Jumlah Sesi</th>
+                <th style="text-align:center;">Nilai Hadir</th>
+                <th style="text-align:center;">%</th>
+              </tr>
+            </thead>
+            <tbody id="tbodyRekapAgregat">
+              <tr><td colspan="12" style="text-align:center;padding:16px;color:#94a3b8;">Pilih filter lalu klik Cari</td></tr>
+            </tbody>
+          </table>
+        </div>
       </div>
     </section>
     <section class="page" id="page-jadwal-mapel">
@@ -2179,7 +2235,7 @@
 
   <!-- FOOTER -->
   <footer class="footer">
-    © 2026 SMPN PANTANG MUNDUR * <span style="opacity:.7">· v2026.10.08m</span>
+    © 2026 SMPN PANTANG MUNDUR * <span style="opacity:.7">· v2026.10.08n</span>
   </footer>
 
   <!-- ========== MODAL LOGIN ========== -->
@@ -10579,6 +10635,236 @@
       document.getElementById('infoRekap') && (document.getElementById('infoRekap').textContent = '0 data');
       document.getElementById('infoRekapView') && (document.getElementById('infoRekapView').textContent = '0 data');
       dataRekap = [];
+      await fillRekapPeriodeFilters();
+      setRekapMode(_rekapMode || 'edit');
+    }
+
+    let _rekapMode = 'edit'; // 'edit' | 'rekap'
+    let _rekapPeriodeList = [];
+
+    async function fillRekapPeriodeFilters() {
+      const selTahun = document.getElementById('rekapTahunAjaran');
+      const selSem = document.getElementById('rekapSemester');
+      if (!selTahun) return;
+      try {
+        let list = [];
+        if (supabaseClient) {
+          const { data } = await supabaseClient.from('periode').select('*').order('id');
+          list = data || [];
+        } else if (typeof dataPeriode !== 'undefined' && dataPeriode.length) {
+          list = dataPeriode.slice();
+        } else {
+          list = [
+            { id: 3, tahun_ajaran: '2026/2027', semester: 'Ganjil', aktif: true,
+              tanggal_mulai: '2026-07-14', tanggal_akhir: '2026-12-19' }
+          ];
+        }
+        _rekapPeriodeList = list;
+        const tahunSet = [...new Set(list.map(p => p.tahun_ajaran).filter(Boolean))];
+        const curT = selTahun.value;
+        const curS = selSem ? selSem.value : '';
+        selTahun.innerHTML = '<option value="">Semua</option>' +
+          tahunSet.map(t => '<option value="' + esc(t) + '">' + esc(t) + '</option>').join('');
+        // Default: periode aktif
+        if (!curT && aktifPeriode && aktifPeriode.tahun_ajaran) {
+          selTahun.value = aktifPeriode.tahun_ajaran;
+          if (selSem && aktifPeriode.semester) selSem.value = aktifPeriode.semester;
+        } else {
+          if (curT) selTahun.value = curT;
+          if (selSem && curS) selSem.value = curS;
+        }
+        applyRekapPeriodeDates();
+      } catch (e) { console.warn('fillRekapPeriode', e); }
+    }
+
+    function applyRekapPeriodeDates() {
+      const ta = document.getElementById('rekapTahunAjaran')?.value || '';
+      const sem = document.getElementById('rekapSemester')?.value || '';
+      const dari = document.getElementById('rekapDari');
+      const sampai = document.getElementById('rekapSampai');
+      if (!dari || !sampai) return;
+      let match = null;
+      if (ta || sem) {
+        match = (_rekapPeriodeList || []).find(p => {
+          if (ta && p.tahun_ajaran !== ta) return false;
+          if (sem && p.semester !== sem) return false;
+          return true;
+        });
+      }
+      if (!match && aktifPeriode) match = aktifPeriode;
+      if (match) {
+        const t0 = (match.tanggal_mulai || match.tgl_mulai || '').toString().slice(0, 10);
+        const t1 = (match.tanggal_akhir || match.tgl_akhir || '').toString().slice(0, 10);
+        if (t0) dari.value = t0;
+        if (t1) sampai.value = t1;
+      }
+    }
+
+    function setRekapMode(mode) {
+      _rekapMode = mode === 'rekap' ? 'rekap' : 'edit';
+      const btnE = document.getElementById('btnRekapModeEdit');
+      const btnR = document.getElementById('btnRekapModeRekap');
+      const panelE = document.getElementById('rekapPanelEdit');
+      const panelR = document.getElementById('rekapPanelRekap');
+      if (btnE) {
+        btnE.classList.toggle('active', _rekapMode === 'edit');
+        btnE.style.background = _rekapMode === 'edit' ? '#38bdf8' : '#1e40af';
+        btnE.style.color = _rekapMode === 'edit' ? '#0f172a' : '#fff';
+      }
+      if (btnR) {
+        btnR.classList.toggle('active', _rekapMode === 'rekap');
+        btnR.style.background = _rekapMode === 'rekap' ? '#38bdf8' : '#1e40af';
+        btnR.style.color = _rekapMode === 'rekap' ? '#0f172a' : '#fff';
+      }
+      if (panelE) panelE.style.display = _rekapMode === 'edit' ? 'block' : 'none';
+      if (panelR) panelR.style.display = _rekapMode === 'rekap' ? 'block' : 'none';
+      // Toolbar admin hanya di mode edit
+      const isAdmin = currentRole === 'admin';
+      const tbAdmin = document.getElementById('toolbarRekapAdmin');
+      const tbView = document.getElementById('toolbarRekapView');
+      if (_rekapMode === 'edit') {
+        if (tbAdmin) tbAdmin.style.display = isAdmin ? 'flex' : 'none';
+        if (tbView) tbView.style.display = isAdmin ? 'none' : 'flex';
+      }
+    }
+
+    function normAbsStatus(st) {
+      const s = String(st || '').toUpperCase().trim();
+      if (s === 'TW' || s === 'H' || s === 'HADIR') return 'TW';
+      if (s === 'TL' || s === 'TERLAMBAT') return 'TL';
+      if (s === 'IZIN' || s === 'I') return 'Izin';
+      if (s === 'SAKIT' || s === 'S') return 'Sakit';
+      if (s === 'A' || s === 'ALPA' || s === 'ALPHA' || s === 'ABSEN') return 'Alpa';
+      if (s === 'B' || s === 'BOLOS') return 'Bolos';
+      return s || '-';
+    }
+
+    async function loadRekapAgregat() {
+      const tbody = document.getElementById('tbodyRekapAgregat');
+      if (!tbody) return;
+      tbody.innerHTML = '<tr><td colspan="12" style="text-align:center;padding:16px;color:#94a3b8;">Memuat...</td></tr>';
+
+      let dari = document.getElementById('rekapDari')?.value || '';
+      let sampai = document.getElementById('rekapSampai')?.value || '';
+      const qNama = (document.getElementById('rekapNama')?.value || '').trim().toLowerCase();
+      const kelas = document.getElementById('rekapKelas')?.value || '';
+      const tipe = document.getElementById('rekapTipe')?.value || '';
+
+      // Jika tanggal kosong, isi dari periode filter
+      if (!dari || !sampai) applyRekapPeriodeDates();
+      dari = document.getElementById('rekapDari')?.value || '';
+      sampai = document.getElementById('rekapSampai')?.value || '';
+      if (!dari) dari = new Date().toISOString().slice(0, 10);
+      if (!sampai) sampai = dari;
+
+      try {
+        await loadSesi();
+        let rows = await fetchAbsensiRange(dari, sampai, { tipe: tipe || undefined });
+
+        // Filter nama
+        if (qNama) {
+          rows = rows.filter(r =>
+            String(r.nama || '').toLowerCase().includes(qNama) ||
+            String(r.kode || '').toLowerCase().includes(qNama)
+          );
+        }
+        if (tipe) rows = rows.filter(r => r.tipe === tipe);
+
+        // Map kelas dari siswa
+        let kelasByRef = {};
+        if (supabaseClient) {
+          try {
+            const ids = [...new Set(rows.filter(r => r.tipe === 'siswa' && r.ref_id).map(r => Number(r.ref_id)))];
+            const nisns = [...new Set(rows.filter(r => r.tipe === 'siswa' && r.kode).map(r => String(r.kode)))];
+            if (ids.length) {
+              const { data: ss } = await supabaseClient.from('siswa').select('id, nisn, kelas, nama').in('id', ids);
+              (ss || []).forEach(s => {
+                kelasByRef['id:' + s.id] = s.kelas || '';
+                if (s.nisn) kelasByRef['k:' + s.nisn] = s.kelas || '';
+              });
+            }
+            if (nisns.length) {
+              const { data: ss2 } = await supabaseClient.from('siswa').select('id, nisn, kelas').in('nisn', nisns);
+              (ss2 || []).forEach(s => {
+                kelasByRef['id:' + s.id] = s.kelas || kelasByRef['id:' + s.id] || '';
+                if (s.nisn) kelasByRef['k:' + s.nisn] = s.kelas || '';
+              });
+            }
+          } catch (e) { console.warn(e); }
+        }
+
+        if (kelas) {
+          rows = rows.filter(r => {
+            if (r.tipe !== 'siswa') return !kelas; // guru tidak punya kelas filter ketat
+            const k = r.kelas || kelasByRef['id:' + r.ref_id] || kelasByRef['k:' + r.kode] || '';
+            return String(k) === String(kelas);
+          });
+        }
+
+        // Agregat per orang
+        const map = new Map();
+        rows.forEach(r => {
+          const key = (r.tipe || '') + '|' + (r.ref_id || r.kode || r.nama);
+          if (!map.has(key)) {
+            const kls = r.kelas || kelasByRef['id:' + r.ref_id] || kelasByRef['k:' + r.kode] || (r.tipe === 'guru' ? '-' : '');
+            map.set(key, {
+              id: r.kode || r.ref_id || '-',
+              nama: r.nama || '-',
+              kelas: kls || '-',
+              tipe: r.tipe,
+              TW: 0, TL: 0, Izin: 0, Sakit: 0, Alpa: 0, Bolos: 0, other: 0,
+              total: 0
+            });
+          }
+          const o = map.get(key);
+          o.total++;
+          const st = normAbsStatus(r.status);
+          if (st === 'TW') o.TW++;
+          else if (st === 'TL') o.TL++;
+          else if (st === 'Izin') o.Izin++;
+          else if (st === 'Sakit') o.Sakit++;
+          else if (st === 'Alpa') o.Alpa++;
+          else if (st === 'Bolos') o.Bolos++;
+          else o.other++;
+        });
+
+        let list = [...map.values()].sort((a, b) =>
+          String(a.kelas).localeCompare(String(b.kelas)) || String(a.nama).localeCompare(String(b.nama))
+        );
+
+        const info = document.getElementById('infoRekapAgregat');
+        if (info) info.textContent = list.length + ' orang · ' + dari + ' s/d ' + sampai;
+
+        if (!list.length) {
+          tbody.innerHTML = '<tr><td colspan="12" style="text-align:center;padding:16px;color:#94a3b8;">Tidak ada data</td></tr>';
+          return;
+        }
+
+        tbody.innerHTML = list.map(o => {
+          // Nilai Hadir = TW + TL (hadir fisik)
+          const nilaiHadir = o.TW + o.TL;
+          const jml = o.total;
+          const pct = jml ? Math.round((nilaiHadir / jml) * 1000) / 10 : 0;
+          const pctStyle = pct < 70 ? 'color:#dc2626;font-weight:700;' : '';
+          return '<tr>' +
+            '<td>' + esc(String(o.id)) + '</td>' +
+            '<td>' + esc(o.nama) + '</td>' +
+            '<td style="text-align:center;">' + esc(o.kelas) + '</td>' +
+            '<td style="text-align:center;color:#16a34a;font-weight:600;">' + o.TW + '</td>' +
+            '<td style="text-align:center;color:#ca8a04;font-weight:600;">' + o.TL + '</td>' +
+            '<td style="text-align:center;">' + o.Izin + '</td>' +
+            '<td style="text-align:center;">' + o.Sakit + '</td>' +
+            '<td style="text-align:center;color:#dc2626;">' + o.Alpa + '</td>' +
+            '<td style="text-align:center;color:#7f1d1d;">' + o.Bolos + '</td>' +
+            '<td style="text-align:center;font-weight:600;">' + jml + '</td>' +
+            '<td style="text-align:center;font-weight:600;">' + nilaiHadir + '</td>' +
+            '<td style="text-align:center;' + pctStyle + '">' + pct + '</td>' +
+            '</tr>';
+        }).join('');
+      } catch (e) {
+        console.error(e);
+        tbody.innerHTML = '<tr><td colspan="12" style="color:#ef4444;padding:16px;">Gagal: ' + esc(String(e.message || e)) + '</td></tr>';
+      }
     }
 
     async function loadRekapData(skipMaterialize) {
@@ -10759,10 +11045,20 @@
       }
     }
 
-    document.getElementById('btnCariRekap')?.addEventListener('click', () => loadRekapData());
-    document.getElementById('rekapNama')?.addEventListener('keydown', (e) => {
-      if (e.key === 'Enter') loadRekapData();
+    document.getElementById('btnCariRekap')?.addEventListener('click', () => {
+      if (_rekapMode === 'rekap') loadRekapAgregat();
+      else loadRekapData();
     });
+    document.getElementById('rekapNama')?.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') {
+        if (_rekapMode === 'rekap') loadRekapAgregat();
+        else loadRekapData();
+      }
+    });
+    document.getElementById('btnRekapModeEdit')?.addEventListener('click', () => setRekapMode('edit'));
+    document.getElementById('btnRekapModeRekap')?.addEventListener('click', () => setRekapMode('rekap'));
+    document.getElementById('rekapTahunAjaran')?.addEventListener('change', () => applyRekapPeriodeDates());
+    document.getElementById('rekapSemester')?.addEventListener('change', () => applyRekapPeriodeDates());
 
     function getRekapSelectedIds() {
       const boxes = [...document.querySelectorAll('.cb-rekap-row:checked')];
