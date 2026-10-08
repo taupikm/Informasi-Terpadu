@@ -1829,7 +1829,7 @@
           <span>📚 Mapel</span>
           <span class="acc-icon">▼</span>
         </button>
-        <div class="accordion-body open" id="accMapelBody">
+        <div class="accordion-body" id="accMapelBody">
           <div class="toolbar">
             <button class="btn btn-primary" id="btnTambahMapel">+ Tambah</button>
             <button class="btn btn-secondary" id="btnEditMapel">✏️ Edit</button>
@@ -1995,6 +1995,29 @@
           <div id="listIzinFp" class="check-list" style="max-height:280px;">
             <span style="color:#94a3b8;font-size:12px;">Memuat daftar user...</span>
           </div>
+        </div>
+      </div>
+
+      <div class="accordion">
+        <button type="button" class="accordion-header" data-acc="accArsipBody">
+          <span>📦 Arsip Absensi (Historis)</span>
+          <span class="acc-icon">▼</span>
+        </button>
+        <div class="accordion-body" id="accArsipBody">
+          <p style="font-size:12px;color:#64748b;line-height:1.45;margin-bottom:10px;">
+            Pindahkan data absensi lama ke tabel <b>absensi_historis</b> agar tabel aktif tetap ringan.
+            Rekap &amp; Cari Siswa tetap membaca absensi + historis.
+          </p>
+          <div id="arsipInfo" style="font-size:12px;margin-bottom:10px;color:#334155;">Memuat info...</div>
+          <div class="form-group">
+            <label>Pindahkan data s/d tanggal (inklusif)</label>
+            <input type="date" id="arsipSampaiTanggal">
+          </div>
+          <div class="toolbar" style="gap:8px;">
+            <button class="btn btn-primary" id="btnArsipPreview">Cek Jumlah</button>
+            <button class="btn" id="btnArsipPindah" style="background:#b45309;color:#fff;border:none;">📦 Pindahkan ke Historis</button>
+          </div>
+          <div id="arsipHasil" style="font-size:12px;margin-top:10px;color:#64748b;"></div>
         </div>
       </div>
     </section>
@@ -4447,6 +4470,7 @@
         loadMapelTable(), loadKelasTable(), loadPeriodeTable(),
         loadSesiTable(), loadLiburTable(), loadIzinFpList()
       ]);
+      try { await refreshArsipInfo(); } catch (e) {}
     }
 
     // ----- MAPEL -----
@@ -6374,12 +6398,13 @@
     }
 
     async function createTuSession(bank, deadlineMs) {
+      try { await ensureSiswaKelas(); } catch (e) {}
       const payload = {
         bank_id: Number(bank.id),
         siswa_id: currentUserId,
         nisn: currentUserKode,
         nama: currentUserName,
-        kelas: currentUserKelas,
+        kelas: currentUserKelas || null,
         status: 'sedang',
         skor: null,
         benar: null,
@@ -6798,9 +6823,11 @@
         skor: totalSkor,
         benar: benar,
         total: total,
+        total_skor: maxSkor,
         detail: detail,
         cheat_count: _tuCheatCount || 0,
         status: isTimeout ? 'timeout' : 'selesai',
+        kelas: currentUserKelas || null,
         submitted_at: new Date().toISOString()
       };
 
@@ -8584,6 +8611,10 @@
       setCurrentBankId(ids[0]);
       const r = dataBankSoal.find(x => String(x.id) === String(getCurrentBankId()));
       document.getElementById('bsHasilTitle').textContent = 'Monitoring: ' + (r?.judul || '');
+      const ms = document.getElementById('monStatus');
+      if (ms) ms.value = '';
+      const mk = document.getElementById('monKelas');
+      if (mk) mk.value = '';
       showPage('bank-soal-hasil', true);
       await loadBsHasilTable();
     });
@@ -8603,26 +8634,62 @@
       return '<span style="background:#dcfce7;color:#166534;padding:2px 8px;border-radius:8px;font-size:11px;font-weight:600;">Selesai</span>';
     }
 
-    function monSisaWaktu(r) {
-      if (!r.deadline_at) return '-';
-      const st = String(r.status || '').toLowerCase();
-      if (st === 'selesai' || st === 'timeout') return '-';
-      const sisa = Math.floor((new Date(r.deadline_at).getTime() - Date.now()) / 1000);
-      if (sisa <= 0) return '0:00';
-      const m = Math.floor(sisa / 60);
-      const s = sisa % 60;
+    function monFormatDurasi(sec) {
+      sec = Math.max(0, Math.floor(sec));
+      const m = Math.floor(sec / 60);
+      const s = sec % 60;
       return m + ':' + String(s).padStart(2, '0');
     }
+
+    function monSisaWaktu(r) {
+      const st = String(r.status || 'selesai').toLowerCase();
+      if (st === 'timeout') return '0:00';
+      if (st === 'selesai') {
+        // tampilkan durasi pengerjaan jika ada start/deadline
+        if (r.submitted_at && r.deadline_at) {
+          // sisa saat submit = deadline - submitted (bisa negatif → 0)
+          const sisa = Math.floor((new Date(r.deadline_at).getTime() - new Date(r.submitted_at).getTime()) / 1000);
+          return monFormatDurasi(sisa) + ' sisa';
+        }
+        if (r.submitted_at) {
+          return new Date(r.submitted_at).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' });
+        }
+        return '-';
+      }
+      // sedang ujian
+      if (!r.deadline_at) return '-';
+      const sisa = Math.floor((new Date(r.deadline_at).getTime() - Date.now()) / 1000);
+      if (sisa <= 0) return '0:00';
+      return monFormatDurasi(sisa);
+    }
+
+    let _monMaxSkor = null;
 
     async function loadBsHasilTable() {
       const tbody = document.getElementById('tbodyBsHasil');
       const bankId = getCurrentBankId();
       if (!tbody || !bankId) return;
+
+      // Max skor dari item soal
+      _monMaxSkor = null;
+      try {
+        if (supabaseClient) {
+          const { data: items } = await supabaseClient.from('bank_soal_item').select('skor').eq('bank_id', bankId);
+          if (items && items.length) {
+            _monMaxSkor = items.reduce((a, x) => a + (Number(x.skor) || 1), 0);
+          }
+        } else {
+          const items = JSON.parse(localStorage.getItem('bank_soal_item') || '[]')
+            .filter(x => Number(x.bank_id) === Number(bankId));
+          if (items.length) _monMaxSkor = items.reduce((a, x) => a + (Number(x.skor) || 1), 0);
+        }
+      } catch (e) {}
+
       let rows = [];
       try {
         if (supabaseClient) {
           const { data, error } = await supabaseClient.from('bank_soal_hasil')
-            .select('*').eq('bank_id', bankId).order('submitted_at', { ascending: false });
+            .select('*').eq('bank_id', bankId).order('id', { ascending: false });
           if (error) throw error;
           rows = data || [];
         } else {
@@ -8634,20 +8701,39 @@
         rows = [];
       }
 
-      // Filter kelas & status
-      const fKelas = document.getElementById('monKelas')?.value || '';
-      const fStatus = document.getElementById('monStatus')?.value || '';
-      const kelasSet = new Set();
-      rows.forEach(r => { if (r.kelas) kelasSet.add(r.kelas); });
-      const selKelas = document.getElementById('monKelas');
-      if (selKelas) {
-        const cur = selKelas.value;
-        selKelas.innerHTML = '<option value="">Semua Kelas</option>' +
-          [...kelasSet].sort().map(k => '<option value="' + esc(k) + '">' + esc(k) + '</option>').join('');
-        if (cur) selKelas.value = cur;
+      // Lengkapi kelas kosong dari tabel siswa
+      const needKelas = rows.filter(r => !r.kelas && (r.nisn || r.siswa_id));
+      if (needKelas.length && supabaseClient) {
+        try {
+          const nisns = [...new Set(needKelas.map(r => r.nisn).filter(Boolean))];
+          const ids = [...new Set(needKelas.map(r => r.siswa_id).filter(Boolean))];
+          let siswaMap = {};
+          if (nisns.length) {
+            const { data: ss } = await supabaseClient.from('siswa').select('*').in('nisn', nisns);
+            (ss || []).forEach(s => {
+              const k = s.kelas || s.kelas_nama || s.rombel || s.nama_kelas || '';
+              if (s.nisn) siswaMap['n:' + s.nisn] = k;
+              if (s.id) siswaMap['i:' + s.id] = k;
+            });
+          }
+          if (ids.length) {
+            const { data: ss2 } = await supabaseClient.from('siswa').select('*').in('id', ids);
+            (ss2 || []).forEach(s => {
+              const k = s.kelas || s.kelas_nama || s.rombel || s.nama_kelas || '';
+              if (s.nisn) siswaMap['n:' + s.nisn] = k;
+              if (s.id) siswaMap['i:' + s.id] = k;
+            });
+          }
+          rows = rows.map(r => {
+            if (r.kelas) return r;
+            const k = siswaMap['n:' + r.nisn] || siswaMap['i:' + r.siswa_id] || '';
+            if (k) return Object.assign({}, r, { kelas: k });
+            return r;
+          });
+        } catch (e) { console.warn('kelas enrich', e); }
       }
 
-      // Dedup: jika ada ganda (sedang+selesai), prioritaskan status non-sedang terbaru
+      // Dedup per siswa: prioritaskan selesai > timeout > sedang, lalu terbaru
       const byKey = new Map();
       rows.forEach(r => {
         const key = String(r.siswa_id || r.nisn || r.id);
@@ -8661,16 +8747,34 @@
         };
         if (rank(r) > rank(prev)) byKey.set(key, r);
         else if (rank(r) === rank(prev)) {
-          const t1 = new Date(r.submitted_at || r.deadline_at || 0).getTime();
-          const t2 = new Date(prev.submitted_at || prev.deadline_at || 0).getTime();
+          const t1 = new Date(r.submitted_at || r.deadline_at || 0).getTime() || Number(r.id) || 0;
+          const t2 = new Date(prev.submitted_at || prev.deadline_at || 0).getTime() || Number(prev.id) || 0;
           if (t1 >= t2) byKey.set(key, r);
         }
       });
       rows = [...byKey.values()];
 
+      // Isi filter kelas (jangan reset status)
+      const kelasSet = new Set();
+      rows.forEach(r => { if (r.kelas) kelasSet.add(String(r.kelas)); });
+      const selKelas = document.getElementById('monKelas');
+      if (selKelas) {
+        const cur = selKelas.value;
+        selKelas.innerHTML = '<option value="">Semua Kelas</option>' +
+          [...kelasSet].sort().map(k => '<option value="' + esc(k) + '">' + esc(k) + '</option>').join('');
+        if (cur && [...kelasSet].includes(cur)) selKelas.value = cur;
+        else selKelas.value = '';
+      }
+
+      const fKelas = document.getElementById('monKelas')?.value || '';
+      const fStatus = document.getElementById('monStatus')?.value || '';
+
       dataMonHasil = rows.filter(r => {
-        if (fKelas && String(r.kelas) !== fKelas) return false;
-        if (fStatus && String(r.status || 'selesai').toLowerCase() !== fStatus) return false;
+        if (fKelas && String(r.kelas || '') !== fKelas) return false;
+        if (fStatus) {
+          const st = String(r.status || 'selesai').toLowerCase();
+          if (st !== fStatus) return false;
+        }
         return true;
       });
 
@@ -8681,17 +8785,21 @@
         tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;padding:16px;color:#94a3b8;">Belum ada data monitoring</td></tr>';
         return;
       }
-      tbody.innerHTML = dataMonHasil.map((r, i) =>
-        '<tr data-id="' + r.id + '">' +
-        '<td><input type="checkbox" class="cb-mon" value="' + r.id + '"></td>' +
-        '<td>' + (i + 1) + '</td>' +
-        '<td>' + esc(r.nisn || '-') + '</td>' +
-        '<td>' + esc(r.nama || '-') + '</td>' +
-        '<td>' + esc(r.kelas || '-') + '</td>' +
-        '<td><b>' + (r.skor != null ? r.skor : '-') + '</b></td>' +
-        '<td>' + monStatusLabel(r.status) + '</td>' +
-        '<td style="font-size:12px;white-space:nowrap;">' + monSisaWaktu(r) + '</td></tr>'
-      ).join('');
+      tbody.innerHTML = dataMonHasil.map((r, i) => {
+        const maxS = r.total_skor || _monMaxSkor;
+        const skorTxt = r.skor != null
+          ? ('<b>' + r.skor + '</b>' + (maxS != null ? ' / ' + maxS : ''))
+          : '-';
+        return '<tr data-id="' + r.id + '">' +
+          '<td><input type="checkbox" class="cb-mon" value="' + r.id + '"></td>' +
+          '<td>' + (i + 1) + '</td>' +
+          '<td>' + esc(r.nisn || '-') + '</td>' +
+          '<td>' + esc(r.nama || '-') + '</td>' +
+          '<td>' + esc(r.kelas || '-') + '</td>' +
+          '<td style="white-space:nowrap;">' + skorTxt + '</td>' +
+          '<td>' + monStatusLabel(r.status) + '</td>' +
+          '<td style="font-size:12px;white-space:nowrap;">' + monSisaWaktu(r) + '</td></tr>';
+      }).join('');
     }
 
     document.getElementById('monKelas')?.addEventListener('change', () => loadBsHasilTable());
@@ -8877,6 +8985,275 @@
       alert('Sinkronisasi: ' + ok + ' berhasil' + (fail ? ', ' + fail + ' gagal (cek tabel nilai di Supabase)' : ''));
     });
 
+
+
+    // ============================================================
+    // ABSENSI + HISTORIS
+    // ============================================================
+    async function fetchAbsensiRange(dari, sampai, extraFilter) {
+      const f = extraFilter || {};
+      async function oneTable(table) {
+        if (!supabaseClient) {
+          const key = table === 'absensi_historis' ? 'absensi_historis' : 'absensi';
+          let rows = JSON.parse(localStorage.getItem(key) || '[]');
+          return rows.filter(r => {
+            const t = String(r.tanggal || '').slice(0, 10);
+            if (dari && t < dari) return false;
+            if (sampai && t > sampai) return false;
+            if (f.tipe && r.tipe !== f.tipe) return false;
+            if (f.kode && String(r.kode) !== String(f.kode)) return false;
+            if (f.ref_id && String(r.ref_id) !== String(f.ref_id)) return false;
+            if (f.namaIlike) {
+              const n = String(r.nama || '').toLowerCase();
+              const k = String(r.kode || '').toLowerCase();
+              const q = String(f.namaIlike).toLowerCase();
+              if (!n.includes(q) && !k.includes(q)) return false;
+            }
+            return true;
+          });
+        }
+        let q = supabaseClient.from(table).select('*')
+          .gte('tanggal', dari).lte('tanggal', sampai)
+          .order('tanggal', { ascending: false }).order('nama');
+        if (f.tipe) q = q.eq('tipe', f.tipe);
+        if (f.kode) q = q.eq('kode', f.kode);
+        if (f.ref_id) q = q.eq('ref_id', f.ref_id);
+        if (f.namaIlike) {
+          const s = f.namaIlike.replace(/%/g, '');
+          q = q.or('nama.ilike.%' + s + '%,kode.ilike.%' + s + '%');
+        }
+        const { data, error } = await q.limit(20000);
+        if (error) {
+          if (table === 'absensi_historis') return [];
+          throw error;
+        }
+        return data || [];
+      }
+      const [a, h] = await Promise.all([oneTable('absensi'), oneTable('absensi_historis')]);
+      const map = new Map();
+      [...a, ...h].forEach(r => {
+        const key = [r.id, r.tanggal, r.kode, r.sesi_id, r.status].join('|');
+        if (!map.has(key)) map.set(key, r);
+      });
+      return [...map.values()];
+    }
+
+    async function refreshArsipInfo() {
+      const el = document.getElementById('arsipInfo');
+      if (!el) return;
+      try {
+        let nAktif = 0, nHist = 0, minT = null, maxT = null;
+        if (supabaseClient) {
+          const { count: c1 } = await supabaseClient.from('absensi').select('id', { count: 'exact', head: true });
+          nAktif = c1 || 0;
+          try {
+            const { count: c2 } = await supabaseClient.from('absensi_historis').select('id', { count: 'exact', head: true });
+            nHist = c2 || 0;
+          } catch (e) { nHist = 0; }
+          const { data: mm } = await supabaseClient.from('absensi').select('tanggal').order('tanggal').limit(1);
+          const { data: mx } = await supabaseClient.from('absensi').select('tanggal').order('tanggal', { ascending: false }).limit(1);
+          minT = mm && mm[0] ? String(mm[0].tanggal).slice(0, 10) : null;
+          maxT = mx && mx[0] ? String(mx[0].tanggal).slice(0, 10) : null;
+        } else {
+          nAktif = JSON.parse(localStorage.getItem('absensi') || '[]').length;
+          nHist = JSON.parse(localStorage.getItem('absensi_historis') || '[]').length;
+        }
+        el.innerHTML = 'Tabel aktif: <b>' + nAktif + '</b> baris · Historis: <b>' + nHist + '</b> baris' +
+          (minT ? '<br>Rentang aktif: ' + minT + ' → ' + (maxT || minT) : '');
+        const inp = document.getElementById('arsipSampaiTanggal');
+        if (inp && !inp.value) {
+          const d = new Date();
+          d.setDate(d.getDate() - 60);
+          inp.value = d.toISOString().slice(0, 10);
+        }
+      } catch (e) {
+        el.textContent = 'Gagal muat info: ' + (e.message || e);
+      }
+    }
+
+    document.getElementById('btnArsipPreview')?.addEventListener('click', async () => {
+      const tgl = document.getElementById('arsipSampaiTanggal')?.value;
+      const out = document.getElementById('arsipHasil');
+      if (!tgl) { alert('Pilih tanggal batas'); return; }
+      try {
+        let n = 0;
+        if (supabaseClient) {
+          const { count } = await supabaseClient.from('absensi').select('id', { count: 'exact', head: true }).lte('tanggal', tgl);
+          n = count || 0;
+        } else {
+          n = JSON.parse(localStorage.getItem('absensi') || '[]').filter(r => String(r.tanggal).slice(0, 10) <= tgl).length;
+        }
+        out.innerHTML = 'Akan dipindahkan: <b>' + n + '</b> baris (tanggal ≤ ' + tgl + ')';
+      } catch (e) {
+        out.textContent = 'Gagal: ' + (e.message || e);
+      }
+    });
+
+    document.getElementById('btnArsipPindah')?.addEventListener('click', async () => {
+      const tgl = document.getElementById('arsipSampaiTanggal')?.value;
+      const out = document.getElementById('arsipHasil');
+      if (!tgl) { alert('Pilih tanggal batas'); return; }
+      if (!(await showConfirm('Pindahkan semua absensi s/d ' + tgl + ' ke historis?', 'Arsip Absensi', '📦'))) return;
+      out.textContent = 'Memindahkan...';
+      try {
+        let moved = 0;
+        if (supabaseClient) {
+          while (true) {
+            const { data, error } = await supabaseClient.from('absensi').select('*')
+              .lte('tanggal', tgl).limit(500);
+            if (error) throw error;
+            if (!data || !data.length) break;
+            const { error: e2 } = await supabaseClient.from('absensi_historis').insert(data);
+            if (e2) throw e2;
+            const ids = data.map(r => r.id);
+            const { error: e3 } = await supabaseClient.from('absensi').delete().in('id', ids);
+            if (e3) throw e3;
+            moved += data.length;
+            if (data.length < 500) break;
+          }
+        } else {
+          let aktif = JSON.parse(localStorage.getItem('absensi') || '[]');
+          let hist = JSON.parse(localStorage.getItem('absensi_historis') || '[]');
+          const keep = [], move = [];
+          aktif.forEach(r => {
+            if (String(r.tanggal).slice(0, 10) <= tgl) move.push(r);
+            else keep.push(r);
+          });
+          hist = hist.concat(move);
+          localStorage.setItem('absensi', JSON.stringify(keep));
+          localStorage.setItem('absensi_historis', JSON.stringify(hist));
+          moved = move.length;
+        }
+        out.innerHTML = 'Berhasil memindahkan <b>' + moved + '</b> baris ke historis.';
+        await refreshArsipInfo();
+      } catch (e) {
+        out.textContent = 'Gagal: ' + (e.message || e) + ' — pastikan tabel absensi_historis sudah dibuat.';
+      }
+    });
+
+    // ============================================================
+    // CARI DATA SISWA (Orang Tua) — tabel seperti Rekap
+    // ============================================================
+    async function initCariSiswaPage() {
+      if (!aktifPeriode) await loadAktifPeriode();
+      await loadSesi();
+      const dari = document.getElementById('cariSiswaDari');
+      const sampai = document.getElementById('cariSiswaSampai');
+      if (dari && !dari.value && aktifPeriode) {
+        dari.value = (aktifPeriode.tgl_mulai || '').toString().slice(0, 10);
+      }
+      if (sampai && !sampai.value && aktifPeriode) {
+        sampai.value = (aktifPeriode.tgl_akhir || '').toString().slice(0, 10);
+      }
+    }
+
+    document.getElementById('btnCariSiswaOrtu')?.addEventListener('click', () => loadCariSiswaRekap());
+    document.getElementById('cariSiswaQ')?.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') loadCariSiswaRekap();
+    });
+
+    async function loadCariSiswaRekap() {
+      const q = (document.getElementById('cariSiswaQ')?.value || '').trim();
+      const dari = document.getElementById('cariSiswaDari')?.value || '';
+      const sampai = document.getElementById('cariSiswaSampai')?.value || '';
+      const tbody = document.getElementById('tbodyCariSiswa');
+      const thead = document.getElementById('theadCariSiswa');
+      const info = document.getElementById('cariSiswaInfo');
+      if (!tbody) return;
+      if (!q) {
+        alert('Isi Nama atau NISN siswa');
+        return;
+      }
+      if (!dari || !sampai) {
+        alert('Isi rentang tanggal');
+        return;
+      }
+      tbody.innerHTML = '<tr><td colspan="10" style="text-align:center;padding:16px;color:#94a3b8;">Memuat...</td></tr>';
+      try {
+        await loadSesi();
+        const sesiList = (dataSesi || []).filter(s => s.aktif !== false)
+          .sort((a, b) => (a.urutan || 0) - (b.urutan || 0));
+
+        let rows = await fetchAbsensiRange(dari, sampai, { tipe: 'siswa', namaIlike: q });
+        // Filter lebih ketat: nama mengandung q ATAU kode/nisn exact/contains
+        const ql = q.toLowerCase();
+        rows = rows.filter(r => {
+          const n = String(r.nama || '').toLowerCase();
+          const k = String(r.kode || '').toLowerCase();
+          return n.includes(ql) || k.includes(ql) || k === ql;
+        });
+
+        if (!rows.length) {
+          info.textContent = 'Tidak ada data kehadiran untuk "' + q + '" pada rentang tersebut.';
+          tbody.innerHTML = '<tr><td colspan="10" style="text-align:center;padding:16px;color:#94a3b8;">Tidak ada data</td></tr>';
+          thead.innerHTML = '<tr><th>No</th><th>Tanggal</th><th>Nama</th><th>Kelas</th></tr>';
+          return;
+        }
+
+        // Kelompokkan per tanggal + orang (nama/kode)
+        // Sama seperti rekap: pivot sesi
+        const byDayPerson = {};
+        rows.forEach(r => {
+          const tgl = String(r.tanggal).slice(0, 10);
+          const key = tgl + '|' + (r.kode || r.ref_id || r.nama);
+          if (!byDayPerson[key]) {
+            byDayPerson[key] = {
+              tanggal: tgl,
+              nama: r.nama,
+              kode: r.kode,
+              kelas: r.kelas || r.kelas_nama || '',
+              sesi: {}
+            };
+          }
+          const sid = r.sesi_id != null ? String(r.sesi_id) : String(r.sesi_urutan || r.sesi_nama || '');
+          byDayPerson[key].sesi[sid] = r;
+          // also by urutan
+          if (r.sesi_urutan != null) byDayPerson[key].sesi['u' + r.sesi_urutan] = r;
+        });
+
+        const list = Object.values(byDayPerson).sort((a, b) =>
+          b.tanggal.localeCompare(a.tanggal) || String(a.nama).localeCompare(String(b.nama))
+        );
+
+        // Header seperti rekap
+        let head = '<tr><th>No</th><th>Tanggal</th><th>NISN</th><th>Nama</th><th>Kelas</th>';
+        sesiList.forEach((s, i) => {
+          head += '<th>S' + (s.urutan || (i + 1)) + '</th>';
+        });
+        head += '</tr>';
+        thead.innerHTML = head;
+
+        tbody.innerHTML = list.map((row, i) => {
+          let html = '<tr><td>' + (i + 1) + '</td>' +
+            '<td style="white-space:nowrap;font-size:12px;">' + row.tanggal + '</td>' +
+            '<td>' + esc(row.kode || '-') + '</td>' +
+            '<td>' + esc(row.nama || '-') + '</td>' +
+            '<td>' + esc(row.kelas || '-') + '</td>';
+          sesiList.forEach((s, si) => {
+            const cell = row.sesi[String(s.id)] || row.sesi['u' + s.urutan] ||
+              row.sesi[String(s.urutan)] || row.sesi[s.nama] || null;
+            const st = cell ? (cell.status || '-') : '-';
+            const jam = cell && cell.jam_scan ? String(cell.jam_scan).slice(0, 5) : '';
+            let color = '#64748b';
+            if (st === 'TW' || st === 'H') color = '#16a34a';
+            else if (st === 'TL') color = '#f59e0b';
+            else if (st === 'A' || st === 'B') color = '#ef4444';
+            else if (st === 'Izin' || st === 'Sakit') color = '#2563eb';
+            html += '<td style="text-align:center;font-size:11px;color:' + color + ';font-weight:600;">' +
+              esc(st) + (jam ? '<div style="font-weight:400;color:#94a3b8;">' + jam + '</div>' : '') + '</td>';
+          });
+          html += '</tr>';
+          return html;
+        }).join('');
+
+        info.textContent = list.length + ' baris · ' + q + ' · ' + dari + ' s/d ' + sampai +
+          ' (absensi + historis)';
+      } catch (e) {
+        console.error(e);
+        tbody.innerHTML = '<tr><td colspan="10" style="color:#ef4444;padding:16px;">Gagal: ' + esc(e.message || e) + '</td></tr>';
+      }
+    }
+
     // ============================================================
     // REKAP DATA ABSENSI
     // ============================================================
@@ -9004,17 +9381,8 @@
           }
         }
 
-        // Hanya data dari DATABASE (tanpa baris virtual)
-        let rows = [];
-        if (supabaseClient) {
-          let query = supabaseClient.from('absensi').select('*')
-            .gte('tanggal', dari).lte('tanggal', sampai)
-            .order('tanggal', { ascending: false }).order('nama');
-          if (tipe) query = query.eq('tipe', tipe);
-          const { data, error } = await query.limit(15000);
-          if (error) throw error;
-          rows = data || [];
-        }
+        // Data dari absensi aktif + historis
+        let rows = await fetchAbsensiRange(dari, sampai, { tipe: tipe || undefined });
 
         // Filter kelas via daftar siswa
         let kelasIds = null;
