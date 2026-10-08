@@ -2,7 +2,7 @@
 <html lang="id">
 <head>
   <meta charset="UTF-8" />
-  <!-- CACHE_BUST 2026-10-08-n -->
+  <!-- CACHE_BUST 2026-10-08-o -->
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
   <title>SMPN PANTANG MUNDUR</title>
   <!-- Supabase JS Client (CDN) -->
@@ -2235,7 +2235,7 @@
 
   <!-- FOOTER -->
   <footer class="footer">
-    © 2026 SMPN PANTANG MUNDUR * <span style="opacity:.7">· v2026.10.08n</span>
+    © 2026 SMPN PANTANG MUNDUR * <span style="opacity:.7">· v2026.10.08o</span>
   </footer>
 
   <!-- ========== MODAL LOGIN ========== -->
@@ -10701,7 +10701,17 @@
     }
 
     function setRekapMode(mode) {
-      _rekapMode = mode === 'rekap' ? 'rekap' : 'edit';
+      const isAdmin = currentRole === 'admin';
+      // Guru: hanya Rekap Kehadiran, switch disembunyikan
+      if (!isAdmin) {
+        _rekapMode = 'rekap';
+      } else {
+        _rekapMode = mode === 'rekap' ? 'rekap' : 'edit';
+      }
+
+      const switchWrap = document.getElementById('btnRekapModeEdit')?.parentElement;
+      if (switchWrap) switchWrap.style.display = isAdmin ? 'flex' : 'none';
+
       const btnE = document.getElementById('btnRekapModeEdit');
       const btnR = document.getElementById('btnRekapModeRekap');
       const panelE = document.getElementById('rekapPanelEdit');
@@ -10716,15 +10726,17 @@
         btnR.style.background = _rekapMode === 'rekap' ? '#38bdf8' : '#1e40af';
         btnR.style.color = _rekapMode === 'rekap' ? '#0f172a' : '#fff';
       }
-      if (panelE) panelE.style.display = _rekapMode === 'edit' ? 'block' : 'none';
+      if (panelE) panelE.style.display = (_rekapMode === 'edit' && isAdmin) ? 'block' : 'none';
       if (panelR) panelR.style.display = _rekapMode === 'rekap' ? 'block' : 'none';
-      // Toolbar admin hanya di mode edit
-      const isAdmin = currentRole === 'admin';
+
       const tbAdmin = document.getElementById('toolbarRekapAdmin');
       const tbView = document.getElementById('toolbarRekapView');
-      if (_rekapMode === 'edit') {
-        if (tbAdmin) tbAdmin.style.display = isAdmin ? 'flex' : 'none';
-        if (tbView) tbView.style.display = isAdmin ? 'none' : 'flex';
+      if (_rekapMode === 'edit' && isAdmin) {
+        if (tbAdmin) tbAdmin.style.display = 'flex';
+        if (tbView) tbView.style.display = 'none';
+      } else {
+        if (tbAdmin) tbAdmin.style.display = 'none';
+        if (tbView) tbView.style.display = 'none';
       }
     }
 
