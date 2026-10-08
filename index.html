@@ -2,6 +2,7 @@
 <html lang="id">
 <head>
   <meta charset="UTF-8" />
+  <!-- CACHE_BUST 2026-10-08-a -->
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
   <title>SMPN PANTANG MUNDUR</title>
   <!-- Supabase JS Client (CDN) -->
@@ -1203,15 +1204,32 @@
 
     <!-- PLACEHOLDER PAGES -->
     <section class="page" id="page-cari-siswa">
-      <div class="placeholder">
-        <div class="icon">🔍</div>
-        <h2>Cari Data Siswa</h2>
-        <p>Halaman pencarian data siswa</p>
-        <br>
-        <div class="card" style="text-align:left;max-width:400px;margin:0 auto;">
-          <input type="text" placeholder="Ketik nama / NIS..." style="width:100%;padding:12px;border:1px solid #e2e8f0;border-radius:8px;font-size:14px;margin-bottom:10px;">
-          <button class="btn btn-primary" style="width:100%;">Cari</button>
+      <div class="page-title">Cari Data Siswa (Orang Tua)</div>
+      <div class="card" style="padding:12px;margin-bottom:10px;">
+        <div class="rekap-filter-row">
+          <label>Nama / NISN</label>
+          <input type="text" id="cariSiswaQ" placeholder="Wajib diisi">
         </div>
+        <div class="rekap-filter-row">
+          <label>Dari Tanggal</label>
+          <input type="date" id="cariSiswaDari">
+        </div>
+        <div class="rekap-filter-row">
+          <label>Sampai Tanggal</label>
+          <input type="date" id="cariSiswaSampai">
+        </div>
+        <button type="button" class="btn btn-primary" id="btnCariSiswaOrtu" style="width:100%;margin-top:8px;">🔍 Cari Kehadiran</button>
+      </div>
+      <div id="cariSiswaInfo" style="font-size:12px;color:#64748b;margin-bottom:8px;"></div>
+      <div class="table-wrap">
+        <table id="tableCariSiswa">
+          <thead id="theadCariSiswa">
+            <tr><th>No</th><th>Tanggal</th><th>NISN</th><th>Nama</th><th>Kelas</th></tr>
+          </thead>
+          <tbody id="tbodyCariSiswa">
+            <tr><td colspan="5" style="text-align:center;padding:16px;color:#94a3b8;">Masukkan Nama/NISN lalu Cari</td></tr>
+          </tbody>
+        </table>
       </div>
     </section>
 
@@ -3272,6 +3290,7 @@
       if (pageId === 'dashboard') loadDashboard();
       if (pageId === 'input-izin') initIzinPage();
       if (pageId === 'rekap-data') initRekapPage();
+      if (pageId === 'cari-siswa') initCariSiswaPage();
       if (pageId === 'kelola-tugas') initBankSoalPage();
       if (pageId === 'tugas-ujian') initTugasSiswaPage();
       if (pageId === 'kerjakan-ujian') { /* stay */ }
@@ -9150,6 +9169,12 @@
     document.getElementById('btnCariSiswaOrtu')?.addEventListener('click', () => loadCariSiswaRekap());
     document.getElementById('cariSiswaQ')?.addEventListener('keydown', (e) => {
       if (e.key === 'Enter') loadCariSiswaRekap();
+    });
+    // Fallback delegation (jika elemen diganti)
+    document.addEventListener('click', (e) => {
+      if (e.target && (e.target.id === 'btnCariSiswaOrtu' || e.target.closest?.('#btnCariSiswaOrtu'))) {
+        loadCariSiswaRekap();
+      }
     });
 
     async function loadCariSiswaRekap() {
