@@ -6401,17 +6401,57 @@
         let rows = [];
         if (supabaseClient) {
           const { data } = await supabaseClient.from('absensi')
-            .select('jam_scan, sesi_nama, status')
+            .select('jam_scan, sesi_id, sesi_nama, sesi_urutan, status')
             .eq('tanggal', today).eq('tipe', 'siswa').eq('kode', currentUserKode)
-            .order('jam_scan');
+            .order('sesi_urutan', { ascending: true });
           rows = data || [];
         }
         if (!rows.length) {
           tbody.innerHTML = '<tr><td colspan="3" style="text-align:center;padding:16px;color:#94a3b8;">Belum ada absen hari ini</td></tr>';
           return;
         }
+        // Pastikan data sesi ada (untuk jam_akhir status A/B)
+        try {
+          if (typeof loadSesi === 'function' && (!dataSesi || !dataSesi.length)) await loadSesi();
+        } catch (e) {}
+        const sesiList = (typeof dataSesi !== 'undefined' && dataSesi) ? dataSesi : [];
+
+        function jamAkhirSesi(r) {
+          const byId = sesiList.find(s => String(s.id) === String(r.sesi_id));
+          if (byId && byId.jam_akhir) return String(byId.jam_akhir).slice(0, 5);
+          const byNama = sesiList.find(s => String(s.nama || '') === String(r.sesi_nama || ''));
+          if (byNama && byNama.jam_akhir) return String(byNama.jam_akhir).slice(0, 5);
+          const byUrut = sesiList.find(s => r.sesi_urutan != null && Number(s.urutan) === Number(r.sesi_urutan));
+          if (byUrut && byUrut.jam_akhir) return String(byUrut.jam_akhir).slice(0, 5);
+          return '';
+        }
+        function tampilJam(r) {
+          const st = String(r.status || '').toUpperCase();
+          // Status tidak scan (A=Alpa, B=Bolos): pakai jam akhir sesi
+          if (st === 'A' || st === 'B' || st === 'ALPA' || st === 'ALPHA' || st === 'BOLOS') {
+            const ja = jamAkhirSesi(r);
+            if (ja) return ja;
+          }
+          if (r.jam_scan) {
+            try {
+              const d = new Date(r.jam_scan);
+              if (!isNaN(d.getTime())) {
+                return d.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+              }
+            } catch (e) {}
+            const s = String(r.jam_scan);
+            if (s.length >= 8 && s.indexOf('T') === -1) return s.slice(0, 8);
+            if (s.length >= 5) return s.slice(11, 19) || s.slice(0, 5);
+          }
+          // Fallback A/B tanpa sesi
+          if (st === 'A' || st === 'B' || st === 'ALPA' || st === 'ALPHA' || st === 'BOLOS') {
+            return jamAkhirSesi(r) || '-';
+          }
+          return '-';
+        }
+
         tbody.innerHTML = rows.map(r =>
-          '<tr><td>' + esc(String(r.jam_scan || '-').slice(0, 8)) + '</td>' +
+          '<tr><td>' + esc(tampilJam(r)) + '</td>' +
           '<td>' + esc(r.sesi_nama || '-') + '</td>' +
           '<td><b>' + esc(r.status || '-') + '</b></td></tr>'
         ).join('');
