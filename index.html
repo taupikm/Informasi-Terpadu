@@ -2,7 +2,7 @@
 <html lang="id">
 <head>
   <meta charset="UTF-8" />
-  <!-- CACHE_BUST 2026-10-08-a -->
+  <!-- CACHE_BUST 2026-10-08-b -->
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
   <title>SMPN PANTANG MUNDUR</title>
   <!-- Supabase JS Client (CDN) -->
@@ -2044,7 +2044,7 @@
 
   <!-- FOOTER -->
   <footer class="footer">
-    © 2026 SMPN PANTANG MUNDUR *
+    © 2026 SMPN PANTANG MUNDUR * <span style="opacity:.7">· v2026.10.08b</span>
   </footer>
 
   <!-- ========== MODAL LOGIN ========== -->
@@ -4476,15 +4476,14 @@
         btn.classList.toggle('open', !isOpen);
       });
     });
-    // Open first accordion header by default
-    const firstAcc = document.querySelector('#accMapelBody');
-    if (firstAcc) {
-      firstAcc.classList.add('open');
-      const hdr = document.querySelector('[data-acc="accMapelBody"]');
-      if (hdr) hdr.classList.add('open');
-    }
+    // Pastikan semua accordion tertutup saat load
+    document.querySelectorAll('.accordion-body').forEach(b => b.classList.remove('open'));
+    document.querySelectorAll('.accordion-header').forEach(h => h.classList.remove('open'));
 
     async function loadPengaturan() {
+      // Tutup semua accordion setiap kali buka halaman pengaturan
+      document.querySelectorAll('#page-pengaturan .accordion-body').forEach(b => b.classList.remove('open'));
+      document.querySelectorAll('#page-pengaturan .accordion-header').forEach(h => h.classList.remove('open'));
       await Promise.all([
         loadMapelTable(), loadKelasTable(), loadPeriodeTable(),
         loadSesiTable(), loadLiburTable(), loadIzinFpList()
