@@ -2,7 +2,7 @@
 <html lang="id">
 <head>
   <meta charset="UTF-8" />
-  <!-- CACHE_BUST 2026-10-08-e -->
+  <!-- CACHE_BUST 2026-10-08-h -->
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
   <title>SMPN PANTANG MUNDUR</title>
   <!-- Supabase JS Client (CDN) -->
@@ -1317,7 +1317,38 @@
       </div>
     </section>
     <section class="page" id="page-nilai-saya">
-      <div class="placeholder"><div class="icon">📈</div><h2>Lihat Nilai Saya</h2><p>Halaman melihat nilai pribadi siswa</p></div>
+      <div class="page-title">Lihat Nilai Saya</div>
+      <div class="card" style="padding:12px;margin-bottom:10px;font-size:13px;line-height:1.55;">
+        <div>Periode : <b id="nsPeriodeLabel">-</b></div>
+        <div style="margin-top:6px;">Nama : <b id="nsNama">-</b></div>
+        <div>NISN : <b id="nsNisn">-</b></div>
+        <div>Kelas : <b id="nsKelas">-</b></div>
+      </div>
+      <div style="text-align:center;font-weight:700;font-size:14px;margin:8px 0 10px;letter-spacing:0.3px;">DAFTAR NILAI</div>
+      <div class="table-wrap">
+        <table id="tableNilaiSaya" style="min-width:0;width:100%;table-layout:auto;font-size:12px;">
+          <thead id="theadNilaiSaya">
+            <tr>
+              <th style="width:36px;">No</th>
+              <th>Mata Pelajaran</th>
+              <th style="text-align:center;">RNH</th>
+              <th style="text-align:center;">NR</th>
+            </tr>
+          </thead>
+          <tbody id="tbodyNilaiSaya">
+            <tr><td colspan="4" style="text-align:center;padding:16px;color:#94a3b8;">Memuat...</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="card" style="padding:12px;margin-top:10px;font-size:11px;color:#475569;line-height:1.55;">
+        <b>KETERANGAN :</b>
+        <ol style="margin:6px 0 0 16px;padding:0;">
+          <li><b>RNH</b> = Rata-rata Nilai Harian (NH, TGS, dll.), tidak termasuk PTS, PAS, PAT, ASAS, ASAJ, ASAT.</li>
+          <li>Kolom <b>PTS / PAS / PAT / ASAS</b> dll. muncul hanya jika nilainya sudah ada.</li>
+          <li><b>NR</b> = Nilai Akhir / Rapor = rata-rata seluruh penilaian.</li>
+          <li>Pembagi = banyaknya penilaian yang dilaksanakan guru (nilai kosong dihitung 0).</li>
+        </ol>
+      </div>
     </section>
     <section class="page" id="page-kelulusan">
       <div class="placeholder"><div class="icon">🎓</div><h2>Kelulusan</h2><p>Halaman informasi kelulusan</p></div>
@@ -2126,7 +2157,7 @@
 
   <!-- FOOTER -->
   <footer class="footer">
-    © 2026 SMPN PANTANG MUNDUR * <span style="opacity:.7">· v2026.10.08g</span>
+    © 2026 SMPN PANTANG MUNDUR * <span style="opacity:.7">· v2026.10.08h</span>
   </footer>
 
   <!-- ========== MODAL LOGIN ========== -->
@@ -3440,6 +3471,7 @@
       if (pageId === 'sidik-jari') initSidikJariSiswaPage();
       if (pageId === 'kelola-tugas') initBankSoalPage();
       if (pageId === 'tugas-ujian') initTugasSiswaPage();
+      if (pageId === 'nilai-saya') loadNilaiSaya();
       if (pageId === 'kerjakan-ujian') { /* stay */ }
       if (pageId === 'bank-soal-detail') {
         const bid = getCurrentBankId();
@@ -4632,6 +4664,199 @@
         alert('Gagal memuat daftar nilai: ' + (e.message || e));
       }
     });
+
+    // ============================================================
+    // LIHAT NILAI SAYA (Siswa / Orang Tua)
+    // ============================================================
+    const NS_EXCLUDE_RNH = new Set(['PTS', 'PAS', 'PAT', 'ASA', 'ASAJ', 'ASAS', 'ASAT', 'UAS', 'UTS']);
+    const NS_FORMAL_ORDER = ['PTS', 'PAS', 'PAT', 'ASAS', 'ASAJ', 'ASAT', 'UAS', 'UTS'];
+
+    function nsFmtNilai(v) {
+      if (v == null || v === '' || isNaN(Number(v))) return '-';
+      const n = Number(v);
+      return (Math.round(n * 10) / 10).toFixed(n % 1 === 0 ? 0 : 1);
+    }
+
+    function nsAvg(sum, denom) {
+      if (!denom || denom <= 0) return null;
+      return sum / denom;
+    }
+
+    async function loadNilaiSaya() {
+      const tbody = document.getElementById('tbodyNilaiSaya');
+      const thead = document.getElementById('theadNilaiSaya');
+      if (!tbody || !thead) return;
+
+      // Harus login sebagai siswa
+      if (currentRole !== 'siswa' || !currentUserId) {
+        document.getElementById('nsPeriodeLabel').textContent = '-';
+        document.getElementById('nsNama').textContent = '-';
+        document.getElementById('nsNisn').textContent = '-';
+        document.getElementById('nsKelas').textContent = '-';
+        tbody.innerHTML = '<tr><td colspan="4" style="text-align:center;padding:16px;color:#ef4444;">Login sebagai siswa untuk melihat nilai</td></tr>';
+        return;
+      }
+
+      tbody.innerHTML = '<tr><td colspan="4" style="text-align:center;padding:16px;color:#94a3b8;">Memuat...</td></tr>';
+
+      try {
+        await loadAktifPeriode();
+        if (!masterMapel.length) await loadMasterMapelKelas();
+
+        const periodeLabel = aktifPeriode
+          ? ((aktifPeriode.tahun_ajaran || '') + ' || ' + (aktifPeriode.semester || ''))
+          : 'Belum ada periode aktif';
+        document.getElementById('nsPeriodeLabel').textContent = periodeLabel;
+        document.getElementById('nsNama').textContent = currentUserName || ROLE_DATA.siswa?.name || '-';
+        document.getElementById('nsNisn').textContent = currentUserKode || '-';
+        document.getElementById('nsKelas').textContent = currentUserKelas || '-';
+
+        if (!aktifPeriode) {
+          tbody.innerHTML = '<tr><td colspan="4" style="text-align:center;padding:16px;color:#94a3b8;">Belum ada periode aktif</td></tr>';
+          return;
+        }
+
+        let siswaId = currentUserId;
+        let kelas = currentUserKelas || '';
+        let mapelList = (masterMapel || []).slice();
+
+        // Lengkapi data siswa (kelas) jika perlu
+        if (supabaseClient) {
+          try {
+            const { data: sw } = await supabaseClient.from('siswa')
+              .select('id, nama, nisn, kelas').eq('id', siswaId).maybeSingle();
+            if (sw) {
+              if (sw.kelas) {
+                kelas = sw.kelas;
+                currentUserKelas = sw.kelas;
+                document.getElementById('nsKelas').textContent = sw.kelas;
+              }
+              if (sw.nama) document.getElementById('nsNama').textContent = sw.nama;
+              if (sw.nisn) document.getElementById('nsNisn').textContent = sw.nisn;
+            }
+          } catch (e) { console.warn(e); }
+        }
+
+        // Ambil semua nilai kelas pada periode (untuk tahu slot penilaian guru)
+        // + nilai siswa sendiri
+        let allNilaiKelas = [];
+        let nilaiSiswa = [];
+        if (supabaseClient) {
+          let q = supabaseClient.from('nilai')
+            .select('siswa_id, mapel_id, jenis, ke, nilai')
+            .eq('periode_id', aktifPeriode.id);
+          if (kelas) q = q.eq('kelas', kelas);
+          const { data, error } = await q;
+          if (error) throw error;
+          allNilaiKelas = data || [];
+          nilaiSiswa = allNilaiKelas.filter(n => String(n.siswa_id) === String(siswaId));
+        }
+
+        // Jika mapel master kosong, ambil dari nilai
+        if (!mapelList.length) {
+          const ids = [...new Set(allNilaiKelas.map(n => n.mapel_id).filter(Boolean))];
+          if (ids.length && supabaseClient) {
+            const { data: mm } = await supabaseClient.from('mapel').select('id, kode, mapel').in('id', ids);
+            mapelList = mm || [];
+          }
+        }
+        // Urutkan mapel by id
+        mapelList = mapelList.slice().sort((a, b) => (a.id || 0) - (b.id || 0));
+
+        // Slot penilaian per mapel: Set of "JENIS|ke"
+        const slotsByMapel = {};
+        allNilaiKelas.forEach(n => {
+          const mid = n.mapel_id;
+          if (!mid) return;
+          if (!slotsByMapel[mid]) slotsByMapel[mid] = new Set();
+          const jenis = String(n.jenis || '').toUpperCase();
+          const ke = n.ke != null ? Number(n.ke) : 1;
+          slotsByMapel[mid].add(jenis + '|' + ke);
+        });
+
+        // Nilai siswa: mapel_id -> { "JENIS|ke": nilai }
+        const mineByMapel = {};
+        nilaiSiswa.forEach(n => {
+          const mid = n.mapel_id;
+          if (!mineByMapel[mid]) mineByMapel[mid] = {};
+          const jenis = String(n.jenis || '').toUpperCase();
+          const ke = n.ke != null ? Number(n.ke) : 1;
+          const key = jenis + '|' + ke;
+          const v = n.nilai != null && n.nilai !== '' ? Number(n.nilai) : null;
+          if (v != null && !isNaN(v)) mineByMapel[mid][key] = v;
+        });
+
+        // Kolom formal yang muncul (ada di kelas, pada mapel manapun)
+        const formalPresent = new Set();
+        Object.values(slotsByMapel).forEach(set => {
+          set.forEach(key => {
+            const jenis = key.split('|')[0];
+            if (NS_EXCLUDE_RNH.has(jenis)) formalPresent.add(jenis);
+          });
+        });
+        const formalCols = NS_FORMAL_ORDER.filter(j => formalPresent.has(j));
+        // formal lain yang tidak di list
+        [...formalPresent].forEach(j => {
+          if (!formalCols.includes(j)) formalCols.push(j);
+        });
+
+        // Header
+        let head = '<tr><th style="width:36px;">No</th><th>Mata Pelajaran</th>' +
+          '<th style="text-align:center;">RNH</th>';
+        formalCols.forEach(j => {
+          head += '<th style="text-align:center;">' + j + '</th>';
+        });
+        head += '<th style="text-align:center;">NR</th></tr>';
+        thead.innerHTML = head;
+
+        const colCount = 3 + formalCols.length + 1; // no + mapel + rnh + formals + nr
+
+        if (!mapelList.length) {
+          tbody.innerHTML = '<tr><td colspan="' + colCount + '" style="text-align:center;padding:16px;color:#94a3b8;">Belum ada data mapel / nilai</td></tr>';
+          return;
+        }
+
+        tbody.innerHTML = mapelList.map((m, i) => {
+          const mid = m.id;
+          const slots = slotsByMapel[mid] ? [...slotsByMapel[mid]] : [];
+          const mine = mineByMapel[mid] || {};
+
+          // RNH: slot harian saja
+          const rnhSlots = slots.filter(k => !NS_EXCLUDE_RNH.has(k.split('|')[0]));
+          let rnhSum = 0;
+          rnhSlots.forEach(k => { rnhSum += (mine[k] != null ? mine[k] : 0); });
+          const rnh = nsAvg(rnhSum, rnhSlots.length);
+
+          // Formal: rata-rata per jenis (jika multi ke)
+          const formalVals = formalCols.map(jenis => {
+            const sSlots = slots.filter(k => k.split('|')[0] === jenis);
+            if (!sSlots.length) return null;
+            let sum = 0;
+            sSlots.forEach(k => { sum += (mine[k] != null ? mine[k] : 0); });
+            return nsAvg(sum, sSlots.length);
+          });
+
+          // NR: semua slot
+          let nrSum = 0;
+          slots.forEach(k => { nrSum += (mine[k] != null ? mine[k] : 0); });
+          const nr = nsAvg(nrSum, slots.length);
+
+          const namaMapel = esc(m.mapel || m.nama || m.kode || ('Mapel ' + mid));
+          let row = '<tr><td style="text-align:center;">' + (i + 1) + '</td>' +
+            '<td>' + namaMapel + '</td>' +
+            '<td style="text-align:center;">' + nsFmtNilai(rnh) + '</td>';
+          formalVals.forEach(v => {
+            row += '<td style="text-align:center;">' + nsFmtNilai(v) + '</td>';
+          });
+          row += '<td style="text-align:center;"><b>' + nsFmtNilai(nr) + '</b></td></tr>';
+          return row;
+        }).join('');
+      } catch (e) {
+        console.error(e);
+        tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;padding:16px;color:#ef4444;">Gagal: ' +
+          esc(String(e.message || e)) + '</td></tr>';
+      }
+    }
 
     // ============================================================
     // PENGATURAN: Mapel, Kelas, Periode (CRUD + Accordion)
