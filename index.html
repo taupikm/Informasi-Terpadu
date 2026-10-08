@@ -9366,6 +9366,37 @@
           return n.includes(ql) || k.includes(ql) || k === ql;
         });
 
+        // Lengkapi kelas dari tabel siswa (absensi sering tanpa kolom kelas)
+        const kelasByKode = {};
+        try {
+          const nisns = [...new Set(rows.map(r => r.kode).filter(Boolean))];
+          const ids = [...new Set(rows.map(r => r.ref_id).filter(Boolean))];
+          if (supabaseClient && (nisns.length || ids.length)) {
+            if (nisns.length) {
+              const { data: ss } = await supabaseClient.from('siswa').select('*').in('nisn', nisns);
+              (ss || []).forEach(s => {
+                const kls = s.kelas || s.kelas_nama || s.rombel || s.nama_kelas || '';
+                if (s.nisn) kelasByKode[String(s.nisn)] = kls;
+                if (s.id) kelasByKode['id:' + s.id] = kls;
+              });
+            }
+            if (ids.length) {
+              const { data: ss2 } = await supabaseClient.from('siswa').select('*').in('id', ids);
+              (ss2 || []).forEach(s => {
+                const kls = s.kelas || s.kelas_nama || s.rombel || s.nama_kelas || '';
+                if (s.nisn) kelasByKode[String(s.nisn)] = kls;
+                if (s.id) kelasByKode['id:' + s.id] = kls;
+              });
+            }
+          }
+        } catch (e) { console.warn('kelas lookup', e); }
+
+        rows = rows.map(r => {
+          if (r.kelas || r.kelas_nama) return r;
+          const kls = kelasByKode[String(r.kode || '')] || kelasByKode['id:' + r.ref_id] || '';
+          return kls ? Object.assign({}, r, { kelas: kls }) : r;
+        });
+
         if (!rows.length) {
           info.textContent = 'Tidak ada data kehadiran untuk "' + q + '" pada rentang tersebut.';
           tbody.innerHTML = '<tr><td colspan="10" style="text-align:center;padding:16px;color:#94a3b8;">Tidak ada data</td></tr>';
@@ -9387,6 +9418,9 @@
               kelas: r.kelas || r.kelas_nama || '',
               sesi: {}
             };
+          }
+          if (!byDayPerson[key].kelas && (r.kelas || r.kelas_nama)) {
+            byDayPerson[key].kelas = r.kelas || r.kelas_nama;
           }
           const sid = r.sesi_id != null ? String(r.sesi_id) : String(r.sesi_urutan || r.sesi_nama || '');
           byDayPerson[key].sesi[sid] = r;
