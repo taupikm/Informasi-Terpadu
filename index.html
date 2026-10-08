@@ -2,7 +2,7 @@
 <html lang="id">
 <head>
   <meta charset="UTF-8" />
-  <!-- CACHE_BUST 2026-10-08-o -->
+  <!-- CACHE_BUST 2026-10-08-p -->
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
   <title>SMPN PANTANG MUNDUR</title>
   <!-- Supabase JS Client (CDN) -->
@@ -2235,7 +2235,7 @@
 
   <!-- FOOTER -->
   <footer class="footer">
-    © 2026 SMPN PANTANG MUNDUR * <span style="opacity:.7">· v2026.10.08o</span>
+    © 2026 SMPN PANTANG MUNDUR * <span style="opacity:.7">· v2026.10.08p</span>
   </footer>
 
   <!-- ========== MODAL LOGIN ========== -->
@@ -10290,6 +10290,7 @@
             const t = String(r.tanggal || '').slice(0, 10);
             if (dari && t < dari) return false;
             if (sampai && t > sampai) return false;
+            if (f.periode_id != null && f.periode_id !== '' && Number(r.periode_id) !== Number(f.periode_id)) return false;
             if (f.tipe && r.tipe !== f.tipe) return false;
             if (f.kode && String(r.kode) !== String(f.kode)) return false;
             if (f.ref_id && String(r.ref_id) !== String(f.ref_id)) return false;
@@ -10303,8 +10304,10 @@
           });
         }
         let q = supabaseClient.from(table).select('*')
-          .gte('tanggal', dari).lte('tanggal', sampai)
           .order('tanggal', { ascending: false }).order('nama');
+        if (dari) q = q.gte('tanggal', dari);
+        if (sampai) q = q.lte('tanggal', sampai);
+        if (f.periode_id != null && f.periode_id !== '') q = q.eq('periode_id', Number(f.periode_id));
         if (f.tipe) q = q.eq('tipe', f.tipe);
         if (f.kode) q = q.eq('kode', f.kode);
         if (f.ref_id) q = q.eq('ref_id', f.ref_id);
@@ -10677,26 +10680,31 @@
       } catch (e) { console.warn('fillRekapPeriode', e); }
     }
 
-    function applyRekapPeriodeDates() {
+    function getSelectedRekapPeriode() {
       const ta = document.getElementById('rekapTahunAjaran')?.value || '';
       const sem = document.getElementById('rekapSemester')?.value || '';
+      if (!ta && !sem) return null;
+      const matches = (_rekapPeriodeList || []).filter(p => {
+        if (ta && p.tahun_ajaran !== ta) return false;
+        if (sem && p.semester !== sem) return false;
+        return true;
+      });
+      if (!matches.length) return null;
+      // prioritaskan yang aktif jika ada beberapa
+      return matches.find(p => p.aktif) || matches[0];
+    }
+
+    function applyRekapPeriodeDates() {
       const dari = document.getElementById('rekapDari');
       const sampai = document.getElementById('rekapSampai');
       if (!dari || !sampai) return;
-      let match = null;
-      if (ta || sem) {
-        match = (_rekapPeriodeList || []).find(p => {
-          if (ta && p.tahun_ajaran !== ta) return false;
-          if (sem && p.semester !== sem) return false;
-          return true;
-        });
-      }
-      if (!match && aktifPeriode) match = aktifPeriode;
+      const match = getSelectedRekapPeriode();
       if (match) {
         const t0 = (match.tanggal_mulai || match.tgl_mulai || '').toString().slice(0, 10);
         const t1 = (match.tanggal_akhir || match.tgl_akhir || '').toString().slice(0, 10);
-        if (t0) dari.value = t0;
-        if (t1) sampai.value = t1;
+        // Set tanggal dari periode; jika null → kosongkan (jangan pakai tanggal periode lain)
+        dari.value = t0 || '';
+        sampai.value = t1 || '';
       }
     }
 
@@ -10762,16 +10770,27 @@
       const kelas = document.getElementById('rekapKelas')?.value || '';
       const tipe = document.getElementById('rekapTipe')?.value || '';
 
-      // Jika tanggal kosong, isi dari periode filter
-      if (!dari || !sampai) applyRekapPeriodeDates();
+      // Sinkron tanggal dari filter periode
+      applyRekapPeriodeDates();
       dari = document.getElementById('rekapDari')?.value || '';
       sampai = document.getElementById('rekapSampai')?.value || '';
-      if (!dari) dari = new Date().toISOString().slice(0, 10);
-      if (!sampai) sampai = dari;
+      const per = getSelectedRekapPeriode();
+      const periodeId = per ? per.id : null;
+
+      // Tanpa tanggal & tanpa periode_id → default hari ini (hindari tarik semua data)
+      if (!dari && !sampai && !periodeId) {
+        dari = new Date().toISOString().slice(0, 10);
+        sampai = dari;
+      }
 
       try {
         await loadSesi();
-        let rows = await fetchAbsensiRange(dari, sampai, { tipe: tipe || undefined });
+        // Filter utama: periode_id (kolom absensi.periode_id)
+        // Tanggal dipakai tambahan jika diisi
+        let rows = await fetchAbsensiRange(dari || null, sampai || null, {
+          tipe: tipe || undefined,
+          periode_id: periodeId || undefined
+        });
 
         // Filter nama
         if (qNama) {
@@ -10953,8 +10972,12 @@
           }
         }
 
-        // Data dari absensi aktif + historis
-        let rows = await fetchAbsensiRange(dari, sampai, { tipe: tipe || undefined });
+        // Data dari absensi aktif + historis (filter periode jika dipilih)
+        const perEdit = getSelectedRekapPeriode();
+        let rows = await fetchAbsensiRange(dari, sampai, {
+          tipe: tipe || undefined,
+          periode_id: perEdit ? perEdit.id : undefined
+        });
 
         // Filter kelas via daftar siswa
         let kelasIds = null;
