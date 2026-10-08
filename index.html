@@ -2,7 +2,7 @@
 <html lang="id">
 <head>
   <meta charset="UTF-8" />
-  <!-- CACHE_BUST 2026-10-08-h -->
+  <!-- CACHE_BUST 2026-10-08-i -->
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
   <title>SMPN PANTANG MUNDUR</title>
   <!-- Supabase JS Client (CDN) -->
@@ -2157,7 +2157,7 @@
 
   <!-- FOOTER -->
   <footer class="footer">
-    © 2026 SMPN PANTANG MUNDUR * <span style="opacity:.7">· v2026.10.08h</span>
+    © 2026 SMPN PANTANG MUNDUR * <span style="opacity:.7">· v2026.10.08i</span>
   </footer>
 
   <!-- ========== MODAL LOGIN ========== -->
@@ -4637,19 +4637,22 @@
         tbody.innerHTML = siswaList.map((s, i) => {
           const nmap = mapNilai[s.id] || {};
           let vals = [];
-          let sum = 0, count = 0;
+          let sum = 0;
+          // Pembagi = banyaknya penilaian yang sudah ada di kelas/mapel (cols),
+          // nilai kosong dihitung 0 — sama seperti Lihat Nilai Saya
+          const denom = cols.length;
           cols.forEach(c => {
             const key = c.jenis + c.ke;
             const v = nmap[key];
             if (v != null && v !== '') {
               vals.push(`<td>${v}</td>`);
               sum += Number(v);
-              count++;
             } else {
               vals.push('<td>-</td>');
+              // kosong = 0
             }
           });
-          const nr = count ? (sum / count).toFixed(1) : '-';
+          const nr = denom ? (sum / denom).toFixed(1) : '-';
           return `<tr>
             <td>${i + 1}</td>
             <td>${s.nisn || ''}</td>
