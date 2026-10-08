@@ -2,7 +2,7 @@
 <html lang="id">
 <head>
   <meta charset="UTF-8" />
-  <!-- CACHE_BUST 2026-10-08-l -->
+  <!-- CACHE_BUST 2026-10-08-m -->
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
   <title>SMPN PANTANG MUNDUR</title>
   <!-- Supabase JS Client (CDN) -->
@@ -2179,7 +2179,7 @@
 
   <!-- FOOTER -->
   <footer class="footer">
-    © 2026 SMPN PANTANG MUNDUR * <span style="opacity:.7">· v2026.10.08l</span>
+    © 2026 SMPN PANTANG MUNDUR * <span style="opacity:.7">· v2026.10.08m</span>
   </footer>
 
   <!-- ========== MODAL LOGIN ========== -->
@@ -4871,8 +4871,9 @@
       aoa.push(['DAFTAR NILAI']);
       aoa.push([judulSemester]);
       aoa.push([]);
-      aoa.push(['Mata Pelajaran', ': ' + mapelNama]);
-      aoa.push(['Kelas', ': ' + (st.kelas || '')]);
+      // Label di A, titik dua di B, nilai mapel/kelas di C (kolom 3) agar tidak bertumpuk
+      aoa.push(['Mata Pelajaran', ':', mapelNama]);
+      aoa.push(['Kelas', ':', (st.kelas || '')]);
       aoa.push([]);
       aoa.push(header);
       dataRows.forEach(r => aoa.push(r));
@@ -4946,9 +4947,11 @@
       setCell(1, 0, judulSemester, styleSub);
       // Info
       setCell(3, 0, 'Mata Pelajaran', styleInfo);
-      setCell(3, 1, ': ' + mapelNama, styleInfo);
+      setCell(3, 1, ':', styleInfo);
+      setCell(3, 2, mapelNama, styleInfo);
       setCell(4, 0, 'Kelas', styleInfo);
-      setCell(4, 1, ': ' + (st.kelas || ''), styleInfo);
+      setCell(4, 1, ':', styleInfo);
+      setCell(4, 2, (st.kelas || ''), styleInfo);
 
       // Header tabel di baris 6
       const hr = 6;
