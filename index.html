@@ -6518,6 +6518,24 @@
       return k.split(/[,;\s]+/).map(x => x.trim()).includes(letter);
     }
 
+    /** Bersihkan huruf opsi di awal konten agar tidak tampil dobel (A. A. jawaban) */
+    function cleanOpsiContent(html, letter) {
+      if (!html) return html;
+      let s = String(html);
+      if (!letter) return s;
+      const L = String(letter);
+      s = s.replace(new RegExp('(<(?:p|div|li|span|h[1-6])(?:\\s[^>]*)?>)\\s*' + L + '\\s*[\\.\\)\\:]\\s*', 'i'), '$1');
+      s = s.replace(new RegExp('^\\s*' + L + '\\s*[\\.\\)\\:]\\s*', 'i'), '');
+      s = s.replace(new RegExp('(<(?:p|div|li)(?:\\s[^>]*)?>)\\s*<(?:strong|b|em|span)[^>]*>\\s*' + L + '\\s*[\\.\\)\\:]?\\s*</(?:strong|b|em|span)>\\s*', 'i'), '$1');
+      s = s.replace(new RegExp('^\\s*<(?:strong|b|em|span)[^>]*>\\s*' + L + '\\s*[\\.\\)\\:]?\\s*</(?:strong|b|em|span)>\\s*', 'i'), '');
+      const plain = s.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
+      if (new RegExp('^' + L + '\\s*[\\.\\)\\:]\\s+', 'i').test(plain)) {
+        s = s.replace(new RegExp('(<[^>]+>)\\s*' + L + '\\s*[\\.\\)\\:]\\s*', 'i'), '$1');
+        s = s.replace(new RegExp('^\\s*' + L + '\\s*[\\.\\)\\:]\\s*', 'i'), '');
+      }
+      return s;
+    }
+
 
     // ============================================================
     // SISWA: KERJAKAN TUGAS / UJIAN
@@ -6792,8 +6810,9 @@
           : ['A','B','C','D'].map(L => ({ L, v: s['opsi_' + L.toLowerCase()] })).filter(o => o.v);
         opts.forEach(o => {
           const checked = ans === o.L ? 'checked' : '';
-          const content = jenis === 'Benar Salah' ? o.v :
-            (typeof renderMathInHtml === 'function' ? renderMathInHtml(o.v) : o.v);
+          const rawV = jenis === 'Benar Salah' ? o.v : cleanOpsiContent(o.v, o.L);
+          const content = jenis === 'Benar Salah' ? rawV :
+            (typeof renderMathInHtml === 'function' ? renderMathInHtml(rawV) : rawV);
           html += '<label class="bs-opsi-line" style="cursor:pointer;">' +
             '<input type="radio" name="tuAns" value="' + esc(o.L) + '" ' + checked + ' style="margin-right:8px;">' +
             (jenis === 'Benar Salah' ? '' : '<span class="bs-opsi-letter">' + o.L + '.</span>') +
@@ -6805,10 +6824,11 @@
           const v = s['opsi_' + L.toLowerCase()];
           if (!v) return;
           const checked = selected.includes(L) ? 'checked' : '';
+          const vClean = cleanOpsiContent(v, L);
           html += '<label class="bs-opsi-line" style="cursor:pointer;">' +
             '<input type="checkbox" class="tu-cb" value="' + L + '" ' + checked + ' style="margin-right:8px;">' +
             '<span class="bs-opsi-letter">' + L + '.</span>' +
-            '<div class="bs-opsi-content">' + (typeof renderMathInHtml === 'function' ? renderMathInHtml(v) : v) + '</div></label>';
+            '<div class="bs-opsi-content">' + (typeof renderMathInHtml === 'function' ? renderMathInHtml(vClean) : vClean) + '</div></label>';
         });
       } else if (jenis === 'Isian Singkat') {
         html += '<div class="form-group" style="margin-top:10px;"><input type="text" id="tuIsian" value="' +
@@ -7401,10 +7421,10 @@
             '</b> · ' + esc(s.jenis) +
             (s.kunci ? ' · Kunci: ' + esc(s.kunci) : '') + '</div>' +
             '<div style="font-size:13px;">' + s.pertanyaan + '</div>' +
-            (s.opsi_a ? '<div style="font-size:12px;margin-top:4px;"><b>A.</b> ' + s.opsi_a + '</div>' : '') +
-            (s.opsi_b ? '<div style="font-size:12px;"><b>B.</b> ' + s.opsi_b + '</div>' : '') +
-            (s.opsi_c ? '<div style="font-size:12px;"><b>C.</b> ' + s.opsi_c + '</div>' : '') +
-            (s.opsi_d ? '<div style="font-size:12px;"><b>D.</b> ' + s.opsi_d + '</div>' : '') +
+            (s.opsi_a ? '<div style="font-size:12px;margin-top:4px;"><b>A.</b> ' + cleanOpsiContent(s.opsi_a, 'A') + '</div>' : '') +
+            (s.opsi_b ? '<div style="font-size:12px;"><b>B.</b> ' + cleanOpsiContent(s.opsi_b, 'B') + '</div>' : '') +
+            (s.opsi_c ? '<div style="font-size:12px;"><b>C.</b> ' + cleanOpsiContent(s.opsi_c, 'C') + '</div>' : '') +
+            (s.opsi_d ? '<div style="font-size:12px;"><b>D.</b> ' + cleanOpsiContent(s.opsi_d, 'D') + '</div>' : '') +
             '</div>'
           ).join('');
           document.getElementById('btnIwSimpan').disabled = false;
@@ -7442,6 +7462,36 @@
           .replace(/Kunci\s*[:.]\s*[^<]*/gi, '')
           .trim();
       }
+      /** Buang huruf opsi bawaan di awal konten (A. / A) / a.) agar UI tidak dobel "A. A. ..." */
+      function stripLeadingOptionLetter(html, letter) {
+        if (!html) return html;
+        let s = String(html);
+        const L = letter ? String(letter).toUpperCase() : '[A-E]';
+        // Pola di teks murni / di dalam tag pembuka
+        const patterns = [
+          // <p>A. teks / <p>A) teks / <p>A teks
+          new RegExp('(<(?:p|div|li|span|h[1-6])(?:\s[^>]*)?>)\s*' + (letter ? letter : '[A-Ea-e]') + '\s*[\.\)\:]\s*', 'i'),
+          // Awal string: A. teks
+          new RegExp('^\s*' + (letter ? letter : '[A-Ea-e]') + '\s*[\.\)\:]\s*', 'i'),
+          // <p><strong>A.</strong> teks atau <b>A.</b>
+          new RegExp('(<(?:p|div|li)(?:\s[^>]*)?>)\s*<(?:strong|b|em|span)[^>]*>\s*' + (letter ? letter : '[A-Ea-e]') + '\s*[\.\)\:]?\s*</(?:strong|b|em|span)>\s*', 'i'),
+          // Hanya <strong>A.</strong> di awal
+          new RegExp('^\s*<(?:strong|b|em|span)[^>]*>\s*' + (letter ? letter : '[A-Ea-e]') + '\s*[\.\)\:]?\s*</(?:strong|b|em|span)>\s*', 'i')
+        ];
+        patterns.forEach(re => { s = s.replace(re, letter ? '$1' : (re.source.startsWith('^') ? '' : '$1')); });
+        // Rapikan sisa jika $1 kosong jadi undefined
+        s = s.replace(/^undefined/, '');
+        // Fallback teks: ulangi sekali jika masih ada prefix huruf yang sama
+        if (letter) {
+          const rePlain = new RegExp('^\s*' + letter + '\s*[\.\)\:]\s+', 'i');
+          const plain = s.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
+          if (rePlain.test(plain)) {
+            s = s.replace(new RegExp('(<[^>]+>)\s*' + letter + '\s*[\.\)\:]\s*', 'i'), '$1');
+            s = s.replace(new RegExp('^\s*' + letter + '\s*[\.\)\:]\s*', 'i'), '');
+          }
+        }
+        return s.trim();
+      }
 
       const soals = [];
       let cur = null;
@@ -7450,7 +7500,10 @@
         if (!cur) return;
         cur.pertanyaan = restoreTables(stripKunci(cur.pertanyaan || ''));
         ['a', 'b', 'c', 'd', 'e'].forEach(L => {
-          if (cur['opsi_' + L]) cur['opsi_' + L] = restoreTables(stripKunci(cur['opsi_' + L]));
+          if (cur['opsi_' + L]) {
+            cur['opsi_' + L] = stripLeadingOptionLetter(
+              restoreTables(stripKunci(cur['opsi_' + L])), L);
+          }
         });
         const plain = blockText(cur.pertanyaan);
         if (plain.length >= 3 || /<img|<table|<svg/i.test(cur.pertanyaan)) {
@@ -7539,7 +7592,7 @@
         if (optm) {
           const L = optm[1].toLowerCase();
           if ('abcde'.includes(L)) {
-            cur['opsi_' + L] = block;
+            cur['opsi_' + L] = stripLeadingOptionLetter(block, L);
             continue;
           }
         }
@@ -8234,8 +8287,8 @@
         setTimeout(() => {
           makeMiniQuill('bsEdA', 'Opsi A'); makeMiniQuill('bsEdB', 'Opsi B');
           makeMiniQuill('bsEdC', 'Opsi C'); makeMiniQuill('bsEdD', 'Opsi D');
-          setMiniHtml('bsEdA', data.opsi_a); setMiniHtml('bsEdB', data.opsi_b);
-          setMiniHtml('bsEdC', data.opsi_c); setMiniHtml('bsEdD', data.opsi_d);
+          setMiniHtml('bsEdA', cleanOpsiContent(data.opsi_a, 'A')); setMiniHtml('bsEdB', cleanOpsiContent(data.opsi_b, 'B'));
+          setMiniHtml('bsEdC', cleanOpsiContent(data.opsi_c, 'C')); setMiniHtml('bsEdD', cleanOpsiContent(data.opsi_d, 'D'));
         }, 30);
       } else if (j === 'Benar Salah') {
         box.innerHTML =
@@ -8264,8 +8317,8 @@
         setTimeout(() => {
           makeMiniQuill('bsEdA', 'Opsi A'); makeMiniQuill('bsEdB', 'Opsi B');
           makeMiniQuill('bsEdC', 'Opsi C'); makeMiniQuill('bsEdD', 'Opsi D');
-          setMiniHtml('bsEdA', data.opsi_a); setMiniHtml('bsEdB', data.opsi_b);
-          setMiniHtml('bsEdC', data.opsi_c); setMiniHtml('bsEdD', data.opsi_d);
+          setMiniHtml('bsEdA', cleanOpsiContent(data.opsi_a, 'A')); setMiniHtml('bsEdB', cleanOpsiContent(data.opsi_b, 'B'));
+          setMiniHtml('bsEdC', cleanOpsiContent(data.opsi_c, 'C')); setMiniHtml('bsEdD', cleanOpsiContent(data.opsi_d, 'D'));
         }, 30);
       } else if (j === 'Menjodohkan') {
         box.innerHTML = block('Pasangan (kiri = kanan, satu baris satu pasangan)', 'bsEdKunci') +
@@ -8727,7 +8780,7 @@
           ['A', 'B', 'C', 'D'].forEach(L => {
             let val = r['opsi_' + L.toLowerCase()];
             if (!val) return;
-            val = cleanSoalHtml(val, '');
+            val = cleanOpsiContent(cleanSoalHtml(val, ''), L);
             const key = isKeyOption(r.kunci, L);
             body += '<div class="bs-opsi-line' + (key ? ' key' : '') + '">' +
               '<span class="bs-opsi-letter">' + L + '.</span>' +
