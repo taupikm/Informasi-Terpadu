@@ -2,7 +2,7 @@
 <html lang="id">
 <head>
   <meta charset="UTF-8" />
-  <!-- CACHE_BUST 2026-10-08-c -->
+  <!-- CACHE_BUST 2026-10-08-e -->
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
   <title>SMPN PANTANG MUNDUR</title>
   <!-- Supabase JS Client (CDN) -->
@@ -2126,7 +2126,7 @@
 
   <!-- FOOTER -->
   <footer class="footer">
-    © 2026 SMPN PANTANG MUNDUR * <span style="opacity:.7">· v2026.10.08e</span>
+    © 2026 SMPN PANTANG MUNDUR * <span style="opacity:.7">· v2026.10.08g</span>
   </footer>
 
   <!-- ========== MODAL LOGIN ========== -->
@@ -5237,23 +5237,16 @@
               else if (nowMin < mulai) { next = s; break; }
             }
             if (next && lastEnded) {
+              // Antar sesi: logika lama tidak diubah
               det.textContent = (lastEnded.nama || 'Sesi') + ' selesai, ' +
-                (next.nama || 'sesi berikutnya') + ' akan berlangsung dari jam ' +
-                String(next.jam_mulai || '').slice(0, 5);
+                (next.nama || 'sesi berikutnya') + ' akan berlangsung pada ' + fmt3(next);
             } else if (next && !lastEnded) {
-              // Sebelum sesi pertama hari ini (setelah 00:00 / lewat 23:59:59 hari sebelumnya)
-              det.textContent = (next.nama || 'Sesi 1') + ' akan berlangsung dari jam ' +
-                String(next.jam_mulai || '').slice(0, 5);
+              // HANYA setelah lewat 23:59:59 (hari baru) sampai sesi 1 dibuka
+              // Format: Sesi 1 akan berlangsung dari Jam 06:00 – 09:30 – 12:30
+              det.textContent = (next.nama || 'Sesi 1') + ' akan berlangsung dari Jam ' + fmt3(next);
             } else {
-              // Semua sesi hari ini sudah selesai — tabel rekap tetap tampil s/d 23:59:59;
-              // info: sesi 1 esok (jam mulai sesi pertama)
-              const first = list[0];
-              const jam1 = first ? String(first.jam_mulai || '').slice(0, 5) : '';
-              if (first && jam1) {
-                det.textContent = (first.nama || 'Sesi 1') + ' akan berlangsung dari jam ' + jam1;
-              } else {
-                det.textContent = 'Sesi Absen Hari Ini Telah Berakhir';
-              }
+              // Semua sesi hari ini sudah selesai (masih hari yang sama, s/d 23:59:59)
+              det.textContent = 'Sesi Absen Hari Ini Telah Berakhir';
             }
           }
         }
