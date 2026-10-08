@@ -1770,6 +1770,11 @@
         <button class="btn btn-outline" id="btnImportSiswa">📥 Import</button>
         <input type="file" id="fileImportSiswa" accept=".csv,.txt" style="display:none;">
         <input type="search" id="cariSiswa" class="search-input" placeholder="Cari Nama / NISN..." autocomplete="off">
+        <select id="filterStatusAwalSiswa" class="search-input" style="min-width:130px;max-width:160px;cursor:pointer;">
+          <option value="">Semua Status Awal</option>
+          <option value="Siswa Baru">Siswa Baru</option>
+          <option value="Pindahan">Pindahan</option>
+        </select>
         <span class="toolbar-info" id="infoSiswa">0 data</span>
       </div>
       <div class="table-wrap">
@@ -2247,7 +2252,7 @@
             <label>Status Awal</label>
             <select id="siswaStatusAwal">
               <option value="">- Pilih -</option>
-              <option value="Baru">Baru</option>
+              <option value="Siswa Baru">Siswa Baru</option>
               <option value="Pindahan">Pindahan</option>
             </select>
           </div>
@@ -3461,8 +3466,8 @@
 
     // Demo fallback data
     const DEMO_SISWA = [
-      { id: 1, nama: 'Andi Pratama', lp: 'L', nisn: '0123456789', kelas: '7A', tmp_lahir: 'Bandung', tgl_lahir: '2012-05-15', status: 'Aktif', tgl_mulai_sekolah: '2024-07-15', status_awal: 'Baru', no_hp: '081111111111', alamat: 'Jl. Merdeka 10', nama_ayah: 'Joko Pratama', nama_ibu: 'Sari Dewi' },
-      { id: 2, nama: 'Salsa Bilah', lp: 'P', nisn: '0123456780', kelas: '7B', tmp_lahir: 'Jakarta', tgl_lahir: '2012-08-20', status: 'Aktif', tgl_mulai_sekolah: '2024-07-15', status_awal: 'Baru', no_hp: '082222222222', alamat: 'Jl. Sudirman 5', nama_ayah: 'Budi Bilah', nama_ibu: 'Rina Sari' },
+      { id: 1, nama: 'Andi Pratama', lp: 'L', nisn: '0123456789', kelas: '7A', tmp_lahir: 'Bandung', tgl_lahir: '2012-05-15', status: 'Aktif', tgl_mulai_sekolah: '2024-07-15', status_awal: 'Siswa Baru', no_hp: '081111111111', alamat: 'Jl. Merdeka 10', nama_ayah: 'Joko Pratama', nama_ibu: 'Sari Dewi' },
+      { id: 2, nama: 'Salsa Bilah', lp: 'P', nisn: '0123456780', kelas: '7B', tmp_lahir: 'Jakarta', tgl_lahir: '2012-08-20', status: 'Aktif', tgl_mulai_sekolah: '2024-07-15', status_awal: 'Siswa Baru', no_hp: '082222222222', alamat: 'Jl. Sudirman 5', nama_ayah: 'Budi Bilah', nama_ibu: 'Rina Sari' },
       { id: 3, nama: 'Rizki Maulana', lp: 'L', nisn: '0123456781', kelas: '8A', tmp_lahir: 'Bogor', tgl_lahir: '2011-03-10', status: 'Aktif', tgl_mulai_sekolah: '2023-07-15', status_awal: 'Pindahan', no_hp: '083333333333', alamat: 'Jl. Kenanga 3', nama_ayah: 'Agus Maulana', nama_ibu: 'Dewi Lestari' }
     ];
     const DEMO_GURU = [
@@ -3490,18 +3495,32 @@
       renderSiswa();
     }
 
+    function normStatusAwal(v) {
+      const s = String(v || '').trim();
+      if (!s) return '';
+      if (s.toLowerCase() === 'baru' || s.toLowerCase() === 'siswa baru') return 'Siswa Baru';
+      if (s.toLowerCase() === 'pindahan') return 'Pindahan';
+      return s;
+    }
+
     function renderSiswa() {
       const q = (document.getElementById('cariSiswa')?.value || '').trim().toLowerCase();
-      const filtered = q
-        ? dataSiswa.filter(s =>
-            (s.nama || '').toLowerCase().includes(q) ||
-            (s.nisn || '').toLowerCase().includes(q))
-        : dataSiswa;
+      const fSa = document.getElementById('filterStatusAwalSiswa')?.value || '';
+      let filtered = dataSiswa.slice();
+      if (q) {
+        filtered = filtered.filter(s =>
+          (s.nama || '').toLowerCase().includes(q) ||
+          (s.nisn || '').toLowerCase().includes(q));
+      }
+      if (fSa) {
+        filtered = filtered.filter(s => normStatusAwal(s.status_awal) === fSa);
+      }
       const tbody = document.getElementById('tbodySiswa');
-      document.getElementById('infoSiswa').textContent = filtered.length + (q ? ' ditemukan' : ' data');
+      const hasFilter = !!(q || fSa);
+      document.getElementById('infoSiswa').textContent = filtered.length + (hasFilter ? ' ditemukan' : ' data');
       document.getElementById('checkAllSiswa').checked = false;
       if (!filtered.length) {
-        tbody.innerHTML = '<tr><td colspan="15" style="text-align:center;padding:24px;color:#94a3b8;">' + (q ? 'Tidak ditemukan' : 'Belum ada data') + '</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="15" style="text-align:center;padding:24px;color:#94a3b8;">' + (hasFilter ? 'Tidak ditemukan' : 'Belum ada data') + '</td></tr>';
         return;
       }
       tbody.innerHTML = filtered.map((s, i) => `
@@ -3516,7 +3535,7 @@
           <td>${s.tgl_lahir || ''}</td>
           <td>${s.status || ''}</td>
           <td>${s.tgl_mulai_sekolah || ''}</td>
-          <td>${s.status_awal || ''}</td>
+          <td>${esc(normStatusAwal(s.status_awal))}</td>
           <td>${esc(s.nama_ayah || '')}</td>
           <td>${esc(s.nama_ibu || '')}</td>
           <td title="${esc(s.alamat || '')}">${esc(s.alamat || '')}</td>
@@ -3525,6 +3544,7 @@
     }
 
     document.getElementById('cariSiswa').addEventListener('input', renderSiswa);
+    document.getElementById('filterStatusAwalSiswa')?.addEventListener('change', renderSiswa);
 
     // ----- LOAD GURU -----
     async function loadGuru() {
@@ -3614,7 +3634,7 @@
       document.getElementById('siswaTmpLahir').value = s.tmp_lahir || '';
       document.getElementById('siswaTglLahir').value = s.tgl_lahir || '';
       document.getElementById('siswaMulaiSekolah').value = (s.tgl_mulai_sekolah || '').toString().slice(0, 10);
-      document.getElementById('siswaStatusAwal').value = s.status_awal || '';
+      document.getElementById('siswaStatusAwal').value = normStatusAwal(s.status_awal) || '';
       document.getElementById('siswaAlamat').value = s.alamat || '';
       document.getElementById('siswaAyah').value = s.nama_ayah || '';
       document.getElementById('siswaIbu').value = s.nama_ibu || '';
@@ -3634,7 +3654,7 @@
         tmp_lahir: document.getElementById('siswaTmpLahir').value.trim() || null,
         tgl_lahir: document.getElementById('siswaTglLahir').value || null,
         tgl_mulai_sekolah: document.getElementById('siswaMulaiSekolah').value || null,
-        status_awal: document.getElementById('siswaStatusAwal').value || null,
+        status_awal: normStatusAwal(document.getElementById('siswaStatusAwal').value) || null,
         alamat: document.getElementById('siswaAlamat').value.trim() || null,
         nama_ayah: document.getElementById('siswaAyah').value.trim() || null,
         nama_ibu: document.getElementById('siswaIbu').value.trim() || null,
@@ -3809,7 +3829,7 @@
           tgl_lahir: emptyToNull(c[5]),
           status: emptyToNull(c[6]) || 'Aktif',
           tgl_mulai_sekolah: emptyToNull(c[7]),
-          status_awal: emptyToNull(c[8]),
+          status_awal: (function(){ var v = emptyToNull(c[8]); if (!v) return null; var l = String(v).toLowerCase(); if (l === 'baru' || l === 'siswa baru') return 'Siswa Baru'; if (l === 'pindahan') return 'Pindahan'; return v; })(),
           alamat: emptyToNull(c[9]),
           nama_ayah: emptyToNull(c[10]),
           nama_ibu: emptyToNull(c[11]),
@@ -4081,8 +4101,8 @@
     // ============================================================
     let dataLulusan = [];
     const DEMO_LULUSAN = [
-      { id: 1, nisn: '0012345678', nama: 'Ahmad Rizki', lp: 'L', tmp_lahir: 'Bandung', tgl_lahir: '2008-03-12', tgl_mulai_sekolah: '2021-07-15', tanggal_lulus: '2024-06-20', tahun_lulus: 2024, lama_belajar: '3 Tahun', status_awal: 'Baru', asal_sekolah: 'SDN 1 Bandung' },
-      { id: 2, nisn: '0012345679', nama: 'Siti Nurhaliza', lp: 'P', tmp_lahir: 'Jakarta', tgl_lahir: '2008-08-25', tgl_mulai_sekolah: '2021-07-15', tanggal_lulus: '2024-06-20', tahun_lulus: 2024, lama_belajar: '3 Tahun', status_awal: 'Baru', asal_sekolah: 'SDN 5 Jakarta' },
+      { id: 1, nisn: '0012345678', nama: 'Ahmad Rizki', lp: 'L', tmp_lahir: 'Bandung', tgl_lahir: '2008-03-12', tgl_mulai_sekolah: '2021-07-15', tanggal_lulus: '2024-06-20', tahun_lulus: 2024, lama_belajar: '3 Tahun', status_awal: 'Siswa Baru', asal_sekolah: 'SDN 1 Bandung' },
+      { id: 2, nisn: '0012345679', nama: 'Siti Nurhaliza', lp: 'P', tmp_lahir: 'Jakarta', tgl_lahir: '2008-08-25', tgl_mulai_sekolah: '2021-07-15', tanggal_lulus: '2024-06-20', tahun_lulus: 2024, lama_belajar: '3 Tahun', status_awal: 'Siswa Baru', asal_sekolah: 'SDN 5 Jakarta' },
       { id: 3, nisn: '0012345680', nama: 'Budi Setiawan', lp: 'L', tmp_lahir: 'Bogor', tgl_lahir: '2007-11-05', tgl_mulai_sekolah: '2020-07-15', tanggal_lulus: '2023-06-18', tahun_lulus: 2023, lama_belajar: '3 Tahun', status_awal: 'Pindahan', asal_sekolah: 'SMPN 2 Bogor' }
     ];
 
