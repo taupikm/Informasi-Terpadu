@@ -1234,7 +1234,37 @@
     </section>
 
     <section class="page" id="page-sidik-jari">
-      <div class="placeholder"><div class="icon">👆</div><h2>Sidik Jari Siswa</h2><p>Halaman absensi sidik jari siswa</p></div>
+      <div class="page-title">Sidik Jari Siswa</div>
+      <div class="card" style="padding:14px;margin-bottom:12px;">
+        <div class="periode-bar">Periode : <b id="fpSiswaLabelPeriode">-</b></div>
+        <div style="margin-top:8px;font-size:13px;">
+          Sesi aktif : <b id="fpSiswaLabelSesi">-</b>
+          <span id="fpSiswaLabelJam" style="color:#64748b;font-size:12px;"></span>
+        </div>
+        <div style="margin-top:10px;font-size:13px;padding:10px;background:#f8fafc;border-radius:8px;">
+          Siswa: <b id="fpSiswaNama">-</b><br>
+          NISN: <b id="fpSiswaNisn">-</b> · Kelas: <b id="fpSiswaKelas">-</b><br>
+          Status sidik jari: <b id="fpSiswaStatusReg">-</b><br>
+          Izin admin: <b id="fpSiswaStatusIzin">-</b>
+        </div>
+        <button class="btn btn-primary" id="btnFpSiswaAksi" style="width:100%;margin-top:14px;background:#1e40af;padding:14px;font-size:15px;">
+          👆 <span id="labelFpSiswaAksi">Daftarkan Sidik Jari</span>
+        </button>
+        <p id="fpSiswaKet" style="font-size:12px;color:#64748b;margin-top:10px;line-height:1.45;text-align:center;">
+          Login sebagai siswa. Izin sidik jari diatur admin di Pengaturan.
+        </p>
+      </div>
+      <div class="section-title">Riwayat Absen Hari Ini</div>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr><th>Jam</th><th>Sesi</th><th>Status</th></tr>
+          </thead>
+          <tbody id="tbodyFpSiswaLog">
+            <tr><td colspan="3" style="text-align:center;padding:16px;color:#94a3b8;">-</td></tr>
+          </tbody>
+        </table>
+      </div>
     </section>
     <section class="page" id="page-syarat-naik">
       <div class="placeholder"><div class="icon">📋</div><h2>Cek Syarat Naik Kelas / Lulus</h2><p>Halaman pengecekan syarat naik kelas atau kelulusan</p></div>
@@ -2044,7 +2074,7 @@
 
   <!-- FOOTER -->
   <footer class="footer">
-    © 2026 SMPN PANTANG MUNDUR * <span style="opacity:.7">· v2026.10.08b</span>
+    © 2026 SMPN PANTANG MUNDUR * <span style="opacity:.7">· v2026.10.08c</span>
   </footer>
 
   <!-- ========== MODAL LOGIN ========== -->
@@ -3291,6 +3321,7 @@
       if (pageId === 'input-izin') initIzinPage();
       if (pageId === 'rekap-data') initRekapPage();
       if (pageId === 'cari-siswa') initCariSiswaPage();
+      if (pageId === 'sidik-jari') initSidikJariSiswaPage();
       if (pageId === 'kelola-tugas') initBankSoalPage();
       if (pageId === 'tugas-ujian') initTugasSiswaPage();
       if (pageId === 'kerjakan-ujian') { /* stay */ }
@@ -6134,6 +6165,134 @@
         alert('Izin sidik jari disimpan');
         await loadIzinFpList();
       } catch (e) { alert('Gagal: ' + (e.message || e)); }
+    });
+
+
+    // ============================================================
+    // SIDIK JARI SISWA (menu khusus)
+    // ============================================================
+    async function initSidikJariSiswaPage() {
+      const nama = document.getElementById('fpSiswaNama');
+      const nisn = document.getElementById('fpSiswaNisn');
+      const kelas = document.getElementById('fpSiswaKelas');
+      const stReg = document.getElementById('fpSiswaStatusReg');
+      const stIzin = document.getElementById('fpSiswaStatusIzin');
+      const label = document.getElementById('labelFpSiswaAksi');
+      const btn = document.getElementById('btnFpSiswaAksi');
+      const ket = document.getElementById('fpSiswaKet');
+
+      if (currentRole !== 'siswa') {
+        if (nama) nama.textContent = '-';
+        if (nisn) nisn.textContent = '-';
+        if (kelas) kelas.textContent = '-';
+        if (stReg) stReg.textContent = '-';
+        if (stIzin) stIzin.textContent = '-';
+        if (label) label.textContent = 'Daftarkan Sidik Jari';
+        if (btn) btn.disabled = true;
+        if (ket) ket.textContent = 'Login sebagai siswa untuk menggunakan fitur ini.';
+        document.getElementById('fpSiswaLabelPeriode').textContent = '-';
+        document.getElementById('fpSiswaLabelSesi').textContent = '-';
+        return;
+      }
+
+      try { await ensureSiswaKelas(); } catch (e) {}
+      if (nama) nama.textContent = currentUserName || '-';
+      if (nisn) nisn.textContent = currentUserKode || '-';
+      if (kelas) kelas.textContent = currentUserKelas || '-';
+
+      // Periode & sesi
+      try {
+        if (!aktifPeriode) await loadAktifPeriode();
+        const lp = document.getElementById('fpSiswaLabelPeriode');
+        if (lp && aktifPeriode) {
+          lp.textContent = (aktifPeriode.tahun_ajaran || '') + ' || ' + (aktifPeriode.semester || '');
+        } else if (lp) lp.textContent = '-';
+        await loadSesi();
+        await loadLiburMap();
+        const now = new Date();
+        const jam = now.toTimeString().slice(0, 5);
+        const sesiAktif = (dataSesi || []).find(s => {
+          if (s.aktif === false) return false;
+          const a = (s.jam_mulai || '').toString().slice(0, 5);
+          const b = (s.jam_akhir || s.jam_selesai || '').toString().slice(0, 5);
+          return a && b && jam >= a && jam <= b;
+        });
+        const ls = document.getElementById('fpSiswaLabelSesi');
+        const lj = document.getElementById('fpSiswaLabelJam');
+        if (ls) ls.textContent = sesiAktif ? (sesiAktif.nama || ('Sesi ' + sesiAktif.urutan)) : 'Tidak ada sesi aktif';
+        if (lj && sesiAktif) {
+          lj.textContent = ' (' + (sesiAktif.jam_mulai || '').toString().slice(0, 5) + '–' +
+            (sesiAktif.jam_akhir || sesiAktif.jam_selesai || '').toString().slice(0, 5) + ')';
+        } else if (lj) lj.textContent = '';
+      } catch (e) { console.warn(e); }
+
+      const terdaftar = isSidikJariTerdaftar();
+      if (stReg) {
+        stReg.textContent = terdaftar ? 'Terdaftar' : 'Belum terdaftar';
+        stReg.style.color = terdaftar ? '#16a34a' : '#b45309';
+      }
+      if (label) label.textContent = terdaftar ? 'Absen Sidik Jari' : 'Daftarkan Sidik Jari';
+
+      let izin = false;
+      try { izin = await cekIzinSidikJari(); } catch (e) { izin = false; }
+      if (stIzin) {
+        stIzin.textContent = izin ? 'Diizinkan' : 'Belum diizinkan admin';
+        stIzin.style.color = izin ? '#16a34a' : '#dc2626';
+      }
+      if (btn) btn.disabled = !izin;
+      if (ket) {
+        if (!izin) ket.textContent = 'Admin belum mengizinkan sidik jari untuk akun Anda. Minta admin mencentang di Pengaturan → Izin Sidik Jari.';
+        else if (!terdaftar) ket.textContent = 'Tekan tombol untuk mendaftarkan sidik jari HP ini. Hanya sekali per perangkat.';
+        else ket.textContent = 'Tekan tombol untuk absen dengan sidik jari (harus dalam jam sesi aktif & bukan hari libur).';
+      }
+
+      await loadFpSiswaLogHariIni();
+    }
+
+    async function loadFpSiswaLogHariIni() {
+      const tbody = document.getElementById('tbodyFpSiswaLog');
+      if (!tbody || !currentUserKode) return;
+      const today = new Date().toISOString().slice(0, 10);
+      try {
+        let rows = [];
+        if (supabaseClient) {
+          const { data } = await supabaseClient.from('absensi')
+            .select('jam_scan, sesi_nama, status')
+            .eq('tanggal', today).eq('tipe', 'siswa').eq('kode', currentUserKode)
+            .order('jam_scan');
+          rows = data || [];
+        }
+        if (!rows.length) {
+          tbody.innerHTML = '<tr><td colspan="3" style="text-align:center;padding:16px;color:#94a3b8;">Belum ada absen hari ini</td></tr>';
+          return;
+        }
+        tbody.innerHTML = rows.map(r =>
+          '<tr><td>' + esc(String(r.jam_scan || '-').slice(0, 8)) + '</td>' +
+          '<td>' + esc(r.sesi_nama || '-') + '</td>' +
+          '<td><b>' + esc(r.status || '-') + '</b></td></tr>'
+        ).join('');
+      } catch (e) {
+        tbody.innerHTML = '<tr><td colspan="3" style="color:#ef4444;">Gagal muat</td></tr>';
+      }
+    }
+
+    document.getElementById('btnFpSiswaAksi')?.addEventListener('click', async () => {
+      if (currentRole !== 'siswa') {
+        alert('Login sebagai siswa terlebih dahulu');
+        return;
+      }
+      // Pakai handler yang sama dengan tombol scan page
+      const terdaftar = isSidikJariTerdaftar();
+      if (!terdaftar) {
+        if (typeof daftarSidikJari === 'function') await daftarSidikJari();
+        else document.getElementById('btnSidikJari')?.click();
+      } else {
+        if (typeof absenSidikJari === 'function') await absenSidikJari();
+        else document.getElementById('btnSidikJari')?.click();
+      }
+      // refresh label
+      try { await initSidikJariSiswaPage(); } catch (e) {}
+      try { if (typeof updateLabelSidikJari === 'function') updateLabelSidikJari(); } catch (e) {}
     });
 
     async function cekIzinSidikJari() {
