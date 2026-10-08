@@ -2,7 +2,7 @@
 <html lang="id">
 <head>
   <meta charset="UTF-8" />
-  <!-- CACHE_BUST 2026-10-08-b -->
+  <!-- CACHE_BUST 2026-10-08-c -->
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
   <title>SMPN PANTANG MUNDUR</title>
   <!-- Supabase JS Client (CDN) -->
@@ -2126,7 +2126,7 @@
 
   <!-- FOOTER -->
   <footer class="footer">
-    © 2026 SMPN PANTANG MUNDUR * <span style="opacity:.7">· v2026.10.08d</span>
+    © 2026 SMPN PANTANG MUNDUR * <span style="opacity:.7">· v2026.10.08e</span>
   </footer>
 
   <!-- ========== MODAL LOGIN ========== -->
@@ -5238,13 +5238,22 @@
             }
             if (next && lastEnded) {
               det.textContent = (lastEnded.nama || 'Sesi') + ' selesai, ' +
-                (next.nama || 'sesi berikutnya') + ' akan berlangsung pada ' + fmt3(next);
+                (next.nama || 'sesi berikutnya') + ' akan berlangsung dari jam ' +
+                String(next.jam_mulai || '').slice(0, 5);
             } else if (next && !lastEnded) {
-              // Sebelum sesi pertama hari ini
-              det.textContent = (next.nama || 'Sesi 1') + ' akan berlangsung pada ' + fmt3(next);
+              // Sebelum sesi pertama hari ini (setelah 00:00 / lewat 23:59:59 hari sebelumnya)
+              det.textContent = (next.nama || 'Sesi 1') + ' akan berlangsung dari jam ' +
+                String(next.jam_mulai || '').slice(0, 5);
             } else {
-              // Semua sesi hari ini sudah selesai (sampai 23:59)
-              det.textContent = 'Sesi Absen Hari Ini Telah Berakhir';
+              // Semua sesi hari ini sudah selesai — tabel rekap tetap tampil s/d 23:59:59;
+              // info: sesi 1 esok (jam mulai sesi pertama)
+              const first = list[0];
+              const jam1 = first ? String(first.jam_mulai || '').slice(0, 5) : '';
+              if (first && jam1) {
+                det.textContent = (first.nama || 'Sesi 1') + ' akan berlangsung dari jam ' + jam1;
+              } else {
+                det.textContent = 'Sesi Absen Hari Ini Telah Berakhir';
+              }
             }
           }
         }
@@ -6425,27 +6434,42 @@
           if (byUrut && byUrut.jam_akhir) return String(byUrut.jam_akhir).slice(0, 5);
           return '';
         }
+        function padHms(h, m, s) {
+          return String(h).padStart(2, '0') + ':' +
+            String(m).padStart(2, '0') + ':' +
+            String(s).padStart(2, '0');
+        }
+        function formatJamDenganDetik(val) {
+          if (!val) return '';
+          try {
+            const d = new Date(val);
+            if (!isNaN(d.getTime())) {
+              return padHms(d.getHours(), d.getMinutes(), d.getSeconds());
+            }
+          } catch (e) {}
+          const s = String(val).trim();
+          const mIso = s.match(/T(\d{2}):(\d{2}):(\d{2})/);
+          if (mIso) return mIso[1] + ':' + mIso[2] + ':' + mIso[3];
+          const mFull = s.match(/^(\d{1,2}):(\d{2}):(\d{2})/);
+          if (mFull) return padHms(mFull[1], mFull[2], mFull[3]);
+          const mHm = s.match(/^(\d{1,2}):(\d{2})\b/);
+          if (mHm) return padHms(mHm[1], mHm[2], 0);
+          return s.slice(0, 8);
+        }
         function tampilJam(r) {
           const st = String(r.status || '').toUpperCase();
-          // Status tidak scan (A=Alpa, B=Bolos): pakai jam akhir sesi
+          // Status tidak scan (A=Alpa, B=Bolos): pakai jam akhir sesi (+ :00)
           if (st === 'A' || st === 'B' || st === 'ALPA' || st === 'ALPHA' || st === 'BOLOS') {
             const ja = jamAkhirSesi(r);
-            if (ja) return ja;
+            if (ja) return formatJamDenganDetik(ja.length === 5 ? ja + ':00' : ja);
           }
           if (r.jam_scan) {
-            try {
-              const d = new Date(r.jam_scan);
-              if (!isNaN(d.getTime())) {
-                return d.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
-              }
-            } catch (e) {}
-            const s = String(r.jam_scan);
-            if (s.length >= 8 && s.indexOf('T') === -1) return s.slice(0, 8);
-            if (s.length >= 5) return s.slice(11, 19) || s.slice(0, 5);
+            const formatted = formatJamDenganDetik(r.jam_scan);
+            if (formatted) return formatted;
           }
-          // Fallback A/B tanpa sesi
           if (st === 'A' || st === 'B' || st === 'ALPA' || st === 'ALPHA' || st === 'BOLOS') {
-            return jamAkhirSesi(r) || '-';
+            const ja = jamAkhirSesi(r);
+            return ja ? formatJamDenganDetik(ja.length === 5 ? ja + ':00' : ja) : '-';
           }
           return '-';
         }
