@@ -2,15 +2,15 @@
 <html lang="id">
 <head>
   <meta charset="UTF-8" />
-  <!-- CACHE_BUST 2026-10-08-k -->
+  <!-- CACHE_BUST 2026-10-08-l -->
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
   <title>SMPN PANTANG MUNDUR</title>
   <!-- Supabase JS Client (CDN) -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <!-- HTML5 QR Code Scanner -->
   <script src="https://cdn.jsdelivr.net/npm/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
-  <!-- SheetJS untuk Excel (.xlsx) -->
-  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+  <!-- SheetJS + style (xlsx-js-style) untuk Excel (.xlsx) -->
+  <script src="https://cdn.jsdelivr.net/npm/xlsx-js-style@1.2.0/dist/xlsx.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/mammoth@1.8.0/mammoth.browser.min.js"></script>
   <link href="https://cdn.jsdelivr.net/npm/quill@2.0.2/dist/quill.snow.css" rel="stylesheet">
   <script src="https://cdn.jsdelivr.net/npm/quill@2.0.2/dist/quill.js"></script>
@@ -2179,7 +2179,7 @@
 
   <!-- FOOTER -->
   <footer class="footer">
-    © 2026 SMPN PANTANG MUNDUR * <span style="opacity:.7">· v2026.10.08k</span>
+    © 2026 SMPN PANTANG MUNDUR * <span style="opacity:.7">· v2026.10.08l</span>
   </footer>
 
   <!-- ========== MODAL LOGIN ========== -->
@@ -4814,18 +4814,30 @@
       }
       const cols = st.cols || [];
       const mapelSel = document.getElementById('dnMapel');
-      const mapelNama = mapelSel?.selectedOptions?.[0]?.textContent || ('Mapel ' + st.mapelId);
-      const periodeLabel = aktifPeriode
-        ? ((aktifPeriode.tahun_ajaran || '') + ' ' + (aktifPeriode.semester || ''))
-        : '';
+      let mapelNama = mapelSel?.selectedOptions?.[0]?.textContent || ('Mapel ' + st.mapelId);
+      // Format "MTK – Matematika" jika opsi berisi kode + nama
+      mapelNama = String(mapelNama).replace(/\s+/g, ' ').trim();
 
-      // Header baris
+      const sem = (aktifPeriode && aktifPeriode.semester) ? String(aktifPeriode.semester).toUpperCase() : '';
+      const ta = (aktifPeriode && aktifPeriode.tahun_ajaran) ? String(aktifPeriode.tahun_ajaran) : '';
+      const judulSemester = (sem && ta)
+        ? ('SEMESTER ' + sem + ' TAHUN AJARAN ' + ta)
+        : (ta || sem || '-');
+
+      const nCol = 4 + cols.length + 1; // No NISN Nama L/P + cols + NR
+      const lastCol = nCol - 1;
+
+      // mm → Excel width (approx: 1 mm ≈ 0.5 character unit untuk font default)
+      // No/L/P/nilai = 7mm ≈ 3.5 → pakai 4; NISN 17mm ≈ 8.5 → 10; Nama 40mm ≈ 20 → 22
+      // Lebih akurat pakai wpx: 1mm ≈ 3.78 px
+      const mm = (x) => Math.round(x * 3.78);
+
       const header = ['No', 'NISN', 'Nama', 'L/P'];
       cols.forEach(c => header.push(String(c.jenis) + String(c.ke)));
       header.push('NR');
 
-      const aoa = [header];
-      st.siswaList.forEach((s, i) => {
+      // Bangun data baris siswa
+      const dataRows = st.siswaList.map((s, i) => {
         const nmap = st.mapNilai[s.id] || st.mapNilai[String(s.id)] || {};
         let sum = 0;
         const denom = cols.length;
@@ -4843,34 +4855,117 @@
         });
         const nr = denom ? Math.round((sum / denom) * 10) / 10 : '';
         row.push(nr === '' ? '' : nr);
-        aoa.push(row);
+        return row;
       });
 
-      // Info sheet header (baris info di atas tabel utama lewat sheet terpisah / prepend)
-      const infoRows = [
-        ['DAFTAR NILAI'],
-        ['Periode', periodeLabel],
-        ['Mapel', mapelNama],
-        ['Kelas', st.kelas || ''],
-        [],
+      // Layout:
+      // R0: DAFTAR NILAI (merge)
+      // R1: SEMESTER ... (merge)
+      // R2: kosong
+      // R3: Mata Pelajaran : ...
+      // R4: Kelas : ...
+      // R5: kosong
+      // R6: header tabel
+      // R7+: data
+      const aoa = [];
+      aoa.push(['DAFTAR NILAI']);
+      aoa.push([judulSemester]);
+      aoa.push([]);
+      aoa.push(['Mata Pelajaran', ': ' + mapelNama]);
+      aoa.push(['Kelas', ': ' + (st.kelas || '')]);
+      aoa.push([]);
+      aoa.push(header);
+      dataRows.forEach(r => aoa.push(r));
+
+      const ws = XLSX.utils.aoa_to_sheet(aoa);
+
+      // Merge judul
+      ws['!merges'] = [
+        { s: { r: 0, c: 0 }, e: { r: 0, c: lastCol } },
+        { s: { r: 1, c: 0 }, e: { r: 1, c: lastCol } }
       ];
-      const full = infoRows.concat(aoa);
 
-      const ws = XLSX.utils.aoa_to_sheet(full);
+      // Lebar kolom (mm)
+      // 0=No 7mm, 1=NISN 17mm, 2=Nama 40mm, 3=L/P 7mm, 4..=nilai 7mm, last=NR 7mm
+      const colsDef = [
+        { wpx: mm(7) },   // No
+        { wpx: mm(17) },  // NISN
+        { wpx: mm(40) },  // Nama
+        { wpx: mm(7) }    // L/P
+      ];
+      for (let i = 0; i < cols.length; i++) colsDef.push({ wpx: mm(7) });
+      colsDef.push({ wpx: mm(7) }); // NR
+      ws['!cols'] = colsDef;
 
-      // Lebar kolom otomatis menyesuaikan isi
-      const colWidths = [];
-      full.forEach(row => {
-        row.forEach((cell, ci) => {
-          const len = String(cell == null ? '' : cell).length;
-          colWidths[ci] = Math.max(colWidths[ci] || 8, Math.min(len + 2, 40));
+      // Styles
+      const borderThin = {
+        top: { style: 'thin', color: { rgb: '000000' } },
+        bottom: { style: 'thin', color: { rgb: '000000' } },
+        left: { style: 'thin', color: { rgb: '000000' } },
+        right: { style: 'thin', color: { rgb: '000000' } }
+      };
+      const styleTitle = {
+        font: { bold: true, sz: 14, name: 'Arial' },
+        alignment: { horizontal: 'center', vertical: 'center' }
+      };
+      const styleSub = {
+        font: { bold: true, sz: 11, name: 'Arial' },
+        alignment: { horizontal: 'center', vertical: 'center' }
+      };
+      const styleInfo = {
+        font: { sz: 10, name: 'Arial' },
+        alignment: { horizontal: 'left', vertical: 'center' }
+      };
+      const styleHead = {
+        font: { bold: true, sz: 10, name: 'Arial', color: { rgb: 'FFFFFF' } },
+        fill: { patternType: 'solid', fgColor: { rgb: '0000FF' } },
+        alignment: { horizontal: 'center', vertical: 'center', wrapText: true },
+        border: borderThin
+      };
+      const styleCenter = {
+        font: { sz: 10, name: 'Arial' },
+        alignment: { horizontal: 'center', vertical: 'center' },
+        border: borderThin
+      };
+      const styleNama = {
+        font: { sz: 10, name: 'Arial' },
+        alignment: { horizontal: 'left', vertical: 'center' },
+        border: borderThin
+      };
+
+      function setCell(r, c, value, style) {
+        const ref = XLSX.utils.encode_cell({ r: r, c: c });
+        const existing = ws[ref] || {};
+        const cell = { t: existing.t || (typeof value === 'number' ? 'n' : 's'), v: value != null ? value : (existing.v != null ? existing.v : ''), s: style };
+        if (cell.t === 's') cell.v = String(cell.v);
+        ws[ref] = cell;
+      }
+
+      // Judul
+      setCell(0, 0, 'DAFTAR NILAI', styleTitle);
+      setCell(1, 0, judulSemester, styleSub);
+      // Info
+      setCell(3, 0, 'Mata Pelajaran', styleInfo);
+      setCell(3, 1, ': ' + mapelNama, styleInfo);
+      setCell(4, 0, 'Kelas', styleInfo);
+      setCell(4, 1, ': ' + (st.kelas || ''), styleInfo);
+
+      // Header tabel di baris 6
+      const hr = 6;
+      header.forEach((h, c) => setCell(hr, c, h, styleHead));
+
+      // Data
+      dataRows.forEach((row, ri) => {
+        const r = hr + 1 + ri;
+        row.forEach((val, c) => {
+          // kolom 2 = Nama → kiri; lainnya center
+          const stl = (c === 2) ? styleNama : styleCenter;
+          setCell(r, c, val, stl);
         });
       });
-      // Minimal untuk kolom nilai
-      for (let i = 4; i < header.length + 0; i++) {
-        colWidths[i] = Math.max(colWidths[i] || 8, 8);
-      }
-      ws['!cols'] = colWidths.map(w => ({ wch: w }));
+
+      // Tinggi baris judul
+      ws['!rows'] = [{ hpt: 22 }, { hpt: 18 }];
 
       const wb = XLSX.utils.book_new();
       const sheetName = ('Nilai ' + (st.kelas || '')).slice(0, 31) || 'Nilai';
