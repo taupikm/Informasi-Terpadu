@@ -2,7 +2,7 @@
 <html lang="id">
 <head>
   <meta charset="UTF-8" />
-  <!-- CACHE_BUST 2026-10-08-i -->
+  <!-- CACHE_BUST 2026-10-08-j -->
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
   <title>SMPN PANTANG MUNDUR</title>
   <!-- Supabase JS Client (CDN) -->
@@ -1319,8 +1319,8 @@
     <section class="page" id="page-nilai-saya">
       <div class="page-title">Lihat Nilai Saya</div>
       <div class="card" style="padding:12px;margin-bottom:10px;font-size:13px;line-height:1.55;">
-        <div>Periode : <b id="nsPeriodeLabel">-</b></div>
-        <div style="margin-top:6px;">Nama : <b id="nsNama">-</b></div>
+        <div>Periode : <b id="nsPeriodeLabel" style="color:#2563eb;">-</b></div>
+        <div style="margin-top:6px;">Nama : <b id="nsNama" style="color:#2563eb;">-</b></div>
         <div>NISN : <b id="nsNisn">-</b></div>
         <div>Kelas : <b id="nsKelas">-</b></div>
       </div>
@@ -1603,19 +1603,40 @@
         </div>
         <button class="btn btn-primary" id="btnLoadDaftarNilai" style="width:100%;">Tampilkan Daftar Nilai</button>
       </div>
+      <div class="toolbar" id="toolbarDaftarNilai">
+        <button class="btn btn-secondary" id="btnDnEdit">✏️ Edit</button>
+        <button class="btn btn-outline" id="btnDnHapus" style="color:#ef4444;border-color:#fca5a5;">🗑️ Hapus</button>
+        <span class="toolbar-info" id="infoDaftarNilai">0 data</span>
+      </div>
       <div class="table-wrap">
         <table id="tableDaftarNilai">
           <thead id="theadDaftarNilai">
             <tr>
+              <th style="width:36px;"><input type="checkbox" id="checkAllDn"></th>
               <th>No</th><th>NISN</th><th>Nama</th><th>L/P</th><th>NR</th>
             </tr>
           </thead>
           <tbody id="tbodyDaftarNilai">
-            <tr><td colspan="5" style="text-align:center;padding:24px;color:#94a3b8;">Pilih Mapel & Kelas lalu klik Tampilkan</td></tr>
+            <tr><td colspan="6" style="text-align:center;padding:24px;color:#94a3b8;">Pilih Mapel & Kelas lalu klik Tampilkan</td></tr>
           </tbody>
         </table>
       </div>
     </section>
+
+    <!-- Modal Edit Nilai (Daftar Nilai) -->
+    <div class="modal-overlay" id="modalDnEdit">
+      <div class="modal" style="max-width:400px;">
+        <div class="modal-header">
+          <h3 id="modalDnEditTitle">Edit Nilai</h3>
+          <button class="modal-close" data-close="modalDnEdit">&times;</button>
+        </div>
+        <div class="modal-body" id="modalDnEditBody"></div>
+        <div class="modal-footer">
+          <button class="btn btn-outline" data-close="modalDnEdit">Batal</button>
+          <button class="btn btn-primary" id="btnDnSaveEdit">Simpan</button>
+        </div>
+      </div>
+    </div>
     <section class="page" id="page-kelola-tugas">
       <div class="page-title">Bank Soal — Tugas / Ujian</div>
 
@@ -2157,7 +2178,7 @@
 
   <!-- FOOTER -->
   <footer class="footer">
-    © 2026 SMPN PANTANG MUNDUR * <span style="opacity:.7">· v2026.10.08i</span>
+    © 2026 SMPN PANTANG MUNDUR * <span style="opacity:.7">· v2026.10.08j</span>
   </footer>
 
   <!-- ========== MODAL LOGIN ========== -->
@@ -4568,8 +4589,19 @@
       }
     });
 
-    // ----- DAFTAR NILAI (kolom dinamis) -----
-    document.getElementById('btnLoadDaftarNilai').addEventListener('click', async () => {
+    // ----- DAFTAR NILAI (kolom dinamis + CRUD) -----
+    let _dnState = { mapelId: null, kelas: null, cols: [], siswaList: [], mapNilai: {}, nilaiRows: [] };
+
+    function dnRenderNilaiCell(v) {
+      if (v == null || v === '') return '<td style="text-align:center;">-</td>';
+      const n = Number(v);
+      if (isNaN(n)) return '<td style="text-align:center;">-</td>';
+      const txt = (Math.round(n * 10) / 10).toFixed(n % 1 === 0 ? 0 : 1);
+      if (n < 70) return '<td style="text-align:center;color:#dc2626;font-weight:700;">' + txt + '</td>';
+      return '<td style="text-align:center;">' + txt + '</td>';
+    }
+
+    async function loadDaftarNilaiTable() {
       const mapelId = document.getElementById('dnMapel').value;
       const kelas = document.getElementById('dnKelas').value;
       if (!mapelId || !kelas) { alert('Pilih Mapel dan Kelas'); return; }
@@ -4577,7 +4609,7 @@
 
       const thead = document.getElementById('theadDaftarNilai');
       const tbody = document.getElementById('tbodyDaftarNilai');
-      tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;padding:24px;color:#94a3b8;">Memuat...</td></tr>';
+      tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;padding:24px;color:#94a3b8;">Memuat...</td></tr>';
 
       try {
         let siswaList = [];
@@ -4590,7 +4622,7 @@
 
           const { data: nilai } = await supabaseClient
             .from('nilai')
-            .select('siswa_id, jenis, ke, nilai')
+            .select('id, siswa_id, jenis, ke, nilai')
             .eq('periode_id', aktifPeriode.id)
             .eq('mapel_id', mapelId)
             .eq('kelas', kelas);
@@ -4598,39 +4630,43 @@
         } else {
           if (!dataSiswa.length) await loadSiswa();
           siswaList = dataSiswa.filter(s => s.kelas === kelas);
-          nilaiRows = []; // demo kosong
+          nilaiRows = [];
         }
 
-        // Kumpulkan kolom dinamis: jenis+ke yang ada, urut
-        const colSet = new Map(); // key "NH1" -> { jenis, ke }
+        const colSet = new Map();
         nilaiRows.forEach(n => {
           const key = n.jenis + n.ke;
           if (!colSet.has(key)) colSet.set(key, { jenis: n.jenis, ke: n.ke });
         });
-        // Urutkan: NH, TGS, PTS, ASAS, ASAJ, ASAT lalu ke
-        const orderJenis = ['NH', 'TGS', 'PTS', 'ASAS', 'ASAJ', 'ASAT'];
+        const orderJenis = ['NH', 'TGS', 'PTS', 'ASAS', 'ASAJ', 'ASAT', 'PAS', 'PAT'];
         const cols = [...colSet.values()].sort((a, b) => {
           const ia = orderJenis.indexOf(a.jenis);
           const ib = orderJenis.indexOf(b.jenis);
-          if (ia !== ib) return ia - ib;
+          if (ia !== ib) return (ia < 0 ? 99 : ia) - (ib < 0 ? 99 : ib);
           return a.ke - b.ke;
         });
 
-        // Header
-        let headerHtml = '<tr><th>No</th><th>NISN</th><th>Nama</th><th>L/P</th>';
-        cols.forEach(c => { headerHtml += `<th>${c.jenis}${c.ke}</th>`; });
-        headerHtml += '<th>NR</th></tr>';
+        let headerHtml = '<tr><th style="width:36px;"><input type="checkbox" id="checkAllDn"></th><th>No</th><th>NISN</th><th>Nama</th><th>L/P</th>';
+        cols.forEach(c => { headerHtml += '<th style="text-align:center;">' + c.jenis + c.ke + '</th>'; });
+        headerHtml += '<th style="text-align:center;">NR</th></tr>';
         thead.innerHTML = headerHtml;
+        document.getElementById('checkAllDn')?.addEventListener('change', function () {
+          document.querySelectorAll('.cb-dn-row').forEach(c => { c.checked = this.checked; });
+        });
 
-        // Map nilai: siswa_id -> { "NH1": 80, ... }
         const mapNilai = {};
         nilaiRows.forEach(n => {
           if (!mapNilai[n.siswa_id]) mapNilai[n.siswa_id] = {};
           mapNilai[n.siswa_id][n.jenis + n.ke] = n.nilai;
         });
 
+        _dnState = { mapelId: Number(mapelId), kelas, cols, siswaList, mapNilai, nilaiRows };
+
+        const info = document.getElementById('infoDaftarNilai');
+        if (info) info.textContent = siswaList.length + ' siswa';
+
         if (!siswaList.length) {
-          tbody.innerHTML = `<tr><td colspan="${4 + cols.length + 1}" style="text-align:center;padding:24px;color:#94a3b8;">Tidak ada siswa</td></tr>`;
+          tbody.innerHTML = '<tr><td colspan="' + (6 + cols.length) + '" style="text-align:center;padding:24px;color:#94a3b8;">Tidak ada siswa</td></tr>';
           return;
         }
 
@@ -4638,33 +4674,129 @@
           const nmap = mapNilai[s.id] || {};
           let vals = [];
           let sum = 0;
-          // Pembagi = banyaknya penilaian yang sudah ada di kelas/mapel (cols),
-          // nilai kosong dihitung 0 — sama seperti Lihat Nilai Saya
           const denom = cols.length;
           cols.forEach(c => {
             const key = c.jenis + c.ke;
             const v = nmap[key];
-            if (v != null && v !== '') {
-              vals.push(`<td>${v}</td>`);
-              sum += Number(v);
-            } else {
-              vals.push('<td>-</td>');
-              // kosong = 0
-            }
+            vals.push(dnRenderNilaiCell(v));
+            if (v != null && v !== '' && !isNaN(Number(v))) sum += Number(v);
           });
-          const nr = denom ? (sum / denom).toFixed(1) : '-';
-          return `<tr>
-            <td>${i + 1}</td>
-            <td>${s.nisn || ''}</td>
-            <td>${esc(s.nama)}</td>
-            <td>${s.lp || ''}</td>
-            ${vals.join('')}
-            <td><b>${nr}</b></td>
-          </tr>`;
+          const nr = denom ? (sum / denom) : null;
+          let nrHtml = '-';
+          if (nr != null) {
+            const t = (Math.round(nr * 10) / 10).toFixed(1);
+            nrHtml = nr < 70 ? '<span style="color:#dc2626;font-weight:700;">' + t + '</span>' : '<b>' + t + '</b>';
+          }
+          return '<tr data-siswa-id="' + s.id + '">' +
+            '<td><input type="checkbox" class="cb-dn-row" value="' + s.id + '"></td>' +
+            '<td>' + (i + 1) + '</td>' +
+            '<td>' + esc(s.nisn || '') + '</td>' +
+            '<td>' + esc(s.nama) + '</td>' +
+            '<td>' + esc(s.lp || '') + '</td>' +
+            vals.join('') +
+            '<td style="text-align:center;">' + nrHtml + '</td></tr>';
         }).join('');
       } catch (e) {
         console.error(e);
         alert('Gagal memuat daftar nilai: ' + (e.message || e));
+      }
+    }
+
+    document.getElementById('btnLoadDaftarNilai')?.addEventListener('click', () => loadDaftarNilaiTable());
+
+    function getCheckedDnSiswa() {
+      return [...document.querySelectorAll('.cb-dn-row:checked')].map(c => c.value);
+    }
+
+    document.getElementById('btnDnEdit')?.addEventListener('click', () => {
+      const ids = getCheckedDnSiswa();
+      if (ids.length !== 1) { alert('Centang tepat 1 siswa untuk diedit'); return; }
+      if (!_dnState.cols.length) { alert('Belum ada kolom nilai. Tampilkan daftar dulu.'); return; }
+      const sid = ids[0];
+      const s = _dnState.siswaList.find(x => String(x.id) === String(sid));
+      if (!s) return;
+      const nmap = _dnState.mapNilai[sid] || _dnState.mapNilai[Number(sid)] || {};
+      document.getElementById('modalDnEditTitle').textContent = 'Edit Nilai: ' + (s.nama || '');
+      let html = '<input type="hidden" id="dnEditSiswaId" value="' + sid + '">';
+      html += '<p style="font-size:12px;color:#64748b;margin-bottom:10px;">NISN: ' + esc(s.nisn || '-') + ' · Kelas: ' + esc(_dnState.kelas || '') + '</p>';
+      _dnState.cols.forEach(c => {
+        const key = c.jenis + c.ke;
+        const v = nmap[key];
+        const val = (v != null && v !== '') ? v : '';
+        html += '<div class="form-group"><label>' + esc(c.jenis + String(c.ke)) + '</label>' +
+          '<input type="number" min="0" max="100" step="0.1" class="dn-edit-nilai" data-jenis="' + esc(c.jenis) +
+          '" data-ke="' + c.ke + '" value="' + val + '" placeholder="Kosongkan = hapus" ' +
+          'style="width:100%;padding:10px;border:1px solid #e2e8f0;border-radius:8px;"></div>';
+      });
+      document.getElementById('modalDnEditBody').innerHTML = html;
+      openModal('modalDnEdit');
+    });
+
+    document.getElementById('btnDnSaveEdit')?.addEventListener('click', async () => {
+      const sid = document.getElementById('dnEditSiswaId')?.value;
+      if (!sid || !aktifPeriode || !_dnState.mapelId) return;
+      if (!supabaseClient) { alert('Butuh koneksi Supabase'); return; }
+      const inputs = [...document.querySelectorAll('.dn-edit-nilai')];
+      try {
+        for (const inp of inputs) {
+          const jenis = inp.dataset.jenis;
+          const ke = Number(inp.dataset.ke);
+          const raw = inp.value.trim();
+          // hapus record lama
+          await supabaseClient.from('nilai').delete()
+            .eq('periode_id', aktifPeriode.id)
+            .eq('siswa_id', Number(sid))
+            .eq('mapel_id', _dnState.mapelId)
+            .eq('jenis', jenis)
+            .eq('ke', ke);
+          if (raw === '') continue; // kosong = hapus saja
+          const num = Number(raw);
+          if (isNaN(num)) continue;
+          const { error } = await supabaseClient.from('nilai').insert([{
+            periode_id: aktifPeriode.id,
+            siswa_id: Number(sid),
+            mapel_id: _dnState.mapelId,
+            kelas: _dnState.kelas,
+            jenis: jenis,
+            ke: ke,
+            nilai: num,
+            updated_at: new Date().toISOString()
+          }]);
+          if (error) throw error;
+        }
+        closeModal('modalDnEdit');
+        alert('Nilai disimpan');
+        await loadDaftarNilaiTable();
+      } catch (e) {
+        alert('Gagal simpan: ' + (e.message || e));
+      }
+    });
+
+    document.getElementById('btnDnHapus')?.addEventListener('click', async () => {
+      const ids = getCheckedDnSiswa();
+      if (!ids.length) { alert('Centang siswa yang nilainya ingin dihapus'); return; }
+      if (!_dnState.mapelId || !aktifPeriode) { alert('Tampilkan daftar nilai dulu'); return; }
+      if (!(await showConfirm(
+        'Hapus SEMUA nilai mapel ini untuk ' + ids.length + ' siswa terpilih?\n(Periode & kelas saat ini)',
+        'Hapus Nilai', '🗑️'
+      ))) return;
+      try {
+        if (!supabaseClient) { alert('Butuh koneksi Supabase'); return; }
+        let deleted = 0;
+        for (const sid of ids) {
+          const { data, error } = await supabaseClient.from('nilai').delete()
+            .eq('periode_id', aktifPeriode.id)
+            .eq('siswa_id', Number(sid))
+            .eq('mapel_id', _dnState.mapelId)
+            .eq('kelas', _dnState.kelas)
+            .select('id');
+          if (error) throw error;
+          deleted += (data || []).length;
+        }
+        alert('Terhapus ' + deleted + ' record nilai');
+        await loadDaftarNilaiTable();
+      } catch (e) {
+        alert('Gagal hapus: ' + (e.message || e));
       }
     });
 
@@ -4674,10 +4806,16 @@
     const NS_EXCLUDE_RNH = new Set(['PTS', 'PAS', 'PAT', 'ASA', 'ASAJ', 'ASAS', 'ASAT', 'UAS', 'UTS']);
     const NS_FORMAL_ORDER = ['PTS', 'PAS', 'PAT', 'ASAS', 'ASAJ', 'ASAT', 'UAS', 'UTS'];
 
-    function nsFmtNilai(v) {
+    function nsFmtNilai(v, asHtml) {
       if (v == null || v === '' || isNaN(Number(v))) return '-';
       const n = Number(v);
-      return (Math.round(n * 10) / 10).toFixed(n % 1 === 0 ? 0 : 1);
+      const txt = (Math.round(n * 10) / 10).toFixed(n % 1 === 0 ? 0 : 1);
+      if (asHtml === false) return txt;
+      if (n < 70) return '<span style="color:#dc2626;font-weight:700;">' + txt + '</span>';
+      return txt;
+    }
+    function dnFmtNilai(v) {
+      return nsFmtNilai(v, true);
     }
 
     function nsAvg(sum, denom) {
