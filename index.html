@@ -2,7 +2,7 @@
 <html lang="id">
 <head>
   <meta charset="UTF-8" />
-  <!-- CACHE_BUST 2026-10-08-j -->
+  <!-- CACHE_BUST 2026-10-08-k -->
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
   <title>SMPN PANTANG MUNDUR</title>
   <!-- Supabase JS Client (CDN) -->
@@ -1606,6 +1606,7 @@
       <div class="toolbar" id="toolbarDaftarNilai">
         <button class="btn btn-secondary" id="btnDnEdit">✏️ Edit</button>
         <button class="btn btn-outline" id="btnDnHapus" style="color:#ef4444;border-color:#fca5a5;">🗑️ Hapus</button>
+        <button class="btn btn-outline" id="btnDnDownload" style="color:#166534;border-color:#86efac;">⬇️ Download</button>
         <span class="toolbar-info" id="infoDaftarNilai">0 data</span>
       </div>
       <div class="table-wrap">
@@ -2178,7 +2179,7 @@
 
   <!-- FOOTER -->
   <footer class="footer">
-    © 2026 SMPN PANTANG MUNDUR * <span style="opacity:.7">· v2026.10.08j</span>
+    © 2026 SMPN PANTANG MUNDUR * <span style="opacity:.7">· v2026.10.08k</span>
   </footer>
 
   <!-- ========== MODAL LOGIN ========== -->
@@ -4798,6 +4799,87 @@
       } catch (e) {
         alert('Gagal hapus: ' + (e.message || e));
       }
+    });
+
+
+    document.getElementById('btnDnDownload')?.addEventListener('click', () => {
+      if (typeof XLSX === 'undefined') {
+        alert('Library Excel belum termuat. Periksa koneksi internet.');
+        return;
+      }
+      const st = _dnState;
+      if (!st || !st.siswaList || !st.siswaList.length) {
+        alert('Tampilkan daftar nilai dulu, lalu Download');
+        return;
+      }
+      const cols = st.cols || [];
+      const mapelSel = document.getElementById('dnMapel');
+      const mapelNama = mapelSel?.selectedOptions?.[0]?.textContent || ('Mapel ' + st.mapelId);
+      const periodeLabel = aktifPeriode
+        ? ((aktifPeriode.tahun_ajaran || '') + ' ' + (aktifPeriode.semester || ''))
+        : '';
+
+      // Header baris
+      const header = ['No', 'NISN', 'Nama', 'L/P'];
+      cols.forEach(c => header.push(String(c.jenis) + String(c.ke)));
+      header.push('NR');
+
+      const aoa = [header];
+      st.siswaList.forEach((s, i) => {
+        const nmap = st.mapNilai[s.id] || st.mapNilai[String(s.id)] || {};
+        let sum = 0;
+        const denom = cols.length;
+        const row = [i + 1, s.nisn || '', s.nama || '', s.lp || ''];
+        cols.forEach(c => {
+          const key = c.jenis + c.ke;
+          const v = nmap[key];
+          if (v != null && v !== '' && !isNaN(Number(v))) {
+            const n = Number(v);
+            row.push(n);
+            sum += n;
+          } else {
+            row.push('');
+          }
+        });
+        const nr = denom ? Math.round((sum / denom) * 10) / 10 : '';
+        row.push(nr === '' ? '' : nr);
+        aoa.push(row);
+      });
+
+      // Info sheet header (baris info di atas tabel utama lewat sheet terpisah / prepend)
+      const infoRows = [
+        ['DAFTAR NILAI'],
+        ['Periode', periodeLabel],
+        ['Mapel', mapelNama],
+        ['Kelas', st.kelas || ''],
+        [],
+      ];
+      const full = infoRows.concat(aoa);
+
+      const ws = XLSX.utils.aoa_to_sheet(full);
+
+      // Lebar kolom otomatis menyesuaikan isi
+      const colWidths = [];
+      full.forEach(row => {
+        row.forEach((cell, ci) => {
+          const len = String(cell == null ? '' : cell).length;
+          colWidths[ci] = Math.max(colWidths[ci] || 8, Math.min(len + 2, 40));
+        });
+      });
+      // Minimal untuk kolom nilai
+      for (let i = 4; i < header.length + 0; i++) {
+        colWidths[i] = Math.max(colWidths[i] || 8, 8);
+      }
+      ws['!cols'] = colWidths.map(w => ({ wch: w }));
+
+      const wb = XLSX.utils.book_new();
+      const sheetName = ('Nilai ' + (st.kelas || '')).slice(0, 31) || 'Nilai';
+      XLSX.utils.book_append_sheet(wb, ws, sheetName);
+
+      const safeMapel = String(mapelNama).replace(/[\\/:*?"<>|]/g, '_').slice(0, 30);
+      const safeKelas = String(st.kelas || '').replace(/[\\/:*?"<>|]/g, '_');
+      const fname = 'Daftar_Nilai_' + safeMapel + '_' + safeKelas + '.xlsx';
+      XLSX.writeFile(wb, fname);
     });
 
     // ============================================================
