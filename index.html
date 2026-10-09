@@ -602,7 +602,7 @@
       margin-bottom: 8px;
     }
     .rekap-filter-row label {
-      flex: 0 0 110px;
+      flex: 0 0 120px;
       font-size: 12px;
       font-weight: 600;
       color: #334155;
@@ -1616,42 +1616,38 @@
         <div class="periode-bar" id="periodeBarInput">
           Tahun Ajaran || Semester : <b id="labelPeriodeInput">-</b>
         </div>
-        <div class="form-row" style="margin-top:12px;">
-          <div class="form-group">
-            <label>Jenis Penilaian</label>
-            <select id="inJenis">
-              <option value="NH">NH (Nilai Harian)</option>
-              <option value="TGS">TGS (Tugas)</option>
-              <option value="PTS">PTS</option>
-              <option value="ASAS">ASAS</option>
-              <option value="ASAJ">ASAJ</option>
-              <option value="ASAT">ASAT</option>
-            </select>
-          </div>
-          <div class="form-group">
-            <label>Penilaian Ke</label>
-            <select id="inKe">
-              <option value="1">1</option><option value="2">2</option><option value="3">3</option>
-              <option value="4">4</option><option value="5">5</option><option value="6">6</option>
-              <option value="7">7</option><option value="8">8</option><option value="9">9</option>
-              <option value="10">10</option><option value="11">11</option><option value="12">12</option>
-              <option value="13">13</option><option value="14">14</option><option value="15">15</option>
-              <option value="16">16</option><option value="17">17</option><option value="18">18</option>
-              <option value="19">19</option><option value="20">20</option>
-            </select>
-          </div>
+        <div class="rekap-filter-row" style="margin-top:12px;">
+          <label>Jenis Penilaian</label>
+          <select id="inJenis">
+            <option value="NH">NH (Nilai Harian)</option>
+            <option value="TGS">TGS (Tugas)</option>
+            <option value="PTS">PTS</option>
+            <option value="ASAS">ASAS</option>
+            <option value="ASAJ">ASAJ</option>
+            <option value="ASAT">ASAT</option>
+          </select>
         </div>
-        <div class="form-row">
-          <div class="form-group">
-            <label>Mapel</label>
-            <select id="inMapel"><option value="">- Pilih Mapel -</option></select>
-          </div>
-          <div class="form-group">
-            <label>Kelas</label>
-            <select id="inKelas"><option value="">- Pilih Kelas -</option></select>
-          </div>
+        <div class="rekap-filter-row">
+          <label>Penilaian Ke</label>
+          <select id="inKe">
+            <option value="1">1</option><option value="2">2</option><option value="3">3</option>
+            <option value="4">4</option><option value="5">5</option><option value="6">6</option>
+            <option value="7">7</option><option value="8">8</option><option value="9">9</option>
+            <option value="10">10</option><option value="11">11</option><option value="12">12</option>
+            <option value="13">13</option><option value="14">14</option><option value="15">15</option>
+            <option value="16">16</option><option value="17">17</option><option value="18">18</option>
+            <option value="19">19</option><option value="20">20</option>
+          </select>
         </div>
-        <button class="btn btn-primary" id="btnLoadSiswaNilai" style="width:100%;">Tampilkan Siswa</button>
+        <div class="rekap-filter-row">
+          <label>Mapel</label>
+          <select id="inMapel"><option value="">- Pilih Mapel -</option></select>
+        </div>
+        <div class="rekap-filter-row">
+          <label>Kelas</label>
+          <select id="inKelas"><option value="">- Pilih Kelas -</option></select>
+        </div>
+        <button class="btn btn-primary" id="btnLoadSiswaNilai" style="width:100%;margin-top:4px;">Tampilkan Siswa</button>
       </div>
       <div class="toolbar">
         <button class="btn btn-secondary" id="btnSimpanNilai" disabled>💾 Simpan Semua Nilai</button>
