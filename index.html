@@ -1474,6 +1474,12 @@
     </section>
     <section class="page" id="page-rekap-data">
       <div class="page-title">Rekap Data Absensi</div>
+      <div id="rekapModeSwitch" style="display:none;margin-bottom:10px;">
+        <div style="display:flex;border-radius:10px;overflow:hidden;border:1px solid #2563eb;">
+          <button type="button" id="btnModeEditAbsensi" style="flex:1;padding:10px;border:none;font-weight:700;font-size:12px;cursor:pointer;background:#2563eb;color:#fff;">✏️ Edit Absensi</button>
+          <button type="button" id="btnModeRekapAbsensi" style="flex:1;padding:10px;border:none;font-weight:700;font-size:12px;cursor:pointer;background:#eff6ff;color:#1e40af;">📊 Rekap Absensi</button>
+        </div>
+      </div>
       <div class="card" style="margin-bottom:10px;padding:12px;">
         <div class="rekap-filter-row">
           <label>Dari Tanggal</label>
@@ -3516,10 +3522,31 @@
       { id: 3, nama: 'Rizki Maulana', lp: 'L', nisn: '0123456781', kelas: '8A', tmp_lahir: 'Bogor', tgl_lahir: '2011-03-10', status: 'Aktif', no_hp: '083333333333', alamat: 'Jl. Kenanga 3', nama_ayah: 'Agus Maulana', nama_ibu: 'Dewi Lestari' }
     ];
     const DEMO_GURU = [
-      { id: 1, nama: 'Budi Santoso, S.Pd', lp: 'L', nip: '196505121990031001', jabatan: 'Guru Matematika', pangkat_gol: 'Pembina / IV-a', status: 'Aktif', no_hp: '081234567890', pin: '123456', mulai_kerja: '1990-03-01' },
-      { id: 2, nama: 'Siti Aminah, S.Pd', lp: 'P', nip: '197208151995032002', jabatan: 'Guru Bahasa Indo', pangkat_gol: 'Penata / III-c', status: 'Aktif', no_hp: '081298765432', pin: '111111', mulai_kerja: '1995-03-01' },
-      { id: 3, nama: 'Ahmad Fauzi, M.Pd', lp: 'L', nip: '198003102008011003', jabatan: 'Guru IPA', pangkat_gol: 'Penata Muda / III-a', status: 'Aktif', no_hp: '082112345678', pin: '222222', mulai_kerja: '2008-01-01' }
+      { id: 1, duk: 1, nama: 'Budi Santoso, S.Pd', lp: 'L', nip: '196505121990031001', jabatan: 'Guru Matematika', pangkat_gol: 'Pembina / IV-a', status: 'Aktif', no_hp: '081234567890', pin: '123456', mulai_kerja: '1990-03-01' },
+      { id: 2, duk: 2, nama: 'Siti Aminah, S.Pd', lp: 'P', nip: '197208151995032002', jabatan: 'Guru Bahasa Indo', pangkat_gol: 'Penata / III-c', status: 'Aktif', no_hp: '081298765432', pin: '111111', mulai_kerja: '1995-03-01' },
+      { id: 3, duk: 3, nama: 'Ahmad Fauzi, M.Pd', lp: 'L', nip: '198003102008011003', jabatan: 'Guru IPA', pangkat_gol: 'Penata Muda / III-a', status: 'Aktif', no_hp: '082112345678', pin: '222222', mulai_kerja: '2008-01-01' }
     ];
+
+    function sortSiswaList(arr) {
+      return (arr || []).slice().sort((a, b) => {
+        const ka = String(a.kelas || '');
+        const kb = String(b.kelas || '');
+        if (ka !== kb) return ka.localeCompare(kb, 'id', { numeric: true, sensitivity: 'base' });
+        return String(a.nama || '').localeCompare(String(b.nama || ''), 'id', { sensitivity: 'base' });
+      });
+    }
+    function sortGuruList(arr) {
+      return (arr || []).slice().sort((a, b) => {
+        const da = Number(a.duk ?? a.no_duk ?? a.urutan_duk ?? a.urutan ?? NaN);
+        const db = Number(b.duk ?? b.no_duk ?? b.urutan_duk ?? b.urutan ?? NaN);
+        if (!isNaN(da) || !isNaN(db)) {
+          const xa = isNaN(da) ? 999999 : da;
+          const xb = isNaN(db) ? 999999 : db;
+          if (xa !== xb) return xa - xb;
+        }
+        return String(a.nama || '').localeCompare(String(b.nama || ''), 'id', { sensitivity: 'base' });
+      });
+    }
 
     // ----- LOAD SISWA -----
     async function loadSiswa() {
@@ -3529,24 +3556,25 @@
         if (supabaseClient) {
           const { data, error } = await supabaseClient.from('siswa').select('*').order('id');
           if (error) throw error;
-          dataSiswa = data || [];
+          dataSiswa = sortSiswaList(data || []);
         } else {
-          dataSiswa = JSON.parse(JSON.stringify(DEMO_SISWA));
+          dataSiswa = sortSiswaList(JSON.parse(JSON.stringify(DEMO_SISWA)));
         }
       } catch (e) {
         console.error(e);
-        dataSiswa = JSON.parse(JSON.stringify(DEMO_SISWA));
+        dataSiswa = sortSiswaList(JSON.parse(JSON.stringify(DEMO_SISWA)));
       }
       renderSiswa();
     }
 
     function renderSiswa() {
       const q = (document.getElementById('cariSiswa')?.value || '').trim().toLowerCase();
-      const filtered = q
+      let filtered = q
         ? dataSiswa.filter(s =>
             (s.nama || '').toLowerCase().includes(q) ||
             (s.nisn || '').toLowerCase().includes(q))
-        : dataSiswa;
+        : dataSiswa.slice();
+      filtered = sortSiswaList(filtered);
       const tbody = document.getElementById('tbodySiswa');
       document.getElementById('infoSiswa').textContent = filtered.length + (q ? ' ditemukan' : ' data');
       document.getElementById('checkAllSiswa').checked = false;
@@ -3577,15 +3605,20 @@
       tbody.innerHTML = '<tr><td colspan="10" style="text-align:center;padding:24px;color:#94a3b8;">Memuat data...</td></tr>';
       try {
         if (supabaseClient) {
-          const { data, error } = await supabaseClient.from('guru').select('*').order('id');
-          if (error) throw error;
-          dataGuru = data || [];
+          let data = null, error = null;
+          // coba urut DUK dulu
+          ({ data, error } = await supabaseClient.from('guru').select('*').order('duk', { ascending: true }).order('nama'));
+          if (error) {
+            ({ data, error } = await supabaseClient.from('guru').select('*').order('nama'));
+            if (error) throw error;
+          }
+          dataGuru = sortGuruList(data || []);
         } else {
-          dataGuru = JSON.parse(JSON.stringify(DEMO_GURU));
+          dataGuru = sortGuruList(JSON.parse(JSON.stringify(DEMO_GURU)));
         }
       } catch (e) {
         console.error(e);
-        dataGuru = JSON.parse(JSON.stringify(DEMO_GURU));
+        dataGuru = sortGuruList(JSON.parse(JSON.stringify(DEMO_GURU)));
       }
       renderGuru();
     }
@@ -9907,16 +9940,49 @@
     let dataRekap = [];
     let rekapSesiList = [];
 
+
+    window._rekapMode = 'edit';
+
+    function updateRekapModeUI() {
+      const mode = window._rekapMode || 'edit';
+      const btnEdit = document.getElementById('btnModeEditAbsensi');
+      const btnSum = document.getElementById('btnModeRekapAbsensi');
+      if (btnEdit) {
+        btnEdit.style.background = mode === 'edit' ? '#2563eb' : '#eff6ff';
+        btnEdit.style.color = mode === 'edit' ? '#fff' : '#1e40af';
+      }
+      if (btnSum) {
+        btnSum.style.background = mode === 'summary' ? '#2563eb' : '#eff6ff';
+        btnSum.style.color = mode === 'summary' ? '#fff' : '#1e40af';
+      }
+      const isAdmin = currentRole === 'admin';
+      const tbAdmin = document.getElementById('toolbarRekapAdmin');
+      const tbView = document.getElementById('toolbarRekapView');
+      if (tbAdmin) tbAdmin.style.display = (isAdmin && mode === 'edit') ? 'flex' : 'none';
+      if (tbView) tbView.style.display = (!isAdmin || mode === 'summary') ? 'flex' : 'none';
+    }
+
+    document.getElementById('btnModeEditAbsensi')?.addEventListener('click', () => {
+      window._rekapMode = 'edit';
+      updateRekapModeUI();
+      loadRekapData(true);
+    });
+    document.getElementById('btnModeRekapAbsensi')?.addEventListener('click', () => {
+      window._rekapMode = 'summary';
+      updateRekapModeUI();
+      loadRekapData(true);
+    });
+
     async function initRekapPage() {
       await loadSesi();
       rekapSesiList = (dataSesi || []).filter(s => s.aktif !== false)
         .sort((a, b) => (a.urutan || 0) - (b.urutan || 0));
-      // Admin: edit/hapus | Guru: hanya lihat
       const isAdmin = currentRole === 'admin';
-      const tbAdmin = document.getElementById('toolbarRekapAdmin');
-      const tbView = document.getElementById('toolbarRekapView');
-      if (tbAdmin) tbAdmin.style.display = isAdmin ? 'flex' : 'none';
-      if (tbView) tbView.style.display = isAdmin ? 'none' : 'flex';
+      const sw = document.getElementById('rekapModeSwitch');
+      if (sw) sw.style.display = isAdmin ? 'block' : 'none';
+      if (!isAdmin) window._rekapMode = 'summary';
+      else if (!window._rekapMode) window._rekapMode = 'edit';
+      updateRekapModeUI();
       // Default tanggal = rentang tahun ajaran aktif (boleh dikosongkan / diubah user)
       await loadAktifPeriode();
       const dari = document.getElementById('rekapDari');
@@ -9952,6 +10018,122 @@
       document.getElementById('infoRekap') && (document.getElementById('infoRekap').textContent = '0 data');
       document.getElementById('infoRekapView') && (document.getElementById('infoRekapView').textContent = '0 data');
       dataRekap = [];
+    }
+
+
+    function normStatusKey(st) {
+      const s = String(st || '').toUpperCase().trim();
+      if (s === 'TW' || s === 'H') return 'TW';
+      if (s === 'TL') return 'TL';
+      if (s === 'I' || s === 'IZIN') return 'Izin';
+      if (s === 'S' || s === 'SAKIT') return 'Sakit';
+      if (s === 'A' || s === 'ALPA' || s === 'ALPHA') return 'Alpa';
+      if (s === 'B' || s === 'BOLOS') return 'Bolos';
+      if (s === 'IZIN') return 'Izin';
+      if (s === 'SAKIT') return 'Sakit';
+      // title case originals
+      const t = String(st || '');
+      if (/izin/i.test(t)) return 'Izin';
+      if (/sakit/i.test(t)) return 'Sakit';
+      if (/alpa|alpha/i.test(t)) return 'Alpa';
+      if (/bolos/i.test(t)) return 'Bolos';
+      return t || '-';
+    }
+
+    async function renderRekapSummary(tbody, thead, rows, dari, sampai) {
+      // Agregasi per orang di seluruh rentang tanggal
+      const byPerson = new Map();
+      rows.forEach(r => {
+        const key = (r.tipe || '') + ':' + (r.ref_id || r.kode || r.nama);
+        if (!byPerson.has(key)) {
+          byPerson.set(key, {
+            tipe: r.tipe,
+            ref_id: r.ref_id,
+            kode: r.kode || '',
+            nama: r.nama || '',
+            kelas: r.kelas || '',
+            duk: 0,
+            TW: 0, TL: 0, Izin: 0, Sakit: 0, Alpa: 0, Bolos: 0,
+            total: 0
+          });
+        }
+        const p = byPerson.get(key);
+        const k = normStatusKey(r.status);
+        if (k === 'TW') p.TW++;
+        else if (k === 'TL') p.TL++;
+        else if (k === 'Izin') p.Izin++;
+        else if (k === 'Sakit') p.Sakit++;
+        else if (k === 'Alpa') p.Alpa++;
+        else if (k === 'Bolos') p.Bolos++;
+        p.total++;
+      });
+
+      // kelas & duk
+      try {
+        if (supabaseClient) {
+          const list = [...byPerson.values()];
+          const sids = list.filter(x => x.tipe === 'siswa').map(x => x.ref_id).filter(Boolean);
+          const gids = list.filter(x => x.tipe === 'guru').map(x => x.ref_id).filter(Boolean);
+          if (sids.length) {
+            const { data: ss } = await supabaseClient.from('siswa').select('id, kelas').in('id', sids);
+            const m = {};
+            (ss || []).forEach(s => { m[s.id] = s.kelas || ''; });
+            list.forEach(p => { if (p.tipe === 'siswa') p.kelas = m[p.ref_id] || p.kelas; });
+          }
+          if (gids.length) {
+            const { data: gg } = await supabaseClient.from('guru').select('id, duk, no_duk, urutan_duk, urutan').in('id', gids);
+            const m = {};
+            (gg || []).forEach(g => { m[g.id] = Number(g.duk ?? g.no_duk ?? g.urutan_duk ?? g.urutan ?? g.id) || 0; });
+            list.forEach(p => { if (p.tipe === 'guru') p.duk = m[p.ref_id] || 0; });
+          }
+        }
+      } catch (e) { console.warn(e); }
+
+      let list = [...byPerson.values()].sort((a, b) => {
+        if (a.tipe !== b.tipe) return a.tipe === 'siswa' ? -1 : 1;
+        if (a.tipe === 'siswa') {
+          const c = String(a.kelas || '').localeCompare(String(b.kelas || ''), 'id', { numeric: true });
+          if (c) return c;
+        } else if ((a.duk || 0) !== (b.duk || 0)) return (a.duk || 0) - (b.duk || 0);
+        return String(a.nama).localeCompare(String(b.nama), 'id');
+      });
+
+      thead.innerHTML = '<tr>' +
+        '<th>No</th><th>ID</th><th>Nama</th><th>Kelas</th>' +
+        '<th style="color:#166534;">TW</th><th style="color:#a16207;">TL</th>' +
+        '<th style="color:#1d4ed8;">Izin</th><th style="color:#7e22ce;">Sakit</th>' +
+        '<th style="color:#dc2626;">Alpa</th><th style="color:#991b1b;">Bolos</th>' +
+        '<th>Jml Sesi</th><th>Nilai Hadir</th><th>%</th></tr>';
+
+      if (!list.length) {
+        tbody.innerHTML = '<tr><td colspan="13" style="text-align:center;padding:16px;color:#94a3b8;">Tidak ada data</td></tr>';
+        document.getElementById('infoRekap') && (document.getElementById('infoRekap').textContent = '0 data');
+        document.getElementById('infoRekapView') && (document.getElementById('infoRekapView').textContent = '0 data');
+        return;
+      }
+
+      tbody.innerHTML = list.map((p, i) => {
+        const hadir = p.TW + p.TL;
+        const pct = p.total ? Math.round((hadir / p.total) * 1000) / 10 : 0;
+        return '<tr>' +
+          '<td>' + (i + 1) + '</td>' +
+          '<td>' + esc(p.kode || p.ref_id || '–') + '</td>' +
+          '<td>' + esc(p.nama) + '</td>' +
+          '<td>' + esc(p.tipe === 'guru' ? '–' : (p.kelas || '–')) + '</td>' +
+          '<td style="text-align:center;color:#166534;font-weight:700;">' + p.TW + '</td>' +
+          '<td style="text-align:center;color:#a16207;font-weight:700;">' + p.TL + '</td>' +
+          '<td style="text-align:center;color:#1d4ed8;font-weight:700;">' + p.Izin + '</td>' +
+          '<td style="text-align:center;color:#7e22ce;font-weight:700;">' + p.Sakit + '</td>' +
+          '<td style="text-align:center;color:#dc2626;font-weight:700;">' + p.Alpa + '</td>' +
+          '<td style="text-align:center;color:#991b1b;font-weight:700;">' + p.Bolos + '</td>' +
+          '<td style="text-align:center;">' + p.total + '</td>' +
+          '<td style="text-align:center;font-weight:700;">' + hadir + '</td>' +
+          '<td style="text-align:center;font-weight:700;">' + pct + '%</td></tr>';
+      }).join('');
+
+      const info = list.length + ' orang · ' + dari + ' s/d ' + sampai;
+      document.getElementById('infoRekap') && (document.getElementById('infoRekap').textContent = info);
+      document.getElementById('infoRekapView') && (document.getElementById('infoRekapView').textContent = info);
     }
 
     async function loadRekapData(skipMaterialize) {
@@ -10080,10 +10262,48 @@
           });
         });
 
+        // Lengkapi kelas (siswa) + duk (guru) untuk urutan
+        try {
+          if (supabaseClient) {
+            const siswaRefs = [...new Set(Array.from(map.values()).filter(x => x.tipe === 'siswa').map(x => x.ref_id).filter(Boolean))];
+            const guruRefs = [...new Set(Array.from(map.values()).filter(x => x.tipe === 'guru').map(x => x.ref_id).filter(Boolean))];
+            const kelasMap = {}, dukMap = {};
+            if (siswaRefs.length) {
+              const { data: ss } = await supabaseClient.from('siswa').select('id, kelas, nama').in('id', siswaRefs);
+              (ss || []).forEach(s => { kelasMap[s.id] = s.kelas || ''; });
+            }
+            if (guruRefs.length) {
+              const { data: gg } = await supabaseClient.from('guru').select('id, duk, no_duk, urutan_duk, urutan, nama').in('id', guruRefs);
+              (gg || []).forEach(g => {
+                dukMap[g.id] = Number(g.duk ?? g.no_duk ?? g.urutan_duk ?? g.urutan ?? g.id) || 0;
+              });
+            }
+            map.forEach(item => {
+              if (item.tipe === 'siswa') item.kelas = kelasMap[item.ref_id] || item.kelas || '';
+              if (item.tipe === 'guru') item.duk = dukMap[item.ref_id] || 0;
+            });
+          }
+        } catch (e) { console.warn('enrich kelas/duk', e); }
+
         dataRekap = Array.from(map.values()).sort((a, b) => {
-          if (a.tanggal === b.tanggal) return String(a.nama).localeCompare(String(b.nama));
-          return a.tanggal < b.tanggal ? 1 : -1;
+          // urut: tipe siswa dulu by kelas, guru by duk, lalu tanggal desc
+          if (a.tipe !== b.tipe) return a.tipe === 'siswa' ? -1 : 1;
+          if (a.tipe === 'siswa') {
+            const kc = String(a.kelas || '').localeCompare(String(b.kelas || ''), 'id', { numeric: true });
+            if (kc) return kc;
+          } else {
+            if ((a.duk || 0) !== (b.duk || 0)) return (a.duk || 0) - (b.duk || 0);
+          }
+          if (a.tanggal !== b.tanggal) return a.tanggal < b.tanggal ? 1 : -1;
+          return String(a.nama).localeCompare(String(b.nama), 'id');
         });
+
+        // Mode summary (Rekap Absensi) atau edit
+        const mode = (currentRole !== 'admin') ? 'summary' : (window._rekapMode || 'edit');
+        if (mode === 'summary') {
+          renderRekapSummary(tbody, thead, rows, dari, sampai);
+          return;
+        }
 
         document.getElementById('infoRekap').textContent = dataRekap.length + ' baris';
         const iv = document.getElementById('infoRekapView');
@@ -10118,14 +10338,6 @@
             cells +
             '<td>' + esc(row.tanggal) + '</td></tr>';
         }).join('');
-
-        if (currentRole !== 'admin') {
-          document.querySelectorAll('#tableRekap .cb-rekap-row, #checkAllRekap').forEach(el => {
-            el.style.display = 'none';
-            const cell = el.closest('th') || el.closest('td');
-            if (cell) cell.style.display = 'none';
-          });
-        }
       } catch (e) {
         console.error(e);
         tbody.innerHTML = '<tr><td colspan="10" style="text-align:center;padding:16px;color:#ef4444;">Gagal: ' + esc(String(e.message || e)) + '</td></tr>';
