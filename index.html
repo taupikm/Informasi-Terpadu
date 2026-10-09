@@ -1681,31 +1681,54 @@
         <div class="periode-bar" id="periodeBarDaftar">
           Tahun Ajaran || Semester : <b id="labelPeriodeDaftar">-</b>
         </div>
-        <div class="form-row" style="margin-top:12px;">
-          <div class="form-group">
-            <label>Mapel</label>
-            <select id="dnMapel"><option value="">- Pilih Mapel -</option></select>
-          </div>
-          <div class="form-group">
-            <label>Kelas</label>
-            <select id="dnKelas"><option value="">- Pilih Kelas -</option></select>
-          </div>
+        <div class="rekap-filter-row" style="margin-top:12px;">
+          <label>Mapel</label>
+          <select id="dnMapel"><option value="">- Pilih Mapel -</option></select>
         </div>
-        <button class="btn btn-primary" id="btnLoadDaftarNilai" style="width:100%;">Tampilkan Daftar Nilai</button>
+        <div class="rekap-filter-row">
+          <label>Kelas</label>
+          <select id="dnKelas"><option value="">- Pilih Kelas -</option></select>
+        </div>
+        <button class="btn btn-primary" id="btnLoadDaftarNilai" style="width:100%;margin-top:4px;">Tampilkan Daftar Nilai</button>
+      </div>
+      <div class="toolbar" id="toolbarDaftarNilai">
+        <button class="btn btn-secondary" id="btnEditDn" title="Edit nilai siswa terpilih">✏️ Edit</button>
+        <button class="btn btn-outline" id="btnHapusDn" style="color:#ef4444;border-color:#fca5a5;" title="Hapus nilai siswa terpilih">🗑️ Hapus</button>
+        <button class="btn btn-outline" id="btnExcelDn" title="Unduh Excel">📥 Excel</button>
+        <span class="toolbar-info" id="infoDaftarNilai">0 data</span>
       </div>
       <div class="table-wrap">
         <table id="tableDaftarNilai">
           <thead id="theadDaftarNilai">
             <tr>
+              <th style="width:36px;"><input type="checkbox" id="checkAllDn" title="Pilih semua"></th>
               <th>No</th><th>NISN</th><th>Nama</th><th>L/P</th><th>NR</th>
             </tr>
           </thead>
           <tbody id="tbodyDaftarNilai">
-            <tr><td colspan="5" style="text-align:center;padding:24px;color:#94a3b8;">Pilih Mapel & Kelas lalu klik Tampilkan</td></tr>
+            <tr><td colspan="6" style="text-align:center;padding:24px;color:#94a3b8;">Pilih Mapel & Kelas lalu klik Tampilkan</td></tr>
           </tbody>
         </table>
       </div>
     </section>
+
+    <!-- Modal Edit Nilai (Daftar Nilai) -->
+    <div class="modal-overlay" id="modalEditDn">
+      <div class="modal modal-lg">
+        <div class="modal-header">
+          <h3>Edit Nilai</h3>
+          <button class="modal-close" data-close="modalEditDn">&times;</button>
+        </div>
+        <div class="modal-body">
+          <div style="font-size:13px;margin-bottom:12px;color:#64748b;" id="editDnInfo">-</div>
+          <div id="editDnFields"></div>
+        </div>
+        <div class="modal-footer">
+          <button class="btn btn-outline" data-close="modalEditDn">Batal</button>
+          <button class="btn btn-primary" id="btnSaveEditDn">💾 Simpan</button>
+        </div>
+      </div>
+    </div>
     <section class="page" id="page-kelola-tugas">
       <div class="page-title">Bank Soal — Tugas / Ujian</div>
 
@@ -4628,8 +4651,18 @@
       }
     });
 
-    // ----- DAFTAR NILAI (kolom dinamis) -----
-    document.getElementById('btnLoadDaftarNilai').addEventListener('click', async () => {
+    // ----- DAFTAR NILAI (kolom dinamis + CRUD + Excel) -----
+    let _dnState = {
+      mapelId: null,
+      kelas: '',
+      mapelNama: '',
+      cols: [],
+      siswaList: [],
+      mapNilai: {},
+      nilaiIdMap: {} // key "siswaId|jenis|ke" -> record id
+    };
+
+    async function loadDaftarNilaiData() {
       const mapelId = document.getElementById('dnMapel').value;
       const kelas = document.getElementById('dnKelas').value;
       if (!mapelId || !kelas) { alert('Pilih Mapel dan Kelas'); return; }
@@ -4637,7 +4670,11 @@
 
       const thead = document.getElementById('theadDaftarNilai');
       const tbody = document.getElementById('tbodyDaftarNilai');
-      tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;padding:24px;color:#94a3b8;">Memuat...</td></tr>';
+      const infoEl = document.getElementById('infoDaftarNilai');
+      tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;padding:24px;color:#94a3b8;">Memuat...</td></tr>';
+
+      const mapelOpt = document.getElementById('dnMapel').selectedOptions[0];
+      const mapelNama = mapelOpt ? mapelOpt.textContent : '';
 
       try {
         let siswaList = [];
@@ -4650,52 +4687,65 @@
 
           const { data: nilai } = await supabaseClient
             .from('nilai')
-            .select('siswa_id, jenis, ke, nilai')
+            .select('id, siswa_id, jenis, ke, nilai')
             .eq('periode_id', aktifPeriode.id)
-            .eq('mapel_id', mapelId)
+            .eq('mapel_id', Number(mapelId))
             .eq('kelas', kelas);
           nilaiRows = nilai || [];
         } else {
           if (!dataSiswa.length) await loadSiswa();
           siswaList = dataSiswa.filter(s => s.kelas === kelas);
-          nilaiRows = []; // demo kosong
+          nilaiRows = [];
         }
 
-        // Kumpulkan kolom dinamis: jenis+ke yang ada, urut
-        const colSet = new Map(); // key "NH1" -> { jenis, ke }
+        const colSet = new Map();
         nilaiRows.forEach(n => {
           const key = n.jenis + n.ke;
           if (!colSet.has(key)) colSet.set(key, { jenis: n.jenis, ke: n.ke });
         });
-        // Urutkan: NH, TGS, PTS, ASAS, ASAJ, ASAT lalu ke
-        const orderJenis = ['NH', 'TGS', 'PTS', 'ASAS', 'ASAJ', 'ASAT'];
+        const orderJenis = ['NH', 'TGS', 'PTS', 'PAS', 'PAT', 'ASAS', 'ASAJ', 'ASAT'];
         const cols = [...colSet.values()].sort((a, b) => {
           const ia = orderJenis.indexOf(a.jenis);
           const ib = orderJenis.indexOf(b.jenis);
-          if (ia !== ib) return ia - ib;
+          if (ia !== ib) return (ia < 0 ? 99 : ia) - (ib < 0 ? 99 : ib);
           return a.ke - b.ke;
         });
 
-        // Header
-        let headerHtml = '<tr><th>No</th><th>NISN</th><th>Nama</th><th>L/P</th>';
-        cols.forEach(c => { headerHtml += `<th>${c.jenis}${c.ke}</th>`; });
-        headerHtml += '<th>NR</th></tr>';
+        let headerHtml = '<tr>';
+        headerHtml += '<th style="width:36px;"><input type="checkbox" id="checkAllDn" title="Pilih semua"></th>';
+        headerHtml += '<th>No</th><th>NISN</th><th>Nama</th><th>L/P</th>';
+        cols.forEach(c => { headerHtml += '<th style="text-align:center;">' + c.jenis + c.ke + '</th>'; });
+        headerHtml += '<th style="text-align:center;">NR</th></tr>';
         thead.innerHTML = headerHtml;
+        document.getElementById('checkAllDn')?.addEventListener('change', function () {
+          document.querySelectorAll('.cb-dn-row').forEach(c => { c.checked = this.checked; });
+        });
 
-        // Map nilai: siswa_id -> { "NH1": 80, ... }
         const mapNilai = {};
+        const nilaiIdMap = {};
         nilaiRows.forEach(n => {
           if (!mapNilai[n.siswa_id]) mapNilai[n.siswa_id] = {};
           mapNilai[n.siswa_id][n.jenis + n.ke] = n.nilai;
+          if (n.id) nilaiIdMap[n.siswa_id + '|' + n.jenis + '|' + n.ke] = n.id;
         });
 
+        _dnState = {
+          mapelId: Number(mapelId),
+          kelas: kelas,
+          mapelNama: mapelNama,
+          cols: cols,
+          siswaList: siswaList,
+          mapNilai: mapNilai,
+          nilaiIdMap: nilaiIdMap
+        };
+
+        if (infoEl) infoEl.textContent = siswaList.length + ' siswa';
+
         if (!siswaList.length) {
-          tbody.innerHTML = `<tr><td colspan="${4 + cols.length + 1}" style="text-align:center;padding:24px;color:#94a3b8;">Tidak ada siswa</td></tr>`;
+          tbody.innerHTML = '<tr><td colspan="' + (6 + cols.length) + '" style="text-align:center;padding:24px;color:#94a3b8;">Tidak ada siswa</td></tr>';
           return;
         }
 
-        // NR = jumlah semua nilai / banyaknya penilaian yang dilaksanakan guru
-        // (kolom dinamis = penilaian yang ada; nilai kosong dihitung 0)
         tbody.innerHTML = siswaList.map((s, i) => {
           const nmap = mapNilai[s.id] || {};
           let vals = [];
@@ -4706,28 +4756,205 @@
             const v = nmap[key];
             if (v != null && v !== '') {
               const num = Number(v);
-              vals.push(`<td style="text-align:center;">${fmtNilaiWarna(num)}</td>`);
+              vals.push('<td style="text-align:center;">' + fmtNilaiWarna(num) + '</td>');
               sum += num;
             } else {
               vals.push('<td style="text-align:center;color:#cbd5e1;">–</td>');
             }
           });
           const nr = totalAssess ? (sum / totalAssess) : null;
-          return `<tr>
-            <td>${i + 1}</td>
-            <td>${s.nisn || ''}</td>
-            <td>${esc(s.nama)}</td>
-            <td>${s.lp || ''}</td>
-            ${vals.join('')}
-            <td style="text-align:center;"><b>${nr != null ? fmtNilaiWarna(nr) : '-'}</b></td>
-          </tr>`;
+          return '<tr>' +
+            '<td><input type="checkbox" class="cb-dn-row" value="' + s.id + '"></td>' +
+            '<td>' + (i + 1) + '</td>' +
+            '<td>' + esc(s.nisn || '') + '</td>' +
+            '<td>' + esc(s.nama) + '</td>' +
+            '<td>' + esc(s.lp || '') + '</td>' +
+            vals.join('') +
+            '<td style="text-align:center;"><b>' + (nr != null ? fmtNilaiWarna(nr) : '-') + '</b></td>' +
+            '</tr>';
         }).join('');
       } catch (e) {
         console.error(e);
         alert('Gagal memuat daftar nilai: ' + (e.message || e));
       }
+    }
+
+    document.getElementById('btnLoadDaftarNilai')?.addEventListener('click', () => loadDaftarNilaiData());
+
+    document.getElementById('checkAllDn')?.addEventListener('change', function () {
+      document.querySelectorAll('.cb-dn-row').forEach(c => { c.checked = this.checked; });
     });
 
+    // Hapus nilai siswa terpilih (semua jenis untuk mapel+kelas+periode ini)
+    document.getElementById('btnHapusDn')?.addEventListener('click', async () => {
+      if (currentRole !== 'admin' && currentRole !== 'guru') {
+        alert('Hanya Admin/Guru yang dapat menghapus nilai');
+        return;
+      }
+      const ids = getChecked('cb-dn-row');
+      if (!ids.length) { alert('Centang siswa yang nilainya ingin dihapus'); return; }
+      if (!_dnState.mapelId || !_dnState.kelas || !aktifPeriode) {
+        alert('Tampilkan daftar nilai dulu');
+        return;
+      }
+      if (!(await showConfirm(
+        'Hapus SEMUA nilai ' + ids.length + ' siswa untuk mapel ini di kelas ' + _dnState.kelas + '?',
+        'Hapus Nilai', '🗑️'
+      ))) return;
+
+      try {
+        if (!supabaseClient) { alert('Butuh koneksi Supabase'); return; }
+        const { data, error } = await supabaseClient.from('nilai').delete()
+          .eq('periode_id', aktifPeriode.id)
+          .eq('mapel_id', _dnState.mapelId)
+          .eq('kelas', _dnState.kelas)
+          .in('siswa_id', ids.map(Number))
+          .select('id');
+        if (error) throw error;
+        const n = (data || []).length;
+        alert(n ? ('Berhasil menghapus ' + n + ' record nilai') : 'Tidak ada record terhapus');
+        await loadDaftarNilaiData();
+      } catch (e) {
+        alert('Gagal hapus: ' + (e.message || e));
+      }
+    });
+
+    // Edit nilai 1 siswa
+    let _editDnSiswa = null;
+    document.getElementById('btnEditDn')?.addEventListener('click', async () => {
+      if (currentRole !== 'admin' && currentRole !== 'guru') {
+        alert('Hanya Admin/Guru yang dapat mengedit nilai');
+        return;
+      }
+      const ids = getChecked('cb-dn-row');
+      if (ids.length !== 1) { alert('Centang tepat 1 siswa untuk diedit'); return; }
+      if (!_dnState.cols || !_dnState.cols.length) {
+        alert('Belum ada kolom penilaian. Input nilai dulu lewat menu Input Nilai.');
+        return;
+      }
+      const sid = Number(ids[0]);
+      const siswa = (_dnState.siswaList || []).find(s => Number(s.id) === sid);
+      if (!siswa) { alert('Siswa tidak ditemukan'); return; }
+      _editDnSiswa = siswa;
+      document.getElementById('editDnInfo').textContent =
+        (siswa.nama || '') + ' · ' + (siswa.nisn || '') + ' · ' + (_dnState.mapelNama || '') + ' · ' + (_dnState.kelas || '');
+
+      const nmap = _dnState.mapNilai[sid] || {};
+      const box = document.getElementById('editDnFields');
+      box.innerHTML = _dnState.cols.map(c => {
+        const key = c.jenis + c.ke;
+        const v = nmap[key];
+        const val = (v != null && v !== '') ? v : '';
+        return '<div class="form-group">' +
+          '<label>' + esc(c.jenis + c.ke) + '</label>' +
+          '<input type="number" min="0" max="100" step="0.1" class="edit-dn-input" data-jenis="' + esc(c.jenis) +
+          '" data-ke="' + c.ke + '" value="' + esc(String(val)) + '" placeholder="0–100 (kosong = hapus)">' +
+          '</div>';
+      }).join('');
+      openModal('modalEditDn');
+    });
+
+    document.getElementById('btnSaveEditDn')?.addEventListener('click', async () => {
+      if (!_editDnSiswa || !_dnState.mapelId || !aktifPeriode) return;
+      const inputs = [...document.querySelectorAll('.edit-dn-input')];
+      if (!(await showConfirm('Simpan perubahan nilai untuk ' + (_editDnSiswa.nama || '') + '?', 'Simpan Nilai', '💾'))) return;
+      try {
+        if (!supabaseClient) { alert('Butuh koneksi Supabase'); return; }
+        const sid = Number(_editDnSiswa.id);
+        for (const inp of inputs) {
+          const jenis = inp.dataset.jenis;
+          const ke = Number(inp.dataset.ke);
+          const raw = inp.value.trim();
+          const idKey = sid + '|' + jenis + '|' + ke;
+          const recId = _dnState.nilaiIdMap[idKey];
+
+          if (raw === '') {
+            // hapus jika ada
+            if (recId) {
+              const { error } = await supabaseClient.from('nilai').delete().eq('id', recId);
+              if (error) throw error;
+            }
+            continue;
+          }
+          const num = parseFloat(raw);
+          if (isNaN(num) || num < 0 || num > 100) {
+            alert('Nilai ' + jenis + ke + ' tidak valid (0–100)');
+            return;
+          }
+          if (recId) {
+            const { error } = await supabaseClient.from('nilai').update({
+              nilai: num, updated_at: new Date().toISOString()
+            }).eq('id', recId);
+            if (error) throw error;
+          } else {
+            const { error } = await supabaseClient.from('nilai').insert([{
+              periode_id: aktifPeriode.id,
+              siswa_id: sid,
+              mapel_id: _dnState.mapelId,
+              kelas: _dnState.kelas,
+              jenis: jenis,
+              ke: ke,
+              nilai: num,
+              updated_at: new Date().toISOString()
+            }]);
+            if (error) throw error;
+          }
+        }
+        closeModal('modalEditDn');
+        _editDnSiswa = null;
+        await loadDaftarNilaiData();
+        alert('Nilai berhasil disimpan');
+      } catch (e) {
+        alert('Gagal simpan: ' + (e.message || e));
+      }
+    });
+
+    // Unduh Excel
+    document.getElementById('btnExcelDn')?.addEventListener('click', () => {
+      if (!_dnState.siswaList || !_dnState.siswaList.length) {
+        alert('Tampilkan daftar nilai dulu');
+        return;
+      }
+      if (typeof XLSX === 'undefined') {
+        alert('Library Excel belum termuat. Cek koneksi internet.');
+        return;
+      }
+      const cols = _dnState.cols || [];
+      const headers = ['No', 'NISN', 'Nama', 'L/P'];
+      cols.forEach(c => headers.push(c.jenis + c.ke));
+      headers.push('NR');
+
+      const rows = [_dnState.siswaList.map((s, i) => {
+        const nmap = _dnState.mapNilai[s.id] || {};
+        let sum = 0;
+        const totalAssess = cols.length;
+        const vals = cols.map(c => {
+          const v = nmap[c.jenis + c.ke];
+          if (v != null && v !== '') {
+            sum += Number(v);
+            return Number(v);
+          }
+          return '';
+        });
+        const nr = totalAssess ? Math.round((sum / totalAssess) * 10) / 10 : '';
+        return [i + 1, s.nisn || '', s.nama || '', s.lp || '', ...vals, nr];
+      })];
+
+      const aoa = [headers, ...rows[0]];
+      const ws = XLSX.utils.aoa_to_sheet(aoa);
+      ws['!cols'] = headers.map((_, i) => ({ wch: i === 2 ? 22 : 10 }));
+      const wb = XLSX.utils.book_new();
+      const sheetName = ('Nilai ' + (_dnState.kelas || '')).slice(0, 31);
+      XLSX.utils.book_append_sheet(wb, ws, sheetName);
+      const ta = aktifPeriode ? (aktifPeriode.tahun_ajaran || '').replace(/\//g, '-') : '';
+      const sm = aktifPeriode ? (aktifPeriode.semester || '') : '';
+      const fname = 'Daftar_Nilai_' + (_dnState.kelas || '') + '_' + ta + '_' + sm + '.xlsx';
+      XLSX.writeFile(wb, fname.replace(/\s+/g, '_'));
+    });
+
+    // ============================================================
+    // LIHAT NILAI SAYA + helper warna / agregasi
+    // ============================================================
     // ============================================================
     // LIHAT NILAI SAYA + helper warna / agregasi
     // ============================================================
