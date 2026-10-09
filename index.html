@@ -2,8 +2,7 @@
 <html lang="id">
 <head>
   <meta charset="UTF-8" />
-  <!-- CACHE_BUST 2026-10-09-a -->
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <!-- CACHE_BUST 2026-10-09-c<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
   <title>SMPN PANTANG MUNDUR</title>
   <!-- Supabase JS Client (CDN) -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -1898,9 +1897,10 @@
               <th>Kelas</th>
               <th>Tmp Lahir</th>
               <th>Tgl Lahir</th>
-              <th>Status</th>
               <th>Mulai Sekolah</th>
               <th>Status Awal</th>
+              <th>Status</th>
+              <th>Sekolah Asal</th>
               <th>Nama Ayah</th>
               <th>Nama Ibu</th>
               <th>Alamat</th>
@@ -1908,7 +1908,7 @@
             </tr>
           </thead>
           <tbody id="tbodySiswa">
-            <tr><td colspan="15" style="text-align:center;padding:24px;color:#94a3b8;">Memuat data...</td></tr>
+            <tr><td colspan="16" style="text-align:center;padding:24px;color:#94a3b8;">Memuat data...</td></tr>
           </tbody>
         </table>
       </div>
@@ -2371,6 +2371,10 @@
               <option value="Pindahan">Pindahan</option>
             </select>
           </div>
+        </div>
+        <div class="form-group">
+          <label>Sekolah Asal</label>
+          <input type="text" id="siswaAsalSekolah" placeholder="SDN / SMP sebelumnya">
         </div>
         <div class="form-group">
           <label>Alamat</label>
@@ -3722,7 +3726,7 @@
       document.getElementById('infoSiswa').textContent = filtered.length + (hasFilter ? ' ditemukan' : ' data');
       document.getElementById('checkAllSiswa').checked = false;
       if (!filtered.length) {
-        tbody.innerHTML = '<tr><td colspan="15" style="text-align:center;padding:24px;color:#94a3b8;">' + (hasFilter ? 'Tidak ditemukan' : 'Belum ada data') + '</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="16" style="text-align:center;padding:24px;color:#94a3b8;">' + (hasFilter ? 'Tidak ditemukan' : 'Belum ada data') + '</td></tr>';
         return;
       }
       tbody.innerHTML = filtered.map((s, i) => `
@@ -3735,9 +3739,10 @@
           <td>${s.kelas || ''}</td>
           <td>${s.tmp_lahir || ''}</td>
           <td>${s.tgl_lahir || ''}</td>
-          <td>${s.status || ''}</td>
           <td>${s.tgl_mulai_sekolah || s.mulai_sekolah || ''}</td>
           <td>${esc(normStatusAwal(s.status_awal))}</td>
+          <td>${s.status || ''}</td>
+          <td>${esc(s.asal_sekolah || '')}</td>
           <td>${esc(s.nama_ayah || '')}</td>
           <td>${esc(s.nama_ibu || '')}</td>
           <td title="${esc(s.alamat || '')}">${esc(s.alamat || '')}</td>
@@ -3811,7 +3816,7 @@
     document.getElementById('btnTambahSiswa').addEventListener('click', () => {
       document.getElementById('modalSiswaTitle').textContent = 'Tambah Siswa';
       document.getElementById('siswaId').value = '';
-      ['siswaNama','siswaNisn','siswaTmpLahir','siswaTglLahir','siswaMulaiSekolah','siswaAlamat','siswaAyah','siswaIbu','siswaHp'].forEach(id => document.getElementById(id).value = '');
+      ['siswaNama','siswaNisn','siswaTmpLahir','siswaTglLahir','siswaMulaiSekolah','siswaAsalSekolah','siswaAlamat','siswaAyah','siswaIbu','siswaHp'].forEach(id => document.getElementById(id).value = '');
       document.getElementById('siswaLp').value = 'L';
       document.getElementById('siswaKelas').value = '';
       document.getElementById('siswaStatus').value = 'Aktif';
@@ -3837,6 +3842,7 @@
       document.getElementById('siswaTglLahir').value = s.tgl_lahir || '';
       document.getElementById('siswaMulaiSekolah').value = (s.tgl_mulai_sekolah || s.mulai_sekolah || '').toString().slice(0, 10);
       document.getElementById('siswaStatusAwal').value = normStatusAwal(s.status_awal) || '';
+      document.getElementById('siswaAsalSekolah').value = s.asal_sekolah || '';
       document.getElementById('siswaAlamat').value = s.alamat || '';
       document.getElementById('siswaAyah').value = s.nama_ayah || '';
       document.getElementById('siswaIbu').value = s.nama_ibu || '';
@@ -3858,6 +3864,7 @@
         tgl_mulai_sekolah: document.getElementById('siswaMulaiSekolah').value || null,
         mulai_sekolah: document.getElementById('siswaMulaiSekolah').value || null,
         status_awal: normStatusAwal(document.getElementById('siswaStatusAwal').value) || null,
+        asal_sekolah: (document.getElementById('siswaAsalSekolah')?.value || '').trim() || null,
         alamat: document.getElementById('siswaAlamat').value.trim() || null,
         nama_ayah: document.getElementById('siswaAyah').value.trim() || null,
         nama_ibu: document.getElementById('siswaIbu').value.trim() || null,
@@ -3919,8 +3926,8 @@
       siswa: {
         title: 'Import Data Siswa',
         filename: 'contoh_siswa.xlsx',
-        headers: ['nama','lp','nisn','kelas','tmp_lahir','tgl_lahir','status','tgl_mulai_sekolah','status_awal','alamat','nama_ayah','nama_ibu','no_hp'],
-        sample: ['Andi Pratama','L','0123456789','7A','Bandung','2012-05-15','Aktif','Jl. Merdeka','Joko','Sari','081111111111']
+        headers: ['nama','lp','nisn','kelas','tmp_lahir','tgl_lahir','mulai_sekolah','status_awal','status','asal_sekolah','nama_ayah','nama_ibu','alamat','no_hp'],
+        sample: ['Andi Pratama','L','0123456789','7A','Bandung','2012-05-15','2024-07-15','Siswa Baru','Aktif','SDN 1 Bandung','Joko','Sari','Jl. Merdeka','081111111111']
       },
       guru: {
         title: 'Import Data Guru',
@@ -4030,13 +4037,14 @@
           kelas: emptyToNull(c[3]),
           tmp_lahir: emptyToNull(c[4]),
           tgl_lahir: emptyToNull(c[5]),
-          status: emptyToNull(c[6]) || 'Aktif',
-          tgl_mulai_sekolah: emptyToNull(c[7]),
-          status_awal: (function(){ var v = emptyToNull(c[8]); if (!v) return null; var l = String(v).toLowerCase(); if (l === 'baru' || l === 'siswa baru') return 'Siswa Baru'; if (l === 'pindahan') return 'Pindahan'; return v; })(),
-          alamat: emptyToNull(c[9]),
+          mulai_sekolah: emptyToNull(c[6]),
+          status_awal: (function(){ var v = emptyToNull(c[7]); if (!v) return null; var l = String(v).toLowerCase(); if (l === 'baru' || l === 'siswa baru') return 'Siswa Baru'; if (l === 'pindahan') return 'Pindahan'; return v; })(),
+          status: emptyToNull(c[8]) || 'Aktif',
+          asal_sekolah: emptyToNull(c[9]),
           nama_ayah: emptyToNull(c[10]),
           nama_ibu: emptyToNull(c[11]),
-          no_hp: emptyToNull(c[12])
+          alamat: emptyToNull(c[12]),
+          no_hp: emptyToNull(c[13])
         });
       }
       if (!rows.length) { alert('Tidak ada baris valid (nama & NISN wajib)'); return; }
