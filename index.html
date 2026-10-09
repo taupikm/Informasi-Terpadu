@@ -5715,6 +5715,9 @@
     }
 
     async function materializeAbsensiForDate(tanggal, force) {
+      if (!aktifPeriode) {
+        try { await loadAktifPeriode(); } catch (e) {}
+      }
       if (!supabaseClient || !tanggal) return;
       if (isTanggalLibur(tanggal)) return;
       if (!force && _materializedDates.has(tanggal)) return;
@@ -5788,7 +5791,10 @@
       const tbG = document.getElementById('tbodyDashGuru');
       const tbS = document.getElementById('tbodyDashSiswa');
       try {
-        // Pastikan dataSesi + hari libur terisi
+        // Pastikan periode aktif + dataSesi + hari libur terisi
+        if (!aktifPeriode) {
+          try { await loadAktifPeriode(); } catch (e) {}
+        }
         if (typeof loadSesi === 'function') {
           await loadSesi();
         }
@@ -7242,13 +7248,25 @@
 
       try {
         let banks = [];
+        if (!aktifPeriode) {
+          try { await loadAktifPeriode(); } catch (e) {}
+        }
         if (supabaseClient) {
-          const { data, error } = await supabaseClient.from('bank_soal')
-            .select('*').eq('status', 'Aktif').order('id', { ascending: false });
+          let q = supabaseClient.from('bank_soal').select('*').eq('status', 'Aktif').order('id', { ascending: false });
+          // Prefer filter by periode aktif; data lama tanpa periode_id tetap ikut
+          const { data, error } = await q;
           if (error) throw error;
           banks = data || [];
         } else {
           banks = JSON.parse(localStorage.getItem('bank_soal') || '[]').filter(b => b.status === 'Aktif');
+        }
+        // Filter periode aktif (atau bank tanpa periode_id = legacy)
+        if (aktifPeriode && aktifPeriode.id) {
+          const pid = Number(aktifPeriode.id);
+          banks = banks.filter(b => {
+            if (b.periode_id == null || b.periode_id === '') return true;
+            return Number(b.periode_id) === pid;
+          });
         }
         // Filter kelas siswa
         const kelas = String(currentUserKelas || '').trim().toLowerCase();
@@ -7397,12 +7415,16 @@
 
     async function createTuSession(bank, deadlineMs) {
       try { await ensureSiswaKelas(); } catch (e) {}
+      if (!aktifPeriode) {
+        try { await loadAktifPeriode(); } catch (e) {}
+      }
       const payload = {
         bank_id: Number(bank.id),
         siswa_id: currentUserId,
         nisn: currentUserKode,
         nama: currentUserName,
         kelas: currentUserKelas || null,
+        periode_id: (bank && bank.periode_id) || (aktifPeriode ? aktifPeriode.id : null),
         status: 'sedang',
         skor: null,
         benar: null,
@@ -7820,6 +7842,7 @@
         nisn: currentUserKode,
         nama: currentUserName,
         kelas: currentUserKelas,
+        periode_id: (_tuExam && _tuExam.periode_id) || (aktifPeriode ? aktifPeriode.id : null),
         skor: totalSkor,
         benar: benar,
         total: total,
@@ -8385,6 +8408,13 @@
           : '<option value="">Belum ada periode</option>';
         if (aktifPeriode) selPeriode.value = aktifPeriode.id;
       }
+      // Default filter daftar bank = periode aktif
+      const fTahun = document.getElementById('bsTahun');
+      const fSem = document.getElementById('bsSemester');
+      if (aktifPeriode) {
+        if (fTahun && !fTahun.value && aktifPeriode.tahun_ajaran) fTahun.value = aktifPeriode.tahun_ajaran;
+        if (fSem && !fSem.value && aktifPeriode.semester) fSem.value = aktifPeriode.semester;
+      }
     }
 
     async function loadBankSoalTable() {
@@ -8668,7 +8698,9 @@
         jenis: document.getElementById('bsJenis').value,
         penilaian_ke: Number(document.getElementById('bsKe').value) || 1,
         status: document.getElementById('bsStatus').value,
-        periode_id: document.getElementById('bsPeriodeId').value
+        periode_id: document.getElementById('bsPeriodeId')?.value
+          ? Number(document.getElementById('bsPeriodeId').value)
+          : (aktifPeriode ? aktifPeriode.id : null)
           ? Number(document.getElementById('bsPeriodeId').value) : null,
         durasi: Number(document.getElementById('bsDurasi').value) || 60,
         max_attempt: Number(document.getElementById('bsMaxAttempt').value) || 1,
@@ -11536,6 +11568,9 @@
 
 
         // Inisialisasi
+    // 0. Muat periode aktif sedini mungkin (banyak fitur bergantung)
+    try { loadAktifPeriode(); } catch (e) {}
+
     // 1. Restore sesi login dari localStorage (agar refresh tidak logout)
     (function restoreSession() {
       const ses = loadSession();
