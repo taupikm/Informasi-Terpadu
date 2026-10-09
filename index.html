@@ -1359,7 +1359,41 @@
       </div>
     </section>
     <section class="page" id="page-nilai-saya">
-      <div class="placeholder"><div class="icon">📈</div><h2>Lihat Nilai Saya</h2><p>Halaman melihat nilai pribadi siswa</p></div>
+      <div class="page-title">Lihat Nilai Saya</div>
+      <div class="card" style="margin-bottom:12px;">
+        <div class="periode-bar" id="periodeBarNilaiSaya">
+          Tahun Ajaran || Semester : <b id="labelPeriodeNilaiSaya">-</b>
+        </div>
+        <div style="margin-top:12px;font-size:13px;line-height:1.7;">
+          <div><span style="color:#64748b;display:inline-block;min-width:70px;">Nama</span>: <b id="nsNama">-</b></div>
+          <div><span style="color:#64748b;display:inline-block;min-width:70px;">NISN</span>: <b id="nsNisn">-</b></div>
+          <div><span style="color:#64748b;display:inline-block;min-width:70px;">Kelas</span>: <b id="nsKelas">-</b></div>
+        </div>
+      </div>
+      <div class="table-wrap">
+        <table id="tableNilaiSaya">
+          <thead id="theadNilaiSaya">
+            <tr>
+              <th style="background:#1a56db;color:#fff;">No</th>
+              <th style="background:#1a56db;color:#fff;">Mata Pelajaran</th>
+              <th style="background:#1a56db;color:#fff;text-align:center;">RNH</th>
+              <th style="background:#1a56db;color:#fff;text-align:center;">NR</th>
+            </tr>
+          </thead>
+          <tbody id="tbodyNilaiSaya">
+            <tr><td colspan="4" style="text-align:center;padding:24px;color:#94a3b8;">Memuat...</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="card" style="margin-top:12px;font-size:12px;line-height:1.55;color:#334155;">
+        <div style="font-weight:700;margin-bottom:6px;">KETERANGAN :</div>
+        <ol style="padding-left:18px;margin:0;">
+          <li style="margin-bottom:4px;"><b>RNH</b> = Nilai Rata-rata harian</li>
+          <li style="margin-bottom:4px;"><b>PTS, PAS, PAT</b> dst tampil dinamis sesuai dengan jenis nilai yang sudah diinput guru</li>
+          <li style="margin-bottom:4px;"><b>NR</b> = Nilai Rapor, rata-rata dari RNH dan PTS, PAS dst. Rata-rata ini adalah jumlah semua nilai siswa dibagi banyaknya penilaian yang telah dilaksanakan guru, bukan yang diikuti siswa, misalnya : guru sudah melaksanakan 4 kali penilaian tetapi siswa hanya mengikuti 2 penilaian, maka reratanya tetap harus dibagi 4 sebanyak penilaian yang telah dilaksanakan guru</li>
+          <li style="margin-bottom:4px;">untuk membedakan nilai yang melampaui, memenuhi dan masih kurang, maka warna nilai dibedakan : 90 keatas (<span style="color:#2563eb;font-weight:700;">Biru</span>), 80-90 (<span style="color:#16a34a;font-weight:700;">Hijau</span>), 70-80 (<span style="color:#ea580c;font-weight:700;">Oranye</span>), dibawah 70 (<span style="color:#dc2626;font-weight:700;">merah</span>)</li>
+        </ol>
+      </div>
     </section>
     <section class="page" id="page-kelulusan">
       <div class="placeholder"><div class="icon">🎓</div><h2>Kelulusan</h2><p>Halaman informasi kelulusan</p></div>
@@ -3432,6 +3466,7 @@
       if (pageId === 'data-guru') loadGuru();
       if (pageId === 'data-lulusan') loadLulusan();
       if (pageId === 'input-nilai' || pageId === 'daftar-nilai') initNilaiPage(pageId);
+      if (pageId === 'nilai-saya') loadNilaiSaya();
       if (pageId === 'pengaturan') loadPengaturan();
       if (pageId === 'scan-barcode') initScanPage();
       if (pageId === 'dashboard') loadDashboard();
@@ -4388,8 +4423,10 @@
         : 'Belum ada periode aktif';
       const el1 = document.getElementById('labelPeriodeInput');
       const el2 = document.getElementById('labelPeriodeDaftar');
+      const el3 = document.getElementById('labelPeriodeNilaiSaya');
       if (el1) el1.textContent = label;
       if (el2) el2.textContent = label;
+      if (el3) el3.textContent = label;
     }
 
     async function fillMapelKelasSelects() {
@@ -4618,29 +4655,33 @@
           return;
         }
 
+        // NR = jumlah semua nilai / banyaknya penilaian yang dilaksanakan guru
+        // (kolom dinamis = penilaian yang ada; nilai kosong dihitung 0)
         tbody.innerHTML = siswaList.map((s, i) => {
           const nmap = mapNilai[s.id] || {};
           let vals = [];
-          let sum = 0, count = 0;
+          let sum = 0;
+          const totalAssess = cols.length;
           cols.forEach(c => {
             const key = c.jenis + c.ke;
             const v = nmap[key];
             if (v != null && v !== '') {
-              vals.push(`<td>${v}</td>`);
-              sum += Number(v);
-              count++;
+              const num = Number(v);
+              vals.push(`<td style="text-align:center;">${fmtNilaiWarna(num)}</td>`);
+              sum += num;
             } else {
-              vals.push('<td>-</td>');
+              vals.push('<td style="text-align:center;color:#cbd5e1;">–</td>');
+              // kosong = 0 untuk perhitungan NR
             }
           });
-          const nr = count ? (sum / count).toFixed(1) : '-';
+          const nr = totalAssess ? (sum / totalAssess) : null;
           return `<tr>
             <td>${i + 1}</td>
             <td>${s.nisn || ''}</td>
             <td>${esc(s.nama)}</td>
             <td>${s.lp || ''}</td>
             ${vals.join('')}
-            <td><b>${nr}</b></td>
+            <td style="text-align:center;"><b>${nr != null ? fmtNilaiWarna(nr) : '-'}</b></td>
           </tr>`;
         }).join('');
       } catch (e) {
@@ -4648,6 +4689,247 @@
         alert('Gagal memuat daftar nilai: ' + (e.message || e));
       }
     });
+
+    // ============================================================
+    // LIHAT NILAI SAYA + helper warna / agregasi
+    // ============================================================
+    function fmtNilaiWarna(v) {
+      if (v == null || v === '' || isNaN(Number(v))) return '-';
+      const n = Number(v);
+      const t = (Math.round(n * 10) / 10).toFixed(n % 1 === 0 ? 0 : 1);
+      let color = '#dc2626'; // < 70 merah
+      if (n >= 90) color = '#2563eb';
+      else if (n >= 80) color = '#16a34a';
+      else if (n >= 70) color = '#ea580c';
+      return '<span style="color:' + color + ';font-weight:700;">' + t + '</span>';
+    }
+
+    /** Agregasi nilai satu mapel untuk 1 siswa.
+     *  RNH = rata-rata NH (hanya yang ada, untuk tampilan).
+     *  Kolom lain = 1 kolom per jenis non-NH (rata jika multi ke).
+     *  NR = sum semua nilai individu (kosong=0) / jumlah penilaian yang guru laksanakan.
+     *  totalAssessFromClass = Set key "jenis|ke" yang pernah diinput guru untuk mapel+kelas itu.
+     */
+    function agregasiNilaiMapel(nilaiRowsSiswa, totalAssessKeys) {
+      const byJenis = {}; // jenis -> [{ke, nilai}]
+      (nilaiRowsSiswa || []).forEach(n => {
+        const j = String(n.jenis || '').toUpperCase();
+        if (!byJenis[j]) byJenis[j] = [];
+        byJenis[j].push({ ke: Number(n.ke) || 1, nilai: Number(n.nilai) });
+      });
+
+      // RNH dari NH
+      let rnh = null;
+      if (byJenis.NH && byJenis.NH.length) {
+        const s = byJenis.NH.reduce((a, x) => a + x.nilai, 0);
+        rnh = s / byJenis.NH.length;
+      }
+
+      // Kolom dinamis non-NH (urut)
+      const orderJenis = ['TGS', 'PTS', 'PAS', 'PAT', 'ASAS', 'ASAJ', 'ASAT'];
+      const otherCols = [];
+      // Ambil jenis yang ada di totalAssess atau di siswa
+      const jenisSet = new Set();
+      (totalAssessKeys || []).forEach(k => {
+        const j = k.split('|')[0];
+        if (j && j !== 'NH') jenisSet.add(j);
+      });
+      Object.keys(byJenis).forEach(j => { if (j !== 'NH') jenisSet.add(j); });
+      const jenisList = [...jenisSet].sort((a, b) => {
+        const ia = orderJenis.indexOf(a);
+        const ib = orderJenis.indexOf(b);
+        if (ia < 0 && ib < 0) return a.localeCompare(b);
+        if (ia < 0) return 1;
+        if (ib < 0) return -1;
+        return ia - ib;
+      });
+      jenisList.forEach(j => {
+        const arr = byJenis[j] || [];
+        let val = null;
+        if (arr.length) {
+          val = arr.reduce((a, x) => a + x.nilai, 0) / arr.length;
+        }
+        otherCols.push({ jenis: j, nilai: val });
+      });
+
+      // NR: bagi jumlah penilaian yang dilaksanakan guru
+      let nr = null;
+      const keys = totalAssessKeys || [];
+      if (keys.length) {
+        // map siswa: jenis|ke -> nilai
+        const map = {};
+        (nilaiRowsSiswa || []).forEach(n => {
+          const k = String(n.jenis || '').toUpperCase() + '|' + (Number(n.ke) || 1);
+          map[k] = Number(n.nilai);
+        });
+        let sum = 0;
+        keys.forEach(k => {
+          const v = map[k];
+          sum += (v != null && !isNaN(v)) ? v : 0;
+        });
+        nr = sum / keys.length;
+      } else if (nilaiRowsSiswa && nilaiRowsSiswa.length) {
+        // fallback: rata nilai yang ada
+        const s = nilaiRowsSiswa.reduce((a, n) => a + Number(n.nilai), 0);
+        nr = s / nilaiRowsSiswa.length;
+      }
+
+      return { rnh, otherCols, nr };
+    }
+
+    async function loadNilaiSaya() {
+      const tbody = document.getElementById('tbodyNilaiSaya');
+      const thead = document.getElementById('theadNilaiSaya');
+      if (!tbody) return;
+
+      await loadAktifPeriode();
+      const label = aktifPeriode
+        ? (aktifPeriode.tahun_ajaran + ' || ' + aktifPeriode.semester)
+        : 'Belum ada periode aktif';
+      const elP = document.getElementById('labelPeriodeNilaiSaya');
+      if (elP) elP.textContent = label;
+
+      // Info siswa
+      let siswa = null;
+      try {
+        if (currentRole === 'siswa' && currentUserId && supabaseClient) {
+          const { data } = await supabaseClient.from('siswa').select('id, nama, nisn, kelas').eq('id', currentUserId).maybeSingle();
+          siswa = data;
+        } else if (currentRole === 'siswa' && currentUserId) {
+          if (!dataSiswa.length) await loadSiswa();
+          siswa = dataSiswa.find(s => Number(s.id) === Number(currentUserId)) || null;
+        }
+      } catch (e) { console.warn(e); }
+
+      document.getElementById('nsNama').textContent = siswa ? (siswa.nama || '-') : (currentUserName || ROLE_DATA.siswa?.name || '-');
+      document.getElementById('nsNisn').textContent = siswa ? (siswa.nisn || currentUserKode || '-') : (currentUserKode || '-');
+      document.getElementById('nsKelas').textContent = siswa ? (siswa.kelas || currentUserKelas || '-') : (currentUserKelas || '-');
+
+      if (!siswa || !siswa.id) {
+        tbody.innerHTML = '<tr><td colspan="4" style="text-align:center;padding:24px;color:#94a3b8;">Login sebagai siswa untuk melihat nilai</td></tr>';
+        return;
+      }
+      if (!aktifPeriode) {
+        tbody.innerHTML = '<tr><td colspan="4" style="text-align:center;padding:24px;color:#94a3b8;">Belum ada periode aktif</td></tr>';
+        return;
+      }
+
+      tbody.innerHTML = '<tr><td colspan="4" style="text-align:center;padding:24px;color:#94a3b8;">Memuat nilai...</td></tr>';
+
+      try {
+        await loadMasterMapelKelas();
+        const mapelList = masterMapel.slice();
+
+        // Ambil semua nilai siswa di periode aktif
+        let nilaiSaya = [];
+        let nilaiKelasAll = []; // untuk hitung berapa penilaian guru laksanakan per mapel
+        if (supabaseClient) {
+          const { data, error } = await supabaseClient
+            .from('nilai')
+            .select('siswa_id, mapel_id, kelas, jenis, ke, nilai')
+            .eq('periode_id', aktifPeriode.id)
+            .eq('siswa_id', siswa.id);
+          if (error) throw error;
+          nilaiSaya = data || [];
+
+          // Semua nilai di kelas siswa (untuk denominator penilaian guru)
+          const kelasSiswa = siswa.kelas || currentUserKelas || '';
+          if (kelasSiswa) {
+            const { data: dk } = await supabaseClient
+              .from('nilai')
+              .select('mapel_id, jenis, ke')
+              .eq('periode_id', aktifPeriode.id)
+              .eq('kelas', kelasSiswa);
+            nilaiKelasAll = dk || [];
+          } else {
+            // fallback: pakai jenis+ke dari nilai siswa sendiri
+            nilaiKelasAll = nilaiSaya.map(n => ({ mapel_id: n.mapel_id, jenis: n.jenis, ke: n.ke }));
+          }
+        }
+
+        // mapel_id -> Set("JENIS|ke")
+        const assessByMapel = {};
+        nilaiKelasAll.forEach(n => {
+          const mid = n.mapel_id;
+          if (!assessByMapel[mid]) assessByMapel[mid] = new Set();
+          assessByMapel[mid].add(String(n.jenis || '').toUpperCase() + '|' + (Number(n.ke) || 1));
+        });
+
+        // mapel_id -> rows siswa
+        const byMapel = {};
+        nilaiSaya.forEach(n => {
+          if (!byMapel[n.mapel_id]) byMapel[n.mapel_id] = [];
+          byMapel[n.mapel_id].push(n);
+        });
+
+        // Kumpulkan semua jenis non-NH yang muncul (untuk header dinamis)
+        const allOtherJenis = new Set();
+        Object.values(assessByMapel).forEach(set => {
+          set.forEach(k => {
+            const j = k.split('|')[0];
+            if (j && j !== 'NH') allOtherJenis.add(j);
+          });
+        });
+        Object.values(byMapel).forEach(rows => {
+          rows.forEach(n => {
+            const j = String(n.jenis || '').toUpperCase();
+            if (j && j !== 'NH') allOtherJenis.add(j);
+          });
+        });
+        const orderJenis = ['TGS', 'PTS', 'PAS', 'PAT', 'ASAS', 'ASAJ', 'ASAT'];
+        const otherJenisList = [...allOtherJenis].sort((a, b) => {
+          const ia = orderJenis.indexOf(a);
+          const ib = orderJenis.indexOf(b);
+          if (ia < 0 && ib < 0) return a.localeCompare(b);
+          if (ia < 0) return 1;
+          if (ib < 0) return -1;
+          return ia - ib;
+        });
+
+        // Header
+        let h = '<tr>';
+        h += '<th style="background:#1a56db;color:#fff;">No</th>';
+        h += '<th style="background:#1a56db;color:#fff;">Mata Pelajaran</th>';
+        h += '<th style="background:#1a56db;color:#fff;text-align:center;">RNH</th>';
+        otherJenisList.forEach(j => {
+          h += '<th style="background:#1a56db;color:#fff;text-align:center;">' + j + '</th>';
+        });
+        h += '<th style="background:#1a56db;color:#fff;text-align:center;">NR</th></tr>';
+        thead.innerHTML = h;
+
+        if (!mapelList.length) {
+          tbody.innerHTML = '<tr><td colspan="' + (3 + otherJenisList.length + 1) + '" style="text-align:center;padding:24px;color:#94a3b8;">Belum ada data mapel</td></tr>';
+          return;
+        }
+
+        tbody.innerHTML = mapelList.map((m, i) => {
+          const rows = byMapel[m.id] || [];
+          const keys = assessByMapel[m.id] ? [...assessByMapel[m.id]] : [];
+          const agg = agregasiNilaiMapel(rows, keys);
+
+          // Map otherCols by jenis
+          const ocMap = {};
+          (agg.otherCols || []).forEach(c => { ocMap[c.jenis] = c.nilai; });
+
+          const cellsOther = otherJenisList.map(j => {
+            const v = ocMap[j];
+            if (v == null) return '<td style="text-align:center;color:#cbd5e1;">–</td>';
+            return '<td style="text-align:center;">' + fmtNilaiWarna(v) + '</td>';
+          }).join('');
+
+          return '<tr>' +
+            '<td>' + (i + 1) + '</td>' +
+            '<td>' + esc(m.mapel || m.kode || '') + '</td>' +
+            '<td style="text-align:center;">' + (agg.rnh != null ? fmtNilaiWarna(agg.rnh) : '<span style="color:#cbd5e1;">–</span>') + '</td>' +
+            cellsOther +
+            '<td style="text-align:center;"><b>' + (agg.nr != null ? fmtNilaiWarna(agg.nr) : '-') + '</b></td>' +
+            '</tr>';
+        }).join('');
+      } catch (e) {
+        console.error(e);
+        tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;padding:16px;color:#ef4444;">Gagal: ' + esc(String(e.message || e)) + '</td></tr>';
+      }
+    }
 
     // ============================================================
     // PENGATURAN: Mapel, Kelas, Periode (CRUD + Accordion)
