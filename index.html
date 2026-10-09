@@ -2,7 +2,7 @@
 <html lang="id">
 <head>
   <meta charset="UTF-8" />
-  <!-- CACHE_BUST 2026-10-08-p -->
+  <!-- CACHE_BUST 2026-10-09-a -->
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
   <title>SMPN PANTANG MUNDUR</title>
   <!-- Supabase JS Client (CDN) -->
@@ -1981,7 +1981,7 @@
               <th>Tanggal Lulus</th>
               <th>Tahun Lulus</th>
               <th>Lama Belajar</th>
-              <th>Status Kelulusan</th>
+              <th>Status Lulus</th>
               <th>Asal Sekolah</th>
             </tr>
           </thead>
@@ -2509,7 +2509,7 @@
             <input type="text" id="lulusanKelas" placeholder="9A / 9B">
           </div>
           <div class="form-group">
-            <label>Status Kelulusan</label>
+            <label>Status Lulus</label>
             <select id="lulusanStatusKelulusan">
               <option value="Lulus">Lulus</option>
               <option value="Ditangguhkan">Ditangguhkan</option>
@@ -3697,8 +3697,11 @@
     function normStatusAwal(v) {
       const s = String(v || '').trim();
       if (!s) return '';
-      if (s.toLowerCase() === 'baru' || s.toLowerCase() === 'siswa baru') return 'Siswa Baru';
-      if (s.toLowerCase() === 'pindahan') return 'Pindahan';
+      const l = s.toLowerCase();
+      // Hanya Siswa Baru / Pindahan — bukan status keaktifan (Aktif/Nonaktif/Lulus)
+      if (l === 'baru' || l === 'siswa baru') return 'Siswa Baru';
+      if (l === 'pindahan') return 'Pindahan';
+      if (l === 'aktif' || l === 'active' || l === 'nonaktif' || l === 'pindah' || l === 'lulus') return '';
       return s;
     }
 
@@ -4324,6 +4327,17 @@
       renderLulusan();
     }
 
+    function badgeStatusLulus(st) {
+      const s = String(st || '').trim();
+      if (!s) return '<span style="color:#94a3b8;">–</span>';
+      let bg = '#f1f5f9', color = '#475569';
+      if (s === 'Lulus') { bg = '#dcfce7'; color = '#166534'; }
+      else if (s === 'Ditangguhkan') { bg = '#fef3c7'; color = '#92400e'; }
+      else if (s === 'Tidak Lulus') { bg = '#fee2e2'; color = '#991b1b'; }
+      return '<span style="display:inline-block;padding:2px 8px;border-radius:10px;font-size:11px;font-weight:600;background:' +
+        bg + ';color:' + color + ';">' + esc(s) + '</span>';
+    }
+
     function renderLulusan() {
       const q = (document.getElementById('cariLulusan')?.value || '').trim().toLowerCase();
       const filtered = q
@@ -4360,7 +4374,7 @@
           '<td>' + esc(s.tanggal_lulus || '') + '</td>' +
           '<td>' + esc(s.tahun_lulus || '') + '</td>' +
           '<td>' + esc(s.lama_belajar || '') + '</td>' +
-          '<td><b>' + esc(s.status_kelulusan || '') + '</b></td>' +
+          '<td>' + badgeStatusLulus(s.status_kelulusan) + '</td>' +
           '<td>' + esc(s.asal_sekolah || '') + '</td></tr>';
       }).join('');
     }
