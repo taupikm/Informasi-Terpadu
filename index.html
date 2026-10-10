@@ -1436,7 +1436,7 @@
               <span style="color:#334155;">◎ Akumulasi Sesi Efektif</span>
               <b id="syaratSesi" style="color:#0f172a;">0 sesi</b>
             </div>
-            <div style="font-size:10px;color:#94a3b8;margin-top:6px;line-height:1.35;">(akumulasi unik tanggal+sesi dari data kehadiran &amp; historis; jumlah sesi per hari bisa berbeda)</div>
+            <div style="font-size:10px;color:#94a3b8;margin-top:6px;line-height:1.35;">(sesi real dari mulai absen s/d hari ini; unik tanggal+sesi di absensi &amp; historis; jumlah sesi per hari fleksibel)</div>
           </div>
           <div id="syaratRows" style="display:flex;flex-direction:column;gap:6px;"></div>
           <div style="margin-top:12px;background:linear-gradient(135deg,#eff6ff,#e0e7ff);border-radius:12px;padding:16px 12px;text-align:center;">
@@ -10668,7 +10668,8 @@
       document.getElementById('syaratMeta').textContent =
         'Kelas ' + (siswa.kelas || '-') + ' · NISN ' + (siswa.nisn || '-');
       document.getElementById('syaratRentang').textContent =
-        (settings.mulai || '-') + ' s/d ' + (settings.akhir || '-');
+        (settings.mulai || '-') + ' s/d ' + (settings.akhir || '-') +
+        (settings.sampaiHariIni ? ' (s/d hari ini)' : '');
       document.getElementById('syaratHari').textContent = hitung.hari + ' hari';
       document.getElementById('syaratSesi').textContent = hitung.totalSesi + ' sesi';
 
@@ -10733,6 +10734,16 @@
           if (empty) empty.textContent = 'Pengaturan absensi belum diisi. Admin: Pengaturan → Arsip Absensi.';
           return;
         }
+        // Sesi dihitung real: dari mulai berlaku s/d HARI INI (bukan sampai akhir seting jika masih di masa depan)
+        // Jumlah sesi = baris unik tanggal+sesi yang benar-benar ada di absensi/historis (fleksibel 1–n per hari)
+        const today = todayLocal();
+        const dari = settings.mulai;
+        let sampai = settings.akhir;
+        if (sampai > today) sampai = today;
+        if (sampai < dari) {
+          if (empty) empty.textContent = 'Tanggal mulai absensi masih di masa depan. Belum ada sesi yang dihitung.';
+          return;
+        }
         const siswa = await resolveSiswaForSyarat(currentRole === 'siswa' ? '' : q);
         if (!siswa) {
           if (empty) empty.textContent = (currentRole === 'siswa')
@@ -10741,28 +10752,35 @@
           return;
         }
 
-        // Data real: absensi + historis, hanya dalam rentang seting
-        let rows = await fetchAbsensiRange(settings.mulai, settings.akhir, {
+        // Data real saja: absensi + historis, rentang mulai → min(akhir, hari ini)
+        let rows = await fetchAbsensiRange(dari, sampai, {
           tipe: 'siswa',
           ref_id: siswa.id
         });
         if ((!rows || !rows.length) && siswa.nisn) {
-          rows = await fetchAbsensiRange(settings.mulai, settings.akhir, {
+          rows = await fetchAbsensiRange(dari, sampai, {
             tipe: 'siswa',
             kode: siswa.nisn
           });
         }
         const filtered = (rows || []).filter(r => {
           const tgl = String(r.tanggal || '').slice(0, 10);
-          if (settings.mulai && tgl < settings.mulai) return false;
-          if (settings.akhir && tgl > settings.akhir) return false;
+          if (dari && tgl < dari) return false;
+          if (sampai && tgl > sampai) return false;
           if (r.tipe && r.tipe !== 'siswa') return false;
           return Number(r.ref_id) === Number(siswa.id) ||
             String(r.kode || '') === String(siswa.nisn || '');
         });
 
-        const hitung = hitungSyaratDariRows(filtered, settings.mulai, settings.akhir);
-        renderSyaratCard(siswa, hitung, settings);
+        const hitung = hitungSyaratDariRows(filtered, dari, sampai);
+        // Tampilkan rentang efektif yang dipakai hitung
+        const settingsView = Object.assign({}, settings, {
+          mulai: dari,
+          akhir: sampai,
+          akhirSeting: settings.akhir,
+          sampaiHariIni: sampai === today && settings.akhir > today
+        });
+        renderSyaratCard(siswa, hitung, settingsView);
       } catch (e) {
         console.error(e);
         if (empty) empty.textContent = 'Gagal: ' + (e.message || e);
