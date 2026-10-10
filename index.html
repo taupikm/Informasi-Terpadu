@@ -3103,6 +3103,23 @@
             <input type="date" id="periodeTglNaik">
           </div>
         </div>
+        <div style="font-size:12px;font-weight:700;color:#1e40af;margin:4px 0 8px;padding:8px 10px;background:#eff6ff;border-radius:8px;">
+          📢 Jadwal Pengumuman Kelulusan (rentang tanggal + jam)
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label>Pengumuman Mulai</label>
+            <input type="datetime-local" id="periodePgMulai">
+          </div>
+          <div class="form-group">
+            <label>Pengumuman Berakhir</label>
+            <input type="datetime-local" id="periodePgAkhir">
+          </div>
+        </div>
+        <p style="font-size:11px;color:#64748b;margin:-4px 0 12px;line-height:1.4;">
+          Contoh: 5 Juli 2027 09:00 s/d 7 Juli 2027 23:59. Di luar rentang ini, siswa tidak bisa melihat hasil pengumuman.
+          Jika dikosongkan, sistem memakai default: tanggal kelulusan pukul 09:00 s/d +2 hari pukul 23:59.
+        </p>
         <div class="form-group">
           <label>SK Kelulusan</label>
           <input type="text" id="periodeSkKelulusan" placeholder="Nomor SK Kelulusan">
@@ -6235,6 +6252,10 @@
       document.getElementById('periodeTglAkhir').value = '';
       document.getElementById('periodeTglLulus').value = '';
       document.getElementById('periodeTglNaik').value = '';
+      const pgM = document.getElementById('periodePgMulai');
+      const pgA = document.getElementById('periodePgAkhir');
+      if (pgM) pgM.value = '';
+      if (pgA) pgA.value = '';
       // Prefill dummy — silakan diganti
       document.getElementById('periodeSkKelulusan').value = PERIODE_DUMMY.sk_kelulusan;
       document.getElementById('periodeSkNaikKelas').value = PERIODE_DUMMY.sk_naik_kelas;
@@ -6255,6 +6276,16 @@
       document.getElementById('periodeTglAkhir').value = p.tanggal_akhir || '';
       document.getElementById('periodeTglLulus').value = p.tanggal_kelulusan || '';
       document.getElementById('periodeTglNaik').value = p.tanggal_naik_kelas || '';
+      {
+        const pgM = document.getElementById('periodePgMulai');
+        const pgA = document.getElementById('periodePgAkhir');
+        const jm = getJadwalPengumuman(p);
+        if (pgM) pgM.value = p.pengumuman_mulai ? toDatetimeLocalValue(parseLocalDateTime(p.pengumuman_mulai)) : (jm.mulai ? toDatetimeLocalValue(jm.mulai) : '');
+        if (pgA) pgA.value = p.pengumuman_akhir ? toDatetimeLocalValue(parseLocalDateTime(p.pengumuman_akhir)) : (jm.akhir ? toDatetimeLocalValue(jm.akhir) : '');
+        // Jika kolom DB kosong, tampilkan fallback agar admin melihat default
+        if (pgM && !p.pengumuman_mulai && jm.mulai) pgM.value = toDatetimeLocalValue(jm.mulai);
+        if (pgA && !p.pengumuman_akhir && jm.akhir) pgA.value = toDatetimeLocalValue(jm.akhir);
+      }
       document.getElementById('periodeSkKelulusan').value = p.sk_kelulusan || PERIODE_DUMMY.sk_kelulusan;
       document.getElementById('periodeSkNaikKelas').value = p.sk_naik_kelas || PERIODE_DUMMY.sk_naik_kelas;
       document.getElementById('periodeNamaKepsek').value = p.nama_kepsek || PERIODE_DUMMY.nama_kepsek;
@@ -6276,6 +6307,8 @@
         tanggal_akhir_absen: document.getElementById('periodeTglAkhirAbsen')?.value || null,
         tanggal_kelulusan: document.getElementById('periodeTglLulus').value || null,
         tanggal_naik_kelas: document.getElementById('periodeTglNaik').value || null,
+        pengumuman_mulai: document.getElementById('periodePgMulai')?.value || null,
+        pengumuman_akhir: document.getElementById('periodePgAkhir')?.value || null,
         sk_kelulusan: (document.getElementById('periodeSkKelulusan')?.value || '').trim() || null,
         sk_naik_kelas: (document.getElementById('periodeSkNaikKelas')?.value || '').trim() || null,
         nama_kepsek: (document.getElementById('periodeNamaKepsek')?.value || '').trim() || null,
@@ -6307,8 +6340,8 @@
         alert(id ? 'Periode diubah' : 'Periode ditambah');
       } catch (e) {
         const msg = String(e.message || e);
-        if (/sk_kelulusan|sk_naik_kelas|nama_kepsek|nip_kepsek|column/i.test(msg)) {
-          alert('Gagal simpan: kolom SK/Kepsek belum ada di database.\n\nJalankan SQL di Supabase:\n\nALTER TABLE public.periode\n  ADD COLUMN IF NOT EXISTS sk_kelulusan text,\n  ADD COLUMN IF NOT EXISTS sk_naik_kelas text,\n  ADD COLUMN IF NOT EXISTS nama_kepsek text,\n  ADD COLUMN IF NOT EXISTS nip_kepsek text;\n\nDetail: ' + msg);
+        if (/sk_kelulusan|sk_naik_kelas|nama_kepsek|nip_kepsek|pengumuman_mulai|pengumuman_akhir|column/i.test(msg)) {
+          alert('Gagal simpan: kolom periode belum lengkap di database.\n\nJalankan SQL di Supabase:\n\nALTER TABLE public.periode\n  ADD COLUMN IF NOT EXISTS sk_kelulusan text,\n  ADD COLUMN IF NOT EXISTS sk_naik_kelas text,\n  ADD COLUMN IF NOT EXISTS nama_kepsek text,\n  ADD COLUMN IF NOT EXISTS nip_kepsek text,\n  ADD COLUMN IF NOT EXISTS pengumuman_mulai timestamptz,\n  ADD COLUMN IF NOT EXISTS pengumuman_akhir timestamptz;\n\nDetail: ' + msg);
         } else {
           alert('Gagal: ' + msg);
         }
@@ -13007,7 +13040,76 @@
       return String(currentUserKelas || '');
     }
 
-    async function initPengumumanKelulusan() {
+
+    /** Format Date → value datetime-local (YYYY-MM-DDTHH:MM) lokal */
+    function toDatetimeLocalValue(d) {
+      if (!d || isNaN(d.getTime())) return '';
+      const pad = n => String(n).padStart(2, '0');
+      return d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate()) +
+        'T' + pad(d.getHours()) + ':' + pad(d.getMinutes());
+    }
+
+    /** Parse ISO / datetime-local / date string → Date lokal */
+    function parseLocalDateTime(v) {
+      if (!v) return null;
+      const s = String(v).trim();
+      // datetime-local: 2027-07-05T09:00
+      let m = s.match(/^(\d{4})-(\d{2})-(\d{2})[T ](\d{2}):(\d{2})(?::(\d{2}))?/);
+      if (m) {
+        return new Date(+m[1], +m[2] - 1, +m[3], +m[4], +m[5], +(m[6] || 0));
+      }
+      // date only
+      m = s.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+      if (m) return new Date(+m[1], +m[2] - 1, +m[3], 0, 0, 0);
+      const d = new Date(s);
+      return isNaN(d.getTime()) ? null : d;
+    }
+
+    function fmtTglJamId(d) {
+      if (!d || isNaN(d.getTime())) return '-';
+      const pad = n => String(n).padStart(2, '0');
+      const hari = ['Minggu','Senin','Selasa','Rabu','Kamis','Jumat','Sabtu'];
+      return hari[d.getDay()] + ', ' + pad(d.getDate()) + '/' + pad(d.getMonth() + 1) + '/' + d.getFullYear() +
+        ' pukul ' + pad(d.getHours()) + ':' + pad(d.getMinutes());
+    }
+
+    /**
+     * Ambil rentang pengumuman dari periode aktif.
+     * Kolom DB: pengumuman_mulai, pengumuman_akhir (timestamptz/text)
+     * Fallback: tanggal_kelulusan 09:00 → +2 hari 23:59
+     */
+    function getJadwalPengumuman(periode) {
+      const p = periode || {};
+      let mulai = parseLocalDateTime(p.pengumuman_mulai || p.pg_mulai || p.pengumuman_buka);
+      let akhir = parseLocalDateTime(p.pengumuman_akhir || p.pg_akhir || p.pengumuman_tutup);
+      const tglLulus = String(p.tanggal_kelulusan || p.tgl_kelulusan || '').slice(0, 10);
+      if (!mulai && tglLulus) {
+        const d = parseLocalDateTime(tglLulus);
+        if (d) { d.setHours(9, 0, 0, 0); mulai = d; }
+      }
+      if (!akhir && tglLulus) {
+        const d = parseLocalDateTime(tglLulus);
+        if (d) { d.setDate(d.getDate() + 2); d.setHours(23, 59, 0, 0); akhir = d; }
+      }
+      return { mulai, akhir, tglLulus };
+    }
+
+    function cekAksesPengumuman(periode, now) {
+      const n = now || new Date();
+      const { mulai, akhir } = getJadwalPengumuman(periode);
+      if (!mulai && !akhir) {
+        return { ok: false, reason: 'unset', mulai: null, akhir: null };
+      }
+      if (mulai && n < mulai) {
+        return { ok: false, reason: 'belum', mulai, akhir };
+      }
+      if (akhir && n > akhir) {
+        return { ok: false, reason: 'sudah', mulai, akhir };
+      }
+      return { ok: true, reason: 'buka', mulai, akhir };
+    }
+
+        async function initPengumumanKelulusan() {
       const blocked = document.getElementById('pgBlocked');
       const blockedMsg = document.getElementById('pgBlockedMsg');
       const loading = document.getElementById('pgLoading');
@@ -13054,6 +13156,29 @@
         if (!aktifPeriode) await loadAktifPeriode();
         const skNo = (aktifPeriode && (aktifPeriode.sk_kelulusan || PERIODE_DUMMY?.sk_kelulusan)) || '-';
         const ta = (aktifPeriode && aktifPeriode.tahun_ajaran) || '-';
+
+        // --- Jadwal buka/tutup pengumuman (periode) ---
+        const akses = cekAksesPengumuman(aktifPeriode);
+        if (!akses.ok) {
+          if (loading) loading.style.display = 'none';
+          if (blocked) blocked.style.display = 'block';
+          let msg = '';
+          if (akses.reason === 'belum') {
+            msg = 'Pengumuman kelulusan belum dibuka.\n\nDibuka mulai:\n' + fmtTglJamId(akses.mulai) +
+              (akses.akhir ? '\n\nBerakhir:\n' + fmtTglJamId(akses.akhir) : '');
+          } else if (akses.reason === 'sudah') {
+            msg = 'Masa pengumuman kelulusan sudah berakhir.\n\nRentang:\n' +
+              fmtTglJamId(akses.mulai) + '\n s/d \n' + fmtTglJamId(akses.akhir);
+          } else {
+            msg = 'Jadwal pengumuman kelulusan belum diatur admin.\nAdmin: Pengaturan → Periode → isi Pengumuman Mulai & Berakhir.';
+          }
+          if (blockedMsg) {
+            blockedMsg.style.whiteSpace = 'pre-line';
+            blockedMsg.style.color = akses.reason === 'belum' ? '#a16207' : '#b91c1c';
+            blockedMsg.textContent = msg;
+          }
+          return;
+        }
 
         // Cari data lulusan by NISN / nama / id
         const nisn = currentUserKode || '';
@@ -13125,6 +13250,20 @@
           stEl.style.color = '#b91c1c';
           subEl.textContent = 'lebih dari 60% syarat kelulusan tidak tercapai';
           predLine.innerHTML = '';
+        }
+
+        // Info rentang jadwal
+        const aksesOk = cekAksesPengumuman(aktifPeriode);
+        let infoJadwal = document.getElementById('pgJadwalInfo');
+        if (!infoJadwal && result) {
+          infoJadwal = document.createElement('div');
+          infoJadwal.id = 'pgJadwalInfo';
+          infoJadwal.style.cssText = 'text-align:center;font-size:11px;color:#64748b;margin-top:10px;line-height:1.45;';
+          result.appendChild(infoJadwal);
+        }
+        if (infoJadwal && aksesOk.mulai) {
+          infoJadwal.innerHTML = 'Masa pengumuman: <b>' + fmtTglJamId(aksesOk.mulai) + '</b>' +
+            (aksesOk.akhir ? ' s/d <b>' + fmtTglJamId(aksesOk.akhir) + '</b>' : '');
         }
 
         if (result) result.style.display = 'block';
