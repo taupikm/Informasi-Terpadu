@@ -2256,12 +2256,15 @@
               <th>Kelas</th>
               <th>Tmp Lahir</th>
               <th>Tgl Lahir</th>
+              <th>Status Awal</th>
+              <th>Mulai Sekolah</th>
+              <th>Asal Sekolah</th>
               <th>Status</th>
               <th>No HP</th>
             </tr>
           </thead>
           <tbody id="tbodySiswa">
-            <tr><td colspan="10" style="text-align:center;padding:24px;color:#94a3b8;">Memuat data...</td></tr>
+            <tr><td colspan="13" style="text-align:center;padding:24px;color:#94a3b8;">Memuat data...</td></tr>
           </tbody>
         </table>
       </div>
@@ -2742,7 +2745,7 @@
 
   <!-- ========== MODAL SISWA (Tambah / Edit) ========== -->
   <div class="modal-overlay" id="modalSiswa">
-    <div class="modal">
+    <div class="modal modal-lg">
       <div class="modal-header">
         <h3 id="modalSiswaTitle">Tambah Siswa</h3>
         <button class="modal-close" data-close="modalSiswa">&times;</button>
@@ -2779,12 +2782,29 @@
           <div class="form-group">
             <label>Status</label>
             <select id="siswaStatus">
-              <option>Aktif</option>
-              <option>Nonaktif</option>
-              <option>Pindah</option>
-              <option>Lulus</option>
+              <option value="Aktif">Aktif</option>
+              <option value="Nonaktif">Nonaktif</option>
+              <option value="Pindah">Pindah</option>
+              <option value="Lulus">Lulus</option>
             </select>
           </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label>Status Awal</label>
+            <select id="siswaStatusAwal">
+              <option value="Siswa Baru">Siswa Baru</option>
+              <option value="Pindahan">Pindahan</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Tgl Mulai Sekolah</label>
+            <input type="date" id="siswaMulaiSekolah">
+          </div>
+        </div>
+        <div class="form-group">
+          <label>Asal Sekolah <span style="font-weight:400;color:#94a3b8;">(wajib jika Pindahan)</span></label>
+          <input type="text" id="siswaAsalSekolah" placeholder="Nama sekolah asal">
         </div>
         <div class="form-row">
           <div class="form-group">
@@ -2961,7 +2981,7 @@
           <div class="form-group">
             <label>Status Awal</label>
             <select id="lulusanStatusAwal">
-              <option value="Baru">Baru</option>
+              <option value="Siswa Baru">Siswa Baru</option>
               <option value="Pindahan">Pindahan</option>
             </select>
           </div>
@@ -4196,6 +4216,40 @@
       renderSiswa();
     }
 
+    /** Samakan label status awal: Baru / Siswa Baru → "Siswa Baru" */
+    function normStatusAwal(v) {
+      const s = String(v || '').trim();
+      if (!s) return '';
+      if (/^baru$/i.test(s) || /siswa\s*baru/i.test(s)) return 'Siswa Baru';
+      if (/pindah/i.test(s)) return 'Pindahan';
+      return s;
+    }
+
+    /** Hitung lama belajar untuk lulusan */
+    function hitungLamaBelajar(statusAwal, tglMulai, tglLulus) {
+      const sa = normStatusAwal(statusAwal);
+      if (sa === 'Siswa Baru') return '3 Tahun';
+      const a = String(tglMulai || '').slice(0, 10);
+      const b = String(tglLulus || '').slice(0, 10);
+      if (!a || !b) return null;
+      const d1 = new Date(a + 'T00:00:00');
+      const d2 = new Date(b + 'T00:00:00');
+      if (isNaN(d1.getTime()) || isNaN(d2.getTime()) || d2 < d1) return null;
+      let years = d2.getFullYear() - d1.getFullYear();
+      let months = d2.getMonth() - d1.getMonth();
+      if (d2.getDate() < d1.getDate()) months -= 1;
+      if (months < 0) { years -= 1; months += 12; }
+      if (years < 0) return null;
+      if (years === 0 && months === 0) return '0 Tahun';
+      if (years === 0) return months + ' Bulan';
+      if (months === 0) return years + ' Tahun';
+      return years + ' Tahun ' + months + ' Bulan';
+    }
+
+    function tglMulaiSiswa(s) {
+      return String(s.mulai_sekolah || s.tgl_mulai_sekolah || '').slice(0, 10);
+    }
+
     function renderSiswa() {
       const q = (document.getElementById('cariSiswa')?.value || '').trim().toLowerCase();
       let filtered = q
@@ -4208,22 +4262,28 @@
       document.getElementById('infoSiswa').textContent = filtered.length + (q ? ' ditemukan' : ' data');
       document.getElementById('checkAllSiswa').checked = false;
       if (!filtered.length) {
-        tbody.innerHTML = '<tr><td colspan="10" style="text-align:center;padding:24px;color:#94a3b8;">' + (q ? 'Tidak ditemukan' : 'Belum ada data') + '</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="13" style="text-align:center;padding:24px;color:#94a3b8;">' + (q ? 'Tidak ditemukan' : 'Belum ada data') + '</td></tr>';
         return;
       }
-      tbody.innerHTML = filtered.map((s, i) => `
-        <tr data-id="${s.id}">
-          <td><input type="checkbox" class="cb-siswa" value="${s.id}"></td>
-          <td>${i + 1}</td>
-          <td>${esc(s.nama)}</td>
-          <td>${s.lp || ''}</td>
-          <td>${s.nisn || ''}</td>
-          <td>${s.kelas || ''}</td>
-          <td>${s.tmp_lahir || ''}</td>
-          <td>${s.tgl_lahir || ''}</td>
-          <td>${s.status || ''}</td>
-          <td>${s.no_hp || ''}</td>
-        </tr>`).join('');
+      tbody.innerHTML = filtered.map((s, i) => {
+        const stAwal = normStatusAwal(s.status_awal) || '-';
+        const mulai = tglMulaiSiswa(s) || '-';
+        return '<tr data-id="' + s.id + '">' +
+          '<td><input type="checkbox" class="cb-siswa" value="' + s.id + '"></td>' +
+          '<td>' + (i + 1) + '</td>' +
+          '<td>' + esc(s.nama) + '</td>' +
+          '<td>' + esc(s.lp || '') + '</td>' +
+          '<td>' + esc(s.nisn || '') + '</td>' +
+          '<td>' + esc(s.kelas || '') + '</td>' +
+          '<td>' + esc(s.tmp_lahir || '') + '</td>' +
+          '<td>' + esc(String(s.tgl_lahir || '').slice(0, 10)) + '</td>' +
+          '<td>' + esc(stAwal) + '</td>' +
+          '<td>' + esc(mulai) + '</td>' +
+          '<td style="max-width:120px;overflow:hidden;text-overflow:ellipsis;" title="' + esc(s.asal_sekolah || '') + '">' + esc(s.asal_sekolah || '-') + '</td>' +
+          '<td>' + esc(s.status || '') + '</td>' +
+          '<td>' + esc(s.no_hp || '') + '</td>' +
+          '</tr>';
+      }).join('');
     }
 
     document.getElementById('cariSiswa').addEventListener('input', renderSiswa);
@@ -4296,10 +4356,22 @@
     document.getElementById('btnTambahSiswa').addEventListener('click', () => {
       document.getElementById('modalSiswaTitle').textContent = 'Tambah Siswa';
       document.getElementById('siswaId').value = '';
-      ['siswaNama','siswaNisn','siswaTmpLahir','siswaTglLahir','siswaAlamat','siswaAyah','siswaIbu','siswaHp'].forEach(id => document.getElementById(id).value = '');
+      ['siswaNama','siswaNisn','siswaTmpLahir','siswaTglLahir','siswaAlamat','siswaAyah','siswaIbu','siswaHp','siswaAsalSekolah','siswaMulaiSekolah'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.value = '';
+      });
       document.getElementById('siswaLp').value = 'L';
       document.getElementById('siswaKelas').value = '';
       document.getElementById('siswaStatus').value = 'Aktif';
+      document.getElementById('siswaStatusAwal').value = 'Siswa Baru';
+      // Default tgl mulai = tanggal_mulai periode aktif (jika ada)
+      (async () => {
+        try {
+          if (!aktifPeriode) await loadAktifPeriode();
+          const tm = aktifPeriode && (aktifPeriode.tanggal_mulai || aktifPeriode.tgl_mulai);
+          if (tm) document.getElementById('siswaMulaiSekolah').value = String(tm).slice(0, 10);
+        } catch (e) {}
+      })();
       openModal('modalSiswa');
     });
 
@@ -4317,8 +4389,11 @@
       document.getElementById('siswaNisn').value = s.nisn || '';
       document.getElementById('siswaKelas').value = s.kelas || '';
       document.getElementById('siswaStatus').value = s.status || 'Aktif';
+      document.getElementById('siswaStatusAwal').value = normStatusAwal(s.status_awal) || 'Siswa Baru';
+      document.getElementById('siswaMulaiSekolah').value = tglMulaiSiswa(s) || '';
+      document.getElementById('siswaAsalSekolah').value = s.asal_sekolah || '';
       document.getElementById('siswaTmpLahir').value = s.tmp_lahir || '';
-      document.getElementById('siswaTglLahir').value = s.tgl_lahir || '';
+      document.getElementById('siswaTglLahir').value = String(s.tgl_lahir || '').slice(0, 10);
       document.getElementById('siswaAlamat').value = s.alamat || '';
       document.getElementById('siswaAyah').value = s.nama_ayah || '';
       document.getElementById('siswaIbu').value = s.nama_ibu || '';
@@ -4329,12 +4404,16 @@
     // ----- SISWA: Simpan -----
     document.getElementById('btnSaveSiswa').addEventListener('click', async () => {
       const id = document.getElementById('siswaId').value;
+      const statusAwal = document.getElementById('siswaStatusAwal')?.value || 'Siswa Baru';
       const payload = {
         nama: document.getElementById('siswaNama').value.trim(),
         lp: document.getElementById('siswaLp').value,
         nisn: document.getElementById('siswaNisn').value.trim(),
         kelas: document.getElementById('siswaKelas').value || null,
         status: document.getElementById('siswaStatus').value,
+        status_awal: statusAwal,
+        mulai_sekolah: document.getElementById('siswaMulaiSekolah')?.value || null,
+        asal_sekolah: document.getElementById('siswaAsalSekolah')?.value.trim() || null,
         tmp_lahir: document.getElementById('siswaTmpLahir').value.trim() || null,
         tgl_lahir: document.getElementById('siswaTglLahir').value || null,
         alamat: document.getElementById('siswaAlamat').value.trim() || null,
@@ -4343,6 +4422,18 @@
         no_hp: document.getElementById('siswaHp').value.trim() || null
       };
       if (!payload.nama || !payload.nisn) { alert('Nama dan NISN wajib diisi'); return; }
+      if (normStatusAwal(statusAwal) === 'Pindahan' && !payload.asal_sekolah) {
+        alert('Asal Sekolah wajib diisi untuk siswa Pindahan');
+        return;
+      }
+      if (normStatusAwal(statusAwal) === 'Siswa Baru' && !payload.mulai_sekolah) {
+        // isi default dari periode aktif
+        try {
+          if (aktifPeriode && (aktifPeriode.tanggal_mulai || aktifPeriode.tgl_mulai)) {
+            payload.mulai_sekolah = String(aktifPeriode.tanggal_mulai || aktifPeriode.tgl_mulai).slice(0, 10);
+          }
+        } catch (e) {}
+      }
 
       try {
         if (supabaseClient) {
@@ -4864,10 +4955,32 @@
       if (sk) sk.value = 'Lulus';
       const pr0 = document.getElementById('lulusanPredikat');
       if (pr0) pr0.value = 'BAIK';
+      const sa0 = document.getElementById('lulusanStatusAwal');
+      if (sa0) sa0.value = 'Siswa Baru';
+      const lm0 = document.getElementById('lulusanLama');
+      if (lm0) lm0.value = '3 Tahun';
+      // default tgl lulus dari periode aktif
+      (async () => {
+        try {
+          if (!aktifPeriode) await loadAktifPeriode();
+          if (aktifPeriode) {
+            const tl = aktifPeriode.tanggal_kelulusan || aktifPeriode.tgl_kelulusan;
+            if (tl && document.getElementById('lulusanTglLulus')) {
+              document.getElementById('lulusanTglLulus').value = String(tl).slice(0, 10);
+            }
+            const th = tl ? String(tl).slice(0, 4) : '';
+            if (th && document.getElementById('lulusanTahun')) document.getElementById('lulusanTahun').value = th;
+            const tm = aktifPeriode.tanggal_mulai || aktifPeriode.tgl_mulai;
+            if (tm && document.getElementById('lulusanTglMulai') && !document.getElementById('lulusanTglMulai').value) {
+              document.getElementById('lulusanTglMulai').value = String(tm).slice(0, 10);
+            }
+          }
+        } catch (e) {}
+      })();
       const sa = document.getElementById('lulusanStatusAwal');
       if (sa) sa.value = 'Baru';
       document.getElementById('lulusanLp').value = 'L';
-      document.getElementById('lulusanStatusAwal').value = 'Baru';
+      document.getElementById('lulusanStatusAwal').value = 'Siswa Baru';
       openModal('modalLulusan');
     });
 
@@ -4889,7 +5002,7 @@
       document.getElementById('lulusanTglLulus').value = String(s.tanggal_lulus || '').slice(0, 10);
       document.getElementById('lulusanTahun').value = s.tahun_lulus || '';
       document.getElementById('lulusanLama').value = s.lama_belajar || '';
-      document.getElementById('lulusanStatusAwal').value = s.status_awal || 'Baru';
+      document.getElementById('lulusanStatusAwal').value = normStatusAwal(s.status_awal) || 'Siswa Baru';
       document.getElementById('lulusanAsal').value = s.asal_sekolah || '';
       const sk = document.getElementById('lulusanStatusKelulusan');
       if (sk) sk.value = s.status_kelulusan || s.status_lulus || 'Lulus';
@@ -4911,11 +5024,20 @@
         tanggal_lulus: document.getElementById('lulusanTglLulus').value || null,
         tahun_lulus: parseInt(document.getElementById('lulusanTahun').value) || null,
         lama_belajar: document.getElementById('lulusanLama').value.trim() || null,
-        status_awal: document.getElementById('lulusanStatusAwal').value || null,
+        status_awal: normStatusAwal(document.getElementById('lulusanStatusAwal')?.value) || null,
         status_kelulusan: document.getElementById('lulusanStatusKelulusan')?.value || 'Lulus',
         predikat: document.getElementById('lulusanPredikat')?.value || null,
         asal_sekolah: document.getElementById('lulusanAsal').value.trim() || null
       };
+      // Auto lama belajar jika kosong
+      if (!payload.lama_belajar) {
+        payload.lama_belajar = hitungLamaBelajar(payload.status_awal, payload.tgl_mulai_sekolah, payload.tanggal_lulus)
+          || (normStatusAwal(payload.status_awal) === 'Siswa Baru' ? '3 Tahun' : null);
+      }
+      // Tahun lulus dari tanggal lulus (relasi periode)
+      if (!payload.tahun_lulus && payload.tanggal_lulus) {
+        payload.tahun_lulus = Number(String(payload.tanggal_lulus).slice(0, 4)) || null;
+      }
       if (!payload.nama) { alert('Nama wajib diisi'); return; }
       try {
         if (supabaseClient) {
@@ -4949,6 +5071,21 @@
     });
 
     // Hapus
+    
+    function refreshLulusanLamaBelajar() {
+      const sa = document.getElementById('lulusanStatusAwal')?.value;
+      const mulai = document.getElementById('lulusanTglMulai')?.value;
+      const lulus = document.getElementById('lulusanTglLulus')?.value;
+      const el = document.getElementById('lulusanLama');
+      if (!el) return;
+      const hitung = hitungLamaBelajar(sa, mulai, lulus);
+      if (hitung) el.value = hitung;
+      else if (normStatusAwal(sa) === 'Siswa Baru') el.value = '3 Tahun';
+    }
+    ['lulusanStatusAwal', 'lulusanTglMulai', 'lulusanTglLulus'].forEach(id => {
+      document.getElementById(id)?.addEventListener('change', refreshLulusanLamaBelajar);
+    });
+
     document.getElementById('btnHapusLulusan').addEventListener('click', async () => {
       const ids = getChecked('cb-lulusan');
       if (!ids.length) { alert('Centang data yang ingin dihapus'); return; }
@@ -11074,23 +11211,34 @@
       for (const s of k9) {
         const st = statusMap[String(s.id)] || 'Lulus';
         try {
+          const statusAwal = normStatusAwal(s.status_awal) || 'Siswa Baru';
+          const tglMulai = tglMulaiSiswa(s) || null;
+          const lama = hitungLamaBelajar(statusAwal, tglMulai, tglLulus) || (statusAwal === 'Siswa Baru' ? '3 Tahun' : null);
+          // tahun_lulus dari tanggal_lulus (relasi periode)
+          const tahunLulusNum = tglLulus ? Number(String(tglLulus).slice(0, 4)) : null;
           const payload = {
             nama: s.nama,
             lp: s.lp || null,
             nisn: s.nisn || null,
-            kelas_akhir: s.kelas || null,
+            kelas: s.kelas || null,
             tmp_lahir: s.tmp_lahir || null,
             tgl_lahir: s.tgl_lahir || null,
             alamat: s.alamat || null,
             nama_ayah: s.nama_ayah || null,
             nama_ibu: s.nama_ibu || null,
             no_hp: s.no_hp || null,
-            status_awal: s.status || 'Aktif',
+            asal_sekolah: s.asal_sekolah || null,
+            status_awal: statusAwal,
+            tgl_mulai_sekolah: tglMulai,
+            lama_belajar: lama,
             status_kelulusan: st,
             tahun_ajaran: tahunAjaran,
             tanggal_lulus: tglLulus,
-            siswa_id_asal: s.id
+            tahun_lulus: tahunLulusNum
           };
+          // kolom opsional — jangan gagal jika belum ada di DB
+          try { payload.kelas_akhir = s.kelas || null; } catch (e) {}
+          try { payload.siswa_id_asal = s.id; } catch (e) {}
           if (supabaseClient) {
             const { error } = await supabaseClient.from('lulusan').insert([payload]);
             if (error) throw error;
