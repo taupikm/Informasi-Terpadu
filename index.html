@@ -748,6 +748,113 @@
         max-width: 780px;
       }
     }
+    /* Laptop: halaman Cek Syarat + semua submenu Pengaturan — center, tidak full width */
+    @media (min-width: 768px) {
+      #page-syarat-naik,
+      #page-set-mapel,
+      #page-set-kelas,
+      #page-set-periode,
+      #page-set-sesi-libur,
+      #page-set-izin-fp,
+      #page-set-arsip,
+      #page-set-naik-lulus {
+        max-width: 720px;
+        margin-left: auto;
+        margin-right: auto;
+      }
+      #page-syarat-naik .page-title,
+      #page-set-mapel .page-title,
+      #page-set-kelas .page-title,
+      #page-set-periode .page-title,
+      #page-set-sesi-libur .page-title,
+      #page-set-izin-fp .page-title,
+      #page-set-arsip .page-title,
+      #page-set-naik-lulus .page-title {
+        text-align: center;
+      }
+      #page-syarat-naik .card,
+      #page-set-mapel .card,
+      #page-set-kelas .card,
+      #page-set-periode .card,
+      #page-set-sesi-libur .card,
+      #page-set-izin-fp .card,
+      #page-set-arsip .card,
+      #page-set-naik-lulus .card {
+        box-shadow: 0 2px 12px rgba(15, 23, 42, 0.06);
+      }
+      /* Cek Syarat: kartu hasil + tipografi lebih nyaman di laptop */
+      #page-syarat-naik #syaratCardPrint {
+        max-width: 480px;
+        margin-left: auto;
+        margin-right: auto;
+      }
+      #page-syarat-naik #syaratNama {
+        font-size: 22px !important;
+      }
+      #page-syarat-naik #syaratMeta {
+        font-size: 13px !important;
+      }
+      #page-syarat-naik #syaratPersen {
+        font-size: 32px !important;
+      }
+      #page-syarat-naik #syaratRows > div {
+        font-size: 14px !important;
+        padding: 12px 14px !important;
+      }
+      #page-syarat-naik #syaratRows > div b {
+        font-size: 16px !important;
+      }
+      #page-syarat-naik #btnSyaratCek,
+      #page-syarat-naik #btnSyaratPdf {
+        max-width: 280px;
+        margin-left: auto;
+        margin-right: auto;
+        display: block;
+      }
+      /* Tabel pengaturan: font & padding lebih lega */
+      #page-set-mapel table,
+      #page-set-kelas table,
+      #page-set-periode table,
+      #page-set-sesi-libur table,
+      #page-set-naik-lulus table {
+        font-size: 14px;
+      }
+      #page-set-mapel table th,
+      #page-set-mapel table td,
+      #page-set-kelas table th,
+      #page-set-kelas table td,
+      #page-set-periode table th,
+      #page-set-periode table td,
+      #page-set-sesi-libur table th,
+      #page-set-sesi-libur table td,
+      #page-set-naik-lulus table th,
+      #page-set-naik-lulus table td {
+        padding: 10px 12px;
+      }
+      #page-set-izin-fp .check-list label {
+        font-size: 14px !important;
+        padding: 6px 0;
+      }
+    }
+    @media (min-width: 1100px) {
+      #page-syarat-naik,
+      #page-set-mapel,
+      #page-set-kelas,
+      #page-set-periode,
+      #page-set-sesi-libur,
+      #page-set-izin-fp,
+      #page-set-arsip,
+      #page-set-naik-lulus {
+        max-width: 780px;
+      }
+      #page-set-periode {
+        max-width: 900px; /* tabel periode punya banyak kolom */
+      }
+      #page-set-sesi-libur {
+        max-width: 860px;
+      }
+    }
+
 
     /* Tabel Input Nilai: kompak, tanpa scroll horizontal di HP */
     #page-input-nilai .table-wrap {
