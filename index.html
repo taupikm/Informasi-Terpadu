@@ -1224,6 +1224,7 @@
         <button class="menu-item" data-page="data-guru"><span class="icon">👨‍🏫</span> Data Guru</button>
         <button class="menu-item" data-page="data-lulusan"><span class="icon">🎓</span> Data Lulusan</button>
         <button class="menu-item" data-page="syarat-naik"><span class="icon">📋</span> Cek Syarat Naik / Lulus</button>
+        <button class="menu-item" data-page="nilai-saya"><span class="icon">📈</span> Lihat Nilai Siswa</button>
       </div>
       <div class="menu-group" data-role="admin" style="display:none;">
         <div class="menu-group-title">Pengaturan</div>
@@ -1501,6 +1502,13 @@
     </section>
     <section class="page" id="page-nilai-saya">
       <div class="page-title">Lihat Nilai Saya</div>
+      <div class="card" id="nsSearchCard" style="padding:12px;margin-bottom:12px;display:none;">
+        <div class="rekap-filter-row">
+          <label>Nama / NISN</label>
+          <input type="text" id="nsCariQ" placeholder="Masukkan NISN atau nama siswa">
+        </div>
+        <button type="button" class="btn btn-primary" id="btnNsCari" style="width:100%;margin-top:8px;">🔍 Cek Nilai</button>
+      </div>
       <div class="card" style="margin-bottom:12px;">
         <div class="periode-bar" id="periodeBarNilaiSaya">
           Tahun Ajaran || Semester : <b id="labelPeriodeNilaiSaya">-</b>
@@ -5124,10 +5132,40 @@
       return { rnh, otherCols, nr };
     }
 
-    async function loadNilaiSaya() {
+    async function resolveSiswaUntukNilai(q) {
+      q = String(q || '').trim();
+      // Siswa login → data sendiri
+      if (!q && currentRole === 'siswa' && currentUserId) {
+        if (supabaseClient) {
+          const { data } = await supabaseClient.from('siswa').select('id, nama, nisn, kelas').eq('id', currentUserId).maybeSingle();
+          if (data) return data;
+        }
+        if (!dataSiswa.length) await loadSiswa();
+        return dataSiswa.find(s => Number(s.id) === Number(currentUserId)) || null;
+      }
+      if (!q) return null;
+      if (supabaseClient) {
+        const { data } = await supabaseClient.from('siswa').select('id, nama, nisn, kelas')
+          .or('nama.ilike.%' + q + '%,nisn.ilike.%' + q + '%').limit(8);
+        if (data && data.length === 1) return data[0];
+        if (data && data.length > 1) {
+          const exact = data.find(s => String(s.nisn) === q);
+          return exact || data[0];
+        }
+        return null;
+      }
+      if (!dataSiswa.length) await loadSiswa();
+      const ql = q.toLowerCase();
+      return dataSiswa.find(s =>
+        String(s.nisn) === q || String(s.nama || '').toLowerCase().includes(ql)
+      ) || null;
+    }
+
+    async function loadNilaiSaya(opts) {
       const tbody = document.getElementById('tbodyNilaiSaya');
       const thead = document.getElementById('theadNilaiSaya');
       if (!tbody) return;
+      opts = opts || {};
 
       await loadAktifPeriode();
       const label = aktifPeriode
@@ -5136,26 +5174,39 @@
       const elP = document.getElementById('labelPeriodeNilaiSaya');
       if (elP) elP.textContent = label;
 
+      // Form cari: hanya admin
+      const searchCard = document.getElementById('nsSearchCard');
+      if (searchCard) {
+        searchCard.style.display = (currentRole === 'admin') ? 'block' : 'none';
+      }
+
       let siswa = null;
       try {
-        if (currentRole === 'siswa' && currentUserId && supabaseClient) {
-          const { data } = await supabaseClient.from('siswa').select('id, nama, nisn, kelas').eq('id', currentUserId).maybeSingle();
-          siswa = data;
-        } else if (currentRole === 'siswa' && currentUserId) {
-          if (!dataSiswa.length) await loadSiswa();
-          siswa = dataSiswa.find(s => Number(s.id) === Number(currentUserId)) || null;
+        if (currentRole === 'siswa') {
+          siswa = await resolveSiswaUntukNilai('');
+        } else if (currentRole === 'admin') {
+          const q = (opts.q != null) ? opts.q : (document.getElementById('nsCariQ')?.value || '');
+          if (String(q).trim()) {
+            siswa = await resolveSiswaUntukNilai(q);
+          } else if (opts.forceEmpty) {
+            siswa = null;
+          }
         }
       } catch (e) { console.warn(e); }
 
       const elNama = document.getElementById('nsNama');
       const elNisn = document.getElementById('nsNisn');
       const elKelas = document.getElementById('nsKelas');
-      if (elNama) elNama.textContent = siswa ? (siswa.nama || '-') : (typeof currentUserName !== 'undefined' && currentUserName ? currentUserName : (ROLE_DATA.siswa?.name || '-'));
-      if (elNisn) elNisn.textContent = siswa ? (siswa.nisn || currentUserKode || '-') : (currentUserKode || '-');
-      if (elKelas) elKelas.textContent = siswa ? (siswa.kelas || currentUserKelas || '-') : (currentUserKelas || '-');
+      if (elNama) elNama.textContent = siswa ? (siswa.nama || '-') : '-';
+      if (elNisn) elNisn.textContent = siswa ? (siswa.nisn || '-') : '-';
+      if (elKelas) elKelas.textContent = siswa ? (siswa.kelas || '-') : '-';
 
       if (!siswa || !siswa.id) {
-        tbody.innerHTML = '<tr><td colspan="4" style="text-align:center;padding:24px;color:#94a3b8;">Login sebagai siswa untuk melihat nilai</td></tr>';
+        if (currentRole === 'admin') {
+          tbody.innerHTML = '<tr><td colspan="4" style="text-align:center;padding:24px;color:#94a3b8;">Masukkan NISN atau Nama siswa lalu Cek Nilai</td></tr>';
+        } else {
+          tbody.innerHTML = '<tr><td colspan="4" style="text-align:center;padding:24px;color:#94a3b8;">Login sebagai siswa untuk melihat nilai</td></tr>';
+        }
         return;
       }
       if (!aktifPeriode) {
@@ -5271,6 +5322,21 @@
         tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;padding:16px;color:#ef4444;">Gagal: ' + esc(String(e.message || e)) + '</td></tr>';
       }
     }
+
+    document.getElementById('btnNsCari')?.addEventListener('click', () => {
+      const q = document.getElementById('nsCariQ')?.value || '';
+      if (!String(q).trim()) {
+        alert('Masukkan NISN atau Nama siswa');
+        return;
+      }
+      loadNilaiSaya({ q: q });
+    });
+    document.getElementById('nsCariQ')?.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') {
+        const q = document.getElementById('nsCariQ')?.value || '';
+        if (String(q).trim()) loadNilaiSaya({ q: q });
+      }
+    });
 
     // ============================================================
     // PENGATURAN: Mapel, Kelas, Periode (CRUD + Accordion)
