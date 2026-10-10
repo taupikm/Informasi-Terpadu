@@ -3680,16 +3680,24 @@
       });
     }
     function sortGuruList(arr) {
+      // Sama dashboard: urut id, lalu nama
       return (arr || []).slice().sort((a, b) => {
-        const da = Number(a.duk ?? a.no_duk ?? a.urutan_duk ?? a.urutan ?? NaN);
-        const db = Number(b.duk ?? b.no_duk ?? b.urutan_duk ?? b.urutan ?? NaN);
-        if (!isNaN(da) || !isNaN(db)) {
-          const xa = isNaN(da) ? 999999 : da;
-          const xb = isNaN(db) ? 999999 : db;
-          if (xa !== xb) return xa - xb;
-        }
+        const ia = Number(a.id) || 0;
+        const ib = Number(b.id) || 0;
+        if (ia !== ib) return ia - ib;
         return String(a.nama || '').localeCompare(String(b.nama || ''), 'id', { sensitivity: 'base' });
       });
+    }
+
+    /** Gabungan guru dulu → siswa, urutan sama dashboard */
+    function sortGuruSiswaUsers(arr) {
+      const list = (arr || []).slice();
+      const guru = sortGuruList(list.filter(u => u.tipe === 'guru'));
+      const siswa = sortSiswaList(list.filter(u => u.tipe === 'siswa').map(u => ({
+        ...u, kelas: u.kelas || ''
+      })));
+      // sortSiswaList pakai .kelas; pertahankan field lain
+      return guru.concat(siswa);
     }
 
     // ----- LOAD SISWA -----
@@ -5907,22 +5915,14 @@
             if (g.error) console.warn('guru', g.error);
             if (s.error) console.warn('siswa', s.error);
             absRows = ab.data || [];
-            guruList = (g.data || []).slice().sort((a, b) => (Number(a.id) || 0) - (Number(b.id) || 0));
-            siswaList = (s.data || []).slice().sort((a, b) => {
-              const kc = String(a.kelas || '').localeCompare(String(b.kelas || ''), 'id', { numeric: true });
-              if (kc) return kc;
-              return String(a.nama || '').localeCompare(String(b.nama || ''), 'id');
-            });
+            guruList = sortGuruList(g.data || []);
+            siswaList = sortSiswaList(s.data || []);
           } catch (netErr) {
             console.error('dashboard fetch', netErr);
           }
         } else {
-          guruList = ((typeof dataGuru !== 'undefined' && dataGuru) ? dataGuru.slice() : []).sort((a, b) => (Number(a.id) || 0) - (Number(b.id) || 0));
-          siswaList = ((typeof dataSiswa !== 'undefined' && dataSiswa) ? dataSiswa.slice() : []).sort((a, b) => {
-            const kc = String(a.kelas || '').localeCompare(String(b.kelas || ''), 'id', { numeric: true });
-            if (kc) return kc;
-            return String(a.nama || '').localeCompare(String(b.nama || ''), 'id');
-          });
+          guruList = sortGuruList((typeof dataGuru !== 'undefined' && dataGuru) ? dataGuru : []);
+          siswaList = sortSiswaList((typeof dataSiswa !== 'undefined' && dataSiswa) ? dataSiswa : []);
         }
 
         const elTG = document.getElementById('dashTotalGuru');
@@ -6913,20 +6913,29 @@
         let allowed = new Set();
         if (supabaseClient) {
           const [siswaRes, guruRes, izinRes] = await Promise.all([
-            supabaseClient.from('siswa').select('id, nama, nisn').order('nama'),
-            supabaseClient.from('guru').select('id, nama, pin, nip').order('nama'),
+            supabaseClient.from('siswa').select('id, nama, nisn, kelas').order('kelas').order('nama'),
+            supabaseClient.from('guru').select('id, nama, pin, nip').order('id'),
             supabaseClient.from('izin_sidik_jari').select('tipe, ref_id').eq('aktif', true)
           ]);
-          (siswaRes.data || []).forEach(s => users.push({ tipe: 'siswa', ref_id: s.id, kode: s.nisn, nama: s.nama }));
-          // Simpan PIN (bukan NIP) agar selaras dengan kode login guru
-          (guruRes.data || []).forEach(g => users.push({ tipe: 'guru', ref_id: g.id, kode: g.pin || g.nip, nama: g.nama }));
+          // Guru dulu (urut id), lalu siswa (urut kelas → nama) — sama dashboard
+          (guruRes.data || []).forEach(g => users.push({
+            tipe: 'guru', ref_id: g.id, id: g.id, kode: g.pin || g.nip, nama: g.nama
+          }));
+          (siswaRes.data || []).forEach(s => users.push({
+            tipe: 'siswa', ref_id: s.id, id: s.id, kode: s.nisn, nama: s.nama, kelas: s.kelas || ''
+          }));
           (izinRes.data || []).forEach(r => allowed.add(r.tipe + ':' + r.ref_id));
         } else {
           if (!dataSiswa.length) await loadSiswa();
           if (!dataGuru.length) await loadGuru();
-          dataSiswa.forEach(s => users.push({ tipe: 'siswa', ref_id: s.id, kode: s.nisn, nama: s.nama }));
-          dataGuru.forEach(g => users.push({ tipe: 'guru', ref_id: g.id, kode: g.nip || g.pin, nama: g.nama }));
+          sortGuruList(dataGuru).forEach(g => users.push({
+            tipe: 'guru', ref_id: g.id, id: g.id, kode: g.pin || g.nip, nama: g.nama
+          }));
+          sortSiswaList(dataSiswa).forEach(s => users.push({
+            tipe: 'siswa', ref_id: s.id, id: s.id, kode: s.nisn, nama: s.nama, kelas: s.kelas || ''
+          }));
         }
+        users = sortGuruSiswaUsers(users);
         dataIzinFp = users;
         if (!users.length) {
           box.innerHTML = '<span style="color:#94a3b8;font-size:12px;">Belum ada data siswa/guru</span>';
@@ -10898,16 +10907,17 @@
         } catch (e) { console.warn('enrich kelas/duk', e); }
 
         dataRekap = Array.from(map.values()).sort((a, b) => {
-          // urut: tipe siswa dulu by kelas, guru by duk, lalu tanggal desc
-          if (a.tipe !== b.tipe) return a.tipe === 'siswa' ? -1 : 1;
-          if (a.tipe === 'siswa') {
+          // urut: guru dulu (id), lalu siswa (kelas), lalu tanggal desc, nama
+          if (a.tipe !== b.tipe) return a.tipe === 'guru' ? -1 : 1;
+          if (a.tipe === 'guru') {
+            const ia = Number(a.ref_id) || 0, ib = Number(b.ref_id) || 0;
+            if (ia !== ib) return ia - ib;
+          } else {
             const kc = String(a.kelas || '').localeCompare(String(b.kelas || ''), 'id', { numeric: true });
             if (kc) return kc;
-          } else {
-            if ((a.duk || 0) !== (b.duk || 0)) return (a.duk || 0) - (b.duk || 0);
           }
           if (a.tanggal !== b.tanggal) return a.tanggal < b.tanggal ? 1 : -1;
-          return String(a.nama).localeCompare(String(b.nama), 'id');
+          return String(a.nama || '').localeCompare(String(b.nama || ''), 'id');
         });
 
         // Mode summary (Rekap Absensi) atau edit
