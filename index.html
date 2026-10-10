@@ -11419,22 +11419,50 @@
       if (sampai && !sampai.value) {
         sampai.value = todayLocal();
       }
-      // isi kelas
+      // isi kelas (+ filter ampua untuk guru)
       const sel = document.getElementById('rekapKelas');
       if (sel) {
         try {
           let kelas = [];
+          let kelasRows = [];
           if (supabaseClient) {
-            const { data } = await supabaseClient.from('kelas').select('kelas').order('kelas');
-            kelas = (data || []).map(k => k.kelas);
+            const { data } = await supabaseClient.from('kelas').select('id, kelas').order('kelas');
+            kelasRows = data || [];
+            kelas = kelasRows.map(k => k.kelas).filter(Boolean);
           } else if (typeof masterKelas !== 'undefined' && masterKelas.length) {
-            kelas = masterKelas.map(k => k.kelas || k);
+            kelasRows = masterKelas.slice();
+            kelas = masterKelas.map(k => k.kelas || k).filter(Boolean);
+          }
+          // Guru: hanya kelas diampu
+          if (currentRole === 'guru' && currentUserId && supabaseClient) {
+            try {
+              const { data: gk } = await supabaseClient.from('guru_kelas').select('kelas_id').eq('guru_id', currentUserId);
+              const ids = new Set((gk || []).map(r => Number(r.kelas_id)));
+              kelas = kelasRows.filter(k => ids.has(Number(k.id))).map(k => k.kelas).filter(Boolean);
+            } catch (e) {
+              console.warn('rekap kelas guru', e);
+              kelas = [];
+            }
           }
           const cur = sel.value;
-          sel.innerHTML = '<option value="">Semua Kelas</option>' +
+          sel.innerHTML = '<option value="">' + (currentRole === 'guru' ? 'Semua kelas diampu' : 'Semua Kelas') + '</option>' +
             kelas.map(k => '<option value="' + esc(k) + '">' + esc(k) + '</option>').join('');
-          if (cur) sel.value = cur;
+          if (cur && kelas.includes(cur)) sel.value = cur;
         } catch (e) { console.warn(e); }
+      }
+      // Guru: kunci tipe = siswa saja (tidak bisa lihat rekap guru)
+      const selTipe = document.getElementById('rekapTipe');
+      if (selTipe) {
+        if (currentRole === 'guru') {
+          selTipe.innerHTML = '<option value="siswa">Siswa</option>';
+          selTipe.value = 'siswa';
+          selTipe.disabled = true;
+        } else {
+          selTipe.disabled = false;
+          const curT = selTipe.value;
+          selTipe.innerHTML = '<option value="">Semua</option><option value="siswa">Siswa</option><option value="guru">Guru</option>';
+          if (curT) selTipe.value = curT;
+        }
       }
       // Tabel default kosong — tampil setelah klik Cari
       const tbody = document.getElementById('tbodyRekap');
@@ -11592,8 +11620,12 @@
       let dari = document.getElementById('rekapDari')?.value || '';
       let sampai = document.getElementById('rekapSampai')?.value || '';
       const qNama = (document.getElementById('rekapNama')?.value || '').trim().toLowerCase();
-      const kelas = document.getElementById('rekapKelas')?.value || '';
-      const tipe = document.getElementById('rekapTipe')?.value || '';
+      let kelas = document.getElementById('rekapKelas')?.value || '';
+      let tipe = document.getElementById('rekapTipe')?.value || '';
+      // Guru: selalu hanya siswa + kelas diampu
+      if (currentRole === 'guru') {
+        tipe = 'siswa';
+      }
 
       if (!aktifPeriode) await loadAktifPeriode();
       await loadLiburMap();
@@ -11664,6 +11696,7 @@
         }
 
         // Data dari absensi aktif + historis (filter tanggal ketat)
+        // Guru: paksa tipe siswa
         let rows = await fetchAbsensiRange(dari, sampai, { tipe: tipe || undefined });
         // Pastikan filter tanggal di sisi klien juga (jaga-jaga tipe data)
         rows = (rows || []).filter(r => {
@@ -11671,11 +11704,48 @@
           return (!dari || t >= dari) && (!sampai || t <= sampai);
         });
 
+        // Guru: tidak boleh lihat absensi guru
+        if (currentRole === 'guru') {
+          rows = rows.filter(r => r.tipe === 'siswa');
+        }
+
+        // Kelas yang diizinkan (guru = hanya diampu)
+        let allowedKelasNames = null;
+        if (currentRole === 'guru' && currentUserId && supabaseClient) {
+          try {
+            const [{ data: gk }, { data: kl }] = await Promise.all([
+              supabaseClient.from('guru_kelas').select('kelas_id').eq('guru_id', currentUserId),
+              supabaseClient.from('kelas').select('id, kelas')
+            ]);
+            const ids = new Set((gk || []).map(r => Number(r.kelas_id)));
+            allowedKelasNames = new Set(
+              (kl || []).filter(k => ids.has(Number(k.id))).map(k => String(k.kelas || '').trim()).filter(Boolean)
+            );
+          } catch (e) {
+            console.warn('allowed kelas guru', e);
+            allowedKelasNames = new Set();
+          }
+        }
+
         // Filter kelas via daftar siswa
         let kelasIds = null;
         if (kelas && supabaseClient) {
-          const { data: sk } = await supabaseClient.from('siswa').select('id').eq('kelas', kelas);
-          kelasIds = new Set((sk || []).map(s => Number(s.id)));
+          // Jika guru pilih kelas di luar ampua — kosongkan
+          if (allowedKelasNames && !allowedKelasNames.has(kelas)) {
+            kelasIds = new Set();
+          } else {
+            const { data: sk } = await supabaseClient.from('siswa').select('id').eq('kelas', kelas);
+            kelasIds = new Set((sk || []).map(s => Number(s.id)));
+          }
+        } else if (allowedKelasNames && supabaseClient) {
+          // Semua kelas diampu
+          const list = [...allowedKelasNames];
+          if (list.length) {
+            const { data: sk } = await supabaseClient.from('siswa').select('id, kelas').in('kelas', list);
+            kelasIds = new Set((sk || []).map(s => Number(s.id)));
+          } else {
+            kelasIds = new Set();
+          }
         }
 
         if (qNama) {
