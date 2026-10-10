@@ -2449,14 +2449,56 @@
     <!-- ========== PENGATURAN: 👆 Izin Sidik Jari ========== -->
     <section class="page" id="page-set-izin-fp">
       <div class="page-title">👆 Izin Sidik Jari</div>
-      <p style="font-size:12px;color:#64748b;margin-bottom:10px;">Centang user yang diizinkan memakai fitur sidik jari, lalu simpan.</p>
-          <div class="toolbar">
-            <button class="btn btn-primary" id="btnSimpanIzinFp">💾 Simpan Izin</button>
-            <span class="toolbar-info" id="infoIzinFp">0 dipilih</span>
-          </div>
-          <div id="listIzinFp" class="check-list" style="max-height:280px;">
-            <span style="color:#94a3b8;font-size:12px;">Memuat daftar user...</span>
-          </div>
+      <p style="font-size:12px;color:#64748b;margin-bottom:10px;">Centang user yang diizinkan memakai fitur sidik jari, lalu simpan. Pilihan Guru dan Siswa disimpan bersama.</p>
+
+      <div id="izinFpModeSwitch" style="display:flex;border-radius:10px;overflow:hidden;border:1px solid #2563eb;margin-bottom:12px;">
+        <button type="button" id="btnIzinFpSiswa" style="flex:1;padding:10px;border:none;font-weight:700;font-size:12px;cursor:pointer;background:#2563eb;color:#fff;">👨‍🎓 Siswa</button>
+        <button type="button" id="btnIzinFpGuru" style="flex:1;padding:10px;border:none;font-weight:700;font-size:12px;cursor:pointer;background:#eff6ff;color:#1e40af;">👨‍🏫 Guru</button>
+      </div>
+
+      <div class="toolbar">
+        <button class="btn btn-primary" id="btnSimpanIzinFp">💾 Simpan Izin</button>
+        <span class="toolbar-info" id="infoIzinFp">0 dipilih</span>
+      </div>
+
+      <!-- Tabel Siswa -->
+      <div id="izinFpPanelSiswa">
+        <div class="table-wrap">
+          <table id="tableIzinFpSiswa">
+            <thead>
+              <tr>
+                <th style="width:36px;"><input type="checkbox" id="checkAllIzinFpSiswa" title="Pilih semua siswa"></th>
+                <th>No</th>
+                <th>NISN</th>
+                <th>Nama</th>
+                <th>Kelas</th>
+              </tr>
+            </thead>
+            <tbody id="tbodyIzinFpSiswa">
+              <tr><td colspan="5" style="text-align:center;padding:16px;color:#94a3b8;">Memuat...</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Tabel Guru -->
+      <div id="izinFpPanelGuru" style="display:none;">
+        <div class="table-wrap">
+          <table id="tableIzinFpGuru">
+            <thead>
+              <tr>
+                <th style="width:36px;"><input type="checkbox" id="checkAllIzinFpGuru" title="Pilih semua guru"></th>
+                <th>No</th>
+                <th>NIP</th>
+                <th>Nama</th>
+              </tr>
+            </thead>
+            <tbody id="tbodyIzinFpGuru">
+              <tr><td colspan="4" style="text-align:center;padding:16px;color:#94a3b8;">Memuat...</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
     </section>
 
     <!-- ========== PENGATURAN: 📦 Arsip Absensi ========== -->
@@ -7246,22 +7288,115 @@
     function clearLiburCache() { _cacheLiburMap = null; }
 
     // ----- IZIN SIDIK JARI -----
+    let _izinFpMode = 'siswa'; // 'siswa' | 'guru'
+    let _izinFpAllowed = new Set(); // 'tipe:ref_id'
+
+    function setIzinFpMode(mode) {
+      _izinFpMode = mode === 'guru' ? 'guru' : 'siswa';
+      const btnS = document.getElementById('btnIzinFpSiswa');
+      const btnG = document.getElementById('btnIzinFpGuru');
+      const panelS = document.getElementById('izinFpPanelSiswa');
+      const panelG = document.getElementById('izinFpPanelGuru');
+      if (btnS) {
+        btnS.style.background = _izinFpMode === 'siswa' ? '#2563eb' : '#eff6ff';
+        btnS.style.color = _izinFpMode === 'siswa' ? '#fff' : '#1e40af';
+      }
+      if (btnG) {
+        btnG.style.background = _izinFpMode === 'guru' ? '#2563eb' : '#eff6ff';
+        btnG.style.color = _izinFpMode === 'guru' ? '#fff' : '#1e40af';
+      }
+      if (panelS) panelS.style.display = _izinFpMode === 'siswa' ? 'block' : 'none';
+      if (panelG) panelG.style.display = _izinFpMode === 'guru' ? 'block' : 'none';
+      renderIzinFpTables();
+    }
+
+    function updateInfoIzinFp() {
+      const n = _izinFpAllowed.size;
+      const el = document.getElementById('infoIzinFp');
+      if (el) el.textContent = n + ' dipilih';
+      const tipe = _izinFpMode;
+      const cbs = [...document.querySelectorAll('.cb-izin-fp[data-tipe="' + tipe + '"]')];
+      const all = document.getElementById(tipe === 'siswa' ? 'checkAllIzinFpSiswa' : 'checkAllIzinFpGuru');
+      if (all && cbs.length) {
+        all.checked = cbs.every(c => c.checked);
+        all.indeterminate = !all.checked && cbs.some(c => c.checked);
+      } else if (all) {
+        all.checked = false;
+        all.indeterminate = false;
+      }
+    }
+
+    function onIzinFpCbChange(cb) {
+      const key = cb.dataset.tipe + ':' + cb.dataset.ref;
+      if (cb.checked) _izinFpAllowed.add(key);
+      else _izinFpAllowed.delete(key);
+      updateInfoIzinFp();
+    }
+
+    function renderIzinFpTables() {
+      const siswa = (dataIzinFp || []).filter(u => u.tipe === 'siswa');
+      const guru = (dataIzinFp || []).filter(u => u.tipe === 'guru');
+
+      const tbodyS = document.getElementById('tbodyIzinFpSiswa');
+      const tbodyG = document.getElementById('tbodyIzinFpGuru');
+      if (tbodyS) {
+        if (!siswa.length) {
+          tbodyS.innerHTML = '<tr><td colspan="5" style="text-align:center;padding:16px;color:#94a3b8;">Belum ada data siswa</td></tr>';
+        } else {
+          tbodyS.innerHTML = siswa.map((u, i) => {
+            const key = u.tipe + ':' + u.ref_id;
+            const checked = _izinFpAllowed.has(key) ? ' checked' : '';
+            return '<tr>' +
+              '<td><input type="checkbox" class="cb-izin-fp" data-tipe="siswa" data-ref="' + u.ref_id +
+              '" data-kode="' + esc(u.kode || '') + '" data-nama="' + esc(u.nama || '') + '"' + checked + '></td>' +
+              '<td>' + (i + 1) + '</td>' +
+              '<td>' + esc(u.kode || '-') + '</td>' +
+              '<td>' + esc(u.nama || '-') + '</td>' +
+              '<td>' + esc(u.kelas || '-') + '</td>' +
+              '</tr>';
+          }).join('');
+        }
+      }
+      if (tbodyG) {
+        if (!guru.length) {
+          tbodyG.innerHTML = '<tr><td colspan="4" style="text-align:center;padding:16px;color:#94a3b8;">Belum ada data guru</td></tr>';
+        } else {
+          tbodyG.innerHTML = guru.map((u, i) => {
+            const key = u.tipe + ':' + u.ref_id;
+            const checked = _izinFpAllowed.has(key) ? ' checked' : '';
+            const nip = u.nip || u.kode || '-';
+            return '<tr>' +
+              '<td><input type="checkbox" class="cb-izin-fp" data-tipe="guru" data-ref="' + u.ref_id +
+              '" data-kode="' + esc(u.kode || '') + '" data-nama="' + esc(u.nama || '') + '"' + checked + '></td>' +
+              '<td>' + (i + 1) + '</td>' +
+              '<td>' + esc(nip) + '</td>' +
+              '<td>' + esc(u.nama || '-') + '</td>' +
+              '</tr>';
+          }).join('');
+        }
+      }
+      document.querySelectorAll('.cb-izin-fp').forEach(cb => {
+        cb.addEventListener('change', () => onIzinFpCbChange(cb));
+      });
+      updateInfoIzinFp();
+    }
+
     async function loadIzinFpList() {
-      const box = document.getElementById('listIzinFp');
-      if (!box) return;
-      box.innerHTML = '<span style="color:#94a3b8;font-size:12px;">Memuat...</span>';
+      const tbodyS = document.getElementById('tbodyIzinFpSiswa');
+      const tbodyG = document.getElementById('tbodyIzinFpGuru');
+      if (tbodyS) tbodyS.innerHTML = '<tr><td colspan="5" style="text-align:center;padding:16px;color:#94a3b8;">Memuat...</td></tr>';
+      if (tbodyG) tbodyG.innerHTML = '<tr><td colspan="4" style="text-align:center;padding:16px;color:#94a3b8;">Memuat...</td></tr>';
       try {
         let users = [];
-        let allowed = new Set();
+        const allowed = new Set();
         if (supabaseClient) {
           const [siswaRes, guruRes, izinRes] = await Promise.all([
             supabaseClient.from('siswa').select('id, nama, nisn, kelas').order('kelas').order('nama'),
             supabaseClient.from('guru').select('id, nama, pin, nip').order('id'),
             supabaseClient.from('izin_sidik_jari').select('tipe, ref_id').eq('aktif', true)
           ]);
-          // Guru dulu (urut id), lalu siswa (urut kelas → nama) — sama dashboard
           (guruRes.data || []).forEach(g => users.push({
-            tipe: 'guru', ref_id: g.id, id: g.id, kode: g.pin || g.nip, nama: g.nama
+            tipe: 'guru', ref_id: g.id, id: g.id, kode: g.pin || g.nip, nip: g.nip || g.pin || '', nama: g.nama
           }));
           (siswaRes.data || []).forEach(s => users.push({
             tipe: 'siswa', ref_id: s.id, id: s.id, kode: s.nisn, nama: s.nama, kelas: s.kelas || ''
@@ -7271,56 +7406,81 @@
           if (!dataSiswa.length) await loadSiswa();
           if (!dataGuru.length) await loadGuru();
           sortGuruList(dataGuru).forEach(g => users.push({
-            tipe: 'guru', ref_id: g.id, id: g.id, kode: g.pin || g.nip, nama: g.nama
+            tipe: 'guru', ref_id: g.id, id: g.id, kode: g.pin || g.nip, nip: g.nip || g.pin || '', nama: g.nama
           }));
           sortSiswaList(dataSiswa).forEach(s => users.push({
             tipe: 'siswa', ref_id: s.id, id: s.id, kode: s.nisn, nama: s.nama, kelas: s.kelas || ''
           }));
         }
-        users = sortGuruSiswaUsers(users);
-        dataIzinFp = users;
-        if (!users.length) {
-          box.innerHTML = '<span style="color:#94a3b8;font-size:12px;">Belum ada data siswa/guru</span>';
-          return;
-        }
-        box.innerHTML = users.map(u => `
-          <label style="width:100%;">
-            <input type="checkbox" class="cb-izin-fp" data-tipe="${u.tipe}" data-ref="${u.ref_id}"
-              data-kode="${esc(u.kode || '')}" data-nama="${esc(u.nama || '')}"
-              ${allowed.has(u.tipe + ':' + u.ref_id) ? 'checked' : ''}>
-            <span style="font-size:12px;">[${u.tipe}] ${esc(u.nama)} <span style="color:#94a3b8;">(${esc(u.kode || '-')})</span></span>
-          </label>`).join('');
-        updateInfoIzinFp();
-        box.querySelectorAll('.cb-izin-fp').forEach(cb => cb.addEventListener('change', updateInfoIzinFp));
+        const guruU = users.filter(u => u.tipe === 'guru');
+        const siswaU = users.filter(u => u.tipe === 'siswa').sort((a, b) => {
+          const c = String(a.kelas || '').localeCompare(String(b.kelas || ''), 'id', { numeric: true });
+          if (c) return c;
+          return String(a.nama || '').localeCompare(String(b.nama || ''), 'id');
+        });
+        dataIzinFp = [...siswaU, ...guruU];
+        _izinFpAllowed = allowed;
+        if (!_izinFpMode) _izinFpMode = 'siswa';
+        setIzinFpMode(_izinFpMode);
       } catch (e) {
         console.error(e);
-        box.innerHTML = '<span style="color:#ef4444;font-size:12px;">Gagal memuat: ' + (e.message || e) + '</span>';
+        if (tbodyS) tbodyS.innerHTML = '<tr><td colspan="5" style="text-align:center;padding:16px;color:#ef4444;">Gagal: ' + esc(String(e.message || e)) + '</td></tr>';
+        if (tbodyG) tbodyG.innerHTML = '<tr><td colspan="4" style="text-align:center;padding:16px;color:#ef4444;">Gagal memuat</td></tr>';
       }
     }
-    function updateInfoIzinFp() {
-      const n = document.querySelectorAll('.cb-izin-fp:checked').length;
-      const el = document.getElementById('infoIzinFp');
-      if (el) el.textContent = n + ' dipilih';
-    }
+
+    document.getElementById('btnIzinFpSiswa')?.addEventListener('click', () => setIzinFpMode('siswa'));
+    document.getElementById('btnIzinFpGuru')?.addEventListener('click', () => setIzinFpMode('guru'));
+
+    document.getElementById('checkAllIzinFpSiswa')?.addEventListener('change', function () {
+      document.querySelectorAll('.cb-izin-fp[data-tipe="siswa"]').forEach(cb => {
+        cb.checked = this.checked;
+        const key = 'siswa:' + cb.dataset.ref;
+        if (this.checked) _izinFpAllowed.add(key);
+        else _izinFpAllowed.delete(key);
+      });
+      updateInfoIzinFp();
+    });
+    document.getElementById('checkAllIzinFpGuru')?.addEventListener('change', function () {
+      document.querySelectorAll('.cb-izin-fp[data-tipe="guru"]').forEach(cb => {
+        cb.checked = this.checked;
+        const key = 'guru:' + cb.dataset.ref;
+        if (this.checked) _izinFpAllowed.add(key);
+        else _izinFpAllowed.delete(key);
+      });
+      updateInfoIzinFp();
+    });
+
     document.getElementById('btnSimpanIzinFp')?.addEventListener('click', async () => {
-      const checked = [...document.querySelectorAll('.cb-izin-fp:checked')].map(cb => ({
-        tipe: cb.dataset.tipe,
-        ref_id: Number(cb.dataset.ref),
-        kode: cb.dataset.kode || null,
-        nama: cb.dataset.nama || null,
-        aktif: true
-      }));
-      if (!(await showConfirm('Simpan izin sidik jari untuk ' + checked.length + ' user?', 'Izin Sidik Jari', '👆'))) return;
+      // Ambil dari set global (Guru + Siswa), bukan hanya yang terlihat di tab
+      const byKey = new Map();
+      (dataIzinFp || []).forEach(u => {
+        byKey.set(u.tipe + ':' + u.ref_id, u);
+      });
+      const checked = [..._izinFpAllowed].map(key => {
+        const u = byKey.get(key);
+        if (u) {
+          return {
+            tipe: u.tipe,
+            ref_id: Number(u.ref_id),
+            kode: u.kode || null,
+            nama: u.nama || null,
+            aktif: true
+          };
+        }
+        const parts = key.split(':');
+        return { tipe: parts[0], ref_id: Number(parts[1]), kode: null, nama: null, aktif: true };
+      });
+      if (!(await showConfirm('Simpan izin sidik jari untuk ' + checked.length + ' user (Guru + Siswa)?', 'Izin Sidik Jari', '👆'))) return;
       try {
         if (supabaseClient) {
-          // Hapus semua lalu insert yang dicentang
           await supabaseClient.from('izin_sidik_jari').delete().neq('id', 0);
           if (checked.length) {
             const { error } = await supabaseClient.from('izin_sidik_jari').insert(checked);
             if (error) throw error;
           }
         }
-        alert('Izin sidik jari disimpan');
+        alert('Izin sidik jari disimpan (' + checked.length + ' user)');
         await loadIzinFpList();
       } catch (e) { alert('Gagal: ' + (e.message || e)); }
     });
