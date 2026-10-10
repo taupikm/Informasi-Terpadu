@@ -2382,11 +2382,14 @@
                   <th>Tgl Akhir</th>
                   <th>Tgl Kelulusan</th>
                   <th>Tgl Naik Kelas</th>
+                  <th>SK Lulus</th>
+                  <th>SK Naik</th>
+                  <th>Kepsek</th>
                   <th>Aktif</th>
                 </tr>
               </thead>
               <tbody id="tbodyPeriode">
-                <tr><td colspan="9" style="text-align:center;padding:16px;color:#94a3b8;">Memuat...</td></tr>
+                <tr><td colspan="12" style="text-align:center;padding:16px;color:#94a3b8;">Memuat...</td></tr>
               </tbody>
             </table>
       </div>
@@ -2999,7 +3002,7 @@
 
   <!-- ========== MODAL PERIODE ========== -->
   <div class="modal-overlay" id="modalPeriode">
-    <div class="modal">
+    <div class="modal modal-lg">
       <div class="modal-header">
         <h3 id="modalPeriodeTitle">Tambah Periode</h3>
         <button class="modal-close" data-close="modalPeriode">&times;</button>
@@ -3037,6 +3040,24 @@
           <div class="form-group">
             <label>Tanggal Naik Kelas</label>
             <input type="date" id="periodeTglNaik">
+          </div>
+        </div>
+        <div class="form-group">
+          <label>SK Kelulusan</label>
+          <input type="text" id="periodeSkKelulusan" placeholder="Nomor SK Kelulusan">
+        </div>
+        <div class="form-group">
+          <label>SK Naik Kelas</label>
+          <input type="text" id="periodeSkNaikKelas" placeholder="Nomor SK Naik Kelas">
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label>Nama Kepsek</label>
+            <input type="text" id="periodeNamaKepsek" placeholder="Nama Kepala Sekolah">
+          </div>
+          <div class="form-group">
+            <label>NIP Kepsek</label>
+            <input type="text" id="periodeNipKepsek" placeholder="NIP Kepala Sekolah">
           </div>
         </div>
       </div>
@@ -5861,6 +5882,14 @@
       return true;
     }
 
+    // Data dummy default untuk field SK / Kepsek (boleh diganti lewat form)
+    const PERIODE_DUMMY = {
+      sk_kelulusan: '421.3/001/SMPN-PM/2027',
+      sk_naik_kelas: '421.3/002/SMPN-PM/2026',
+      nama_kepsek: 'Drs. Contoh Kepala Sekolah, M.Pd.',
+      nip_kepsek: '196501011990031001'
+    };
+
     async function loadPeriodeTable() {
       try {
         if (supabaseClient) {
@@ -5869,7 +5898,17 @@
           dataPeriode = data || [];
         } else {
           dataPeriode = [
-            { id: 3, tahun_ajaran: '2026/2027', semester: 'Ganjil', tanggal_mulai: '2026-07-14', tanggal_akhir: '2026-12-19', tanggal_mulai_absen: '2026-07-14', tanggal_akhir_absen: '2026-12-19', tanggal_kelulusan: '2026-06-15', tanggal_naik_kelas: '2026-06-20', aktif: true }
+            {
+              id: 3, tahun_ajaran: '2026/2027', semester: 'Ganjil',
+              tanggal_mulai: '2026-07-14', tanggal_akhir: '2026-12-19',
+              tanggal_mulai_absen: '2026-07-14', tanggal_akhir_absen: '2026-12-19',
+              tanggal_kelulusan: '2026-06-15', tanggal_naik_kelas: '2026-06-20',
+              sk_kelulusan: PERIODE_DUMMY.sk_kelulusan,
+              sk_naik_kelas: PERIODE_DUMMY.sk_naik_kelas,
+              nama_kepsek: PERIODE_DUMMY.nama_kepsek,
+              nip_kepsek: PERIODE_DUMMY.nip_kepsek,
+              aktif: true
+            }
           ];
         }
       } catch (e) { console.error(e); dataPeriode = []; }
@@ -5880,21 +5919,28 @@
       document.getElementById('infoPeriode').textContent = dataPeriode.length + ' data';
       document.getElementById('checkAllPeriode').checked = false;
       if (!dataPeriode.length) {
-        tbody.innerHTML = '<tr><td colspan="9" style="text-align:center;padding:16px;color:#94a3b8;">Belum ada data</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="12" style="text-align:center;padding:16px;color:#94a3b8;">Belum ada data</td></tr>';
         return;
       }
-      tbody.innerHTML = dataPeriode.map((p, i) => `
-        <tr data-id="${p.id}">
-          <td><input type="checkbox" class="cb-periode-row" value="${p.id}"></td>
-          <td>${i + 1}</td>
-          <td>${esc(p.tahun_ajaran)}</td>
-          <td>${esc(p.semester)}</td>
-          <td>${p.tanggal_mulai || '-'}</td>
-          <td>${p.tanggal_akhir || '-'}</td>
-          <td>${p.tanggal_kelulusan || '-'}</td>
-          <td>${p.tanggal_naik_kelas || '-'}</td>
-          <td>${p.aktif ? '<span class="badge-aktif">Aktif</span>' : '<span class="badge-nonaktif">Tidak</span>'}</td>
-        </tr>`).join('');
+      tbody.innerHTML = dataPeriode.map((p, i) => {
+        const skL = p.sk_kelulusan || '-';
+        const skN = p.sk_naik_kelas || '-';
+        const kep = p.nama_kepsek || '-';
+        return '<tr data-id="' + p.id + '">' +
+          '<td><input type="checkbox" class="cb-periode-row" value="' + p.id + '"></td>' +
+          '<td>' + (i + 1) + '</td>' +
+          '<td>' + esc(p.tahun_ajaran) + '</td>' +
+          '<td>' + esc(p.semester) + '</td>' +
+          '<td>' + (p.tanggal_mulai || '-') + '</td>' +
+          '<td>' + (p.tanggal_akhir || '-') + '</td>' +
+          '<td>' + (p.tanggal_kelulusan || '-') + '</td>' +
+          '<td>' + (p.tanggal_naik_kelas || '-') + '</td>' +
+          '<td title="' + esc(skL) + '" style="max-width:100px;overflow:hidden;text-overflow:ellipsis;">' + esc(skL) + '</td>' +
+          '<td title="' + esc(skN) + '" style="max-width:100px;overflow:hidden;text-overflow:ellipsis;">' + esc(skN) + '</td>' +
+          '<td title="' + esc(kep) + (p.nip_kepsek ? ' / ' + p.nip_kepsek : '') + '" style="max-width:120px;overflow:hidden;text-overflow:ellipsis;">' + esc(kep) + '</td>' +
+          '<td>' + (p.aktif ? '<span class="badge-aktif">Aktif</span>' : '<span class="badge-nonaktif">Tidak</span>') + '</td>' +
+          '</tr>';
+      }).join('');
     }
     document.getElementById('checkAllPeriode').addEventListener('change', function () {
       document.querySelectorAll('.cb-periode-row').forEach(c => c.checked = this.checked);
@@ -5908,6 +5954,11 @@
       document.getElementById('periodeTglAkhir').value = '';
       document.getElementById('periodeTglLulus').value = '';
       document.getElementById('periodeTglNaik').value = '';
+      // Prefill dummy — silakan diganti
+      document.getElementById('periodeSkKelulusan').value = PERIODE_DUMMY.sk_kelulusan;
+      document.getElementById('periodeSkNaikKelas').value = PERIODE_DUMMY.sk_naik_kelas;
+      document.getElementById('periodeNamaKepsek').value = PERIODE_DUMMY.nama_kepsek;
+      document.getElementById('periodeNipKepsek').value = PERIODE_DUMMY.nip_kepsek;
       openModal('modalPeriode');
     });
     document.getElementById('btnEditPeriode').addEventListener('click', () => {
@@ -5923,6 +5974,10 @@
       document.getElementById('periodeTglAkhir').value = p.tanggal_akhir || '';
       document.getElementById('periodeTglLulus').value = p.tanggal_kelulusan || '';
       document.getElementById('periodeTglNaik').value = p.tanggal_naik_kelas || '';
+      document.getElementById('periodeSkKelulusan').value = p.sk_kelulusan || PERIODE_DUMMY.sk_kelulusan;
+      document.getElementById('periodeSkNaikKelas').value = p.sk_naik_kelas || PERIODE_DUMMY.sk_naik_kelas;
+      document.getElementById('periodeNamaKepsek').value = p.nama_kepsek || PERIODE_DUMMY.nama_kepsek;
+      document.getElementById('periodeNipKepsek').value = p.nip_kepsek || PERIODE_DUMMY.nip_kepsek;
       const pma = document.getElementById('periodeTglMulaiAbsen');
       const paa = document.getElementById('periodeTglAkhirAbsen');
       if (pma) pma.value = p.tanggal_mulai_absen || '';
@@ -5939,7 +5994,11 @@
         tanggal_mulai_absen: document.getElementById('periodeTglMulaiAbsen')?.value || null,
         tanggal_akhir_absen: document.getElementById('periodeTglAkhirAbsen')?.value || null,
         tanggal_kelulusan: document.getElementById('periodeTglLulus').value || null,
-        tanggal_naik_kelas: document.getElementById('periodeTglNaik').value || null
+        tanggal_naik_kelas: document.getElementById('periodeTglNaik').value || null,
+        sk_kelulusan: (document.getElementById('periodeSkKelulusan')?.value || '').trim() || null,
+        sk_naik_kelas: (document.getElementById('periodeSkNaikKelas')?.value || '').trim() || null,
+        nama_kepsek: (document.getElementById('periodeNamaKepsek')?.value || '').trim() || null,
+        nip_kepsek: (document.getElementById('periodeNipKepsek')?.value || '').trim() || null
       };
       if (!payload.tahun_ajaran || !payload.semester) { alert('Tahun Ajaran dan Semester wajib'); return; }
       try {
@@ -5965,7 +6024,14 @@
         closeModal('modalPeriode');
         await loadPeriodeTable();
         alert(id ? 'Periode diubah' : 'Periode ditambah');
-      } catch (e) { alert('Gagal: ' + (e.message || e)); }
+      } catch (e) {
+        const msg = String(e.message || e);
+        if (/sk_kelulusan|sk_naik_kelas|nama_kepsek|nip_kepsek|column/i.test(msg)) {
+          alert('Gagal simpan: kolom SK/Kepsek belum ada di database.\n\nJalankan SQL di Supabase:\n\nALTER TABLE public.periode\n  ADD COLUMN IF NOT EXISTS sk_kelulusan text,\n  ADD COLUMN IF NOT EXISTS sk_naik_kelas text,\n  ADD COLUMN IF NOT EXISTS nama_kepsek text,\n  ADD COLUMN IF NOT EXISTS nip_kepsek text;\n\nDetail: ' + msg);
+        } else {
+          alert('Gagal: ' + msg);
+        }
+      }
     });
     document.getElementById('btnHapusPeriode').addEventListener('click', async () => {
       const ids = getChecked('cb-periode-row');
