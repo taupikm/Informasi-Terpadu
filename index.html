@@ -1223,6 +1223,7 @@
         <button class="menu-item" data-page="data-siswa"><span class="icon">👨‍🎓</span> Data Siswa</button>
         <button class="menu-item" data-page="data-guru"><span class="icon">👨‍🏫</span> Data Guru</button>
         <button class="menu-item" data-page="data-lulusan"><span class="icon">🎓</span> Data Lulusan</button>
+        <button class="menu-item" data-page="syarat-naik"><span class="icon">📋</span> Cek Syarat Naik / Lulus</button>
       </div>
       <div class="menu-group" data-role="admin" style="display:none;">
         <div class="menu-group-title">Pengaturan</div>
@@ -10452,18 +10453,51 @@
     // ============================================================
     // ============================================================
     // PENGATURAN ABSENSI (syarat naik/lulus) + CEK SYARAT
+    // Tabel DB: pengaturan_absensi (id=1, mulai, akhir, min_hadir)
     // ============================================================
     const ABSEN_SET_KEY = 'smpn_absensi_syarat';
-    // Bobot kehadiran (sama rumus kartu syarat)
     const BOBOT_STATUS = { TW: 1, TL: 0.8, Sakit: 0.75, Izin: 0.5, Alpa: 0, Bolos: 0 };
+    let _absenSettingsCache = null;
 
-    function loadAbsenSettings() {
+    async function fetchAbsenSettingsFromDb() {
+      if (!supabaseClient) return null;
+      try {
+        const { data, error } = await supabaseClient
+          .from('pengaturan_absensi')
+          .select('mulai, akhir, min_hadir')
+          .eq('id', 1)
+          .maybeSingle();
+        if (error) {
+          console.warn('pengaturan_absensi:', error.message);
+          return null;
+        }
+        if (!data) return null;
+        return {
+          mulai: data.mulai ? String(data.mulai).slice(0, 10) : '',
+          akhir: data.akhir ? String(data.akhir).slice(0, 10) : '',
+          minHadir: Number(data.min_hadir) || 80
+        };
+      } catch (e) {
+        console.warn(e);
+        return null;
+      }
+    }
+
+    async function loadAbsenSettings() {
+      // 1) DB
+      const fromDb = await fetchAbsenSettingsFromDb();
+      if (fromDb && fromDb.mulai && fromDb.akhir) {
+        _absenSettingsCache = fromDb;
+        try { localStorage.setItem(ABSEN_SET_KEY, JSON.stringify(fromDb)); } catch (e) {}
+        return fromDb;
+      }
+      // 2) localStorage cache
       let s = { mulai: '', akhir: '', minHadir: 80 };
       try {
         const raw = localStorage.getItem(ABSEN_SET_KEY);
         if (raw) s = Object.assign(s, JSON.parse(raw));
       } catch (e) {}
-      // Fallback rentang dari periode aktif
+      // 3) periode aktif
       if (!s.mulai || !s.akhir) {
         try {
           const r = getRentangAbsenAktif();
@@ -10474,13 +10508,33 @@
       if (!s.mulai) s.mulai = todayLocal();
       if (!s.akhir) s.akhir = todayLocal();
       if (!s.minHadir || isNaN(Number(s.minHadir))) s.minHadir = 80;
+      _absenSettingsCache = s;
       return s;
     }
-    function saveAbsenSettings(obj) {
-      localStorage.setItem(ABSEN_SET_KEY, JSON.stringify(obj));
+
+    async function saveAbsenSettings(obj) {
+      _absenSettingsCache = obj;
+      try { localStorage.setItem(ABSEN_SET_KEY, JSON.stringify(obj)); } catch (e) {}
+      if (!supabaseClient) return { ok: true, source: 'local' };
+      try {
+        const payload = {
+          id: 1,
+          mulai: obj.mulai,
+          akhir: obj.akhir,
+          min_hadir: Number(obj.minHadir) || 80,
+          updated_at: new Date().toISOString()
+        };
+        const { error } = await supabaseClient.from('pengaturan_absensi').upsert(payload, { onConflict: 'id' });
+        if (error) throw error;
+        return { ok: true, source: 'db' };
+      } catch (e) {
+        console.warn(e);
+        return { ok: false, source: 'local', error: e.message || String(e) };
+      }
     }
-    function loadSetAbsenForm() {
-      const s = loadAbsenSettings();
+
+    async function loadSetAbsenForm() {
+      const s = await loadAbsenSettings();
       const elM = document.getElementById('setAbsenMulai');
       const elA = document.getElementById('setAbsenAkhir');
       const elH = document.getElementById('setAbsenMinHadir');
@@ -10488,18 +10542,30 @@
       if (elA) elA.value = s.akhir || '';
       if (elH) elH.value = s.minHadir;
       const info = document.getElementById('setAbsenInfo');
-      if (info) info.textContent = 'Aktif: ' + (s.mulai || '-') + ' s/d ' + (s.akhir || '-') + ' · Min hadir ' + s.minHadir + '%';
+      if (info) {
+        info.innerHTML = 'Aktif: <b>' + (s.mulai || '-') + '</b> s/d <b>' + (s.akhir || '-') +
+          '</b> · Min hadir <b>' + s.minHadir + '%</b>' +
+          '<br><span style="color:#94a3b8;">Tabel DB: <code>pengaturan_absensi</code> (jalankan SQL jika belum ada)</span>';
+      }
     }
-    document.getElementById('btnSimpanSetAbsen')?.addEventListener('click', () => {
+
+    document.getElementById('btnSimpanSetAbsen')?.addEventListener('click', async () => {
       const mulai = document.getElementById('setAbsenMulai')?.value || '';
       const akhir = document.getElementById('setAbsenAkhir')?.value || '';
       let minHadir = Number(document.getElementById('setAbsenMinHadir')?.value);
       if (!mulai || !akhir) { alert('Isi tanggal mulai dan berakhir'); return; }
       if (akhir < mulai) { alert('Tanggal berakhir harus ≥ mulai'); return; }
       if (isNaN(minHadir) || minHadir < 1 || minHadir > 100) { alert('Minimal hadir 1–100'); return; }
-      saveAbsenSettings({ mulai, akhir, minHadir });
-      loadSetAbsenForm();
-      alert('Pengaturan absensi disimpan');
+      const res = await saveAbsenSettings({ mulai, akhir, minHadir });
+      await loadSetAbsenForm();
+      if (res.ok && res.source === 'db') {
+        alert('Pengaturan absensi disimpan ke database');
+      } else if (res.ok) {
+        alert('Disimpan lokal. Buat tabel pengaturan_absensi di Supabase agar tersimpan permanen.');
+      } else {
+        alert('Disimpan lokal saja. Gagal ke DB: ' + (res.error || '') +
+          '\n\nJalankan SQL pembuatan tabel pengaturan_absensi di Supabase.');
+      }
     });
 
     function normStatusSyarat(st) {
@@ -10510,28 +10576,32 @@
       if (k === 'Izin') return 'Izin';
       if (k === 'Alpa') return 'Alpa';
       if (k === 'Bolos') return 'Bolos';
-      // fallback
       const u = String(st || '').toUpperCase();
       if (u === 'H' || u === 'HADIR') return 'TW';
       return 'Alpa';
     }
 
-    /** Hitung ringkasan dari baris absensi siswa (unik tanggal+sesi) */
-    function hitungSyaratDariRows(rows) {
-      // unik per tanggal|sesi_id|sesi_urutan|sesi_nama
+    /** Hitung dari baris real absensi+historis dalam rentang seting (unik tanggal+sesi) */
+    function hitungSyaratDariRows(rows, mulai, akhir) {
       const map = new Map();
       (rows || []).forEach(r => {
         const tgl = String(r.tanggal || '').slice(0, 10);
-        const sesiKey = (r.sesi_id != null ? 'id:' + r.sesi_id : '') +
-          '|' + (r.sesi_urutan != null ? 'u:' + r.sesi_urutan : '') +
-          '|' + String(r.sesi_nama || '');
+        if (!tgl) return;
+        // Ketat: di luar rentang seting → tidak dihitung
+        if (mulai && tgl < mulai) return;
+        if (akhir && tgl > akhir) return;
+        const sesiKey =
+          (r.sesi_id != null && r.sesi_id !== '' ? 'id:' + r.sesi_id : '') +
+          '|' + (r.sesi_urutan != null && r.sesi_urutan !== '' ? 'u:' + r.sesi_urutan : '') +
+          '|' + String(r.sesi_nama || '').trim();
         const key = tgl + '||' + sesiKey;
         if (!map.has(key)) {
           map.set(key, r);
         } else {
-          // prioritaskan yang ada jam_scan / status lebih "kuat"
           const prev = map.get(key);
-          if (r.jam_scan && !prev.jam_scan) map.set(key, r);
+          // prioritaskan record yang ada jam_scan / status hadir
+          const score = (x) => (x.jam_scan ? 2 : 0) + (['TW', 'TL'].includes(String(x.status || '').toUpperCase()) ? 1 : 0);
+          if (score(r) > score(prev)) map.set(key, r);
         }
       });
       const uniq = [...map.values()];
@@ -10542,6 +10612,8 @@
         else counts.Alpa++;
       });
       const totalSesi = uniq.length;
+      // verifikasi: jumlah rincian = total sesi
+      const sumStatus = Object.values(counts).reduce((a, b) => a + b, 0);
       const hariSet = new Set(uniq.map(r => String(r.tanggal || '').slice(0, 10)));
       let nilaiHadir = 0;
       Object.keys(counts).forEach(k => {
@@ -10551,6 +10623,7 @@
       return {
         counts,
         totalSesi,
+        sumStatus,
         hari: hariSet.size,
         nilaiHadir: Math.round(nilaiHadir * 10) / 10,
         persen: Math.round(persen * 100) / 100
@@ -10559,7 +10632,6 @@
 
     async function resolveSiswaForSyarat(q) {
       q = String(q || '').trim();
-      // Login sebagai siswa tanpa query → data sendiri
       if (!q && currentRole === 'siswa' && currentUserId) {
         if (supabaseClient) {
           const { data } = await supabaseClient.from('siswa').select('*').eq('id', currentUserId).maybeSingle();
@@ -10571,10 +10643,9 @@
       if (!q) return null;
       if (supabaseClient) {
         const { data } = await supabaseClient.from('siswa').select('*')
-          .or('nama.ilike.%' + q + '%,nisn.ilike.%' + q + '%').limit(5);
+          .or('nama.ilike.%' + q + '%,nisn.ilike.%' + q + '%').limit(8);
         if (data && data.length === 1) return data[0];
         if (data && data.length > 1) {
-          // exact nisn prefer
           const exact = data.find(s => String(s.nisn) === q);
           return exact || data[0];
         }
@@ -10622,39 +10693,29 @@
       document.getElementById('syaratPersen').textContent = persen.toFixed(2) + '%';
       document.getElementById('syaratDetail').textContent =
         'Nilai Hadir: ' + hitung.nilaiHadir + ' / ' + hitung.totalSesi +
-        ' (Batas: ' + settings.minHadir + '%) · TW=1 · TL=0.8';
+        ' (Batas: ' + settings.minHadir + '%) · TW=1 · TL=0.8' +
+        (hitung.sumStatus === hitung.totalSesi ? '' : ' · cek data');
 
       const tingkat = tingkatDariKelas(siswa.kelas);
       const lulus = persen >= Number(settings.minHadir);
       const badge = document.getElementById('syaratBadge');
       if (tingkat === '9') {
         if (lulus) {
-          badge.style.background = '#dcfce7';
-          badge.style.color = '#166534';
-          badge.style.border = '1px solid #86efac';
+          badge.style.background = '#dcfce7'; badge.style.color = '#166534'; badge.style.border = '1px solid #86efac';
           badge.innerHTML = '🎓 MEMENUHI SYARAT LULUS';
         } else {
-          badge.style.background = '#fee2e2';
-          badge.style.color = '#991b1b';
-          badge.style.border = '1px solid #fca5a5';
+          badge.style.background = '#fee2e2'; badge.style.color = '#991b1b'; badge.style.border = '1px solid #fca5a5';
           badge.innerHTML = '❌ TIDAK MEMENUHI SYARAT KELULUSAN';
         }
       } else {
-        // kelas 7/8 (atau lain)
         if (lulus) {
-          badge.style.background = '#dcfce7';
-          badge.style.color = '#166534';
-          badge.style.border = '1px solid #86efac';
+          badge.style.background = '#dcfce7'; badge.style.color = '#166534'; badge.style.border = '1px solid #86efac';
           badge.innerHTML = '⬆️ MEMENUHI SYARAT NAIK KELAS';
         } else {
-          badge.style.background = '#fee2e2';
-          badge.style.color = '#991b1b';
-          badge.style.border = '1px solid #fca5a5';
+          badge.style.background = '#fee2e2'; badge.style.color = '#991b1b'; badge.style.border = '1px solid #fca5a5';
           badge.innerHTML = '❌ TIDAK MEMENUHI SYARAT NAIK KELAS';
         }
       }
-
-      // simpan untuk print
       window._syaratLast = { siswa, hitung, settings };
     }
 
@@ -10662,21 +10723,25 @@
       const q = document.getElementById('syaratQ')?.value || '';
       const empty = document.getElementById('syaratEmpty');
       const box = document.getElementById('syaratResult');
-      if (empty) empty.textContent = 'Memuat data absensi...';
-      if (empty) empty.style.display = 'block';
+      if (empty) { empty.textContent = 'Memuat data absensi...'; empty.style.display = 'block'; }
       if (box) box.style.display = 'none';
 
       try {
         if (!aktifPeriode) await loadAktifPeriode();
-        const settings = loadAbsenSettings();
-        const siswa = await resolveSiswaForSyarat(q);
-        if (!siswa) {
-          if (empty) empty.textContent = q
-            ? 'Siswa tidak ditemukan untuk "' + q + '"'
-            : 'Login sebagai siswa atau masukkan NISN/Nama.';
+        const settings = await loadAbsenSettings();
+        if (!settings.mulai || !settings.akhir) {
+          if (empty) empty.textContent = 'Pengaturan absensi belum diisi. Admin: Pengaturan → Arsip Absensi.';
           return;
         }
-        // Ambil by ref_id, fallback by kode/NISN jika perlu
+        const siswa = await resolveSiswaForSyarat(currentRole === 'siswa' ? '' : q);
+        if (!siswa) {
+          if (empty) empty.textContent = (currentRole === 'siswa')
+            ? 'Data siswa tidak ditemukan. Login ulang.'
+            : (q ? 'Siswa tidak ditemukan untuk "' + q + '"' : 'Masukkan NISN atau Nama siswa.');
+          return;
+        }
+
+        // Data real: absensi + historis, hanya dalam rentang seting
         let rows = await fetchAbsensiRange(settings.mulai, settings.akhir, {
           tipe: 'siswa',
           ref_id: siswa.id
@@ -10687,13 +10752,16 @@
             kode: siswa.nisn
           });
         }
-        const filtered = (rows || []).filter(r =>
-          r.tipe === 'siswa' && (
-            Number(r.ref_id) === Number(siswa.id) ||
-            String(r.kode || '') === String(siswa.nisn || '')
-          )
-        );
-        const hitung = hitungSyaratDariRows(filtered);
+        const filtered = (rows || []).filter(r => {
+          const tgl = String(r.tanggal || '').slice(0, 10);
+          if (settings.mulai && tgl < settings.mulai) return false;
+          if (settings.akhir && tgl > settings.akhir) return false;
+          if (r.tipe && r.tipe !== 'siswa') return false;
+          return Number(r.ref_id) === Number(siswa.id) ||
+            String(r.kode || '') === String(siswa.nisn || '');
+        });
+
+        const hitung = hitungSyaratDariRows(filtered, settings.mulai, settings.akhir);
         renderSyaratCard(siswa, hitung, settings);
       } catch (e) {
         console.error(e);
@@ -10703,18 +10771,28 @@
     }
 
     async function initSyaratNaikPage() {
-      if (!aktifPeriode) await loadAktifPeriode();
-      const s = loadAbsenSettings();
-      // Sembunyikan search jika siswa login (opsional tetap bisa cek diri)
-      const sc = document.getElementById('syaratSearchCard');
-      if (currentRole === 'siswa') {
-        if (document.getElementById('syaratQ')) document.getElementById('syaratQ').value = '';
-        await jalankanCekSyarat();
-      } else {
+      // Guru tidak punya akses menu; tetap amankan
+      if (currentRole === 'guru') {
+        document.getElementById('syaratSearchCard').style.display = 'none';
         document.getElementById('syaratResult').style.display = 'none';
         document.getElementById('syaratEmpty').style.display = 'block';
+        document.getElementById('syaratEmpty').textContent = 'Halaman ini khusus Siswa/Orang Tua dan Admin.';
+        return;
+      }
+      if (!aktifPeriode) await loadAktifPeriode();
+      const sc = document.getElementById('syaratSearchCard');
+      if (currentRole === 'siswa') {
+        // Siswa: tanpa form, langsung hasil
+        if (sc) sc.style.display = 'none';
+        await jalankanCekSyarat();
+      } else {
+        // Admin (dan peran lain yang punya menu): form pencarian
+        if (sc) sc.style.display = 'block';
+        document.getElementById('syaratResult').style.display = 'none';
+        const s = await loadAbsenSettings();
+        document.getElementById('syaratEmpty').style.display = 'block';
         document.getElementById('syaratEmpty').textContent =
-          'Masukkan NISN/Nama lalu Cek. Rentang: ' + s.mulai + ' s/d ' + s.akhir + ' · Min ' + s.minHadir + '%';
+          'Masukkan NISN/Nama lalu Cek. Rentang absensi: ' + s.mulai + ' s/d ' + s.akhir + ' · Min ' + s.minHadir + '%';
       }
     }
 
@@ -10740,7 +10818,6 @@
     });
 
     async function initCariSiswaPage() {
-
       if (!aktifPeriode) await loadAktifPeriode();
       await loadSesi();
       const dari = document.getElementById('cariSiswaDari');
