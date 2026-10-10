@@ -3874,8 +3874,20 @@
 
           // --- Cek di tabel siswa (NISN) ---
           if (!role) {
-            const { data: siswaData } = await supabaseClient
-              .from('siswa').select('id, nama, nisn, kelas').eq('nisn', kode).maybeSingle();
+            // Coba exact string, lalu fallback ilike (jaga-jaga format NISN)
+            let siswaData = null;
+            let siswaErr = null;
+            {
+              const r1 = await supabaseClient
+                .from('siswa').select('id, nama, nisn, kelas').eq('nisn', kode).maybeSingle();
+              siswaData = r1.data;
+              siswaErr = r1.error;
+            }
+            if (!siswaData && !siswaErr) {
+              const r2 = await supabaseClient
+                .from('siswa').select('id, nama, nisn, kelas').eq('nisn', String(Number(kode) || kode)).maybeSingle();
+              siswaData = r2.data;
+            }
             if (siswaData) {
               role = 'siswa';
               userName = siswaData.nama;
@@ -3883,21 +3895,57 @@
               window._loginKelas = siswaData.kelas || null;
               window._loginNisn = siswaData.nisn || kode;
               window._loginIsAlumni = false;
+            } else if (siswaErr) {
+              console.warn('login siswa:', siswaErr.message || siswaErr);
             }
           }
 
           // --- Cek di tabel lulusan (NISN) — tanpa dobel data di siswa ---
+          // PENTING: jangan select kolom yang mungkin belum ada (kelas_akhir, predikat)
+          // karena PostgREST akan error → login gagal.
           if (!role) {
-            const { data: lusData } = await supabaseClient
-              .from('lulusan').select('id, nama, nisn, kelas, kelas_akhir, status_kelulusan, predikat')
-              .eq('nisn', kode).maybeSingle();
+            let lusData = null;
+            let lusErr = null;
+            // 1) exact match
+            {
+              const r = await supabaseClient
+                .from('lulusan').select('id, nama, nisn, kelas, status_kelulusan')
+                .eq('nisn', kode).limit(1);
+              if (r.error) {
+                lusErr = r.error;
+                console.warn('login lulusan:', r.error.message || r.error);
+              } else if (r.data && r.data.length) {
+                lusData = r.data[0];
+              }
+            }
+            // 2) fallback: nisn sebagai number-string
+            if (!lusData && !lusErr) {
+              const r = await supabaseClient
+                .from('lulusan').select('id, nama, nisn, kelas, status_kelulusan')
+                .eq('nisn', String(Number(kode) || kode)).limit(1);
+              if (r.data && r.data.length) lusData = r.data[0];
+            }
+            // 3) fallback: ilike (jika disimpan dengan spasi/format lain)
+            if (!lusData && !lusErr) {
+              const r = await supabaseClient
+                .from('lulusan').select('id, nama, nisn, kelas, status_kelulusan')
+                .ilike('nisn', kode).limit(1);
+              if (r.data && r.data.length) lusData = r.data[0];
+            }
             if (lusData) {
               role = 'siswa';
               userName = lusData.nama;
               userId = lusData.id;
-              window._loginKelas = lusData.kelas_akhir || lusData.kelas || '9';
+              window._loginKelas = lusData.kelas || '9';
               window._loginNisn = lusData.nisn || kode;
               window._loginIsAlumni = true;
+            } else if (lusErr) {
+              // Jika error RLS / permission, beri petunjuk jelas
+              const em = String(lusErr.message || lusErr);
+              if (/permission|policy|RLS|row-level/i.test(em)) {
+                alert('Gagal membaca data lulusan (izin database).\n\nDi Supabase SQL Editor jalankan:\n\nALTER TABLE public.lulusan ENABLE ROW LEVEL SECURITY;\nCREATE POLICY "lulusan_select_public" ON public.lulusan FOR SELECT USING (true);\n\nDetail: ' + em);
+                return;
+              }
             }
           }
         } else {
@@ -3912,7 +3960,7 @@
         }
 
         if (!role) {
-          alert('NISN / PIN tidak dikenali.\n\nDemo:\nSiswa = 0123456789\nGuru = 123456\nAdmin = 456789');
+          alert('NISN / PIN tidak dikenali.\n\nPastikan NISN benar.\nJika siswa sudah diluluskan, data harus ada di menu Admin → Data Lulusan.\n\nDemo:\nSiswa = 0123456789\nGuru = 123456\nAdmin = 456789');
           return;
         }
         currentUserId = userId;
