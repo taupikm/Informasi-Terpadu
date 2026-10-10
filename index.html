@@ -3618,9 +3618,10 @@
     // guest | siswa | guru | admin
     let currentRole = 'guest';
     let currentUserName = 'Tamu (Belum Login)';
-    let currentUserId = null; // id di tabel siswa/guru/admin
+    let currentUserId = null; // id di tabel siswa/guru/admin (atau lulusan jika alumni)
     let currentUserKode = null; // NISN atau PIN/NIP
     let currentUserKelas = null;
+    let currentUserIsAlumni = false; // true jika login lewat tabel lulusan
     const SESSION_KEY = 'smpn_session';
 
     const ROLE_DATA = {
@@ -3641,7 +3642,8 @@
         avatar: ROLE_DATA[currentRole]?.avatar || '?',
         userId: currentUserId,
         kode: currentUserKode,
-        kelas: currentUserKelas
+        kelas: currentUserKelas,
+        isAlumni: !!currentUserIsAlumni
       }));
     }
 
@@ -3658,6 +3660,13 @@
     // skipRedirect = true → jangan pindah ke dashboard (untuk restore saat refresh)
     function applyRole(role, skipRedirect) {
       currentRole = role;
+      if (role === 'guest') {
+        currentUserIsAlumni = false;
+        currentUserId = null;
+        currentUserKode = null;
+        currentUserKelas = null;
+        if (ROLE_DATA.siswa) ROLE_DATA.siswa.label = 'Siswa';
+      }
 
       const isLoggedIn = role !== 'guest';
       const btnToggle = document.getElementById('btnToggle');
@@ -3866,11 +3875,29 @@
           // --- Cek di tabel siswa (NISN) ---
           if (!role) {
             const { data: siswaData } = await supabaseClient
-              .from('siswa').select('id, nama, nisn').eq('nisn', kode).maybeSingle();
+              .from('siswa').select('id, nama, nisn, kelas').eq('nisn', kode).maybeSingle();
             if (siswaData) {
               role = 'siswa';
               userName = siswaData.nama;
               userId = siswaData.id;
+              window._loginKelas = siswaData.kelas || null;
+              window._loginNisn = siswaData.nisn || kode;
+              window._loginIsAlumni = false;
+            }
+          }
+
+          // --- Cek di tabel lulusan (NISN) — tanpa dobel data di siswa ---
+          if (!role) {
+            const { data: lusData } = await supabaseClient
+              .from('lulusan').select('id, nama, nisn, kelas, kelas_akhir, status_kelulusan, predikat')
+              .eq('nisn', kode).maybeSingle();
+            if (lusData) {
+              role = 'siswa';
+              userName = lusData.nama;
+              userId = lusData.id;
+              window._loginKelas = lusData.kelas_akhir || lusData.kelas || '9';
+              window._loginNisn = lusData.nisn || kode;
+              window._loginIsAlumni = true;
             }
           }
         } else {
@@ -3891,14 +3918,25 @@
         currentUserId = userId;
         currentUserKode = kode;
         currentUserKelas = window._loginKelas || null;
+        currentUserIsAlumni = !!window._loginIsAlumni;
         if (window._loginNisn) currentUserKode = window._loginNisn;
+        // bersihkan flag sementara
+        window._loginIsAlumni = false;
+        window._loginKelas = null;
+        window._loginNisn = null;
 
         // Update nama di ROLE_DATA agar tampil nama asli dari database
         if (userName) ROLE_DATA[role].name = userName;
+        if (currentUserIsAlumni && role === 'siswa') {
+          ROLE_DATA[role].label = 'Alumni';
+        } else if (role === 'siswa') {
+          ROLE_DATA[role].label = 'Siswa';
+        }
 
         applyRole(role); // simpan sesi + ke dashboard
         closeModal('modalLogin');
-        alert('Login berhasil sebagai ' + ROLE_DATA[role].label + (userName ? '\n' + userName : ''));
+        const extra = currentUserIsAlumni ? '\n(Alumni / Lulusan)' : '';
+        alert('Login berhasil sebagai ' + ROLE_DATA[role].label + (userName ? '\n' + userName : '') + extra);
       } catch (err) {
         console.error(err);
         alert('Gagal terhubung ke server. Coba lagi atau periksa konfigurasi Supabase.');
@@ -12743,14 +12781,30 @@
 
     async function resolveKelasSiswaLogin() {
       if (currentUserKelas) return String(currentUserKelas);
-      if (currentRole !== 'siswa' || !currentUserId) return '';
+      if (currentRole !== 'siswa') return '';
       try {
         if (supabaseClient) {
-          const { data } = await supabaseClient.from('siswa').select('kelas, nisn, nama').eq('id', currentUserId).maybeSingle();
-          if (data) {
-            currentUserKelas = data.kelas || '';
-            if (data.nisn) currentUserKode = data.nisn;
-            return String(data.kelas || '');
+          // Siswa aktif
+          if (currentUserId && !currentUserIsAlumni) {
+            const { data } = await supabaseClient.from('siswa').select('kelas, nisn, nama').eq('id', currentUserId).maybeSingle();
+            if (data) {
+              currentUserKelas = data.kelas || '';
+              if (data.nisn) currentUserKode = data.nisn;
+              return String(data.kelas || '');
+            }
+          }
+          // Alumni: cari di lulusan by NISN atau id
+          if (currentUserKode || currentUserId) {
+            let q = supabaseClient.from('lulusan').select('kelas, kelas_akhir, nisn, nama');
+            if (currentUserKode) q = q.eq('nisn', String(currentUserKode));
+            else q = q.eq('id', currentUserId);
+            const { data } = await q.maybeSingle();
+            if (data) {
+              currentUserIsAlumni = true;
+              currentUserKelas = data.kelas_akhir || data.kelas || '9';
+              if (data.nisn) currentUserKode = data.nisn;
+              return String(currentUserKelas || '');
+            }
           }
         }
       } catch (e) { console.warn(e); }
@@ -12780,22 +12834,25 @@
 
         const kelas = await resolveKelasSiswaLogin();
         const tingkat = tingkatDariKelas(kelas);
-        // Kelas 7 & 8 (dan bukan 9) dilarang
-        if (tingkat === '7' || tingkat === '8') {
-          if (loading) loading.style.display = 'none';
-          if (blocked) blocked.style.display = 'block';
-          if (blockedMsg) {
-            blockedMsg.textContent = 'Kamu tidak diizinkan mengakses pengumuman kelulusan, kelasmu : ' + (kelas || tingkat);
+        // Alumni (sudah di tabel lulusan) selalu boleh lihat pengumuman
+        // Kelas 7 & 8 (siswa aktif) dilarang
+        if (!currentUserIsAlumni) {
+          if (tingkat === '7' || tingkat === '8') {
+            if (loading) loading.style.display = 'none';
+            if (blocked) blocked.style.display = 'block';
+            if (blockedMsg) {
+              blockedMsg.textContent = 'Kamu tidak diizinkan mengakses pengumuman kelulusan, kelasmu : ' + (kelas || tingkat);
+            }
+            return;
           }
-          return;
-        }
-        if (tingkat && tingkat !== '9') {
-          if (loading) loading.style.display = 'none';
-          if (blocked) blocked.style.display = 'block';
-          if (blockedMsg) {
-            blockedMsg.textContent = 'Kamu tidak diizinkan mengakses pengumuman kelulusan, kelasmu : ' + (kelas || tingkat);
+          if (tingkat && tingkat !== '9') {
+            if (loading) loading.style.display = 'none';
+            if (blocked) blocked.style.display = 'block';
+            if (blockedMsg) {
+              blockedMsg.textContent = 'Kamu tidak diizinkan mengakses pengumuman kelulusan, kelasmu : ' + (kelas || tingkat);
+            }
+            return;
           }
-          return;
         }
 
         if (!aktifPeriode) await loadAktifPeriode();
@@ -13151,6 +13208,10 @@
         currentUserId = ses.userId || null;
         currentUserKode = ses.kode || null;
         currentUserKelas = ses.kelas || null;
+        currentUserIsAlumni = !!ses.isAlumni;
+        if (currentUserIsAlumni && ses.role === 'siswa') {
+          ROLE_DATA.siswa.label = 'Alumni';
+        }
         applyRole(ses.role, true); // skipRedirect → tetap di halaman hash saat ini
       }
     })();
