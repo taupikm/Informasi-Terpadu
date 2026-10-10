@@ -2417,6 +2417,8 @@
                   <th>Tgl Akhir</th>
                   <th>Tgl Kelulusan</th>
                   <th>Tgl Naik Kelas</th>
+                  <th>Pg Mulai</th>
+                  <th>Pg Akhir</th>
                   <th>SK Lulus</th>
                   <th>SK Naik</th>
                   <th>Kepsek</th>
@@ -2424,7 +2426,7 @@
                 </tr>
               </thead>
               <tbody id="tbodyPeriode">
-                <tr><td colspan="12" style="text-align:center;padding:16px;color:#94a3b8;">Memuat...</td></tr>
+                <tr><td colspan="14" style="text-align:center;padding:16px;color:#94a3b8;">Memuat...</td></tr>
               </tbody>
             </table>
       </div>
@@ -6217,13 +6219,20 @@
       document.getElementById('infoPeriode').textContent = dataPeriode.length + ' data';
       document.getElementById('checkAllPeriode').checked = false;
       if (!dataPeriode.length) {
-        tbody.innerHTML = '<tr><td colspan="12" style="text-align:center;padding:16px;color:#94a3b8;">Belum ada data</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="14" style="text-align:center;padding:16px;color:#94a3b8;">Belum ada data</td></tr>';
         return;
       }
       tbody.innerHTML = dataPeriode.map((p, i) => {
         const skL = p.sk_kelulusan || '-';
         const skN = p.sk_naik_kelas || '-';
         const kep = p.nama_kepsek || '-';
+        const jm = (typeof getJadwalPengumuman === 'function') ? getJadwalPengumuman(p) : { mulai: null, akhir: null };
+        const pgM = p.pengumuman_mulai
+          ? (typeof fmtTglJamId === 'function' ? fmtTglJamId(parseLocalDateTime(p.pengumuman_mulai)) : String(p.pengumuman_mulai).replace('T', ' ').slice(0, 16))
+          : (jm.mulai && typeof fmtTglJamId === 'function' ? fmtTglJamId(jm.mulai) + ' *' : '-');
+        const pgA = p.pengumuman_akhir
+          ? (typeof fmtTglJamId === 'function' ? fmtTglJamId(parseLocalDateTime(p.pengumuman_akhir)) : String(p.pengumuman_akhir).replace('T', ' ').slice(0, 16))
+          : (jm.akhir && typeof fmtTglJamId === 'function' ? fmtTglJamId(jm.akhir) + ' *' : '-');
         return '<tr data-id="' + p.id + '">' +
           '<td><input type="checkbox" class="cb-periode-row" value="' + p.id + '"></td>' +
           '<td>' + (i + 1) + '</td>' +
@@ -6233,6 +6242,8 @@
           '<td>' + (p.tanggal_akhir || '-') + '</td>' +
           '<td>' + (p.tanggal_kelulusan || '-') + '</td>' +
           '<td>' + (p.tanggal_naik_kelas || '-') + '</td>' +
+          '<td style="font-size:11px;white-space:nowrap;" title="' + esc(pgM) + '">' + esc(pgM) + '</td>' +
+          '<td style="font-size:11px;white-space:nowrap;" title="' + esc(pgA) + '">' + esc(pgA) + '</td>' +
           '<td title="' + esc(skL) + '" style="max-width:100px;overflow:hidden;text-overflow:ellipsis;">' + esc(skL) + '</td>' +
           '<td title="' + esc(skN) + '" style="max-width:100px;overflow:hidden;text-overflow:ellipsis;">' + esc(skN) + '</td>' +
           '<td title="' + esc(kep) + (p.nip_kepsek ? ' / ' + p.nip_kepsek : '') + '" style="max-width:120px;overflow:hidden;text-overflow:ellipsis;">' + esc(kep) + '</td>' +
