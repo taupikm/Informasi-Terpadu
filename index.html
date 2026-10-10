@@ -11044,15 +11044,26 @@
       if (!isAdmin) window._rekapMode = 'summary';
       else if (!window._rekapMode) window._rekapMode = 'edit';
       updateRekapModeUI();
-      // Default tanggal = rentang tahun ajaran aktif (boleh dikosongkan / diubah user)
+      // Default tanggal = pengaturan absensi (mulai → hari ini), fallback periode
       await loadAktifPeriode();
       const dari = document.getElementById('rekapDari');
       const sampai = document.getElementById('rekapSampai');
-      if (dari && !dari.value && aktifPeriode) {
-        dari.value = (aktifPeriode.tgl_mulai || '').toString().slice(0, 10);
+      if (dari && !dari.value) {
+        try {
+          const s = await loadAbsenSettings();
+          if (s.mulai) dari.value = s.mulai;
+          else if (aktifPeriode) {
+            dari.value = (aktifPeriode.tanggal_mulai || aktifPeriode.tgl_mulai || '').toString().slice(0, 10);
+          }
+        } catch (e) {
+          if (aktifPeriode) {
+            dari.value = (aktifPeriode.tanggal_mulai || aktifPeriode.tgl_mulai || '').toString().slice(0, 10);
+          }
+        }
+        if (!dari.value) dari.value = todayLocal();
       }
-      if (sampai && !sampai.value && aktifPeriode) {
-        sampai.value = (aktifPeriode.tgl_akhir || '').toString().slice(0, 10);
+      if (sampai && !sampai.value) {
+        sampai.value = todayLocal();
       }
       // isi kelas
       const sel = document.getElementById('rekapKelas');
@@ -11102,9 +11113,29 @@
     }
 
     async function renderRekapSummary(tbody, thead, rows, dari, sampai) {
-      // Agregasi per orang di seluruh rentang tanggal
+      // Unik per orang + tanggal + sesi (sama logika Cek Syarat)
+      const seenSesi = new Map(); // personKey|tgl|sesiKey → status record
+      (rows || []).forEach(r => {
+        const tgl = String(r.tanggal || '').slice(0, 10);
+        if (dari && tgl < dari) return;
+        if (sampai && tgl > sampai) return;
+        const personKey = (r.tipe || '') + ':' + (r.ref_id || r.kode || r.nama);
+        const sesiKey =
+          (r.sesi_id != null && r.sesi_id !== '' ? 'id:' + r.sesi_id : '') +
+          '|' + (r.sesi_urutan != null && r.sesi_urutan !== '' ? 'u:' + r.sesi_urutan : '') +
+          '|' + String(r.sesi_nama || '').trim();
+        const ukey = personKey + '||' + tgl + '||' + sesiKey;
+        if (!seenSesi.has(ukey)) {
+          seenSesi.set(ukey, r);
+        } else {
+          const prev = seenSesi.get(ukey);
+          const score = (x) => (x.jam_scan ? 2 : 0) + (['TW', 'TL'].includes(String(x.status || '').toUpperCase()) ? 1 : 0);
+          if (score(r) > score(prev)) seenSesi.set(ukey, r);
+        }
+      });
+
       const byPerson = new Map();
-      rows.forEach(r => {
+      seenSesi.forEach(r => {
         const key = (r.tipe || '') + ':' + (r.ref_id || r.kode || r.nama);
         if (!byPerson.has(key)) {
           byPerson.set(key, {
@@ -11126,6 +11157,7 @@
         else if (k === 'Sakit') p.Sakit++;
         else if (k === 'Alpa') p.Alpa++;
         else if (k === 'Bolos') p.Bolos++;
+        else p.Alpa++;
         p.total++;
       });
 
@@ -11221,6 +11253,11 @@
       }
       if (!dari) dari = todayLocal();
       if (!sampai) sampai = dari;
+      // Tulis balik ke input agar jelas rentang yang dipakai
+      const elDari = document.getElementById('rekapDari');
+      const elSampai = document.getElementById('rekapSampai');
+      if (elDari) elDari.value = dari;
+      if (elSampai) elSampai.value = sampai;
 
       rekapSesiList = (dataSesi || []).filter(s => s.aktif !== false)
         .sort((a, b) => (a.urutan || 0) - (b.urutan || 0));
@@ -11263,16 +11300,22 @@
           }
         }
 
+        // JANGAN materialize massal seluruh rentang (itu yang bikin ratusan Alpa palsu).
+        // Materialize hanya hari ini jika hari ini ada di rentang filter.
         if (!skipMaterialize) {
-          for (const tgl of dates) {
-            if (!isTanggalLibur(tgl)) {
-              try { await materializeAbsensiForDate(tgl); } catch (e) { console.warn('mat', tgl, e); }
-            }
+          const today = todayLocal();
+          if (today >= dari && today <= sampai && !isTanggalLibur(today)) {
+            try { await materializeAbsensiForDate(today); } catch (e) { console.warn('mat today', e); }
           }
         }
 
-        // Data dari absensi aktif + historis
+        // Data dari absensi aktif + historis (filter tanggal ketat)
         let rows = await fetchAbsensiRange(dari, sampai, { tipe: tipe || undefined });
+        // Pastikan filter tanggal di sisi klien juga (jaga-jaga tipe data)
+        rows = (rows || []).filter(r => {
+          const t = String(r.tanggal || '').slice(0, 10);
+          return (!dari || t >= dari) && (!sampai || t <= sampai);
+        });
 
         // Filter kelas via daftar siswa
         let kelasIds = null;
