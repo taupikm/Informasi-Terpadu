@@ -757,7 +757,8 @@
       #page-set-sesi-libur,
       #page-set-izin-fp,
       #page-set-arsip,
-      #page-set-naik-lulus {
+      #page-set-naik-lulus,
+      #page-set-reset-pin {
         max-width: 720px;
         margin-left: auto;
         margin-right: auto;
@@ -769,7 +770,8 @@
       #page-set-sesi-libur .page-title,
       #page-set-izin-fp .page-title,
       #page-set-arsip .page-title,
-      #page-set-naik-lulus .page-title {
+      #page-set-naik-lulus .page-title,
+      #page-set-reset-pin .page-title {
         text-align: center;
       }
       #page-syarat-naik .card,
@@ -779,7 +781,8 @@
       #page-set-sesi-libur .card,
       #page-set-izin-fp .card,
       #page-set-arsip .card,
-      #page-set-naik-lulus .card {
+      #page-set-naik-lulus .card,
+      #page-set-reset-pin .card {
         box-shadow: 0 2px 12px rgba(15, 23, 42, 0.06);
       }
       /* Cek Syarat: kartu hasil + tipografi lebih nyaman di laptop */
@@ -844,7 +847,8 @@
       #page-set-sesi-libur,
       #page-set-izin-fp,
       #page-set-arsip,
-      #page-set-naik-lulus {
+      #page-set-naik-lulus,
+      #page-set-reset-pin {
         max-width: 780px;
       }
       #page-set-periode {
@@ -1395,6 +1399,7 @@
         <button class="menu-item" data-page="set-izin-fp"><span class="icon">👆</span> Izin Sidik Jari</button>
         <button class="menu-item" data-page="set-arsip"><span class="icon">📦</span> Arsip Absensi</button>
         <button class="menu-item" data-page="set-naik-lulus"><span class="icon">🎓</span> Naik Kelas &amp; Kelulusan</button>
+        <button class="menu-item" data-page="set-reset-pin"><span class="icon">🔑</span> Reset PIN</button>
       </div>
     </nav>
   </aside>
@@ -2513,6 +2518,57 @@
                 <tr><td colspan="7" style="text-align:center;padding:16px;color:#94a3b8;">Pilih mode lalu muat data</td></tr>
               </tbody>
             </table>
+      </div>
+    </section>
+
+    <!-- ========== PENGATURAN: Reset PIN ========== -->
+    <section class="page" id="page-set-reset-pin">
+      <div class="page-title">🔑 Reset PIN</div>
+      <p style="font-size:12px;color:#64748b;margin-bottom:12px;line-height:1.45;">
+        Admin dapat mereset PIN guru dan mengubah PIN admin sendiri. PIN dipakai untuk login.
+      </p>
+
+      <div class="card" style="padding:14px;margin-bottom:14px;">
+        <div style="font-size:14px;font-weight:700;margin-bottom:10px;color:#0f172a;">👤 PIN Admin</div>
+        <div style="font-size:12px;color:#64748b;margin-bottom:10px;">
+          Login sebagai: <b id="rpAdminNama">-</b> · username: <b id="rpAdminUser">-</b>
+        </div>
+        <div class="rekap-filter-row">
+          <label>PIN Baru</label>
+          <input type="password" id="rpAdminPinBaru" placeholder="Minimal 4 digit" inputmode="numeric" autocomplete="new-password">
+        </div>
+        <div class="rekap-filter-row">
+          <label>Ulangi PIN</label>
+          <input type="password" id="rpAdminPinUlang" placeholder="Ulangi PIN baru" inputmode="numeric" autocomplete="new-password">
+        </div>
+        <button type="button" class="btn btn-primary" id="btnRpAdminSimpan" style="width:100%;margin-top:8px;">💾 Ubah PIN Admin</button>
+      </div>
+
+      <div class="card" style="padding:14px;">
+        <div style="font-size:14px;font-weight:700;margin-bottom:10px;color:#0f172a;">👨‍🏫 Reset PIN Guru</div>
+        <div class="rekap-filter-row">
+          <label>Cari Guru</label>
+          <input type="search" id="rpGuruCari" placeholder="Nama / NIP / PIN lama">
+        </div>
+        <div class="toolbar" style="margin-top:4px;">
+          <span class="toolbar-info" id="infoRpGuru">0 guru</span>
+        </div>
+        <div class="table-wrap" style="margin-top:8px;">
+          <table>
+            <thead>
+              <tr>
+                <th>No</th>
+                <th>Nama</th>
+                <th>NIP</th>
+                <th>PIN</th>
+                <th style="width:120px;">Aksi</th>
+              </tr>
+            </thead>
+            <tbody id="tbodyRpGuru">
+              <tr><td colspan="5" style="text-align:center;padding:16px;color:#94a3b8;">Memuat...</td></tr>
+            </tbody>
+          </table>
+        </div>
       </div>
     </section>
 
@@ -3777,6 +3833,7 @@
       if (pageId === 'set-izin-fp') loadIzinFpList();
       if (pageId === 'set-arsip') { try { refreshArsipInfo(); } catch (e) {} try { loadSetAbsenForm(); } catch (e) {} }
       if (pageId === 'set-naik-lulus') { try { loadNaikLulusTable(); } catch (e) {} }
+      if (pageId === 'set-reset-pin') { try { initResetPinPage(); } catch (e) {} }
       if (pageId === 'pengaturan') showPage('set-mapel', true);
       if (pageId === 'scan-barcode') initScanPage();
       if (pageId === 'dashboard') loadDashboard();
@@ -12359,6 +12416,140 @@
         alert('Gagal hapus: ' + (e.message || e));
       }
     });
+
+    // ========== RESET PIN (Admin) ==========
+    let _dataRpGuru = [];
+
+    async function initResetPinPage() {
+      if (currentRole !== 'admin') {
+        const tbody = document.getElementById('tbodyRpGuru');
+        if (tbody) tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;padding:16px;color:#ef4444;">Hanya Admin</td></tr>';
+        return;
+      }
+      // Info admin login
+      const elNama = document.getElementById('rpAdminNama');
+      const elUser = document.getElementById('rpAdminUser');
+      if (elNama) elNama.textContent = currentUserName || 'Admin';
+      if (elUser) elUser.textContent = '-';
+      try {
+        if (supabaseClient && currentUserId) {
+          const { data } = await supabaseClient.from('admin').select('id, nama, username').eq('id', currentUserId).maybeSingle();
+          if (data) {
+            if (elNama) elNama.textContent = data.nama || 'Admin';
+            if (elUser) elUser.textContent = data.username || '-';
+          }
+        }
+      } catch (e) { console.warn(e); }
+      document.getElementById('rpAdminPinBaru').value = '';
+      document.getElementById('rpAdminPinUlang').value = '';
+      await loadRpGuruTable();
+    }
+
+    async function loadRpGuruTable() {
+      const tbody = document.getElementById('tbodyRpGuru');
+      if (!tbody) return;
+      tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;padding:16px;color:#94a3b8;">Memuat...</td></tr>';
+      try {
+        if (supabaseClient) {
+          const { data, error } = await supabaseClient.from('guru').select('id, nama, nip, pin, status').order('nama');
+          if (error) throw error;
+          _dataRpGuru = data || [];
+        } else {
+          if (!dataGuru.length) await loadGuru();
+          _dataRpGuru = dataGuru.slice();
+        }
+      } catch (e) {
+        console.error(e);
+        tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;padding:16px;color:#ef4444;">Gagal: ' + esc(String(e.message || e)) + '</td></tr>';
+        return;
+      }
+      renderRpGuruTable();
+    }
+
+    function renderRpGuruTable() {
+      const tbody = document.getElementById('tbodyRpGuru');
+      if (!tbody) return;
+      const q = (document.getElementById('rpGuruCari')?.value || '').trim().toLowerCase();
+      let rows = _dataRpGuru.slice();
+      if (q) {
+        rows = rows.filter(g =>
+          String(g.nama || '').toLowerCase().includes(q) ||
+          String(g.nip || '').toLowerCase().includes(q) ||
+          String(g.pin || '').toLowerCase().includes(q)
+        );
+      }
+      document.getElementById('infoRpGuru').textContent = rows.length + ' guru';
+      if (!rows.length) {
+        tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;padding:16px;color:#94a3b8;">Tidak ada data</td></tr>';
+        return;
+      }
+      tbody.innerHTML = rows.map((g, i) => {
+        const pinMask = g.pin ? String(g.pin) : '-';
+        return '<tr>' +
+          '<td>' + (i + 1) + '</td>' +
+          '<td>' + esc(g.nama || '') + '</td>' +
+          '<td style="font-size:12px;">' + esc(g.nip || '-') + '</td>' +
+          '<td style="font-family:monospace;font-size:12px;">' + esc(pinMask) + '</td>' +
+          '<td><button type="button" class="btn btn-outline btn-rp-guru" data-id="' + g.id + '" data-nama="' + esc(g.nama || '') + '" style="padding:4px 8px;font-size:11px;">Reset</button></td>' +
+          '</tr>';
+      }).join('');
+      tbody.querySelectorAll('.btn-rp-guru').forEach(btn => {
+        btn.addEventListener('click', () => resetPinGuru(Number(btn.dataset.id), btn.dataset.nama));
+      });
+    }
+
+    async function resetPinGuru(id, nama) {
+      if (currentRole !== 'admin') { alert('Hanya Admin'); return; }
+      const pinBaru = prompt('PIN baru untuk ' + (nama || 'guru') + ':\n(minimal 4 karakter)', '');
+      if (pinBaru == null) return;
+      const p = String(pinBaru).trim();
+      if (p.length < 4) { alert('PIN minimal 4 karakter'); return; }
+      const ulang = prompt('Ulangi PIN baru:', '');
+      if (ulang == null) return;
+      if (String(ulang).trim() !== p) { alert('PIN tidak cocok'); return; }
+      // Cek unik
+      try {
+        if (supabaseClient) {
+          const { data: clash } = await supabaseClient.from('guru').select('id').eq('pin', p).neq('id', id).maybeSingle();
+          if (clash) { alert('PIN sudah dipakai guru lain. Pilih PIN lain.'); return; }
+          const { data: clashA } = await supabaseClient.from('admin').select('id').eq('pin', p).maybeSingle();
+          if (clashA) { alert('PIN sama dengan PIN admin. Pilih PIN lain.'); return; }
+          const { error } = await supabaseClient.from('guru').update({ pin: p }).eq('id', id);
+          if (error) throw error;
+        }
+        alert('PIN ' + (nama || '') + ' berhasil diubah menjadi: ' + p);
+        await loadRpGuruTable();
+      } catch (e) {
+        alert('Gagal: ' + (e.message || e));
+      }
+    }
+
+    document.getElementById('rpGuruCari')?.addEventListener('input', () => renderRpGuruTable());
+
+    document.getElementById('btnRpAdminSimpan')?.addEventListener('click', async () => {
+      if (currentRole !== 'admin') { alert('Hanya Admin'); return; }
+      const p1 = (document.getElementById('rpAdminPinBaru')?.value || '').trim();
+      const p2 = (document.getElementById('rpAdminPinUlang')?.value || '').trim();
+      if (p1.length < 4) { alert('PIN minimal 4 karakter'); return; }
+      if (p1 !== p2) { alert('PIN tidak cocok'); return; }
+      if (!currentUserId) { alert('Sesi admin tidak valid. Login ulang.'); return; }
+      try {
+        if (supabaseClient) {
+          const { data: clash } = await supabaseClient.from('guru').select('id').eq('pin', p1).maybeSingle();
+          if (clash) { alert('PIN sudah dipakai guru. Pilih PIN lain.'); return; }
+          const { data: clashA } = await supabaseClient.from('admin').select('id').eq('pin', p1).neq('id', currentUserId).maybeSingle();
+          if (clashA) { alert('PIN sudah dipakai admin lain.'); return; }
+          const { error } = await supabaseClient.from('admin').update({ pin: p1 }).eq('id', currentUserId);
+          if (error) throw error;
+        }
+        document.getElementById('rpAdminPinBaru').value = '';
+        document.getElementById('rpAdminPinUlang').value = '';
+        alert('PIN Admin berhasil diubah. Gunakan PIN baru saat login berikutnya.');
+      } catch (e) {
+        alert('Gagal: ' + (e.message || e));
+      }
+    });
+
 
 
         // Inisialisasi
