@@ -1367,7 +1367,7 @@
         <button class="menu-item" data-page="syarat-naik"><span class="icon">📋</span> Cek Syarat Naik Kelas / Lulus</button>
         <button class="menu-item" data-page="tugas-ujian"><span class="icon">📝</span> Kerjakan Tugas/Ujian</button>
         <button class="menu-item" data-page="nilai-saya"><span class="icon">📈</span> Lihat Nilai Saya</button>
-        <button class="menu-item" data-page="kelulusan"><span class="icon">🎓</span> Kelulusan</button>
+        <button class="menu-item" data-page="kelulusan"><span class="icon">🎓</span> Pengumuman Kelulusan</button>
         <button class="menu-item" data-page="validasi-lulusan"><span class="icon">✅</span> Validasi Data Lulusan</button>
       </div>
 
@@ -1709,7 +1709,38 @@
       </div>
     </section>
     <section class="page" id="page-kelulusan">
-      <div class="placeholder"><div class="icon">🎓</div><h2>Kelulusan</h2><p>Halaman informasi kelulusan</p></div>
+      <div class="page-title">Pengumuman Kelulusan</div>
+      <div id="pgBlocked" class="card" style="display:none;padding:20px;text-align:center;">
+        <div style="font-size:40px;margin-bottom:10px;">🚫</div>
+        <div id="pgBlockedMsg" style="font-size:14px;font-weight:600;color:#b91c1c;line-height:1.5;"></div>
+      </div>
+      <div id="pgLoading" style="text-align:center;padding:28px;color:#94a3b8;font-size:13px;">Memuat pengumuman...</div>
+      <div id="pgEmpty" style="display:none;text-align:center;padding:28px 12px;color:#94a3b8;font-size:13px;"></div>
+      <div id="pgResult" style="display:none;">
+        <div class="card" id="pgCardPrint" style="padding:18px 14px;border-radius:16px;border:1px solid #e2e8f0;box-shadow:0 4px 20px rgba(0,0,0,.06);max-width:520px;margin:0 auto;">
+          <div style="text-align:center;font-size:15px;font-weight:800;color:#1e40af;letter-spacing:.04em;margin-bottom:14px;">PENGUMUMAN KELULUSAN</div>
+          <div id="pgSkText" style="font-size:13px;line-height:1.55;color:#334155;text-align:center;margin-bottom:14px;"></div>
+          <div style="text-align:center;font-size:14px;line-height:1.8;margin-bottom:8px;">
+            <div>Nama : <b id="pgNama">-</b></div>
+            <div>NISN : <b id="pgNisn">-</b></div>
+          </div>
+          <div style="text-align:center;font-size:13px;color:#64748b;margin:12px 0 6px;">Dinyatakan :</div>
+          <div id="pgStatus" style="text-align:center;font-size:26px;font-weight:800;letter-spacing:.06em;margin:6px 0 10px;"></div>
+          <div id="pgStatusSub" style="text-align:center;font-size:13px;line-height:1.55;color:#334155;margin-bottom:8px;"></div>
+          <div id="pgPredikatLine" style="text-align:center;font-size:14px;line-height:1.5;margin-top:10px;"></div>
+          <div style="border-top:1px dashed #cbd5e1;margin:16px 0 10px;"></div>
+          <div style="font-size:12px;color:#334155;line-height:1.55;">
+            <div style="font-weight:700;margin-bottom:6px;text-decoration:underline;">KETERANGAN :</div>
+            <ol style="padding-left:18px;margin:0;">
+              <li style="margin-bottom:4px;">Predikat kelulusan diambil dari data lulusan</li>
+              <li style="margin-bottom:4px;">Jika lulus maka kalimat dibawahnya : “Dari <b>SMPN PANTANG MUNDUR</b> dengan Predikat <b style="color:#16a34a;">BAIK</b>”</li>
+              <li style="margin-bottom:4px;">Untuk warna Predikat : <span style="color:#2563eb;font-weight:700;">MEMUASKAN</span> (biru), <span style="color:#16a34a;font-weight:700;">BAIK</span> (hijau), <span style="color:#ea580c;font-weight:700;">CUKUP</span> (orange)</li>
+              <li style="margin-bottom:4px;">Jika ditangguhkan, kalimat dibawahnya : “Jika sampai batas H-2 akhir Tahun Ajaran, beberapa syarat kelulusan yang tertinggal tidak dipenuhi maka statusnya menjadi <b>TIDAK LULUS</b> permanen”</li>
+              <li style="margin-bottom:4px;">Jika tidak lulus, kalimat dibawahnya : “lebih dari 60% syarat kelulusan tidak tercapai”</li>
+            </ol>
+          </div>
+        </div>
+      </div>
     </section>
     <section class="page" id="page-validasi-lulusan">
       <div class="page-title">Validasi Data Lulusan</div>
@@ -2292,6 +2323,7 @@
               <th>Nama</th>
               <th>L/P</th>
               <th>Status</th>
+              <th>Predikat</th>
               <th>Tmp Lahir</th>
               <th>Tgl Lahir</th>
               <th>Mulai Sekolah</th>
@@ -2303,7 +2335,7 @@
             </tr>
           </thead>
           <tbody id="tbodyLulusan">
-            <tr><td colspan="14" style="text-align:center;padding:24px;color:#94a3b8;">Memuat data...</td></tr>
+            <tr><td colspan="15" style="text-align:center;padding:24px;color:#94a3b8;">Memuat data...</td></tr>
           </tbody>
         </table>
       </div>
@@ -2941,6 +2973,15 @@
               <option value="Tidak Lulus">Tidak Lulus</option>
             </select>
           </div>
+        </div>
+        <div class="form-group">
+          <label>Predikat</label>
+          <select id="lulusanPredikat">
+            <option value="">- Pilih -</option>
+            <option value="MEMUASKAN">MEMUASKAN</option>
+            <option value="BAIK">BAIK</option>
+            <option value="CUKUP">CUKUP</option>
+          </select>
         </div>
         <div class="form-group">
           <label>Asal Sekolah</label>
@@ -3914,6 +3955,7 @@
       if (pageId === 'data-guru') loadGuru();
       if (pageId === 'data-lulusan') loadLulusan();
       if (pageId === 'validasi-lulusan') initValidasiLulusanPage();
+      if (pageId === 'kelulusan') initPengumumanKelulusan();
       if (pageId === 'input-nilai' || pageId === 'daftar-nilai') initNilaiPage(pageId);
       if (pageId === 'nilai-saya') loadNilaiSaya();
       if (pageId === 'set-mapel') loadMapelTable();
@@ -4653,9 +4695,9 @@
     // ============================================================
     let dataLulusan = [];
     const DEMO_LULUSAN = [
-      { id: 1, nisn: '0012345678', nama: 'Ahmad Rizki', lp: 'L', tmp_lahir: 'Bandung', tgl_lahir: '2008-03-12', tgl_mulai_sekolah: '2021-07-15', tanggal_lulus: '2024-06-20', tahun_lulus: 2024, lama_belajar: '3 Tahun', status_awal: 'Baru', asal_sekolah: 'SDN 1 Bandung' },
-      { id: 2, nisn: '0012345679', nama: 'Siti Nurhaliza', lp: 'P', tmp_lahir: 'Jakarta', tgl_lahir: '2008-08-25', tgl_mulai_sekolah: '2021-07-15', tanggal_lulus: '2024-06-20', tahun_lulus: 2024, lama_belajar: '3 Tahun', status_awal: 'Baru', asal_sekolah: 'SDN 5 Jakarta' },
-      { id: 3, nisn: '0012345680', nama: 'Budi Setiawan', lp: 'L', tmp_lahir: 'Bogor', tgl_lahir: '2007-11-05', tgl_mulai_sekolah: '2020-07-15', tanggal_lulus: '2023-06-18', tahun_lulus: 2023, lama_belajar: '3 Tahun', status_awal: 'Pindahan', asal_sekolah: 'SMPN 2 Bogor' }
+      { id: 1, nisn: '0012345678', nama: 'Ahmad Rizki', lp: 'L', tmp_lahir: 'Bandung', tgl_lahir: '2008-03-12', tgl_mulai_sekolah: '2021-07-15', tanggal_lulus: '2024-06-20', tahun_lulus: 2024, lama_belajar: '3 Tahun', status_awal: 'Baru', asal_sekolah: 'SDN 1 Bandung', status_kelulusan: 'Lulus', predikat: 'BAIK' },
+      { id: 2, nisn: '0012345679', nama: 'Siti Nurhaliza', lp: 'P', tmp_lahir: 'Jakarta', tgl_lahir: '2008-08-25', tgl_mulai_sekolah: '2021-07-15', tanggal_lulus: '2024-06-20', tahun_lulus: 2024, lama_belajar: '3 Tahun', status_awal: 'Baru', asal_sekolah: 'SDN 5 Jakarta', status_kelulusan: 'Lulus', predikat: 'MEMUASKAN' },
+      { id: 3, nisn: '0012345680', nama: 'Budi Setiawan', lp: 'L', tmp_lahir: 'Bogor', tgl_lahir: '2007-11-05', tgl_mulai_sekolah: '2020-07-15', tanggal_lulus: '2023-06-18', tahun_lulus: 2023, lama_belajar: '3 Tahun', status_awal: 'Pindahan', asal_sekolah: 'SMPN 2 Bogor', status_kelulusan: 'Lulus', predikat: 'CUKUP' }
     ];
 
     async function loadLulusan() {
@@ -4687,7 +4729,7 @@
       document.getElementById('infoLulusan').textContent = filtered.length + (q ? ' ditemukan' : ' data');
       document.getElementById('checkAllLulusan').checked = false;
       if (!filtered.length) {
-        tbody.innerHTML = '<tr><td colspan="14" style="text-align:center;padding:24px;color:#94a3b8;">' + (q ? 'Tidak ditemukan' : 'Belum ada data') + '</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="15" style="text-align:center;padding:24px;color:#94a3b8;">' + (q ? 'Tidak ditemukan' : 'Belum ada data') + '</td></tr>';
         return;
       }
       tbody.innerHTML = filtered.map((s, i) => {
@@ -4695,6 +4737,11 @@
         let stColor = '#166534', stBg = '#dcfce7';
         if (st === 'Ditangguhkan') { stColor = '#a16207'; stBg = '#fef3c7'; }
         if (st === 'Tidak Lulus') { stColor = '#b91c1c'; stBg = '#fee2e2'; }
+        const pred = String(s.predikat || '').toUpperCase();
+        let predColor = '#64748b';
+        if (pred === 'MEMUASKAN') predColor = '#2563eb';
+        else if (pred === 'BAIK') predColor = '#16a34a';
+        else if (pred === 'CUKUP') predColor = '#ea580c';
         return '<tr data-id="' + s.id + '">' +
           '<td><input type="checkbox" class="cb-lulusan" value="' + s.id + '"></td>' +
           '<td>' + (i + 1) + '</td>' +
@@ -4702,6 +4749,7 @@
           '<td>' + esc(s.nama || '') + '</td>' +
           '<td>' + esc(s.lp || '') + '</td>' +
           '<td><span style="background:' + stBg + ';color:' + stColor + ';padding:2px 6px;border-radius:6px;font-size:10px;font-weight:600;">' + esc(st) + '</span></td>' +
+          '<td style="font-weight:700;color:' + predColor + ';">' + esc(pred || '-') + '</td>' +
           '<td>' + esc(s.tmp_lahir || '') + '</td>' +
           '<td>' + esc(String(s.tgl_lahir || '').slice(0, 10)) + '</td>' +
           '<td>' + esc(String(s.tgl_mulai_sekolah || '').slice(0, 10)) + '</td>' +
@@ -4728,6 +4776,8 @@
       });
       const sk = document.getElementById('lulusanStatusKelulusan');
       if (sk) sk.value = 'Lulus';
+      const pr0 = document.getElementById('lulusanPredikat');
+      if (pr0) pr0.value = 'BAIK';
       const sa = document.getElementById('lulusanStatusAwal');
       if (sa) sa.value = 'Baru';
       document.getElementById('lulusanLp').value = 'L';
@@ -4757,6 +4807,8 @@
       document.getElementById('lulusanAsal').value = s.asal_sekolah || '';
       const sk = document.getElementById('lulusanStatusKelulusan');
       if (sk) sk.value = s.status_kelulusan || s.status_lulus || 'Lulus';
+      const pr = document.getElementById('lulusanPredikat');
+      if (pr) pr.value = s.predikat || '';
       openModal('modalLulusan');
     });
 
@@ -4775,6 +4827,7 @@
         lama_belajar: document.getElementById('lulusanLama').value.trim() || null,
         status_awal: document.getElementById('lulusanStatusAwal').value || null,
         status_kelulusan: document.getElementById('lulusanStatusKelulusan')?.value || 'Lulus',
+        predikat: document.getElementById('lulusanPredikat')?.value || null,
         asal_sekolah: document.getElementById('lulusanAsal').value.trim() || null
       };
       if (!payload.nama) { alert('Nama wajib diisi'); return; }
@@ -4800,7 +4853,12 @@
         await loadLulusan();
         alert(id ? 'Data berhasil diubah' : 'Data berhasil ditambah');
       } catch (e) {
-        alert('Gagal simpan: ' + (e.message || e));
+        const msg = String(e.message || e);
+        if (/predikat|column/i.test(msg)) {
+          alert('Gagal simpan: kolom predikat belum ada di database.\n\nJalankan SQL di Supabase:\n\nALTER TABLE public.lulusan\n  ADD COLUMN IF NOT EXISTS predikat text;\n\nDetail: ' + msg);
+        } else {
+          alert('Gagal simpan: ' + msg);
+        }
       }
     });
 
@@ -12669,6 +12727,163 @@
         alert('Gagal hapus: ' + (e.message || e));
       }
     });
+
+
+    
+    // ============================================================
+    // PENGUMUMAN KELULUSAN (Siswa / Orang Tua — hanya kelas 9)
+    // ============================================================
+    function predikatColor(p) {
+      const u = String(p || '').toUpperCase();
+      if (u === 'MEMUASKAN') return '#2563eb';
+      if (u === 'BAIK') return '#16a34a';
+      if (u === 'CUKUP') return '#ea580c';
+      return '#334155';
+    }
+
+    async function resolveKelasSiswaLogin() {
+      if (currentUserKelas) return String(currentUserKelas);
+      if (currentRole !== 'siswa' || !currentUserId) return '';
+      try {
+        if (supabaseClient) {
+          const { data } = await supabaseClient.from('siswa').select('kelas, nisn, nama').eq('id', currentUserId).maybeSingle();
+          if (data) {
+            currentUserKelas = data.kelas || '';
+            if (data.nisn) currentUserKode = data.nisn;
+            return String(data.kelas || '');
+          }
+        }
+      } catch (e) { console.warn(e); }
+      return String(currentUserKelas || '');
+    }
+
+    async function initPengumumanKelulusan() {
+      const blocked = document.getElementById('pgBlocked');
+      const blockedMsg = document.getElementById('pgBlockedMsg');
+      const loading = document.getElementById('pgLoading');
+      const empty = document.getElementById('pgEmpty');
+      const result = document.getElementById('pgResult');
+      if (blocked) blocked.style.display = 'none';
+      if (empty) empty.style.display = 'none';
+      if (result) result.style.display = 'none';
+      if (loading) loading.style.display = 'block';
+
+      try {
+        if (currentRole !== 'siswa') {
+          if (loading) loading.style.display = 'none';
+          if (empty) {
+            empty.style.display = 'block';
+            empty.textContent = 'Login sebagai siswa untuk melihat pengumuman kelulusan.';
+          }
+          return;
+        }
+
+        const kelas = await resolveKelasSiswaLogin();
+        const tingkat = tingkatDariKelas(kelas);
+        // Kelas 7 & 8 (dan bukan 9) dilarang
+        if (tingkat === '7' || tingkat === '8') {
+          if (loading) loading.style.display = 'none';
+          if (blocked) blocked.style.display = 'block';
+          if (blockedMsg) {
+            blockedMsg.textContent = 'Kamu tidak diizinkan mengakses pengumuman kelulusan, kelasmu : ' + (kelas || tingkat);
+          }
+          return;
+        }
+        if (tingkat && tingkat !== '9') {
+          if (loading) loading.style.display = 'none';
+          if (blocked) blocked.style.display = 'block';
+          if (blockedMsg) {
+            blockedMsg.textContent = 'Kamu tidak diizinkan mengakses pengumuman kelulusan, kelasmu : ' + (kelas || tingkat);
+          }
+          return;
+        }
+
+        if (!aktifPeriode) await loadAktifPeriode();
+        const skNo = (aktifPeriode && (aktifPeriode.sk_kelulusan || PERIODE_DUMMY?.sk_kelulusan)) || '-';
+        const ta = (aktifPeriode && aktifPeriode.tahun_ajaran) || '-';
+
+        // Cari data lulusan by NISN / nama / id
+        const nisn = currentUserKode || '';
+        let found = null;
+        if (supabaseClient) {
+          let q = supabaseClient.from('lulusan').select('*');
+          if (nisn) {
+            const { data } = await q.eq('nisn', String(nisn)).limit(5);
+            if (data && data.length) found = data[0];
+          }
+          if (!found && currentUserName) {
+            const { data } = await supabaseClient.from('lulusan').select('*')
+              .ilike('nama', currentUserName).limit(5);
+            if (data && data.length === 1) found = data[0];
+            else if (data && data.length > 1 && nisn) {
+              found = data.find(x => String(x.nisn) === String(nisn)) || data[0];
+            }
+          }
+        } else {
+          if (!dataLulusan.length) {
+            try { await loadLulusan(); } catch (e) {}
+          }
+          found = (dataLulusan || []).find(x =>
+            (nisn && String(x.nisn) === String(nisn)) ||
+            (currentUserName && String(x.nama || '').toLowerCase() === String(currentUserName).toLowerCase())
+          ) || null;
+        }
+
+        if (loading) loading.style.display = 'none';
+
+        if (!found) {
+          // Kelas 9 tapi belum ada di tabel lulusan
+          if (empty) {
+            empty.style.display = 'block';
+            empty.innerHTML = 'Data kelulusan untuk <b>' + esc(currentUserName || 'Anda') +
+              '</b> (NISN: ' + esc(nisn || '-') + ') belum tersedia.<br>Hubungi admin sekolah.';
+          }
+          return;
+        }
+
+        // Render pengumuman
+        const st = found.status_kelulusan || found.status_lulus || 'Lulus';
+        const pred = String(found.predikat || '').toUpperCase() || 'BAIK';
+        const predCol = predikatColor(pred);
+
+        document.getElementById('pgSkText').innerHTML =
+          'Berdasarkan SK Kepala Sekolah No : <b>' + esc(skNo) +
+          '</b> tentang Kelulusan Peserta Didik Kelas 9 Tahun Ajaran <b>' + esc(ta) +
+          '</b>, bahwa :';
+        document.getElementById('pgNama').textContent = found.nama || '-';
+        document.getElementById('pgNisn').textContent = found.nisn || nisn || '-';
+
+        const stEl = document.getElementById('pgStatus');
+        const subEl = document.getElementById('pgStatusSub');
+        const predLine = document.getElementById('pgPredikatLine');
+        const stU = String(st);
+        if (stU === 'Lulus') {
+          stEl.textContent = 'LULUS';
+          stEl.style.color = '#166534';
+          subEl.textContent = '';
+          predLine.innerHTML = 'Dari <b>SMPN PANTANG MUNDUR</b> dengan predikat <b style="color:' + predCol + ';">' + esc(pred) + '</b>';
+        } else if (stU === 'Ditangguhkan') {
+          stEl.textContent = 'DITANGGUHKAN';
+          stEl.style.color = '#a16207';
+          subEl.textContent = 'Jika sampai batas H-2 akhir Tahun Ajaran, beberapa syarat kelulusan yang tertinggal tidak dipenuhi maka statusnya menjadi TIDAK LULUS permanen';
+          predLine.innerHTML = '';
+        } else {
+          stEl.textContent = 'TIDAK LULUS';
+          stEl.style.color = '#b91c1c';
+          subEl.textContent = 'lebih dari 60% syarat kelulusan tidak tercapai';
+          predLine.innerHTML = '';
+        }
+
+        if (result) result.style.display = 'block';
+      } catch (e) {
+        console.error(e);
+        if (loading) loading.style.display = 'none';
+        if (empty) {
+          empty.style.display = 'block';
+          empty.textContent = 'Gagal memuat: ' + (e.message || e);
+        }
+      }
+    }
 
 
     // ========== VALIDASI DATA LULUSAN ==========
