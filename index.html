@@ -7722,8 +7722,9 @@
           : ['A','B','C','D'].map(L => ({ L, v: s['opsi_' + L.toLowerCase()] })).filter(o => o.v);
         opts.forEach(o => {
           const checked = ans === o.L ? 'checked' : '';
-          const content = jenis === 'Benar Salah' ? o.v :
-            (typeof renderMathInHtml === 'function' ? renderMathInHtml(o.v) : o.v);
+          const raw = jenis === 'Benar Salah' ? o.v : (typeof cleanOpsiContent === 'function' ? cleanOpsiContent(o.v, o.L) : o.v);
+          const content = jenis === 'Benar Salah' ? raw :
+            (typeof renderMathInHtml === 'function' ? renderMathInHtml(raw) : raw);
           html += '<label class="bs-opsi-line" style="cursor:pointer;">' +
             '<input type="radio" name="tuAns" value="' + esc(o.L) + '" ' + checked + ' style="margin-right:8px;">' +
             (jenis === 'Benar Salah' ? '' : '<span class="bs-opsi-letter">' + o.L + '.</span>') +
@@ -7732,8 +7733,9 @@
       } else if (jenis === 'Checkbox') {
         const selected = Array.isArray(ans) ? ans : (ans ? String(ans).split(',') : []);
         ['A','B','C','D'].forEach(L => {
-          const v = s['opsi_' + L.toLowerCase()];
+          let v = s['opsi_' + L.toLowerCase()];
           if (!v) return;
+          v = typeof cleanOpsiContent === 'function' ? cleanOpsiContent(v, L) : v;
           const checked = selected.includes(L) ? 'checked' : '';
           html += '<label class="bs-opsi-line" style="cursor:pointer;">' +
             '<input type="checkbox" class="tu-cb" value="' + L + '" ' + checked + ' style="margin-right:8px;">' +
@@ -8331,10 +8333,10 @@
             '</b> · ' + esc(s.jenis) +
             (s.kunci ? ' · Kunci: ' + esc(s.kunci) : '') + '</div>' +
             '<div style="font-size:13px;">' + s.pertanyaan + '</div>' +
-            (s.opsi_a ? '<div style="font-size:12px;margin-top:4px;"><b>A.</b> ' + s.opsi_a + '</div>' : '') +
-            (s.opsi_b ? '<div style="font-size:12px;"><b>B.</b> ' + s.opsi_b + '</div>' : '') +
-            (s.opsi_c ? '<div style="font-size:12px;"><b>C.</b> ' + s.opsi_c + '</div>' : '') +
-            (s.opsi_d ? '<div style="font-size:12px;"><b>D.</b> ' + s.opsi_d + '</div>' : '') +
+            (s.opsi_a ? '<div style="font-size:12px;margin-top:4px;"><b>A.</b> ' + cleanOpsiContent(s.opsi_a, 'A') + '</div>' : '') +
+            (s.opsi_b ? '<div style="font-size:12px;"><b>B.</b> ' + cleanOpsiContent(s.opsi_b, 'B') + '</div>' : '') +
+            (s.opsi_c ? '<div style="font-size:12px;"><b>C.</b> ' + cleanOpsiContent(s.opsi_c, 'C') + '</div>' : '') +
+            (s.opsi_d ? '<div style="font-size:12px;"><b>D.</b> ' + cleanOpsiContent(s.opsi_d, 'D') + '</div>' : '') +
             '</div>'
           ).join('');
           document.getElementById('btnIwSimpan').disabled = false;
@@ -8344,6 +8346,26 @@
         console.error(e);
       }
     });
+
+
+    /** Buang prefix huruf opsi (A. / B) dll) di konten agar tidak dobel di UI */
+    function cleanOpsiContent(html, letter) {
+      if (!html) return html || '';
+      const L = letter ? String(letter).toUpperCase() : '[A-Ea-e]';
+      let s = String(html);
+      for (let i = 0; i < 2; i++) {
+        s = s.replace(
+          new RegExp(
+            '^(\\s*(?:<(?:p|div|span|li)[^>]*>\\s*)*)(?:' + L + ')\\s*[.\\)．、:：]\\s*',
+            'i'
+          ),
+          '$1'
+        );
+      }
+      // juga di teks polos tanpa tag
+      s = s.replace(new RegExp('^\\s*(?:' + L + ')\\s*[.\\)．、:：]\\s*', 'i'), '');
+      return s;
+    }
 
     function parseSoalFromWordHtml(html) {
       const jenisDefault = document.getElementById('iwJenisDefault')?.value || 'Pilihan Ganda';
@@ -8376,11 +8398,40 @@
       const soals = [];
       let cur = null;
 
+      function stripOpsiLetterPrefix(html, letter) {
+        // Buang prefix A. / A) / A： di awal opsi agar tidak dobel saat ditampil "A. ..."
+        if (!html) return html;
+        const L = String(letter || '').toUpperCase();
+        let s = String(html);
+        // Teks murni di awal setelah tag pembuka
+        s = s.replace(
+          new RegExp(
+            '^(\s*(?:<(?:p|div|span|li)[^>]*>\s*)*)' +
+            '(?:<[^>]+>\s*)*' +
+            '(?:' + L + '|[A-Ea-e])\s*[.\)．、:：]\s*',
+            'i'
+          ),
+          '$1'
+        );
+        // Ulangi sekali lagi jika masih ada (A. A. teks)
+        s = s.replace(
+          new RegExp(
+            '^(\s*(?:<(?:p|div|span|li)[^>]*>\s*)*)' +
+            '(?:' + L + '|[A-Ea-e])\s*[.\)．、:：]\s*',
+            'i'
+          ),
+          '$1'
+        );
+        return s;
+      }
       function flush() {
         if (!cur) return;
         cur.pertanyaan = restoreTables(stripKunci(cur.pertanyaan || ''));
         ['a', 'b', 'c', 'd', 'e'].forEach(L => {
-          if (cur['opsi_' + L]) cur['opsi_' + L] = restoreTables(stripKunci(cur['opsi_' + L]));
+          if (cur['opsi_' + L]) {
+            cur['opsi_' + L] = restoreTables(stripKunci(cur['opsi_' + L]));
+            cur['opsi_' + L] = stripOpsiLetterPrefix(cur['opsi_' + L], L);
+          }
         });
         const plain = blockText(cur.pertanyaan);
         if (plain.length >= 3 || /<img|<table|<svg/i.test(cur.pertanyaan)) {
@@ -8469,7 +8520,8 @@
         if (optm) {
           const L = optm[1].toLowerCase();
           if ('abcde'.includes(L)) {
-            cur['opsi_' + L] = block;
+            // Simpan tanpa huruf opsi di depan (huruf ditambah saat tampil)
+            cur['opsi_' + L] = stripOpsiLetterPrefix(block, L);
             continue;
           }
         }
@@ -8639,6 +8691,44 @@
       }
 
       let rows = dataBankSoal.slice();
+
+      // Guru: hanya bank mapel & kelas yang diampu
+      if (currentRole === 'guru' && currentUserId && supabaseClient) {
+        try {
+          const [gm, gk, mp, kl] = await Promise.all([
+            supabaseClient.from('guru_mapel').select('mapel_id').eq('guru_id', currentUserId),
+            supabaseClient.from('guru_kelas').select('kelas_id').eq('guru_id', currentUserId),
+            supabaseClient.from('mapel').select('id, mapel, nama, kode'),
+            supabaseClient.from('kelas').select('id, kelas, nama')
+          ]);
+          const mapelIds = new Set((gm.data || []).map(r => Number(r.mapel_id)));
+          const kelasIds = new Set((gk.data || []).map(r => Number(r.kelas_id)));
+          const allowedMapelNames = new Set(
+            (mp.data || []).filter(m => mapelIds.has(Number(m.id)))
+              .map(m => String(m.mapel || m.nama || '').trim().toLowerCase())
+              .filter(Boolean)
+          );
+          const allowedKelas = new Set(
+            (kl.data || []).filter(k => kelasIds.has(Number(k.id)))
+              .map(k => String(k.kelas || k.nama || '').trim())
+              .filter(Boolean)
+          );
+          rows = rows.filter(r => {
+            const nm = String(r.mapel || '').trim().toLowerCase();
+            if (allowedMapelNames.size && !allowedMapelNames.has(nm)) return false;
+            if (!allowedMapelNames.size) return false;
+            if (allowedKelas.size) {
+              const kls = String(r.kelas || '').split(/[,;]/).map(x => x.trim()).filter(Boolean);
+              if (!kls.length) return true; // bank tanpa kelas — izinkan
+              return kls.some(k => allowedKelas.has(k));
+            }
+            return false;
+          });
+        } catch (e) {
+          console.warn('filter bank guru', e);
+        }
+      }
+
       if (fTahun) {
         rows = rows.filter(r => {
           const th = r.periode?.tahun_ajaran || r.tahun_ajaran || '';
@@ -8734,34 +8824,71 @@
       if (!mapelList.length && typeof dataMapel !== 'undefined' && dataMapel.length) {
         mapelList = dataMapel;
       }
+
+      // ---- Kelas ----
+      let kelasList = [];
+      let kelasRows = [];
+      try {
+        if (supabaseClient) {
+          const { data, error } = await supabaseClient.from('kelas').select('*').order('kelas');
+          if (error) throw error;
+          kelasRows = data || [];
+          kelasList = kelasRows.map(k => k.kelas || k.nama).filter(Boolean);
+        }
+      } catch (e) { console.warn('kelas', e); }
+      if (!kelasList.length && typeof masterKelas !== 'undefined' && masterKelas.length) {
+        kelasRows = masterKelas.slice();
+        kelasList = masterKelas.map(k => k.kelas || k).filter(Boolean);
+      }
+      if (!kelasList.length) {
+        kelasList = ['7A','7B','7C','7D','8A','8B','8C','8D','9A','9B','9C','9D'];
+      }
+
+      // Guru: hanya mapel & kelas yang diampu
+      if (currentRole === 'guru' && currentUserId && supabaseClient) {
+        try {
+          const [gm, gk] = await Promise.all([
+            supabaseClient.from('guru_mapel').select('mapel_id').eq('guru_id', currentUserId),
+            supabaseClient.from('guru_kelas').select('kelas_id').eq('guru_id', currentUserId)
+          ]);
+          const mapelIds = (gm.data || []).map(r => Number(r.mapel_id));
+          const kelasIds = (gk.data || []).map(r => Number(r.kelas_id));
+          if (mapelIds.length) {
+            mapelList = mapelList.filter(m => mapelIds.includes(Number(m.id)));
+          } else {
+            mapelList = [];
+          }
+          if (kelasIds.length && kelasRows.length) {
+            const allowed = new Set(
+              kelasRows.filter(k => kelasIds.includes(Number(k.id))).map(k => k.kelas || k.nama)
+            );
+            kelasList = kelasList.filter(k => allowed.has(k));
+          } else if (kelasIds.length) {
+            // fallback: jika tidak ada id, biarkan kosong
+            kelasList = [];
+          } else {
+            kelasList = [];
+          }
+        } catch (e) {
+          console.warn('Filter ampua guru bank soal', e);
+        }
+      }
+
       selM.innerHTML = '<option value="">- Pilih Mapel -</option>' +
         mapelList.map(m => {
           const nama = m.mapel || m.nama || m.kode || '';
           return '<option value="' + esc(nama) + '">' + esc(nama) + (m.kode ? ' (' + esc(m.kode) + ')' : '') + '</option>';
         }).join('');
 
-      // ---- Kelas checkbox ----
-      let kelasList = [];
-      try {
-        if (supabaseClient) {
-          const { data, error } = await supabaseClient.from('kelas').select('*').order('kelas');
-          if (error) throw error;
-          kelasList = (data || []).map(k => k.kelas || k.nama).filter(Boolean);
-        }
-      } catch (e) { console.warn('kelas', e); }
-      if (!kelasList.length && typeof masterKelas !== 'undefined' && masterKelas.length) {
-        kelasList = masterKelas.map(k => k.kelas || k).filter(Boolean);
-      }
-      if (!kelasList.length) {
-        kelasList = ['7A','7B','7C','7D','8A','8B','8C','8D','9A','9B','9C','9D'];
-      }
       // unique sort
       kelasList = [...new Set(kelasList)].sort((a, b) => String(a).localeCompare(String(b), 'id', { numeric: true }));
 
-      boxK.innerHTML = kelasList.map(k =>
-        '<label style="display:flex;align-items:center;gap:4px;font-size:12px;cursor:pointer;">' +
-        '<input type="checkbox" class="cb-bs-kelas" value="' + esc(k) + '"> ' + esc(k) + '</label>'
-      ).join('');
+      boxK.innerHTML = kelasList.length
+        ? kelasList.map(k =>
+          '<label style="display:flex;align-items:center;gap:4px;font-size:12px;cursor:pointer;">' +
+          '<input type="checkbox" class="cb-bs-kelas" value="' + esc(k) + '"> ' + esc(k) + '</label>'
+        ).join('')
+        : '<span style="font-size:12px;color:#94a3b8;">Tidak ada kelas diampu</span>';
     }
 
     function getBsKelasChecked() {
@@ -9658,6 +9785,7 @@
             let val = r['opsi_' + L.toLowerCase()];
             if (!val) return;
             val = cleanSoalHtml(val, '');
+            val = typeof cleanOpsiContent === 'function' ? cleanOpsiContent(val, L) : val;
             const key = isKeyOption(r.kunci, L);
             body += '<div class="bs-opsi-line' + (key ? ' key' : '') + '">' +
               '<span class="bs-opsi-letter">' + L + '.</span>' +
