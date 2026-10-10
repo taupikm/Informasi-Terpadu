@@ -657,7 +657,7 @@
       text-overflow: ellipsis;
     }
 
-    /* Tabel Lihat Nilai Saya: kolom kompak agar minimal 3 jenis penilaian muat tanpa scroll */
+    /* Lihat Nilai Saya — HP: kompak full width; Laptop: center + proporsional */
     #page-nilai-saya .table-wrap {
       overflow-x: auto;
       -webkit-overflow-scrolling: touch;
@@ -666,11 +666,11 @@
       width: 100%;
       min-width: 0;
       table-layout: fixed;
-      font-size: 11px;
+      font-size: 12px;
     }
     #page-nilai-saya #tableNilaiSaya th,
     #page-nilai-saya #tableNilaiSaya td {
-      padding: 6px 4px;
+      padding: 7px 6px;
       white-space: nowrap;
       overflow: hidden;
       text-overflow: ellipsis;
@@ -678,7 +678,7 @@
     }
     #page-nilai-saya #tableNilaiSaya th:nth-child(1),
     #page-nilai-saya #tableNilaiSaya td:nth-child(1) {
-      width: 28px;
+      width: 32px;
       text-align: center;
     }
     #page-nilai-saya #tableNilaiSaya th:nth-child(2),
@@ -686,14 +686,67 @@
       width: auto;
       white-space: normal;
       word-break: break-word;
-      font-size: 11px;
-      line-height: 1.3;
+      font-size: 12px;
+      line-height: 1.35;
+      text-align: left;
     }
     #page-nilai-saya #tableNilaiSaya th:not(:nth-child(1)):not(:nth-child(2)),
     #page-nilai-saya #tableNilaiSaya td:not(:nth-child(1)):not(:nth-child(2)) {
-      width: 42px;
+      width: 48px;
       text-align: center;
-      font-size: 11px;
+      font-size: 12px;
+      font-weight: 600;
+    }
+
+    /* Laptop / tablet landscape: konten di tengah, tidak melebar penuh */
+    @media (min-width: 768px) {
+      #page-nilai-saya {
+        max-width: 720px;
+        margin-left: auto;
+        margin-right: auto;
+      }
+      #page-nilai-saya .page-title {
+        text-align: center;
+      }
+      #page-nilai-saya #tableNilaiSaya {
+        font-size: 14px;
+        border-collapse: collapse;
+      }
+      #page-nilai-saya #tableNilaiSaya th,
+      #page-nilai-saya #tableNilaiSaya td {
+        padding: 10px 12px;
+      }
+      #page-nilai-saya #tableNilaiSaya th:nth-child(1),
+      #page-nilai-saya #tableNilaiSaya td:nth-child(1) {
+        width: 44px;
+        font-size: 14px;
+      }
+      #page-nilai-saya #tableNilaiSaya th:nth-child(2),
+      #page-nilai-saya #tableNilaiSaya td:nth-child(2) {
+        font-size: 14px;
+        line-height: 1.4;
+      }
+      #page-nilai-saya #tableNilaiSaya th:not(:nth-child(1)):not(:nth-child(2)),
+      #page-nilai-saya #tableNilaiSaya td:not(:nth-child(1)):not(:nth-child(2)) {
+        width: 64px;
+        font-size: 15px;
+        font-weight: 700;
+      }
+      #page-nilai-saya .card {
+        box-shadow: 0 2px 12px rgba(15, 23, 42, 0.06);
+      }
+      #page-nilai-saya #nsSearchCard .btn,
+      #page-nilai-saya #btnNsCari {
+        max-width: 280px;
+        margin-left: auto;
+        margin-right: auto;
+        display: block;
+      }
+    }
+    @media (min-width: 1100px) {
+      #page-nilai-saya {
+        max-width: 780px;
+      }
     }
 
     /* Tabel Input Nilai: kompak, tanpa scroll horizontal di HP */
