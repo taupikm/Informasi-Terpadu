@@ -695,6 +695,57 @@
       text-align: center;
       font-size: 11px;
     }
+
+    /* Tabel Input Nilai: kompak, tanpa scroll horizontal di HP */
+    #page-input-nilai .table-wrap {
+      overflow-x: hidden;
+      -webkit-overflow-scrolling: touch;
+    }
+    #page-input-nilai #tableInputNilai {
+      width: 100%;
+      min-width: 0;
+      table-layout: fixed;
+      font-size: 12px;
+    }
+    #page-input-nilai #tableInputNilai th,
+    #page-input-nilai #tableInputNilai td {
+      padding: 6px 4px;
+      vertical-align: middle;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    #page-input-nilai #tableInputNilai th:nth-child(1),
+    #page-input-nilai #tableInputNilai td:nth-child(1) {
+      width: 28px;
+      text-align: center;
+      white-space: nowrap;
+    }
+    #page-input-nilai #tableInputNilai th:nth-child(2),
+    #page-input-nilai #tableInputNilai td:nth-child(2) {
+      width: 72px;
+      white-space: nowrap;
+      font-size: 11px;
+    }
+    #page-input-nilai #tableInputNilai th:nth-child(3),
+    #page-input-nilai #tableInputNilai td:nth-child(3) {
+      width: auto;
+      white-space: normal;
+      word-break: break-word;
+      line-height: 1.3;
+    }
+    #page-input-nilai #tableInputNilai th:nth-child(4),
+    #page-input-nilai #tableInputNilai td:nth-child(4) {
+      width: 64px;
+      text-align: center;
+      white-space: nowrap;
+    }
+    #page-input-nilai #tableInputNilai .nilai-input {
+      width: 100%;
+      max-width: 58px;
+      padding: 5px 4px;
+      font-size: 13px;
+      box-sizing: border-box;
+    }
     th {
       background: #f1f5f9;
       padding: 10px 8px;
@@ -1025,11 +1076,11 @@
       color: var(--primary);
     }
     .nilai-input {
-      width: 70px;
-      padding: 6px 8px;
+      width: 58px;
+      padding: 5px 4px;
       border: 1px solid var(--border);
       border-radius: 6px;
-      font-size: 14px;
+      font-size: 13px;
       text-align: center;
     }
     .nilai-input:focus {
@@ -1660,7 +1711,7 @@
               <th>No</th>
               <th>NISN</th>
               <th>Nama</th>
-              <th style="min-width:90px;">Nilai</th>
+              <th>Nilai</th>
             </tr>
           </thead>
           <tbody id="tbodyInputNilai">
@@ -5411,7 +5462,7 @@
       return { dari, sampai };
     }
     function isDalamRentangAbsen(tgl) {
-      const t = String(tgl || new Date().toISOString().slice(0, 10)).slice(0, 10);
+      const t = String(tgl || todayLocal()).slice(0, 10);
       const { dari, sampai } = getRentangAbsenAktif();
       if (dari && t < dari) return false;
       if (sampai && t > sampai) return false;
@@ -5592,15 +5643,36 @@
       return s;
     }
 
+    /** Tanggal lokal YYYY-MM-DD (hindari toISOString yang geser hari di WIB sebelum jam 07:00) */
+    function localDateStr(d) {
+      const x = d instanceof Date ? d : (d ? new Date(d) : new Date());
+      if (typeof d === 'string' && /^\d{4}-\d{2}-\d{2}/.test(d)) {
+        // string tanggal murni: pakai apa adanya, jangan parse UTC
+        return String(d).slice(0, 10);
+      }
+      const y = x.getFullYear();
+      const m = String(x.getMonth() + 1).padStart(2, '0');
+      const day = String(x.getDate()).padStart(2, '0');
+      return y + '-' + m + '-' + day;
+    }
+    function todayLocal() {
+      return localDateStr(new Date());
+    }
+
     function sesiSudahBerakhir(ses, refDate) {
-      const d = refDate ? new Date(refDate) : new Date();
-      const now = new Date();
-      const dayStr = d.toISOString().slice(0, 10);
-      const todayStr = now.toISOString().slice(0, 10);
+      if (!ses) return false;
+      const dayStr = localDateStr(refDate || new Date());
+      const todayStr = todayLocal();
+      // Hari lampau: semua sesi dianggap sudah berakhir
       if (dayStr < todayStr) return true;
+      // Hari depan: belum
       if (dayStr > todayStr) return false;
-      const nowMin = now.getHours() * 60 + now.getMinutes();
-      return nowMin > timeToMinutes(ses.jam_akhir);
+      // Hari ini: baru A/B setelah jam_akhir lewat
+      const nowMin = new Date().getHours() * 60 + new Date().getMinutes();
+      const akhir = timeToMinutes(ses.jam_akhir);
+      // Jika jam_akhir tidak valid, jangan anggap berakhir
+      if (!ses.jam_akhir && akhir === 0) return false;
+      return nowMin > akhir;
     }
 
     // Cocokkan record absensi ↔ sesi (id / nama / urutan)
@@ -5691,7 +5763,7 @@
         .sort((a, b) => (a.urutan || 0) - (b.urutan || 0));
       const ended = sesiList.filter(s => sesiSudahBerakhir(s, tanggal));
       if (!ended.length) {
-        _materializedDates.add(tanggal);
+        // Jangan cache: sesi belum ada yang berakhir, perlu dicek lagi nanti
         return;
       }
       if (!aktifPeriode) await loadAktifPeriode();
@@ -5748,7 +5820,9 @@
           if (error) console.warn('materialize insert', error.message || error);
         }
       }
-      _materializedDates.add(tanggal);
+      // Cache hanya jika SEMUA sesi hari itu sudah berakhir (supaya sesi berikutnya tetap dimaterialize)
+      const allEnded = sesiList.every(s => sesiSudahBerakhir(s, tanggal));
+      if (allEnded) _materializedDates.add(tanggal);
     }
 
     async function loadDashboard() {
@@ -5760,9 +5834,9 @@
           await loadSesi();
         }
         await loadLiburMap();
-        const today = new Date().toISOString().slice(0, 10);
+        const today = todayLocal();
         const liburHariIni = isTanggalLibur(today);
-        // Tulis A/B ke DB untuk sesi yang sudah berakhir (kecuali hari libur)
+        // Tulis A/B ke DB hanya untuk sesi yang SUDAH berakhir (kecuali hari libur)
         if (!liburHariIni) {
           try { await materializeAbsensiForDate(today); } catch (e) { console.warn('materialize', e); }
         }
@@ -6334,7 +6408,7 @@
 
     async function loadScanLog() {
       const tbody = document.getElementById('tbodyScanLog');
-      const today = new Date().toISOString().slice(0, 10);
+      const today = todayLocal();
       try {
         let rows = [];
         if (supabaseClient) {
@@ -6392,7 +6466,7 @@
         await loadAktifPeriode();
       }
 
-      const today = new Date().toISOString().slice(0, 10);
+      const today = todayLocal();
 
       // 1. Cari identitas sesuai tipe scan (admin switch) atau auto
       let person = null;
@@ -6821,7 +6895,7 @@
     }
 
     async function isHariLiburHariIni() {
-      const today = new Date().toISOString().slice(0, 10);
+      const today = todayLocal();
       await loadLiburMap();
       return isTanggalLibur(today);
     }
@@ -6985,7 +7059,7 @@
     async function loadFpSiswaLogHariIni() {
       const tbody = document.getElementById('tbodyFpSiswaLog');
       if (!tbody || !currentUserKode) return;
-      const today = new Date().toISOString().slice(0, 10);
+      const today = todayLocal();
       try {
         let rows = [];
         if (supabaseClient) {
@@ -10696,7 +10770,7 @@
           if (!sampai) sampai = (aktifPeriode.tgl_akhir || '').toString().slice(0, 10);
         }
       }
-      if (!dari) dari = new Date().toISOString().slice(0, 10);
+      if (!dari) dari = todayLocal();
       if (!sampai) sampai = dari;
 
       rekapSesiList = (dataSesi || []).filter(s => s.aktif !== false)
@@ -10734,7 +10808,7 @@
           let cur = new Date(d0);
           let guard = 0;
           while (cur <= d1 && guard < 120) {
-            dates.push(cur.toISOString().slice(0, 10));
+            dates.push(localDateStr(cur));
             cur.setDate(cur.getDate() + 1);
             guard++;
           }
@@ -11075,7 +11149,7 @@
     async function initIzinPage() {
       await loadAktifPeriode();
       await loadSesi();
-      const today = new Date().toISOString().slice(0, 10);
+      const today = todayLocal();
       const lp = document.getElementById('izinLabelPeriode');
       const lt = document.getElementById('izinLabelTanggal');
       if (lp) lp.textContent = aktifPeriode
@@ -11094,7 +11168,7 @@
     }
 
     async function loadIzinTable() {
-      const today = new Date().toISOString().slice(0, 10);
+      const today = todayLocal();
       const tbody = document.getElementById('tbodyIzin');
       try {
         if (supabaseClient) {
@@ -11271,7 +11345,7 @@
       if (!refId || !nama) { alert('Pilih siswa/guru dari hasil pencarian'); return; }
       if (!sesiId) { alert('Pilih sesi'); return; }
       if (!aktifPeriode) await loadAktifPeriode();
-      const today = new Date().toISOString().slice(0, 10);
+      const today = todayLocal();
       const row = {
         periode_id: aktifPeriode ? aktifPeriode.id : null,
         tanggal: today,
