@@ -1223,7 +1223,16 @@
         <button class="menu-item" data-page="data-siswa"><span class="icon">👨‍🎓</span> Data Siswa</button>
         <button class="menu-item" data-page="data-guru"><span class="icon">👨‍🏫</span> Data Guru</button>
         <button class="menu-item" data-page="data-lulusan"><span class="icon">🎓</span> Data Lulusan</button>
-        <button class="menu-item" data-page="pengaturan"><span class="icon">⚙️</span> Pengaturan Sistem</button>
+      </div>
+      <div class="menu-group" data-role="admin" style="display:none;">
+        <div class="menu-group-title">Pengaturan</div>
+        <button class="menu-item" data-page="set-mapel"><span class="icon">📚</span> Mapel</button>
+        <button class="menu-item" data-page="set-kelas"><span class="icon">🏫</span> Kelas</button>
+        <button class="menu-item" data-page="set-periode"><span class="icon">📅</span> Periode</button>
+        <button class="menu-item" data-page="set-sesi-libur"><span class="icon">⏰</span> Sesi & Hari Libur</button>
+        <button class="menu-item" data-page="set-izin-fp"><span class="icon">👆</span> Izin Sidik Jari</button>
+        <button class="menu-item" data-page="set-arsip"><span class="icon">📦</span> Arsip Absensi</button>
+        <button class="menu-item" data-page="set-naik-lulus"><span class="icon">🎓</span> Naik Kelas &amp; Kelulusan</button>
       </div>
     </nav>
   </aside>
@@ -2059,18 +2068,10 @@
       </div>
     </section>
 
-    <!-- ========== PENGATURAN SISTEM ========== -->
-    <section class="page" id="page-pengaturan">
-      <div class="page-title">Pengaturan Sistem</div>
-
-      <!-- Section Mapel -->
-      <div class="accordion">
-        <button type="button" class="accordion-header" data-acc="accMapelBody">
-          <span>📚 Mapel</span>
-          <span class="acc-icon">▼</span>
-        </button>
-        <div class="accordion-body" id="accMapelBody">
-          <div class="toolbar">
+    <!-- ========== PENGATURAN: 📚 Mapel ========== -->
+    <section class="page" id="page-set-mapel">
+      <div class="page-title">📚 Mapel</div>
+      <div class="toolbar">
             <button class="btn btn-primary" id="btnTambahMapel">+ Tambah</button>
             <button class="btn btn-secondary" id="btnEditMapel">✏️ Edit</button>
             <button class="btn btn-outline" id="btnHapusMapel" style="color:#ef4444;border-color:#fca5a5;">🗑️</button>
@@ -2090,18 +2091,13 @@
                 <tr><td colspan="4" style="text-align:center;padding:16px;color:#94a3b8;">Memuat...</td></tr>
               </tbody>
             </table>
-          </div>
-        </div>
       </div>
+    </section>
 
-      <!-- Section Kelas -->
-      <div class="accordion">
-        <button type="button" class="accordion-header" data-acc="accKelasBody">
-          <span>🏫 Kelas</span>
-          <span class="acc-icon">▼</span>
-        </button>
-        <div class="accordion-body" id="accKelasBody">
-          <div class="toolbar">
+    <!-- ========== PENGATURAN: 🏫 Kelas ========== -->
+    <section class="page" id="page-set-kelas">
+      <div class="page-title">🏫 Kelas</div>
+      <div class="toolbar">
             <button class="btn btn-primary" id="btnTambahKelas">+ Tambah</button>
             <button class="btn btn-secondary" id="btnEditKelas">✏️ Edit</button>
             <button class="btn btn-outline" id="btnHapusKelas" style="color:#ef4444;border-color:#fca5a5;">🗑️ Hapus</button>
@@ -2120,18 +2116,13 @@
                 <tr><td colspan="3" style="text-align:center;padding:16px;color:#94a3b8;">Memuat...</td></tr>
               </tbody>
             </table>
-          </div>
-        </div>
       </div>
+    </section>
 
-      <!-- Section Periode -->
-      <div class="accordion">
-        <button type="button" class="accordion-header" data-acc="accPeriodeBody">
-          <span>📅 Periode</span>
-          <span class="acc-icon">▼</span>
-        </button>
-        <div class="accordion-body" id="accPeriodeBody">
-          <div class="toolbar">
+    <!-- ========== PENGATURAN: 📅 Periode ========== -->
+    <section class="page" id="page-set-periode">
+      <div class="page-title">📅 Periode</div>
+      <div class="toolbar">
             <button class="btn btn-primary" id="btnTambahPeriode">+ Tambah</button>
             <button class="btn btn-secondary" id="btnEditPeriode">✏️ Edit</button>
             <button class="btn btn-outline" id="btnHapusPeriode" style="color:#ef4444;border-color:#fca5a5;">🗑️</button>
@@ -2157,18 +2148,13 @@
                 <tr><td colspan="9" style="text-align:center;padding:16px;color:#94a3b8;">Memuat...</td></tr>
               </tbody>
             </table>
-          </div>
-        </div>
       </div>
+    </section>
 
-      <!-- Section Sesi + Hari Libur (satu kelompok) -->
-      <div class="accordion">
-        <button type="button" class="accordion-header" data-acc="accSesiLiburBody">
-          <span>⏰ Sesi & Hari Libur</span>
-          <span class="acc-icon">▼</span>
-        </button>
-        <div class="accordion-body" id="accSesiLiburBody">
-          <div style="font-size:13px;font-weight:700;margin-bottom:8px;">Setting Sesi</div>
+    <!-- ========== PENGATURAN: ⏰ Sesi & Hari Libur ========== -->
+    <section class="page" id="page-set-sesi-libur">
+      <div class="page-title">⏰ Sesi & Hari Libur</div>
+      <div style="font-size:13px;font-weight:700;margin-bottom:8px;">Setting Sesi</div>
           <div class="toolbar">
             <button class="btn btn-primary" id="btnTambahSesi">+ Tambah</button>
             <button class="btn btn-secondary" id="btnEditSesi">✏️ Edit</button>
@@ -2216,18 +2202,13 @@
                 <tr><td colspan="4" style="text-align:center;padding:16px;color:#94a3b8;">Memuat...</td></tr>
               </tbody>
             </table>
-          </div>
-        </div>
       </div>
+    </section>
 
-      <!-- Section Izin Sidik Jari -->
-      <div class="accordion">
-        <button type="button" class="accordion-header" data-acc="accIzinFpBody">
-          <span>👆 Izin Sidik Jari</span>
-          <span class="acc-icon">▼</span>
-        </button>
-        <div class="accordion-body" id="accIzinFpBody">
-          <p style="font-size:12px;color:#64748b;margin-bottom:10px;">Centang user yang diizinkan memakai fitur sidik jari, lalu simpan.</p>
+    <!-- ========== PENGATURAN: 👆 Izin Sidik Jari ========== -->
+    <section class="page" id="page-set-izin-fp">
+      <div class="page-title">👆 Izin Sidik Jari</div>
+      <p style="font-size:12px;color:#64748b;margin-bottom:10px;">Centang user yang diizinkan memakai fitur sidik jari, lalu simpan.</p>
           <div class="toolbar">
             <button class="btn btn-primary" id="btnSimpanIzinFp">💾 Simpan Izin</button>
             <span class="toolbar-info" id="infoIzinFp">0 dipilih</span>
@@ -2235,16 +2216,12 @@
           <div id="listIzinFp" class="check-list" style="max-height:280px;">
             <span style="color:#94a3b8;font-size:12px;">Memuat daftar user...</span>
           </div>
-        </div>
-      </div>
+    </section>
 
-      <div class="accordion">
-        <button type="button" class="accordion-header" data-acc="accArsipBody">
-          <span>📦 Arsip Absensi (Historis)</span>
-          <span class="acc-icon">▼</span>
-        </button>
-        <div class="accordion-body" id="accArsipBody">
-          <p style="font-size:12px;color:#64748b;line-height:1.45;margin-bottom:10px;">
+    <!-- ========== PENGATURAN: 📦 Arsip Absensi ========== -->
+    <section class="page" id="page-set-arsip">
+      <div class="page-title">📦 Arsip Absensi</div>
+      <p style="font-size:12px;color:#64748b;line-height:1.45;margin-bottom:10px;">
             Pindahkan data absensi lama ke tabel <b>absensi_historis</b> agar tabel aktif tetap ringan.
             Rekap &amp; Cari Siswa tetap membaca absensi + historis.
           </p>
@@ -2258,16 +2235,12 @@
             <button class="btn" id="btnArsipPindah" style="background:#b45309;color:#fff;border:none;">📦 Pindahkan ke Historis</button>
           </div>
           <div id="arsipHasil" style="font-size:12px;margin-top:10px;color:#64748b;"></div>
-        </div>
-      </div>
+    </section>
 
-      <div class="accordion">
-        <button type="button" class="accordion-header" data-acc="accNaikLulusBody">
-          <span>🎓 Naik Kelas &amp; Kelulusan</span>
-          <span class="acc-icon">▼</span>
-        </button>
-        <div class="accordion-body" id="accNaikLulusBody">
-          <div id="nlModeSwitch" style="display:flex;border-radius:10px;overflow:hidden;border:1px solid #2563eb;margin-bottom:12px;">
+    <!-- ========== PENGATURAN: 🎓 Naik Kelas & Kelulusan ========== -->
+    <section class="page" id="page-set-naik-lulus">
+      <div class="page-title">🎓 Naik Kelas & Kelulusan</div>
+      <div id="nlModeSwitch" style="display:flex;border-radius:10px;overflow:hidden;border:1px solid #2563eb;margin-bottom:12px;">
             <button type="button" id="btnModeNaikKelas" style="flex:1;padding:10px;border:none;font-weight:700;font-size:12px;cursor:pointer;background:#2563eb;color:#fff;">⬆️ Naik Kelas</button>
             <button type="button" id="btnModeKelulusan" style="flex:1;padding:10px;border:none;font-weight:700;font-size:12px;cursor:pointer;background:#eff6ff;color:#1e40af;">🎓 Kelulusan</button>
           </div>
@@ -2305,8 +2278,6 @@
                 <tr><td colspan="7" style="text-align:center;padding:16px;color:#94a3b8;">Pilih mode lalu muat data</td></tr>
               </tbody>
             </table>
-          </div>
-        </div>
       </div>
     </section>
 
@@ -3564,7 +3535,14 @@
       if (pageId === 'data-lulusan') loadLulusan();
       if (pageId === 'input-nilai' || pageId === 'daftar-nilai') initNilaiPage(pageId);
       if (pageId === 'nilai-saya') loadNilaiSaya();
-      if (pageId === 'pengaturan') loadPengaturan();
+      if (pageId === 'set-mapel') loadMapelTable();
+      if (pageId === 'set-kelas') loadKelasTable();
+      if (pageId === 'set-periode') loadPeriodeTable();
+      if (pageId === 'set-sesi-libur') { loadSesiTable(); loadLiburTable(); }
+      if (pageId === 'set-izin-fp') loadIzinFpList();
+      if (pageId === 'set-arsip') { try { refreshArsipInfo(); } catch (e) {} }
+      if (pageId === 'set-naik-lulus') { try { loadNaikLulusTable(); } catch (e) {} }
+      if (pageId === 'pengaturan') showPage('set-mapel', true);
       if (pageId === 'scan-barcode') initScanPage();
       if (pageId === 'dashboard') loadDashboard();
       if (pageId === 'input-izin') initIzinPage();
@@ -5248,9 +5226,7 @@
     document.querySelectorAll('.accordion-header').forEach(h => h.classList.remove('open'));
 
     async function loadPengaturan() {
-      // Tutup semua accordion setiap kali buka halaman pengaturan
-      document.querySelectorAll('#page-pengaturan .accordion-body').forEach(b => b.classList.remove('open'));
-      document.querySelectorAll('#page-pengaturan .accordion-header').forEach(h => h.classList.remove('open'));
+      // Kompatibilitas: muat semua data pengaturan (halaman sudah dipisah)
       await Promise.all([
         loadMapelTable(), loadKelasTable(), loadPeriodeTable(),
         loadSesiTable(), loadLiburTable(), loadIzinFpList()
