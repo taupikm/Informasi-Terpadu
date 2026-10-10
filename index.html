@@ -1408,7 +1408,48 @@
       </div>
     </section>
     <section class="page" id="page-syarat-naik">
-      <div class="placeholder"><div class="icon">📋</div><h2>Cek Syarat Naik Kelas / Lulus</h2><p>Halaman pengecekan syarat naik kelas atau kelulusan</p></div>
+      <div class="page-title">Cek Syarat Naik Kelas / Lulus</div>
+      <div class="card" id="syaratSearchCard" style="padding:12px;margin-bottom:12px;">
+        <div class="rekap-filter-row">
+          <label>Nama / NISN</label>
+          <input type="text" id="syaratQ" placeholder="Kosongkan = data saya">
+        </div>
+        <button type="button" class="btn btn-primary" id="btnSyaratCek" style="width:100%;margin-top:8px;">🔍 Cek Syarat</button>
+      </div>
+      <div id="syaratResult" style="display:none;">
+        <div class="card" id="syaratCardPrint" style="padding:16px 14px;border-radius:16px;border:1px solid #e2e8f0;box-shadow:0 4px 20px rgba(0,0,0,.06);">
+          <div style="text-align:center;margin-bottom:12px;">
+            <div id="syaratNama" style="font-size:18px;font-weight:800;color:#1e40af;line-height:1.3;">-</div>
+            <div id="syaratMeta" style="font-size:12px;color:#64748b;margin-top:4px;">-</div>
+            <div style="display:inline-flex;align-items:center;gap:6px;margin-top:8px;background:#eff6ff;color:#1d4ed8;font-size:11px;font-weight:600;padding:4px 12px;border-radius:20px;">
+              📅 <span id="syaratRentang">-</span>
+            </div>
+          </div>
+          <div style="border-top:1px dashed #cbd5e1;margin:12px 0;"></div>
+          <div style="background:#eff6ff;border-radius:12px;padding:12px;margin-bottom:10px;">
+            <div style="display:flex;justify-content:space-between;align-items:center;font-size:13px;margin-bottom:6px;">
+              <span style="color:#334155;">📅 Hari Sesi Berjalan</span>
+              <b id="syaratHari" style="color:#0f172a;">0 hari</b>
+            </div>
+            <div style="display:flex;justify-content:space-between;align-items:center;font-size:13px;">
+              <span style="color:#334155;">◎ Akumulasi Sesi Efektif</span>
+              <b id="syaratSesi" style="color:#0f172a;">0 sesi</b>
+            </div>
+            <div style="font-size:10px;color:#94a3b8;margin-top:6px;line-height:1.35;">(akumulasi unik tanggal+sesi dari data kehadiran &amp; historis; jumlah sesi per hari bisa berbeda)</div>
+          </div>
+          <div id="syaratRows" style="display:flex;flex-direction:column;gap:6px;"></div>
+          <div style="margin-top:12px;background:linear-gradient(135deg,#eff6ff,#e0e7ff);border-radius:12px;padding:16px 12px;text-align:center;">
+            <div style="font-size:11px;font-weight:700;color:#64748b;letter-spacing:.04em;">PERSENTASE KEHADIRAN AKURAT</div>
+            <div id="syaratPersen" style="font-size:28px;font-weight:800;color:#1e40af;margin:6px 0;">0%</div>
+            <div id="syaratDetail" style="font-size:11px;color:#64748b;">-</div>
+          </div>
+          <div id="syaratBadge" style="margin-top:12px;border-radius:12px;padding:14px;text-align:center;font-weight:800;font-size:14px;letter-spacing:.02em;">-</div>
+          <button type="button" class="btn" id="btnSyaratPdf" style="width:100%;margin-top:12px;background:#dc2626;color:#fff;border:none;padding:12px;font-size:14px;font-weight:700;">📄 Cetak PDF</button>
+        </div>
+      </div>
+      <div id="syaratEmpty" style="text-align:center;padding:28px 12px;color:#94a3b8;font-size:13px;">
+        Masukkan NISN/Nama lalu Cek, atau login sebagai siswa untuk melihat data Anda.
+      </div>
     </section>
     <section class="page" id="page-tugas-ujian">
       <div class="page-title">Kerjakan Tugas / Ujian</div>
@@ -2221,20 +2262,45 @@
     <!-- ========== PENGATURAN: 📦 Arsip Absensi ========== -->
     <section class="page" id="page-set-arsip">
       <div class="page-title">📦 Arsip Absensi</div>
-      <p style="font-size:12px;color:#64748b;line-height:1.45;margin-bottom:10px;">
-            Pindahkan data absensi lama ke tabel <b>absensi_historis</b> agar tabel aktif tetap ringan.
-            Rekap &amp; Cari Siswa tetap membaca absensi + historis.
-          </p>
-          <div id="arsipInfo" style="font-size:12px;margin-bottom:10px;color:#334155;">Memuat info...</div>
-          <div class="form-group">
-            <label>Pindahkan data s/d tanggal (inklusif)</label>
-            <input type="date" id="arsipSampaiTanggal">
-          </div>
-          <div class="toolbar" style="gap:8px;">
-            <button class="btn btn-primary" id="btnArsipPreview">Cek Jumlah</button>
-            <button class="btn" id="btnArsipPindah" style="background:#b45309;color:#fff;border:none;">📦 Pindahkan ke Historis</button>
-          </div>
-          <div id="arsipHasil" style="font-size:12px;margin-top:10px;color:#64748b;"></div>
+
+      <div class="card" style="padding:14px;margin-bottom:12px;">
+        <div style="font-size:14px;font-weight:700;margin-bottom:10px;color:#0f172a;">⚙️ Pengaturan Absensi (Syarat)</div>
+        <p style="font-size:11px;color:#64748b;margin-bottom:10px;line-height:1.4;">
+          Digunakan untuk menghitung syarat naik kelas / kelulusan. Minimal hadir contoh: 80.
+        </p>
+        <div class="rekap-filter-row">
+          <label>Mulai tanggal</label>
+          <input type="date" id="setAbsenMulai">
+        </div>
+        <div class="rekap-filter-row">
+          <label>Berakhir tanggal</label>
+          <input type="date" id="setAbsenAkhir">
+        </div>
+        <div class="rekap-filter-row">
+          <label>Minimal Hadir (%)</label>
+          <input type="number" id="setAbsenMinHadir" min="1" max="100" step="1" placeholder="80" value="80">
+        </div>
+        <button type="button" class="btn btn-primary" id="btnSimpanSetAbsen" style="width:100%;margin-top:6px;">💾 Simpan Pengaturan Absensi</button>
+        <div id="setAbsenInfo" style="font-size:11px;color:#64748b;margin-top:8px;"></div>
+      </div>
+
+      <div class="card" style="padding:14px;">
+        <div style="font-size:14px;font-weight:700;margin-bottom:8px;">📦 Pindah ke Historis</div>
+        <p style="font-size:12px;color:#64748b;line-height:1.45;margin-bottom:10px;">
+          Pindahkan data absensi lama ke tabel <b>absensi_historis</b> agar tabel aktif tetap ringan.
+          Rekap &amp; Cari Siswa tetap membaca absensi + historis.
+        </p>
+        <div id="arsipInfo" style="font-size:12px;margin-bottom:10px;color:#334155;">Memuat info...</div>
+        <div class="form-group">
+          <label>Pindahkan data s/d tanggal (inklusif)</label>
+          <input type="date" id="arsipSampaiTanggal">
+        </div>
+        <div class="toolbar" style="gap:8px;">
+          <button class="btn btn-primary" id="btnArsipPreview">Cek Jumlah</button>
+          <button class="btn" id="btnArsipPindah" style="background:#b45309;color:#fff;border:none;">📦 Pindahkan ke Historis</button>
+        </div>
+        <div id="arsipHasil" style="font-size:12px;margin-top:10px;color:#64748b;"></div>
+      </div>
     </section>
 
     <!-- ========== PENGATURAN: 🎓 Naik Kelas & Kelulusan ========== -->
@@ -3540,7 +3606,7 @@
       if (pageId === 'set-periode') loadPeriodeTable();
       if (pageId === 'set-sesi-libur') { loadSesiTable(); loadLiburTable(); }
       if (pageId === 'set-izin-fp') loadIzinFpList();
-      if (pageId === 'set-arsip') { try { refreshArsipInfo(); } catch (e) {} }
+      if (pageId === 'set-arsip') { try { refreshArsipInfo(); } catch (e) {} try { loadSetAbsenForm(); } catch (e) {} }
       if (pageId === 'set-naik-lulus') { try { loadNaikLulusTable(); } catch (e) {} }
       if (pageId === 'pengaturan') showPage('set-mapel', true);
       if (pageId === 'scan-barcode') initScanPage();
@@ -3548,6 +3614,7 @@
       if (pageId === 'input-izin') initIzinPage();
       if (pageId === 'rekap-data') initRekapPage();
       if (pageId === 'cari-siswa') initCariSiswaPage();
+      if (pageId === 'syarat-naik') initSyaratNaikPage();
       if (pageId === 'sidik-jari') initSidikJariSiswaPage();
       if (pageId === 'kelola-tugas') initBankSoalPage();
       if (pageId === 'tugas-ujian') initTugasSiswaPage();
@@ -10383,7 +10450,297 @@
     // ============================================================
     // CARI DATA SISWA (Orang Tua) — tabel seperti Rekap
     // ============================================================
+    // ============================================================
+    // PENGATURAN ABSENSI (syarat naik/lulus) + CEK SYARAT
+    // ============================================================
+    const ABSEN_SET_KEY = 'smpn_absensi_syarat';
+    // Bobot kehadiran (sama rumus kartu syarat)
+    const BOBOT_STATUS = { TW: 1, TL: 0.8, Sakit: 0.75, Izin: 0.5, Alpa: 0, Bolos: 0 };
+
+    function loadAbsenSettings() {
+      let s = { mulai: '', akhir: '', minHadir: 80 };
+      try {
+        const raw = localStorage.getItem(ABSEN_SET_KEY);
+        if (raw) s = Object.assign(s, JSON.parse(raw));
+      } catch (e) {}
+      // Fallback rentang dari periode aktif
+      if (!s.mulai || !s.akhir) {
+        try {
+          const r = getRentangAbsenAktif();
+          if (!s.mulai && r.dari) s.mulai = r.dari;
+          if (!s.akhir && r.sampai) s.akhir = r.sampai;
+        } catch (e) {}
+      }
+      if (!s.mulai) s.mulai = todayLocal();
+      if (!s.akhir) s.akhir = todayLocal();
+      if (!s.minHadir || isNaN(Number(s.minHadir))) s.minHadir = 80;
+      return s;
+    }
+    function saveAbsenSettings(obj) {
+      localStorage.setItem(ABSEN_SET_KEY, JSON.stringify(obj));
+    }
+    function loadSetAbsenForm() {
+      const s = loadAbsenSettings();
+      const elM = document.getElementById('setAbsenMulai');
+      const elA = document.getElementById('setAbsenAkhir');
+      const elH = document.getElementById('setAbsenMinHadir');
+      if (elM) elM.value = s.mulai || '';
+      if (elA) elA.value = s.akhir || '';
+      if (elH) elH.value = s.minHadir;
+      const info = document.getElementById('setAbsenInfo');
+      if (info) info.textContent = 'Aktif: ' + (s.mulai || '-') + ' s/d ' + (s.akhir || '-') + ' · Min hadir ' + s.minHadir + '%';
+    }
+    document.getElementById('btnSimpanSetAbsen')?.addEventListener('click', () => {
+      const mulai = document.getElementById('setAbsenMulai')?.value || '';
+      const akhir = document.getElementById('setAbsenAkhir')?.value || '';
+      let minHadir = Number(document.getElementById('setAbsenMinHadir')?.value);
+      if (!mulai || !akhir) { alert('Isi tanggal mulai dan berakhir'); return; }
+      if (akhir < mulai) { alert('Tanggal berakhir harus ≥ mulai'); return; }
+      if (isNaN(minHadir) || minHadir < 1 || minHadir > 100) { alert('Minimal hadir 1–100'); return; }
+      saveAbsenSettings({ mulai, akhir, minHadir });
+      loadSetAbsenForm();
+      alert('Pengaturan absensi disimpan');
+    });
+
+    function normStatusSyarat(st) {
+      const k = normStatusKey(st);
+      if (k === 'TW') return 'TW';
+      if (k === 'TL') return 'TL';
+      if (k === 'Sakit') return 'Sakit';
+      if (k === 'Izin') return 'Izin';
+      if (k === 'Alpa') return 'Alpa';
+      if (k === 'Bolos') return 'Bolos';
+      // fallback
+      const u = String(st || '').toUpperCase();
+      if (u === 'H' || u === 'HADIR') return 'TW';
+      return 'Alpa';
+    }
+
+    /** Hitung ringkasan dari baris absensi siswa (unik tanggal+sesi) */
+    function hitungSyaratDariRows(rows) {
+      // unik per tanggal|sesi_id|sesi_urutan|sesi_nama
+      const map = new Map();
+      (rows || []).forEach(r => {
+        const tgl = String(r.tanggal || '').slice(0, 10);
+        const sesiKey = (r.sesi_id != null ? 'id:' + r.sesi_id : '') +
+          '|' + (r.sesi_urutan != null ? 'u:' + r.sesi_urutan : '') +
+          '|' + String(r.sesi_nama || '');
+        const key = tgl + '||' + sesiKey;
+        if (!map.has(key)) {
+          map.set(key, r);
+        } else {
+          // prioritaskan yang ada jam_scan / status lebih "kuat"
+          const prev = map.get(key);
+          if (r.jam_scan && !prev.jam_scan) map.set(key, r);
+        }
+      });
+      const uniq = [...map.values()];
+      const counts = { TW: 0, TL: 0, Sakit: 0, Izin: 0, Alpa: 0, Bolos: 0 };
+      uniq.forEach(r => {
+        const k = normStatusSyarat(r.status);
+        if (counts[k] != null) counts[k]++;
+        else counts.Alpa++;
+      });
+      const totalSesi = uniq.length;
+      const hariSet = new Set(uniq.map(r => String(r.tanggal || '').slice(0, 10)));
+      let nilaiHadir = 0;
+      Object.keys(counts).forEach(k => {
+        nilaiHadir += counts[k] * (BOBOT_STATUS[k] != null ? BOBOT_STATUS[k] : 0);
+      });
+      const persen = totalSesi > 0 ? (nilaiHadir / totalSesi) * 100 : 0;
+      return {
+        counts,
+        totalSesi,
+        hari: hariSet.size,
+        nilaiHadir: Math.round(nilaiHadir * 10) / 10,
+        persen: Math.round(persen * 100) / 100
+      };
+    }
+
+    async function resolveSiswaForSyarat(q) {
+      q = String(q || '').trim();
+      // Login sebagai siswa tanpa query → data sendiri
+      if (!q && currentRole === 'siswa' && currentUserId) {
+        if (supabaseClient) {
+          const { data } = await supabaseClient.from('siswa').select('*').eq('id', currentUserId).maybeSingle();
+          if (data) return data;
+        }
+        if (!dataSiswa.length) await loadSiswa();
+        return dataSiswa.find(s => Number(s.id) === Number(currentUserId)) || null;
+      }
+      if (!q) return null;
+      if (supabaseClient) {
+        const { data } = await supabaseClient.from('siswa').select('*')
+          .or('nama.ilike.%' + q + '%,nisn.ilike.%' + q + '%').limit(5);
+        if (data && data.length === 1) return data[0];
+        if (data && data.length > 1) {
+          // exact nisn prefer
+          const exact = data.find(s => String(s.nisn) === q);
+          return exact || data[0];
+        }
+        return null;
+      }
+      if (!dataSiswa.length) await loadSiswa();
+      const ql = q.toLowerCase();
+      return dataSiswa.find(s =>
+        String(s.nisn) === q || String(s.nama || '').toLowerCase().includes(ql)
+      ) || null;
+    }
+
+    function renderSyaratCard(siswa, hitung, settings) {
+      const box = document.getElementById('syaratResult');
+      const empty = document.getElementById('syaratEmpty');
+      if (box) box.style.display = 'block';
+      if (empty) empty.style.display = 'none';
+
+      document.getElementById('syaratNama').textContent = siswa.nama || '-';
+      document.getElementById('syaratMeta').textContent =
+        'Kelas ' + (siswa.kelas || '-') + ' · NISN ' + (siswa.nisn || '-');
+      document.getElementById('syaratRentang').textContent =
+        (settings.mulai || '-') + ' s/d ' + (settings.akhir || '-');
+      document.getElementById('syaratHari').textContent = hitung.hari + ' hari';
+      document.getElementById('syaratSesi').textContent = hitung.totalSesi + ' sesi';
+
+      const rowsSpec = [
+        { key: 'TW', label: 'Tepat Waktu (TW = 1)', bg: '#dcfce7', border: '#86efac', color: '#166534' },
+        { key: 'TL', label: 'Terlambat (TL = 0.8)', bg: '#fef3c7', border: '#fcd34d', color: '#a16207' },
+        { key: 'Sakit', label: 'Sakit (0.75 hadir)', bg: '#f3e8ff', border: '#d8b4fe', color: '#7e22ce' },
+        { key: 'Izin', label: 'Izin (0.5 hadir)', bg: '#dbeafe', border: '#93c5fd', color: '#1d4ed8' },
+        { key: 'Alpa', label: 'Alpa', bg: '#fee2e2', border: '#fca5a5', color: '#dc2626' },
+        { key: 'Bolos', label: 'Bolos', bg: '#fecaca', border: '#f87171', color: '#991b1b' }
+      ];
+      const rowsEl = document.getElementById('syaratRows');
+      rowsEl.innerHTML = rowsSpec.map(r => {
+        const n = hitung.counts[r.key] || 0;
+        return '<div style="display:flex;justify-content:space-between;align-items:center;padding:10px 12px;border-radius:10px;background:' +
+          r.bg + ';border:1px solid ' + r.border + ';font-size:13px;">' +
+          '<span style="font-weight:600;color:' + r.color + ';">' + r.label + '</span>' +
+          '<b style="color:' + r.color + ';font-size:15px;">' + n + '</b></div>';
+      }).join('');
+
+      const persen = hitung.persen;
+      document.getElementById('syaratPersen').textContent = persen.toFixed(2) + '%';
+      document.getElementById('syaratDetail').textContent =
+        'Nilai Hadir: ' + hitung.nilaiHadir + ' / ' + hitung.totalSesi +
+        ' (Batas: ' + settings.minHadir + '%) · TW=1 · TL=0.8';
+
+      const tingkat = tingkatDariKelas(siswa.kelas);
+      const lulus = persen >= Number(settings.minHadir);
+      const badge = document.getElementById('syaratBadge');
+      if (tingkat === '9') {
+        if (lulus) {
+          badge.style.background = '#dcfce7';
+          badge.style.color = '#166534';
+          badge.style.border = '1px solid #86efac';
+          badge.innerHTML = '🎓 MEMENUHI SYARAT LULUS';
+        } else {
+          badge.style.background = '#fee2e2';
+          badge.style.color = '#991b1b';
+          badge.style.border = '1px solid #fca5a5';
+          badge.innerHTML = '❌ TIDAK MEMENUHI SYARAT KELULUSAN';
+        }
+      } else {
+        // kelas 7/8 (atau lain)
+        if (lulus) {
+          badge.style.background = '#dcfce7';
+          badge.style.color = '#166534';
+          badge.style.border = '1px solid #86efac';
+          badge.innerHTML = '⬆️ MEMENUHI SYARAT NAIK KELAS';
+        } else {
+          badge.style.background = '#fee2e2';
+          badge.style.color = '#991b1b';
+          badge.style.border = '1px solid #fca5a5';
+          badge.innerHTML = '❌ TIDAK MEMENUHI SYARAT NAIK KELAS';
+        }
+      }
+
+      // simpan untuk print
+      window._syaratLast = { siswa, hitung, settings };
+    }
+
+    async function jalankanCekSyarat() {
+      const q = document.getElementById('syaratQ')?.value || '';
+      const empty = document.getElementById('syaratEmpty');
+      const box = document.getElementById('syaratResult');
+      if (empty) empty.textContent = 'Memuat data absensi...';
+      if (empty) empty.style.display = 'block';
+      if (box) box.style.display = 'none';
+
+      try {
+        if (!aktifPeriode) await loadAktifPeriode();
+        const settings = loadAbsenSettings();
+        const siswa = await resolveSiswaForSyarat(q);
+        if (!siswa) {
+          if (empty) empty.textContent = q
+            ? 'Siswa tidak ditemukan untuk "' + q + '"'
+            : 'Login sebagai siswa atau masukkan NISN/Nama.';
+          return;
+        }
+        // Ambil by ref_id, fallback by kode/NISN jika perlu
+        let rows = await fetchAbsensiRange(settings.mulai, settings.akhir, {
+          tipe: 'siswa',
+          ref_id: siswa.id
+        });
+        if ((!rows || !rows.length) && siswa.nisn) {
+          rows = await fetchAbsensiRange(settings.mulai, settings.akhir, {
+            tipe: 'siswa',
+            kode: siswa.nisn
+          });
+        }
+        const filtered = (rows || []).filter(r =>
+          r.tipe === 'siswa' && (
+            Number(r.ref_id) === Number(siswa.id) ||
+            String(r.kode || '') === String(siswa.nisn || '')
+          )
+        );
+        const hitung = hitungSyaratDariRows(filtered);
+        renderSyaratCard(siswa, hitung, settings);
+      } catch (e) {
+        console.error(e);
+        if (empty) empty.textContent = 'Gagal: ' + (e.message || e);
+        if (box) box.style.display = 'none';
+      }
+    }
+
+    async function initSyaratNaikPage() {
+      if (!aktifPeriode) await loadAktifPeriode();
+      const s = loadAbsenSettings();
+      // Sembunyikan search jika siswa login (opsional tetap bisa cek diri)
+      const sc = document.getElementById('syaratSearchCard');
+      if (currentRole === 'siswa') {
+        if (document.getElementById('syaratQ')) document.getElementById('syaratQ').value = '';
+        await jalankanCekSyarat();
+      } else {
+        document.getElementById('syaratResult').style.display = 'none';
+        document.getElementById('syaratEmpty').style.display = 'block';
+        document.getElementById('syaratEmpty').textContent =
+          'Masukkan NISN/Nama lalu Cek. Rentang: ' + s.mulai + ' s/d ' + s.akhir + ' · Min ' + s.minHadir + '%';
+      }
+    }
+
+    document.getElementById('btnSyaratCek')?.addEventListener('click', () => jalankanCekSyarat());
+    document.getElementById('syaratQ')?.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') jalankanCekSyarat();
+    });
+    document.getElementById('btnSyaratPdf')?.addEventListener('click', () => {
+      const card = document.getElementById('syaratCardPrint');
+      if (!card) return;
+      const w = window.open('', '_blank', 'width=420,height=720');
+      if (!w) { alert('Izinkan pop-up untuk mencetak'); return; }
+      const last = window._syaratLast;
+      const title = last && last.siswa ? (last.siswa.nama || 'Syarat') : 'Syarat';
+      w.document.write('<!DOCTYPE html><html><head><meta charset="utf-8"><title>' + title + '</title>');
+      w.document.write('<meta name="viewport" content="width=device-width,initial-scale=1">');
+      w.document.write('<style>body{font-family:-apple-system,BlinkMacSystemFont,Segoe UI,Roboto,sans-serif;padding:12px;background:#fff;color:#0f172a;}@media print{button{display:none!important;}}</style>');
+      w.document.write('</head><body>');
+      w.document.write(card.innerHTML);
+      w.document.write('</body></html>');
+      w.document.close();
+      setTimeout(() => { try { w.print(); } catch (e) {} }, 400);
+    });
+
     async function initCariSiswaPage() {
+
       if (!aktifPeriode) await loadAktifPeriode();
       await loadSesi();
       const dari = document.getElementById('cariSiswaDari');
