@@ -12081,6 +12081,35 @@
               esc(s.nama) + ' (' + String(s.jam_mulai||'').slice(0,5) + '–' + String(s.jam_akhir||'').slice(0,5) + ')</option>').join('')
           : '<option value="">Tidak ada sesi</option>';
       }
+      // Guru: hanya siswa (form + filter)
+      const selTipe = document.getElementById('izinTipe');
+      const filterTipe = document.getElementById('filterIzinTipe');
+      if (currentRole === 'guru') {
+        if (selTipe) {
+          selTipe.innerHTML = '<option value="siswa">Siswa</option>';
+          selTipe.value = 'siswa';
+          selTipe.disabled = true;
+        }
+        if (filterTipe) {
+          filterTipe.innerHTML = '<option value="siswa">Siswa</option>';
+          filterTipe.value = 'siswa';
+          filterTipe.disabled = true;
+          izinFilterTipe = 'siswa';
+        }
+      } else {
+        if (selTipe) {
+          selTipe.disabled = false;
+          const cur = selTipe.value || 'siswa';
+          selTipe.innerHTML = '<option value="siswa">Siswa</option><option value="guru">Guru</option>';
+          selTipe.value = cur;
+        }
+        if (filterTipe) {
+          filterTipe.disabled = false;
+          const curF = filterTipe.value;
+          filterTipe.innerHTML = '<option value="">Semua</option><option value="siswa">Siswa</option><option value="guru">Guru</option>';
+          if (curF) filterTipe.value = curF;
+        }
+      }
       await loadIzinTable();
     }
 
@@ -12121,7 +12150,9 @@
       if (izinFilterStatus) {
         rows = rows.filter(r => String(r.status || '').toLowerCase() === izinFilterStatus.toLowerCase());
       }
-      if (izinFilterTipe) {
+      if (currentRole === 'guru') {
+        rows = rows.filter(r => r.tipe === 'siswa');
+      } else if (izinFilterTipe) {
         rows = rows.filter(r => r.tipe === izinFilterTipe);
       }
       document.getElementById('infoIzin').textContent = rows.length + ' data';
@@ -12173,6 +12204,16 @@
       document.getElementById('izinUserHasil').style.display = 'none';
       document.getElementById('izinKet').value = '';
       document.getElementById('izinStatus').value = 'Izin';
+      const selTipe = document.getElementById('izinTipe');
+      if (selTipe) {
+        if (currentRole === 'guru') {
+          selTipe.innerHTML = '<option value="siswa">Siswa</option>';
+          selTipe.value = 'siswa';
+          selTipe.disabled = true;
+        } else {
+          selTipe.disabled = false;
+        }
+      }
       openModal('modalIzin');
     });
 
@@ -12188,7 +12229,8 @@
         return;
       }
       _izinSearchTimer = setTimeout(async () => {
-        const tipe = document.getElementById('izinTipe').value;
+        let tipe = document.getElementById('izinTipe').value;
+        if (currentRole === 'guru') tipe = 'siswa';
         let list = [];
         try {
           if (supabaseClient) {
@@ -12252,7 +12294,8 @@
       const refId = document.getElementById('izinRefId').value;
       const kode = document.getElementById('izinKode').value;
       const nama = document.getElementById('izinNama').value;
-      const tipe = document.getElementById('izinTipe').value;
+      let tipe = document.getElementById('izinTipe').value;
+      if (currentRole === 'guru') tipe = 'siswa';
       const status = document.getElementById('izinStatus').value;
       const sesiEl = document.getElementById('izinSesi');
       const sesiId = sesiEl.value;
