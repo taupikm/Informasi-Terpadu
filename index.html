@@ -12451,12 +12451,12 @@
       tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;padding:16px;color:#94a3b8;">Memuat...</td></tr>';
       try {
         if (supabaseClient) {
-          const { data, error } = await supabaseClient.from('guru').select('id, nama, nip, pin, status').order('nama');
+          const { data, error } = await supabaseClient.from('guru').select('id, nama, nip, pin, status').order('id');
           if (error) throw error;
           _dataRpGuru = data || [];
         } else {
           if (!dataGuru.length) await loadGuru();
-          _dataRpGuru = dataGuru.slice();
+          _dataRpGuru = dataGuru.slice().sort((a, b) => (Number(a.id) || 0) - (Number(b.id) || 0));
         }
       } catch (e) {
         console.error(e);
