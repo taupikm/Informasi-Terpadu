@@ -1367,7 +1367,7 @@
         <button class="menu-item" data-page="syarat-naik"><span class="icon">📋</span> Cek Syarat Naik Kelas / Lulus</button>
         <button class="menu-item" data-page="tugas-ujian"><span class="icon">📝</span> Kerjakan Tugas/Ujian</button>
         <button class="menu-item" data-page="nilai-saya"><span class="icon">📈</span> Lihat Nilai Saya</button>
-        <button class="menu-item" data-page="kelulusan"><span class="icon">🎓</span> Pengumuman Kelulusan</button>
+        <button class="menu-item" data-page="kelulusan"><span class="icon">🎓</span> Kelulusan</button>
         <button class="menu-item" data-page="validasi-lulusan"><span class="icon">✅</span> Validasi Data Lulusan</button>
       </div>
 
@@ -1709,38 +1709,7 @@
       </div>
     </section>
     <section class="page" id="page-kelulusan">
-      <div class="page-title">Pengumuman Kelulusan</div>
-      <div id="pgBlocked" class="card" style="display:none;padding:20px;text-align:center;">
-        <div style="font-size:40px;margin-bottom:10px;">🚫</div>
-        <div id="pgBlockedMsg" style="font-size:14px;font-weight:600;color:#b91c1c;line-height:1.5;"></div>
-      </div>
-      <div id="pgLoading" style="text-align:center;padding:28px;color:#94a3b8;font-size:13px;">Memuat pengumuman...</div>
-      <div id="pgEmpty" style="display:none;text-align:center;padding:28px 12px;color:#94a3b8;font-size:13px;"></div>
-      <div id="pgResult" style="display:none;">
-        <div class="card" id="pgCardPrint" style="padding:18px 14px;border-radius:16px;border:1px solid #e2e8f0;box-shadow:0 4px 20px rgba(0,0,0,.06);max-width:520px;margin:0 auto;">
-          <div style="text-align:center;font-size:15px;font-weight:800;color:#1e40af;letter-spacing:.04em;margin-bottom:14px;">PENGUMUMAN KELULUSAN</div>
-          <div id="pgSkText" style="font-size:13px;line-height:1.55;color:#334155;text-align:center;margin-bottom:14px;"></div>
-          <div style="text-align:center;font-size:14px;line-height:1.8;margin-bottom:8px;">
-            <div>Nama : <b id="pgNama">-</b></div>
-            <div>NISN : <b id="pgNisn">-</b></div>
-          </div>
-          <div style="text-align:center;font-size:13px;color:#64748b;margin:12px 0 6px;">Dinyatakan :</div>
-          <div id="pgStatus" style="text-align:center;font-size:26px;font-weight:800;letter-spacing:.06em;margin:6px 0 10px;"></div>
-          <div id="pgStatusSub" style="text-align:center;font-size:13px;line-height:1.55;color:#334155;margin-bottom:8px;"></div>
-          <div id="pgPredikatLine" style="text-align:center;font-size:14px;line-height:1.5;margin-top:10px;"></div>
-          <div style="border-top:1px dashed #cbd5e1;margin:16px 0 10px;"></div>
-          <div style="font-size:12px;color:#334155;line-height:1.55;">
-            <div style="font-weight:700;margin-bottom:6px;text-decoration:underline;">KETERANGAN :</div>
-            <ol style="padding-left:18px;margin:0;">
-              <li style="margin-bottom:4px;">Predikat kelulusan diambil dari data lulusan</li>
-              <li style="margin-bottom:4px;">Jika lulus maka kalimat dibawahnya : “Dari <b>SMPN PANTANG MUNDUR</b> dengan Predikat <b style="color:#16a34a;">BAIK</b>”</li>
-              <li style="margin-bottom:4px;">Untuk warna Predikat : <span style="color:#2563eb;font-weight:700;">MEMUASKAN</span> (biru), <span style="color:#16a34a;font-weight:700;">BAIK</span> (hijau), <span style="color:#ea580c;font-weight:700;">CUKUP</span> (orange)</li>
-              <li style="margin-bottom:4px;">Jika ditangguhkan, kalimat dibawahnya : “Jika sampai batas H-2 akhir Tahun Ajaran, beberapa syarat kelulusan yang tertinggal tidak dipenuhi maka statusnya menjadi <b>TIDAK LULUS</b> permanen”</li>
-              <li style="margin-bottom:4px;">Jika tidak lulus, kalimat dibawahnya : “lebih dari 60% syarat kelulusan tidak tercapai”</li>
-            </ol>
-          </div>
-        </div>
-      </div>
+      <div class="placeholder"><div class="icon">🎓</div><h2>Kelulusan</h2><p>Halaman informasi kelulusan</p></div>
     </section>
     <section class="page" id="page-validasi-lulusan">
       <div class="page-title">Validasi Data Lulusan</div>
@@ -1983,6 +1952,7 @@
       </div>
       <div class="toolbar">
         <button class="btn btn-secondary" id="btnSimpanNilai" disabled>💾 Simpan Semua Nilai</button>
+        <button class="btn btn-outline" id="btnImportNilai">📥 Import Nilai</button>
         <span class="toolbar-info" id="infoInputNilai"></span>
       </div>
       <div class="table-wrap">
@@ -2256,15 +2226,12 @@
               <th>Kelas</th>
               <th>Tmp Lahir</th>
               <th>Tgl Lahir</th>
-              <th>Status Awal</th>
-              <th>Mulai Sekolah</th>
-              <th>Asal Sekolah</th>
               <th>Status</th>
               <th>No HP</th>
             </tr>
           </thead>
           <tbody id="tbodySiswa">
-            <tr><td colspan="13" style="text-align:center;padding:24px;color:#94a3b8;">Memuat data...</td></tr>
+            <tr><td colspan="10" style="text-align:center;padding:24px;color:#94a3b8;">Memuat data...</td></tr>
           </tbody>
         </table>
       </div>
@@ -2326,7 +2293,6 @@
               <th>Nama</th>
               <th>L/P</th>
               <th>Status</th>
-              <th>Predikat</th>
               <th>Tmp Lahir</th>
               <th>Tgl Lahir</th>
               <th>Mulai Sekolah</th>
@@ -2338,7 +2304,7 @@
             </tr>
           </thead>
           <tbody id="tbodyLulusan">
-            <tr><td colspan="15" style="text-align:center;padding:24px;color:#94a3b8;">Memuat data...</td></tr>
+            <tr><td colspan="14" style="text-align:center;padding:24px;color:#94a3b8;">Memuat data...</td></tr>
           </tbody>
         </table>
       </div>
@@ -2417,16 +2383,11 @@
                   <th>Tgl Akhir</th>
                   <th>Tgl Kelulusan</th>
                   <th>Tgl Naik Kelas</th>
-                  <th>Pg Mulai</th>
-                  <th>Pg Akhir</th>
-                  <th>SK Lulus</th>
-                  <th>SK Naik</th>
-                  <th>Kepsek</th>
                   <th>Aktif</th>
                 </tr>
               </thead>
               <tbody id="tbodyPeriode">
-                <tr><td colspan="14" style="text-align:center;padding:16px;color:#94a3b8;">Memuat...</td></tr>
+                <tr><td colspan="9" style="text-align:center;padding:16px;color:#94a3b8;">Memuat...</td></tr>
               </tbody>
             </table>
       </div>
@@ -2489,56 +2450,14 @@
     <!-- ========== PENGATURAN: 👆 Izin Sidik Jari ========== -->
     <section class="page" id="page-set-izin-fp">
       <div class="page-title">👆 Izin Sidik Jari</div>
-      <p style="font-size:12px;color:#64748b;margin-bottom:10px;">Centang user yang diizinkan memakai fitur sidik jari, lalu simpan. Pilihan Guru dan Siswa disimpan bersama.</p>
-
-      <div id="izinFpModeSwitch" style="display:flex;border-radius:10px;overflow:hidden;border:1px solid #2563eb;margin-bottom:12px;">
-        <button type="button" id="btnIzinFpSiswa" style="flex:1;padding:10px;border:none;font-weight:700;font-size:12px;cursor:pointer;background:#2563eb;color:#fff;">👨‍🎓 Siswa</button>
-        <button type="button" id="btnIzinFpGuru" style="flex:1;padding:10px;border:none;font-weight:700;font-size:12px;cursor:pointer;background:#eff6ff;color:#1e40af;">👨‍🏫 Guru</button>
-      </div>
-
-      <div class="toolbar">
-        <button class="btn btn-primary" id="btnSimpanIzinFp">💾 Simpan Izin</button>
-        <span class="toolbar-info" id="infoIzinFp">0 dipilih</span>
-      </div>
-
-      <!-- Tabel Siswa -->
-      <div id="izinFpPanelSiswa">
-        <div class="table-wrap">
-          <table id="tableIzinFpSiswa">
-            <thead>
-              <tr>
-                <th style="width:36px;"><input type="checkbox" id="checkAllIzinFpSiswa" title="Pilih semua siswa"></th>
-                <th>No</th>
-                <th>NISN</th>
-                <th>Nama</th>
-                <th>Kelas</th>
-              </tr>
-            </thead>
-            <tbody id="tbodyIzinFpSiswa">
-              <tr><td colspan="5" style="text-align:center;padding:16px;color:#94a3b8;">Memuat...</td></tr>
-            </tbody>
-          </table>
-        </div>
-      </div>
-
-      <!-- Tabel Guru -->
-      <div id="izinFpPanelGuru" style="display:none;">
-        <div class="table-wrap">
-          <table id="tableIzinFpGuru">
-            <thead>
-              <tr>
-                <th style="width:36px;"><input type="checkbox" id="checkAllIzinFpGuru" title="Pilih semua guru"></th>
-                <th>No</th>
-                <th>NIP</th>
-                <th>Nama</th>
-              </tr>
-            </thead>
-            <tbody id="tbodyIzinFpGuru">
-              <tr><td colspan="4" style="text-align:center;padding:16px;color:#94a3b8;">Memuat...</td></tr>
-            </tbody>
-          </table>
-        </div>
-      </div>
+      <p style="font-size:12px;color:#64748b;margin-bottom:10px;">Centang user yang diizinkan memakai fitur sidik jari, lalu simpan.</p>
+          <div class="toolbar">
+            <button class="btn btn-primary" id="btnSimpanIzinFp">💾 Simpan Izin</button>
+            <span class="toolbar-info" id="infoIzinFp">0 dipilih</span>
+          </div>
+          <div id="listIzinFp" class="check-list" style="max-height:280px;">
+            <span style="color:#94a3b8;font-size:12px;">Memuat daftar user...</span>
+          </div>
     </section>
 
     <!-- ========== PENGATURAN: 📦 Arsip Absensi ========== -->
@@ -2747,7 +2666,7 @@
 
   <!-- ========== MODAL SISWA (Tambah / Edit) ========== -->
   <div class="modal-overlay" id="modalSiswa">
-    <div class="modal modal-lg">
+    <div class="modal">
       <div class="modal-header">
         <h3 id="modalSiswaTitle">Tambah Siswa</h3>
         <button class="modal-close" data-close="modalSiswa">&times;</button>
@@ -2784,29 +2703,12 @@
           <div class="form-group">
             <label>Status</label>
             <select id="siswaStatus">
-              <option value="Aktif">Aktif</option>
-              <option value="Nonaktif">Nonaktif</option>
-              <option value="Pindah">Pindah</option>
-              <option value="Lulus">Lulus</option>
+              <option>Aktif</option>
+              <option>Nonaktif</option>
+              <option>Pindah</option>
+              <option>Lulus</option>
             </select>
           </div>
-        </div>
-        <div class="form-row">
-          <div class="form-group">
-            <label>Status Awal</label>
-            <select id="siswaStatusAwal">
-              <option value="Siswa Baru">Siswa Baru</option>
-              <option value="Pindahan">Pindahan</option>
-            </select>
-          </div>
-          <div class="form-group">
-            <label>Tgl Mulai Sekolah</label>
-            <input type="date" id="siswaMulaiSekolah">
-          </div>
-        </div>
-        <div class="form-group">
-          <label>Asal Sekolah <span style="font-weight:400;color:#94a3b8;">(wajib jika Pindahan)</span></label>
-          <input type="text" id="siswaAsalSekolah" placeholder="Nama sekolah asal">
         </div>
         <div class="form-row">
           <div class="form-group">
@@ -2983,7 +2885,7 @@
           <div class="form-group">
             <label>Status Awal</label>
             <select id="lulusanStatusAwal">
-              <option value="Siswa Baru">Siswa Baru</option>
+              <option value="Baru">Baru</option>
               <option value="Pindahan">Pindahan</option>
             </select>
           </div>
@@ -2995,15 +2897,6 @@
               <option value="Tidak Lulus">Tidak Lulus</option>
             </select>
           </div>
-        </div>
-        <div class="form-group">
-          <label>Predikat</label>
-          <select id="lulusanPredikat">
-            <option value="">- Pilih -</option>
-            <option value="MEMUASKAN">MEMUASKAN</option>
-            <option value="BAIK">BAIK</option>
-            <option value="CUKUP">CUKUP</option>
-          </select>
         </div>
         <div class="form-group">
           <label>Asal Sekolah</label>
@@ -3065,7 +2958,7 @@
 
   <!-- ========== MODAL PERIODE ========== -->
   <div class="modal-overlay" id="modalPeriode">
-    <div class="modal modal-lg">
+    <div class="modal">
       <div class="modal-header">
         <h3 id="modalPeriodeTitle">Tambah Periode</h3>
         <button class="modal-close" data-close="modalPeriode">&times;</button>
@@ -3103,41 +2996,6 @@
           <div class="form-group">
             <label>Tanggal Naik Kelas</label>
             <input type="date" id="periodeTglNaik">
-          </div>
-        </div>
-        <div style="font-size:12px;font-weight:700;color:#1e40af;margin:4px 0 8px;padding:8px 10px;background:#eff6ff;border-radius:8px;">
-          📢 Jadwal Pengumuman Kelulusan (rentang tanggal + jam)
-        </div>
-        <div class="form-row">
-          <div class="form-group">
-            <label>Pengumuman Mulai</label>
-            <input type="datetime-local" id="periodePgMulai">
-          </div>
-          <div class="form-group">
-            <label>Pengumuman Berakhir</label>
-            <input type="datetime-local" id="periodePgAkhir">
-          </div>
-        </div>
-        <p style="font-size:11px;color:#64748b;margin:-4px 0 12px;line-height:1.4;">
-          Contoh: 5 Juli 2027 09:00 s/d 7 Juli 2027 23:59. Di luar rentang ini, siswa tidak bisa melihat hasil pengumuman.
-          Jika dikosongkan, sistem memakai default: tanggal kelulusan pukul 09:00 s/d +2 hari pukul 23:59.
-        </p>
-        <div class="form-group">
-          <label>SK Kelulusan</label>
-          <input type="text" id="periodeSkKelulusan" placeholder="Nomor SK Kelulusan">
-        </div>
-        <div class="form-group">
-          <label>SK Naik Kelas</label>
-          <input type="text" id="periodeSkNaikKelas" placeholder="Nomor SK Naik Kelas">
-        </div>
-        <div class="form-row">
-          <div class="form-group">
-            <label>Nama Kepsek</label>
-            <input type="text" id="periodeNamaKepsek" placeholder="Nama Kepala Sekolah">
-          </div>
-          <div class="form-group">
-            <label>NIP Kepsek</label>
-            <input type="text" id="periodeNipKepsek" placeholder="NIP Kepala Sekolah">
           </div>
         </div>
       </div>
@@ -3657,10 +3515,9 @@
     // guest | siswa | guru | admin
     let currentRole = 'guest';
     let currentUserName = 'Tamu (Belum Login)';
-    let currentUserId = null; // id di tabel siswa/guru/admin (atau lulusan jika alumni)
+    let currentUserId = null; // id di tabel siswa/guru/admin
     let currentUserKode = null; // NISN atau PIN/NIP
     let currentUserKelas = null;
-    let currentUserIsAlumni = false; // true jika login lewat tabel lulusan
     const SESSION_KEY = 'smpn_session';
 
     const ROLE_DATA = {
@@ -3681,8 +3538,7 @@
         avatar: ROLE_DATA[currentRole]?.avatar || '?',
         userId: currentUserId,
         kode: currentUserKode,
-        kelas: currentUserKelas,
-        isAlumni: !!currentUserIsAlumni
+        kelas: currentUserKelas
       }));
     }
 
@@ -3699,13 +3555,6 @@
     // skipRedirect = true → jangan pindah ke dashboard (untuk restore saat refresh)
     function applyRole(role, skipRedirect) {
       currentRole = role;
-      if (role === 'guest') {
-        currentUserIsAlumni = false;
-        currentUserId = null;
-        currentUserKode = null;
-        currentUserKelas = null;
-        if (ROLE_DATA.siswa) ROLE_DATA.siswa.label = 'Siswa';
-      }
 
       const isLoggedIn = role !== 'guest';
       const btnToggle = document.getElementById('btnToggle');
@@ -3913,78 +3762,12 @@
 
           // --- Cek di tabel siswa (NISN) ---
           if (!role) {
-            // Coba exact string, lalu fallback ilike (jaga-jaga format NISN)
-            let siswaData = null;
-            let siswaErr = null;
-            {
-              const r1 = await supabaseClient
-                .from('siswa').select('id, nama, nisn, kelas').eq('nisn', kode).maybeSingle();
-              siswaData = r1.data;
-              siswaErr = r1.error;
-            }
-            if (!siswaData && !siswaErr) {
-              const r2 = await supabaseClient
-                .from('siswa').select('id, nama, nisn, kelas').eq('nisn', String(Number(kode) || kode)).maybeSingle();
-              siswaData = r2.data;
-            }
+            const { data: siswaData } = await supabaseClient
+              .from('siswa').select('id, nama, nisn').eq('nisn', kode).maybeSingle();
             if (siswaData) {
               role = 'siswa';
               userName = siswaData.nama;
               userId = siswaData.id;
-              window._loginKelas = siswaData.kelas || null;
-              window._loginNisn = siswaData.nisn || kode;
-              window._loginIsAlumni = false;
-            } else if (siswaErr) {
-              console.warn('login siswa:', siswaErr.message || siswaErr);
-            }
-          }
-
-          // --- Cek di tabel lulusan (NISN) — tanpa dobel data di siswa ---
-          // PENTING: jangan select kolom yang mungkin belum ada (kelas_akhir, predikat)
-          // karena PostgREST akan error → login gagal.
-          if (!role) {
-            let lusData = null;
-            let lusErr = null;
-            // 1) exact match
-            {
-              const r = await supabaseClient
-                .from('lulusan').select('id, nama, nisn, kelas, status_kelulusan')
-                .eq('nisn', kode).limit(1);
-              if (r.error) {
-                lusErr = r.error;
-                console.warn('login lulusan:', r.error.message || r.error);
-              } else if (r.data && r.data.length) {
-                lusData = r.data[0];
-              }
-            }
-            // 2) fallback: nisn sebagai number-string
-            if (!lusData && !lusErr) {
-              const r = await supabaseClient
-                .from('lulusan').select('id, nama, nisn, kelas, status_kelulusan')
-                .eq('nisn', String(Number(kode) || kode)).limit(1);
-              if (r.data && r.data.length) lusData = r.data[0];
-            }
-            // 3) fallback: ilike (jika disimpan dengan spasi/format lain)
-            if (!lusData && !lusErr) {
-              const r = await supabaseClient
-                .from('lulusan').select('id, nama, nisn, kelas, status_kelulusan')
-                .ilike('nisn', kode).limit(1);
-              if (r.data && r.data.length) lusData = r.data[0];
-            }
-            if (lusData) {
-              role = 'siswa';
-              userName = lusData.nama;
-              userId = lusData.id;
-              window._loginKelas = lusData.kelas || '9';
-              window._loginNisn = lusData.nisn || kode;
-              window._loginIsAlumni = true;
-            } else if (lusErr) {
-              // Jika error RLS / permission, beri petunjuk jelas
-              const em = String(lusErr.message || lusErr);
-              if (/permission|policy|RLS|row-level/i.test(em)) {
-                alert('Gagal membaca data lulusan (izin database).\n\nDi Supabase SQL Editor jalankan:\n\nALTER TABLE public.lulusan ENABLE ROW LEVEL SECURITY;\nCREATE POLICY "lulusan_select_public" ON public.lulusan FOR SELECT USING (true);\n\nDetail: ' + em);
-                return;
-              }
             }
           }
         } else {
@@ -3999,31 +3782,20 @@
         }
 
         if (!role) {
-          alert('NISN / PIN tidak dikenali.\n\nPastikan NISN benar.\nJika siswa sudah diluluskan, data harus ada di menu Admin → Data Lulusan.\n\nDemo:\nSiswa = 0123456789\nGuru = 123456\nAdmin = 456789');
+          alert('NISN / PIN tidak dikenali.\n\nDemo:\nSiswa = 0123456789\nGuru = 123456\nAdmin = 456789');
           return;
         }
         currentUserId = userId;
         currentUserKode = kode;
         currentUserKelas = window._loginKelas || null;
-        currentUserIsAlumni = !!window._loginIsAlumni;
         if (window._loginNisn) currentUserKode = window._loginNisn;
-        // bersihkan flag sementara
-        window._loginIsAlumni = false;
-        window._loginKelas = null;
-        window._loginNisn = null;
 
         // Update nama di ROLE_DATA agar tampil nama asli dari database
         if (userName) ROLE_DATA[role].name = userName;
-        if (currentUserIsAlumni && role === 'siswa') {
-          ROLE_DATA[role].label = 'Alumni';
-        } else if (role === 'siswa') {
-          ROLE_DATA[role].label = 'Siswa';
-        }
 
         applyRole(role); // simpan sesi + ke dashboard
         closeModal('modalLogin');
-        const extra = currentUserIsAlumni ? '\n(Alumni / Lulusan)' : '';
-        alert('Login berhasil sebagai ' + ROLE_DATA[role].label + (userName ? '\n' + userName : '') + extra);
+        alert('Login berhasil sebagai ' + ROLE_DATA[role].label + (userName ? '\n' + userName : ''));
       } catch (err) {
         console.error(err);
         alert('Gagal terhubung ke server. Coba lagi atau periksa konfigurasi Supabase.');
@@ -4080,7 +3852,6 @@
       if (pageId === 'data-guru') loadGuru();
       if (pageId === 'data-lulusan') loadLulusan();
       if (pageId === 'validasi-lulusan') initValidasiLulusanPage();
-      if (pageId === 'kelulusan') initPengumumanKelulusan();
       if (pageId === 'input-nilai' || pageId === 'daftar-nilai') initNilaiPage(pageId);
       if (pageId === 'nilai-saya') loadNilaiSaya();
       if (pageId === 'set-mapel') loadMapelTable();
@@ -4235,40 +4006,6 @@
       renderSiswa();
     }
 
-    /** Samakan label status awal: Baru / Siswa Baru → "Siswa Baru" */
-    function normStatusAwal(v) {
-      const s = String(v || '').trim();
-      if (!s) return '';
-      if (/^baru$/i.test(s) || /siswa\s*baru/i.test(s)) return 'Siswa Baru';
-      if (/pindah/i.test(s)) return 'Pindahan';
-      return s;
-    }
-
-    /** Hitung lama belajar untuk lulusan */
-    function hitungLamaBelajar(statusAwal, tglMulai, tglLulus) {
-      const sa = normStatusAwal(statusAwal);
-      if (sa === 'Siswa Baru') return '3 Tahun';
-      const a = String(tglMulai || '').slice(0, 10);
-      const b = String(tglLulus || '').slice(0, 10);
-      if (!a || !b) return null;
-      const d1 = new Date(a + 'T00:00:00');
-      const d2 = new Date(b + 'T00:00:00');
-      if (isNaN(d1.getTime()) || isNaN(d2.getTime()) || d2 < d1) return null;
-      let years = d2.getFullYear() - d1.getFullYear();
-      let months = d2.getMonth() - d1.getMonth();
-      if (d2.getDate() < d1.getDate()) months -= 1;
-      if (months < 0) { years -= 1; months += 12; }
-      if (years < 0) return null;
-      if (years === 0 && months === 0) return '0 Tahun';
-      if (years === 0) return months + ' Bulan';
-      if (months === 0) return years + ' Tahun';
-      return years + ' Tahun ' + months + ' Bulan';
-    }
-
-    function tglMulaiSiswa(s) {
-      return String(s.mulai_sekolah || s.tgl_mulai_sekolah || '').slice(0, 10);
-    }
-
     function renderSiswa() {
       const q = (document.getElementById('cariSiswa')?.value || '').trim().toLowerCase();
       let filtered = q
@@ -4281,28 +4018,22 @@
       document.getElementById('infoSiswa').textContent = filtered.length + (q ? ' ditemukan' : ' data');
       document.getElementById('checkAllSiswa').checked = false;
       if (!filtered.length) {
-        tbody.innerHTML = '<tr><td colspan="13" style="text-align:center;padding:24px;color:#94a3b8;">' + (q ? 'Tidak ditemukan' : 'Belum ada data') + '</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="10" style="text-align:center;padding:24px;color:#94a3b8;">' + (q ? 'Tidak ditemukan' : 'Belum ada data') + '</td></tr>';
         return;
       }
-      tbody.innerHTML = filtered.map((s, i) => {
-        const stAwal = normStatusAwal(s.status_awal) || '-';
-        const mulai = tglMulaiSiswa(s) || '-';
-        return '<tr data-id="' + s.id + '">' +
-          '<td><input type="checkbox" class="cb-siswa" value="' + s.id + '"></td>' +
-          '<td>' + (i + 1) + '</td>' +
-          '<td>' + esc(s.nama) + '</td>' +
-          '<td>' + esc(s.lp || '') + '</td>' +
-          '<td>' + esc(s.nisn || '') + '</td>' +
-          '<td>' + esc(s.kelas || '') + '</td>' +
-          '<td>' + esc(s.tmp_lahir || '') + '</td>' +
-          '<td>' + esc(String(s.tgl_lahir || '').slice(0, 10)) + '</td>' +
-          '<td>' + esc(stAwal) + '</td>' +
-          '<td>' + esc(mulai) + '</td>' +
-          '<td style="max-width:120px;overflow:hidden;text-overflow:ellipsis;" title="' + esc(s.asal_sekolah || '') + '">' + esc(s.asal_sekolah || '-') + '</td>' +
-          '<td>' + esc(s.status || '') + '</td>' +
-          '<td>' + esc(s.no_hp || '') + '</td>' +
-          '</tr>';
-      }).join('');
+      tbody.innerHTML = filtered.map((s, i) => `
+        <tr data-id="${s.id}">
+          <td><input type="checkbox" class="cb-siswa" value="${s.id}"></td>
+          <td>${i + 1}</td>
+          <td>${esc(s.nama)}</td>
+          <td>${s.lp || ''}</td>
+          <td>${s.nisn || ''}</td>
+          <td>${s.kelas || ''}</td>
+          <td>${s.tmp_lahir || ''}</td>
+          <td>${s.tgl_lahir || ''}</td>
+          <td>${s.status || ''}</td>
+          <td>${s.no_hp || ''}</td>
+        </tr>`).join('');
     }
 
     document.getElementById('cariSiswa').addEventListener('input', renderSiswa);
@@ -4375,22 +4106,10 @@
     document.getElementById('btnTambahSiswa').addEventListener('click', () => {
       document.getElementById('modalSiswaTitle').textContent = 'Tambah Siswa';
       document.getElementById('siswaId').value = '';
-      ['siswaNama','siswaNisn','siswaTmpLahir','siswaTglLahir','siswaAlamat','siswaAyah','siswaIbu','siswaHp','siswaAsalSekolah','siswaMulaiSekolah'].forEach(id => {
-        const el = document.getElementById(id);
-        if (el) el.value = '';
-      });
+      ['siswaNama','siswaNisn','siswaTmpLahir','siswaTglLahir','siswaAlamat','siswaAyah','siswaIbu','siswaHp'].forEach(id => document.getElementById(id).value = '');
       document.getElementById('siswaLp').value = 'L';
       document.getElementById('siswaKelas').value = '';
       document.getElementById('siswaStatus').value = 'Aktif';
-      document.getElementById('siswaStatusAwal').value = 'Siswa Baru';
-      // Default tgl mulai = tanggal_mulai periode aktif (jika ada)
-      (async () => {
-        try {
-          if (!aktifPeriode) await loadAktifPeriode();
-          const tm = aktifPeriode && (aktifPeriode.tanggal_mulai || aktifPeriode.tgl_mulai);
-          if (tm) document.getElementById('siswaMulaiSekolah').value = String(tm).slice(0, 10);
-        } catch (e) {}
-      })();
       openModal('modalSiswa');
     });
 
@@ -4408,11 +4127,8 @@
       document.getElementById('siswaNisn').value = s.nisn || '';
       document.getElementById('siswaKelas').value = s.kelas || '';
       document.getElementById('siswaStatus').value = s.status || 'Aktif';
-      document.getElementById('siswaStatusAwal').value = normStatusAwal(s.status_awal) || 'Siswa Baru';
-      document.getElementById('siswaMulaiSekolah').value = tglMulaiSiswa(s) || '';
-      document.getElementById('siswaAsalSekolah').value = s.asal_sekolah || '';
       document.getElementById('siswaTmpLahir').value = s.tmp_lahir || '';
-      document.getElementById('siswaTglLahir').value = String(s.tgl_lahir || '').slice(0, 10);
+      document.getElementById('siswaTglLahir').value = s.tgl_lahir || '';
       document.getElementById('siswaAlamat').value = s.alamat || '';
       document.getElementById('siswaAyah').value = s.nama_ayah || '';
       document.getElementById('siswaIbu').value = s.nama_ibu || '';
@@ -4423,16 +4139,12 @@
     // ----- SISWA: Simpan -----
     document.getElementById('btnSaveSiswa').addEventListener('click', async () => {
       const id = document.getElementById('siswaId').value;
-      const statusAwal = document.getElementById('siswaStatusAwal')?.value || 'Siswa Baru';
       const payload = {
         nama: document.getElementById('siswaNama').value.trim(),
         lp: document.getElementById('siswaLp').value,
         nisn: document.getElementById('siswaNisn').value.trim(),
         kelas: document.getElementById('siswaKelas').value || null,
         status: document.getElementById('siswaStatus').value,
-        status_awal: statusAwal,
-        mulai_sekolah: document.getElementById('siswaMulaiSekolah')?.value || null,
-        asal_sekolah: document.getElementById('siswaAsalSekolah')?.value.trim() || null,
         tmp_lahir: document.getElementById('siswaTmpLahir').value.trim() || null,
         tgl_lahir: document.getElementById('siswaTglLahir').value || null,
         alamat: document.getElementById('siswaAlamat').value.trim() || null,
@@ -4441,18 +4153,6 @@
         no_hp: document.getElementById('siswaHp').value.trim() || null
       };
       if (!payload.nama || !payload.nisn) { alert('Nama dan NISN wajib diisi'); return; }
-      if (normStatusAwal(statusAwal) === 'Pindahan' && !payload.asal_sekolah) {
-        alert('Asal Sekolah wajib diisi untuk siswa Pindahan');
-        return;
-      }
-      if (normStatusAwal(statusAwal) === 'Siswa Baru' && !payload.mulai_sekolah) {
-        // isi default dari periode aktif
-        try {
-          if (aktifPeriode && (aktifPeriode.tanggal_mulai || aktifPeriode.tgl_mulai)) {
-            payload.mulai_sekolah = String(aktifPeriode.tanggal_mulai || aktifPeriode.tgl_mulai).slice(0, 10);
-          }
-        } catch (e) {}
-      }
 
       try {
         if (supabaseClient) {
@@ -4502,7 +4202,7 @@
     });
 
     // ----- IMPORT Excel (dialog + contoh format) -----
-    let importTarget = null; // 'siswa' | 'guru' | 'lulusan'
+    let importTarget = null; // 'siswa' | 'guru' | 'lulusan' | 'nilai'
 
     const IMPORT_CONTOH = {
       siswa: {
@@ -4522,6 +4222,12 @@
         filename: 'contoh_lulusan.xlsx',
         headers: ['nisn','nama','lp','tmp_lahir','tgl_lahir','tgl_mulai_sekolah','tanggal_lulus','tahun_lulus','lama_belajar','status_awal','asal_sekolah'],
         sample: ['0012345678','Ahmad Rizki','L','Bandung','2008-03-12','2021-07-15','2024-06-20','2024','3 Tahun','Baru','SDN 1 Bandung']
+      },
+      nilai: {
+        title: 'Import Nilai',
+        filename: 'contoh_import_nilai.xlsx',
+        headers: ['nisn','nama','nilai'],
+        sample: ['0123456789','Andi Pratama',85]
       }
     };
 
@@ -4529,6 +4235,17 @@
       importTarget = target;
       const cfg = IMPORT_CONTOH[target];
       document.getElementById('modalImportTitle').textContent = cfg.title;
+      const desc = document.getElementById('modalImportDesc');
+      if (desc) {
+        if (target === 'nilai') {
+          desc.innerHTML =
+            'Format kolom: <b>nisn</b>, <b>nama</b>, <b>nilai</b>.<br>' +
+            'Mapel, Kelas, Jenis &amp; Penilaian Ke diambil dari filter yang dipilih di halaman Input Nilai.<br>' +
+            'Download contoh, isi nilai, lalu pilih file .xlsx / .csv.';
+        } else {
+          desc.textContent = 'Download contoh format Excel, isi data, lalu pilih file .xlsx untuk diimpor.';
+        }
+      }
       openModal('modalImport');
     }
 
@@ -4582,6 +4299,7 @@
         if (importTarget === 'siswa') await handleImportSiswa(file);
         else if (importTarget === 'guru') await handleImportGuru(file);
         else if (importTarget === 'lulusan') await handleImportLulusan(file);
+        else if (importTarget === 'nilai') await handleImportNilai(file);
       } catch (e) {
         alert('Gagal baca file: ' + (e.message || e));
       }
@@ -4891,9 +4609,9 @@
     // ============================================================
     let dataLulusan = [];
     const DEMO_LULUSAN = [
-      { id: 1, nisn: '0012345678', nama: 'Ahmad Rizki', lp: 'L', tmp_lahir: 'Bandung', tgl_lahir: '2008-03-12', tgl_mulai_sekolah: '2021-07-15', tanggal_lulus: '2024-06-20', tahun_lulus: 2024, lama_belajar: '3 Tahun', status_awal: 'Baru', asal_sekolah: 'SDN 1 Bandung', status_kelulusan: 'Lulus', predikat: 'BAIK' },
-      { id: 2, nisn: '0012345679', nama: 'Siti Nurhaliza', lp: 'P', tmp_lahir: 'Jakarta', tgl_lahir: '2008-08-25', tgl_mulai_sekolah: '2021-07-15', tanggal_lulus: '2024-06-20', tahun_lulus: 2024, lama_belajar: '3 Tahun', status_awal: 'Baru', asal_sekolah: 'SDN 5 Jakarta', status_kelulusan: 'Lulus', predikat: 'MEMUASKAN' },
-      { id: 3, nisn: '0012345680', nama: 'Budi Setiawan', lp: 'L', tmp_lahir: 'Bogor', tgl_lahir: '2007-11-05', tgl_mulai_sekolah: '2020-07-15', tanggal_lulus: '2023-06-18', tahun_lulus: 2023, lama_belajar: '3 Tahun', status_awal: 'Pindahan', asal_sekolah: 'SMPN 2 Bogor', status_kelulusan: 'Lulus', predikat: 'CUKUP' }
+      { id: 1, nisn: '0012345678', nama: 'Ahmad Rizki', lp: 'L', tmp_lahir: 'Bandung', tgl_lahir: '2008-03-12', tgl_mulai_sekolah: '2021-07-15', tanggal_lulus: '2024-06-20', tahun_lulus: 2024, lama_belajar: '3 Tahun', status_awal: 'Baru', asal_sekolah: 'SDN 1 Bandung' },
+      { id: 2, nisn: '0012345679', nama: 'Siti Nurhaliza', lp: 'P', tmp_lahir: 'Jakarta', tgl_lahir: '2008-08-25', tgl_mulai_sekolah: '2021-07-15', tanggal_lulus: '2024-06-20', tahun_lulus: 2024, lama_belajar: '3 Tahun', status_awal: 'Baru', asal_sekolah: 'SDN 5 Jakarta' },
+      { id: 3, nisn: '0012345680', nama: 'Budi Setiawan', lp: 'L', tmp_lahir: 'Bogor', tgl_lahir: '2007-11-05', tgl_mulai_sekolah: '2020-07-15', tanggal_lulus: '2023-06-18', tahun_lulus: 2023, lama_belajar: '3 Tahun', status_awal: 'Pindahan', asal_sekolah: 'SMPN 2 Bogor' }
     ];
 
     async function loadLulusan() {
@@ -4925,7 +4643,7 @@
       document.getElementById('infoLulusan').textContent = filtered.length + (q ? ' ditemukan' : ' data');
       document.getElementById('checkAllLulusan').checked = false;
       if (!filtered.length) {
-        tbody.innerHTML = '<tr><td colspan="15" style="text-align:center;padding:24px;color:#94a3b8;">' + (q ? 'Tidak ditemukan' : 'Belum ada data') + '</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="14" style="text-align:center;padding:24px;color:#94a3b8;">' + (q ? 'Tidak ditemukan' : 'Belum ada data') + '</td></tr>';
         return;
       }
       tbody.innerHTML = filtered.map((s, i) => {
@@ -4933,11 +4651,6 @@
         let stColor = '#166534', stBg = '#dcfce7';
         if (st === 'Ditangguhkan') { stColor = '#a16207'; stBg = '#fef3c7'; }
         if (st === 'Tidak Lulus') { stColor = '#b91c1c'; stBg = '#fee2e2'; }
-        const pred = String(s.predikat || '').toUpperCase();
-        let predColor = '#64748b';
-        if (pred === 'MEMUASKAN') predColor = '#2563eb';
-        else if (pred === 'BAIK') predColor = '#16a34a';
-        else if (pred === 'CUKUP') predColor = '#ea580c';
         return '<tr data-id="' + s.id + '">' +
           '<td><input type="checkbox" class="cb-lulusan" value="' + s.id + '"></td>' +
           '<td>' + (i + 1) + '</td>' +
@@ -4945,7 +4658,6 @@
           '<td>' + esc(s.nama || '') + '</td>' +
           '<td>' + esc(s.lp || '') + '</td>' +
           '<td><span style="background:' + stBg + ';color:' + stColor + ';padding:2px 6px;border-radius:6px;font-size:10px;font-weight:600;">' + esc(st) + '</span></td>' +
-          '<td style="font-weight:700;color:' + predColor + ';">' + esc(pred || '-') + '</td>' +
           '<td>' + esc(s.tmp_lahir || '') + '</td>' +
           '<td>' + esc(String(s.tgl_lahir || '').slice(0, 10)) + '</td>' +
           '<td>' + esc(String(s.tgl_mulai_sekolah || '').slice(0, 10)) + '</td>' +
@@ -4972,34 +4684,10 @@
       });
       const sk = document.getElementById('lulusanStatusKelulusan');
       if (sk) sk.value = 'Lulus';
-      const pr0 = document.getElementById('lulusanPredikat');
-      if (pr0) pr0.value = 'BAIK';
-      const sa0 = document.getElementById('lulusanStatusAwal');
-      if (sa0) sa0.value = 'Siswa Baru';
-      const lm0 = document.getElementById('lulusanLama');
-      if (lm0) lm0.value = '3 Tahun';
-      // default tgl lulus dari periode aktif
-      (async () => {
-        try {
-          if (!aktifPeriode) await loadAktifPeriode();
-          if (aktifPeriode) {
-            const tl = aktifPeriode.tanggal_kelulusan || aktifPeriode.tgl_kelulusan;
-            if (tl && document.getElementById('lulusanTglLulus')) {
-              document.getElementById('lulusanTglLulus').value = String(tl).slice(0, 10);
-            }
-            const th = tl ? String(tl).slice(0, 4) : '';
-            if (th && document.getElementById('lulusanTahun')) document.getElementById('lulusanTahun').value = th;
-            const tm = aktifPeriode.tanggal_mulai || aktifPeriode.tgl_mulai;
-            if (tm && document.getElementById('lulusanTglMulai') && !document.getElementById('lulusanTglMulai').value) {
-              document.getElementById('lulusanTglMulai').value = String(tm).slice(0, 10);
-            }
-          }
-        } catch (e) {}
-      })();
       const sa = document.getElementById('lulusanStatusAwal');
       if (sa) sa.value = 'Baru';
       document.getElementById('lulusanLp').value = 'L';
-      document.getElementById('lulusanStatusAwal').value = 'Siswa Baru';
+      document.getElementById('lulusanStatusAwal').value = 'Baru';
       openModal('modalLulusan');
     });
 
@@ -5021,12 +4709,10 @@
       document.getElementById('lulusanTglLulus').value = String(s.tanggal_lulus || '').slice(0, 10);
       document.getElementById('lulusanTahun').value = s.tahun_lulus || '';
       document.getElementById('lulusanLama').value = s.lama_belajar || '';
-      document.getElementById('lulusanStatusAwal').value = normStatusAwal(s.status_awal) || 'Siswa Baru';
+      document.getElementById('lulusanStatusAwal').value = s.status_awal || 'Baru';
       document.getElementById('lulusanAsal').value = s.asal_sekolah || '';
       const sk = document.getElementById('lulusanStatusKelulusan');
       if (sk) sk.value = s.status_kelulusan || s.status_lulus || 'Lulus';
-      const pr = document.getElementById('lulusanPredikat');
-      if (pr) pr.value = s.predikat || '';
       openModal('modalLulusan');
     });
 
@@ -5043,20 +4729,10 @@
         tanggal_lulus: document.getElementById('lulusanTglLulus').value || null,
         tahun_lulus: parseInt(document.getElementById('lulusanTahun').value) || null,
         lama_belajar: document.getElementById('lulusanLama').value.trim() || null,
-        status_awal: normStatusAwal(document.getElementById('lulusanStatusAwal')?.value) || null,
+        status_awal: document.getElementById('lulusanStatusAwal').value || null,
         status_kelulusan: document.getElementById('lulusanStatusKelulusan')?.value || 'Lulus',
-        predikat: document.getElementById('lulusanPredikat')?.value || null,
         asal_sekolah: document.getElementById('lulusanAsal').value.trim() || null
       };
-      // Auto lama belajar jika kosong
-      if (!payload.lama_belajar) {
-        payload.lama_belajar = hitungLamaBelajar(payload.status_awal, payload.tgl_mulai_sekolah, payload.tanggal_lulus)
-          || (normStatusAwal(payload.status_awal) === 'Siswa Baru' ? '3 Tahun' : null);
-      }
-      // Tahun lulus dari tanggal lulus (relasi periode)
-      if (!payload.tahun_lulus && payload.tanggal_lulus) {
-        payload.tahun_lulus = Number(String(payload.tanggal_lulus).slice(0, 4)) || null;
-      }
       if (!payload.nama) { alert('Nama wajib diisi'); return; }
       try {
         if (supabaseClient) {
@@ -5080,31 +4756,11 @@
         await loadLulusan();
         alert(id ? 'Data berhasil diubah' : 'Data berhasil ditambah');
       } catch (e) {
-        const msg = String(e.message || e);
-        if (/predikat|column/i.test(msg)) {
-          alert('Gagal simpan: kolom predikat belum ada di database.\n\nJalankan SQL di Supabase:\n\nALTER TABLE public.lulusan\n  ADD COLUMN IF NOT EXISTS predikat text;\n\nDetail: ' + msg);
-        } else {
-          alert('Gagal simpan: ' + msg);
-        }
+        alert('Gagal simpan: ' + (e.message || e));
       }
     });
 
     // Hapus
-    
-    function refreshLulusanLamaBelajar() {
-      const sa = document.getElementById('lulusanStatusAwal')?.value;
-      const mulai = document.getElementById('lulusanTglMulai')?.value;
-      const lulus = document.getElementById('lulusanTglLulus')?.value;
-      const el = document.getElementById('lulusanLama');
-      if (!el) return;
-      const hitung = hitungLamaBelajar(sa, mulai, lulus);
-      if (hitung) el.value = hitung;
-      else if (normStatusAwal(sa) === 'Siswa Baru') el.value = '3 Tahun';
-    }
-    ['lulusanStatusAwal', 'lulusanTglMulai', 'lulusanTglLulus'].forEach(id => {
-      document.getElementById(id)?.addEventListener('change', refreshLulusanLamaBelajar);
-    });
-
     document.getElementById('btnHapusLulusan').addEventListener('click', async () => {
       const ids = getChecked('cb-lulusan');
       if (!ids.length) { alert('Centang data yang ingin dihapus'); return; }
@@ -5354,6 +5010,140 @@
         alert('Gagal simpan: ' + (e.message || e));
       }
     });
+
+    document.getElementById('btnImportNilai')?.addEventListener('click', () => {
+      const mapelId = document.getElementById('inMapel')?.value;
+      const kelas = document.getElementById('inKelas')?.value;
+      if (!mapelId || !kelas) {
+        alert('Pilih Mapel dan Kelas dulu sebelum import nilai');
+        return;
+      }
+      if (!aktifPeriode) {
+        alert('Belum ada periode aktif');
+        return;
+      }
+      openImportDialog('nilai');
+    });
+
+    async function handleImportNilai(file) {
+      const mapelId = Number(document.getElementById('inMapel').value);
+      const kelas = document.getElementById('inKelas').value;
+      const jenis = document.getElementById('inJenis').value;
+      const ke = Number(document.getElementById('inKe').value) || 1;
+      if (!mapelId || !kelas) {
+        alert('Pilih Mapel dan Kelas terlebih dahulu');
+        return;
+      }
+      if (!aktifPeriode) {
+        alert('Belum ada periode aktif');
+        return;
+      }
+      try {
+        const rows = await bacaFileSpreadsheet(file);
+        if (!rows || rows.length < 2) {
+          alert('File kosong atau tidak ada data');
+          return;
+        }
+        // Header normalize
+        const header = rows[0].map(h => String(h || '').trim().toLowerCase());
+        let idxNisn = header.findIndex(h => h === 'nisn' || h === 'nis');
+        let idxNama = header.findIndex(h => h === 'nama' || h === 'name');
+        let idxNilai = header.findIndex(h => h === 'nilai' || h === 'score' || h === 'nilai_angka');
+        // Fallback posisi tetap: nisn, nama, nilai
+        if (idxNisn < 0) idxNisn = 0;
+        if (idxNama < 0) idxNama = 1;
+        if (idxNilai < 0) idxNilai = header.length > 2 ? 2 : (header.includes('nilai') ? header.indexOf('nilai') : 2);
+
+        const items = [];
+        for (let i = 1; i < rows.length; i++) {
+          const c = rows[i];
+          if (!c || !c.length) continue;
+          const nisn = String(c[idxNisn] != null ? c[idxNisn] : '').trim();
+          const nama = String(c[idxNama] != null ? c[idxNama] : '').trim();
+          let val = c[idxNilai];
+          if (val === undefined || val === null || String(val).trim() === '') continue;
+          const num = parseFloat(String(val).replace(',', '.'));
+          if (!nisn || isNaN(num) || num < 0 || num > 100) continue;
+          items.push({ nisn, nama, nilai: num });
+        }
+        if (!items.length) {
+          alert('Tidak ada baris valid.\nPastikan kolom: nisn, nama, nilai (0–100)');
+          return;
+        }
+
+        // Resolve siswa_id by NISN (prefer di kelas terpilih)
+        const nisnList = [...new Set(items.map(x => x.nisn))];
+        let siswaMap = {}; // nisn -> {id, nama, kelas}
+        if (supabaseClient) {
+          const { data: ss, error } = await supabaseClient
+            .from('siswa').select('id, nisn, nama, kelas')
+            .in('nisn', nisnList);
+          if (error) throw error;
+          (ss || []).forEach(s => {
+            siswaMap[String(s.nisn)] = s;
+          });
+        } else {
+          if (!dataSiswa.length) await loadSiswa();
+          dataSiswa.forEach(s => {
+            if (nisnList.includes(String(s.nisn))) siswaMap[String(s.nisn)] = s;
+          });
+        }
+
+        const payload = [];
+        const skip = [];
+        items.forEach(it => {
+          const s = siswaMap[it.nisn];
+          if (!s) {
+            skip.push(it.nisn + ' (tidak ada di data siswa)');
+            return;
+          }
+          // Opsional: peringatan beda kelas, tetap simpan dengan kelas filter
+          payload.push({
+            periode_id: aktifPeriode.id,
+            siswa_id: Number(s.id),
+            mapel_id: mapelId,
+            kelas: kelas,
+            jenis: jenis,
+            ke: ke,
+            nilai: it.nilai,
+            updated_at: new Date().toISOString()
+          });
+        });
+
+        if (!payload.length) {
+          alert('Tidak ada siswa yang cocok NISN-nya.\nContoh tidak ketemu: ' + skip.slice(0, 5).join(', '));
+          return;
+        }
+
+        const mapelNama = document.getElementById('inMapel').selectedOptions[0]?.textContent || mapelId;
+        let msg = 'Import ' + payload.length + ' nilai\n' +
+          'Mapel: ' + mapelNama + '\nKelas: ' + kelas + '\nJenis: ' + jenis + ' ke-' + ke;
+        if (skip.length) msg += '\n\nDilewati ' + skip.length + ' baris (NISN tidak ditemukan)';
+        if (!(await showConfirm(msg + '\n\nLanjutkan?', 'Import Nilai', '📥'))) return;
+
+        if (supabaseClient) {
+          for (const r of payload) {
+            await supabaseClient.from('nilai')
+              .delete()
+              .eq('periode_id', r.periode_id)
+              .eq('siswa_id', r.siswa_id)
+              .eq('mapel_id', r.mapel_id)
+              .eq('jenis', r.jenis)
+              .eq('ke', r.ke);
+          }
+          const { error } = await supabaseClient.from('nilai').insert(payload);
+          if (error) throw error;
+        }
+
+        alert('Berhasil import ' + payload.length + ' nilai' +
+          (skip.length ? '\nDilewati: ' + skip.length : ''));
+        // Refresh tabel jika filter sama
+        document.getElementById('btnLoadSiswaNilai')?.click();
+      } catch (e) {
+        console.error(e);
+        alert('Gagal import nilai: ' + (e.message || e));
+      }
+    }
 
     // ----- DAFTAR NILAI (kolom dinamis + CRUD + Excel) -----
     let _dnState = {
@@ -6182,14 +5972,6 @@
       return true;
     }
 
-    // Data dummy default untuk field SK / Kepsek (boleh diganti lewat form)
-    const PERIODE_DUMMY = {
-      sk_kelulusan: '421.3/001/SMPN-PM/2027',
-      sk_naik_kelas: '421.3/002/SMPN-PM/2026',
-      nama_kepsek: 'Drs. Contoh Kepala Sekolah, M.Pd.',
-      nip_kepsek: '196501011990031001'
-    };
-
     async function loadPeriodeTable() {
       try {
         if (supabaseClient) {
@@ -6198,17 +5980,7 @@
           dataPeriode = data || [];
         } else {
           dataPeriode = [
-            {
-              id: 3, tahun_ajaran: '2026/2027', semester: 'Ganjil',
-              tanggal_mulai: '2026-07-14', tanggal_akhir: '2026-12-19',
-              tanggal_mulai_absen: '2026-07-14', tanggal_akhir_absen: '2026-12-19',
-              tanggal_kelulusan: '2026-06-15', tanggal_naik_kelas: '2026-06-20',
-              sk_kelulusan: PERIODE_DUMMY.sk_kelulusan,
-              sk_naik_kelas: PERIODE_DUMMY.sk_naik_kelas,
-              nama_kepsek: PERIODE_DUMMY.nama_kepsek,
-              nip_kepsek: PERIODE_DUMMY.nip_kepsek,
-              aktif: true
-            }
+            { id: 3, tahun_ajaran: '2026/2027', semester: 'Ganjil', tanggal_mulai: '2026-07-14', tanggal_akhir: '2026-12-19', tanggal_mulai_absen: '2026-07-14', tanggal_akhir_absen: '2026-12-19', tanggal_kelulusan: '2026-06-15', tanggal_naik_kelas: '2026-06-20', aktif: true }
           ];
         }
       } catch (e) { console.error(e); dataPeriode = []; }
@@ -6219,37 +5991,21 @@
       document.getElementById('infoPeriode').textContent = dataPeriode.length + ' data';
       document.getElementById('checkAllPeriode').checked = false;
       if (!dataPeriode.length) {
-        tbody.innerHTML = '<tr><td colspan="14" style="text-align:center;padding:16px;color:#94a3b8;">Belum ada data</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="9" style="text-align:center;padding:16px;color:#94a3b8;">Belum ada data</td></tr>';
         return;
       }
-      tbody.innerHTML = dataPeriode.map((p, i) => {
-        const skL = p.sk_kelulusan || '-';
-        const skN = p.sk_naik_kelas || '-';
-        const kep = p.nama_kepsek || '-';
-        const jm = (typeof getJadwalPengumuman === 'function') ? getJadwalPengumuman(p) : { mulai: null, akhir: null };
-        const pgM = p.pengumuman_mulai
-          ? (typeof fmtTglJamId === 'function' ? fmtTglJamId(parseLocalDateTime(p.pengumuman_mulai)) : String(p.pengumuman_mulai).replace('T', ' ').slice(0, 16))
-          : (jm.mulai && typeof fmtTglJamId === 'function' ? fmtTglJamId(jm.mulai) + ' *' : '-');
-        const pgA = p.pengumuman_akhir
-          ? (typeof fmtTglJamId === 'function' ? fmtTglJamId(parseLocalDateTime(p.pengumuman_akhir)) : String(p.pengumuman_akhir).replace('T', ' ').slice(0, 16))
-          : (jm.akhir && typeof fmtTglJamId === 'function' ? fmtTglJamId(jm.akhir) + ' *' : '-');
-        return '<tr data-id="' + p.id + '">' +
-          '<td><input type="checkbox" class="cb-periode-row" value="' + p.id + '"></td>' +
-          '<td>' + (i + 1) + '</td>' +
-          '<td>' + esc(p.tahun_ajaran) + '</td>' +
-          '<td>' + esc(p.semester) + '</td>' +
-          '<td>' + (p.tanggal_mulai || '-') + '</td>' +
-          '<td>' + (p.tanggal_akhir || '-') + '</td>' +
-          '<td>' + (p.tanggal_kelulusan || '-') + '</td>' +
-          '<td>' + (p.tanggal_naik_kelas || '-') + '</td>' +
-          '<td style="font-size:11px;white-space:nowrap;" title="' + esc(pgM) + '">' + esc(pgM) + '</td>' +
-          '<td style="font-size:11px;white-space:nowrap;" title="' + esc(pgA) + '">' + esc(pgA) + '</td>' +
-          '<td title="' + esc(skL) + '" style="max-width:100px;overflow:hidden;text-overflow:ellipsis;">' + esc(skL) + '</td>' +
-          '<td title="' + esc(skN) + '" style="max-width:100px;overflow:hidden;text-overflow:ellipsis;">' + esc(skN) + '</td>' +
-          '<td title="' + esc(kep) + (p.nip_kepsek ? ' / ' + p.nip_kepsek : '') + '" style="max-width:120px;overflow:hidden;text-overflow:ellipsis;">' + esc(kep) + '</td>' +
-          '<td>' + (p.aktif ? '<span class="badge-aktif">Aktif</span>' : '<span class="badge-nonaktif">Tidak</span>') + '</td>' +
-          '</tr>';
-      }).join('');
+      tbody.innerHTML = dataPeriode.map((p, i) => `
+        <tr data-id="${p.id}">
+          <td><input type="checkbox" class="cb-periode-row" value="${p.id}"></td>
+          <td>${i + 1}</td>
+          <td>${esc(p.tahun_ajaran)}</td>
+          <td>${esc(p.semester)}</td>
+          <td>${p.tanggal_mulai || '-'}</td>
+          <td>${p.tanggal_akhir || '-'}</td>
+          <td>${p.tanggal_kelulusan || '-'}</td>
+          <td>${p.tanggal_naik_kelas || '-'}</td>
+          <td>${p.aktif ? '<span class="badge-aktif">Aktif</span>' : '<span class="badge-nonaktif">Tidak</span>'}</td>
+        </tr>`).join('');
     }
     document.getElementById('checkAllPeriode').addEventListener('change', function () {
       document.querySelectorAll('.cb-periode-row').forEach(c => c.checked = this.checked);
@@ -6263,15 +6019,6 @@
       document.getElementById('periodeTglAkhir').value = '';
       document.getElementById('periodeTglLulus').value = '';
       document.getElementById('periodeTglNaik').value = '';
-      const pgM = document.getElementById('periodePgMulai');
-      const pgA = document.getElementById('periodePgAkhir');
-      if (pgM) pgM.value = '';
-      if (pgA) pgA.value = '';
-      // Prefill dummy — silakan diganti
-      document.getElementById('periodeSkKelulusan').value = PERIODE_DUMMY.sk_kelulusan;
-      document.getElementById('periodeSkNaikKelas').value = PERIODE_DUMMY.sk_naik_kelas;
-      document.getElementById('periodeNamaKepsek').value = PERIODE_DUMMY.nama_kepsek;
-      document.getElementById('periodeNipKepsek').value = PERIODE_DUMMY.nip_kepsek;
       openModal('modalPeriode');
     });
     document.getElementById('btnEditPeriode').addEventListener('click', () => {
@@ -6287,20 +6034,6 @@
       document.getElementById('periodeTglAkhir').value = p.tanggal_akhir || '';
       document.getElementById('periodeTglLulus').value = p.tanggal_kelulusan || '';
       document.getElementById('periodeTglNaik').value = p.tanggal_naik_kelas || '';
-      {
-        const pgM = document.getElementById('periodePgMulai');
-        const pgA = document.getElementById('periodePgAkhir');
-        const jm = getJadwalPengumuman(p);
-        if (pgM) pgM.value = p.pengumuman_mulai ? toDatetimeLocalValue(parseLocalDateTime(p.pengumuman_mulai)) : (jm.mulai ? toDatetimeLocalValue(jm.mulai) : '');
-        if (pgA) pgA.value = p.pengumuman_akhir ? toDatetimeLocalValue(parseLocalDateTime(p.pengumuman_akhir)) : (jm.akhir ? toDatetimeLocalValue(jm.akhir) : '');
-        // Jika kolom DB kosong, tampilkan fallback agar admin melihat default
-        if (pgM && !p.pengumuman_mulai && jm.mulai) pgM.value = toDatetimeLocalValue(jm.mulai);
-        if (pgA && !p.pengumuman_akhir && jm.akhir) pgA.value = toDatetimeLocalValue(jm.akhir);
-      }
-      document.getElementById('periodeSkKelulusan').value = p.sk_kelulusan || PERIODE_DUMMY.sk_kelulusan;
-      document.getElementById('periodeSkNaikKelas').value = p.sk_naik_kelas || PERIODE_DUMMY.sk_naik_kelas;
-      document.getElementById('periodeNamaKepsek').value = p.nama_kepsek || PERIODE_DUMMY.nama_kepsek;
-      document.getElementById('periodeNipKepsek').value = p.nip_kepsek || PERIODE_DUMMY.nip_kepsek;
       const pma = document.getElementById('periodeTglMulaiAbsen');
       const paa = document.getElementById('periodeTglAkhirAbsen');
       if (pma) pma.value = p.tanggal_mulai_absen || '';
@@ -6317,13 +6050,7 @@
         tanggal_mulai_absen: document.getElementById('periodeTglMulaiAbsen')?.value || null,
         tanggal_akhir_absen: document.getElementById('periodeTglAkhirAbsen')?.value || null,
         tanggal_kelulusan: document.getElementById('periodeTglLulus').value || null,
-        tanggal_naik_kelas: document.getElementById('periodeTglNaik').value || null,
-        pengumuman_mulai: document.getElementById('periodePgMulai')?.value || null,
-        pengumuman_akhir: document.getElementById('periodePgAkhir')?.value || null,
-        sk_kelulusan: (document.getElementById('periodeSkKelulusan')?.value || '').trim() || null,
-        sk_naik_kelas: (document.getElementById('periodeSkNaikKelas')?.value || '').trim() || null,
-        nama_kepsek: (document.getElementById('periodeNamaKepsek')?.value || '').trim() || null,
-        nip_kepsek: (document.getElementById('periodeNipKepsek')?.value || '').trim() || null
+        tanggal_naik_kelas: document.getElementById('periodeTglNaik').value || null
       };
       if (!payload.tahun_ajaran || !payload.semester) { alert('Tahun Ajaran dan Semester wajib'); return; }
       try {
@@ -6349,14 +6076,7 @@
         closeModal('modalPeriode');
         await loadPeriodeTable();
         alert(id ? 'Periode diubah' : 'Periode ditambah');
-      } catch (e) {
-        const msg = String(e.message || e);
-        if (/sk_kelulusan|sk_naik_kelas|nama_kepsek|nip_kepsek|pengumuman_mulai|pengumuman_akhir|column/i.test(msg)) {
-          alert('Gagal simpan: kolom periode belum lengkap di database.\n\nJalankan SQL di Supabase:\n\nALTER TABLE public.periode\n  ADD COLUMN IF NOT EXISTS sk_kelulusan text,\n  ADD COLUMN IF NOT EXISTS sk_naik_kelas text,\n  ADD COLUMN IF NOT EXISTS nama_kepsek text,\n  ADD COLUMN IF NOT EXISTS nip_kepsek text,\n  ADD COLUMN IF NOT EXISTS pengumuman_mulai timestamptz,\n  ADD COLUMN IF NOT EXISTS pengumuman_akhir timestamptz;\n\nDetail: ' + msg);
-        } else {
-          alert('Gagal: ' + msg);
-        }
-      }
+      } catch (e) { alert('Gagal: ' + (e.message || e)); }
     });
     document.getElementById('btnHapusPeriode').addEventListener('click', async () => {
       const ids = getChecked('cb-periode-row');
@@ -7679,115 +7399,22 @@
     function clearLiburCache() { _cacheLiburMap = null; }
 
     // ----- IZIN SIDIK JARI -----
-    let _izinFpMode = 'siswa'; // 'siswa' | 'guru'
-    let _izinFpAllowed = new Set(); // 'tipe:ref_id'
-
-    function setIzinFpMode(mode) {
-      _izinFpMode = mode === 'guru' ? 'guru' : 'siswa';
-      const btnS = document.getElementById('btnIzinFpSiswa');
-      const btnG = document.getElementById('btnIzinFpGuru');
-      const panelS = document.getElementById('izinFpPanelSiswa');
-      const panelG = document.getElementById('izinFpPanelGuru');
-      if (btnS) {
-        btnS.style.background = _izinFpMode === 'siswa' ? '#2563eb' : '#eff6ff';
-        btnS.style.color = _izinFpMode === 'siswa' ? '#fff' : '#1e40af';
-      }
-      if (btnG) {
-        btnG.style.background = _izinFpMode === 'guru' ? '#2563eb' : '#eff6ff';
-        btnG.style.color = _izinFpMode === 'guru' ? '#fff' : '#1e40af';
-      }
-      if (panelS) panelS.style.display = _izinFpMode === 'siswa' ? 'block' : 'none';
-      if (panelG) panelG.style.display = _izinFpMode === 'guru' ? 'block' : 'none';
-      renderIzinFpTables();
-    }
-
-    function updateInfoIzinFp() {
-      const n = _izinFpAllowed.size;
-      const el = document.getElementById('infoIzinFp');
-      if (el) el.textContent = n + ' dipilih';
-      const tipe = _izinFpMode;
-      const cbs = [...document.querySelectorAll('.cb-izin-fp[data-tipe="' + tipe + '"]')];
-      const all = document.getElementById(tipe === 'siswa' ? 'checkAllIzinFpSiswa' : 'checkAllIzinFpGuru');
-      if (all && cbs.length) {
-        all.checked = cbs.every(c => c.checked);
-        all.indeterminate = !all.checked && cbs.some(c => c.checked);
-      } else if (all) {
-        all.checked = false;
-        all.indeterminate = false;
-      }
-    }
-
-    function onIzinFpCbChange(cb) {
-      const key = cb.dataset.tipe + ':' + cb.dataset.ref;
-      if (cb.checked) _izinFpAllowed.add(key);
-      else _izinFpAllowed.delete(key);
-      updateInfoIzinFp();
-    }
-
-    function renderIzinFpTables() {
-      const siswa = (dataIzinFp || []).filter(u => u.tipe === 'siswa');
-      const guru = (dataIzinFp || []).filter(u => u.tipe === 'guru');
-
-      const tbodyS = document.getElementById('tbodyIzinFpSiswa');
-      const tbodyG = document.getElementById('tbodyIzinFpGuru');
-      if (tbodyS) {
-        if (!siswa.length) {
-          tbodyS.innerHTML = '<tr><td colspan="5" style="text-align:center;padding:16px;color:#94a3b8;">Belum ada data siswa</td></tr>';
-        } else {
-          tbodyS.innerHTML = siswa.map((u, i) => {
-            const key = u.tipe + ':' + u.ref_id;
-            const checked = _izinFpAllowed.has(key) ? ' checked' : '';
-            return '<tr>' +
-              '<td><input type="checkbox" class="cb-izin-fp" data-tipe="siswa" data-ref="' + u.ref_id +
-              '" data-kode="' + esc(u.kode || '') + '" data-nama="' + esc(u.nama || '') + '"' + checked + '></td>' +
-              '<td>' + (i + 1) + '</td>' +
-              '<td>' + esc(u.kode || '-') + '</td>' +
-              '<td>' + esc(u.nama || '-') + '</td>' +
-              '<td>' + esc(u.kelas || '-') + '</td>' +
-              '</tr>';
-          }).join('');
-        }
-      }
-      if (tbodyG) {
-        if (!guru.length) {
-          tbodyG.innerHTML = '<tr><td colspan="4" style="text-align:center;padding:16px;color:#94a3b8;">Belum ada data guru</td></tr>';
-        } else {
-          tbodyG.innerHTML = guru.map((u, i) => {
-            const key = u.tipe + ':' + u.ref_id;
-            const checked = _izinFpAllowed.has(key) ? ' checked' : '';
-            const nip = u.nip || u.kode || '-';
-            return '<tr>' +
-              '<td><input type="checkbox" class="cb-izin-fp" data-tipe="guru" data-ref="' + u.ref_id +
-              '" data-kode="' + esc(u.kode || '') + '" data-nama="' + esc(u.nama || '') + '"' + checked + '></td>' +
-              '<td>' + (i + 1) + '</td>' +
-              '<td>' + esc(nip) + '</td>' +
-              '<td>' + esc(u.nama || '-') + '</td>' +
-              '</tr>';
-          }).join('');
-        }
-      }
-      document.querySelectorAll('.cb-izin-fp').forEach(cb => {
-        cb.addEventListener('change', () => onIzinFpCbChange(cb));
-      });
-      updateInfoIzinFp();
-    }
-
     async function loadIzinFpList() {
-      const tbodyS = document.getElementById('tbodyIzinFpSiswa');
-      const tbodyG = document.getElementById('tbodyIzinFpGuru');
-      if (tbodyS) tbodyS.innerHTML = '<tr><td colspan="5" style="text-align:center;padding:16px;color:#94a3b8;">Memuat...</td></tr>';
-      if (tbodyG) tbodyG.innerHTML = '<tr><td colspan="4" style="text-align:center;padding:16px;color:#94a3b8;">Memuat...</td></tr>';
+      const box = document.getElementById('listIzinFp');
+      if (!box) return;
+      box.innerHTML = '<span style="color:#94a3b8;font-size:12px;">Memuat...</span>';
       try {
         let users = [];
-        const allowed = new Set();
+        let allowed = new Set();
         if (supabaseClient) {
           const [siswaRes, guruRes, izinRes] = await Promise.all([
             supabaseClient.from('siswa').select('id, nama, nisn, kelas').order('kelas').order('nama'),
             supabaseClient.from('guru').select('id, nama, pin, nip').order('id'),
             supabaseClient.from('izin_sidik_jari').select('tipe, ref_id').eq('aktif', true)
           ]);
+          // Guru dulu (urut id), lalu siswa (urut kelas → nama) — sama dashboard
           (guruRes.data || []).forEach(g => users.push({
-            tipe: 'guru', ref_id: g.id, id: g.id, kode: g.pin || g.nip, nip: g.nip || g.pin || '', nama: g.nama
+            tipe: 'guru', ref_id: g.id, id: g.id, kode: g.pin || g.nip, nama: g.nama
           }));
           (siswaRes.data || []).forEach(s => users.push({
             tipe: 'siswa', ref_id: s.id, id: s.id, kode: s.nisn, nama: s.nama, kelas: s.kelas || ''
@@ -7797,81 +7424,56 @@
           if (!dataSiswa.length) await loadSiswa();
           if (!dataGuru.length) await loadGuru();
           sortGuruList(dataGuru).forEach(g => users.push({
-            tipe: 'guru', ref_id: g.id, id: g.id, kode: g.pin || g.nip, nip: g.nip || g.pin || '', nama: g.nama
+            tipe: 'guru', ref_id: g.id, id: g.id, kode: g.pin || g.nip, nama: g.nama
           }));
           sortSiswaList(dataSiswa).forEach(s => users.push({
             tipe: 'siswa', ref_id: s.id, id: s.id, kode: s.nisn, nama: s.nama, kelas: s.kelas || ''
           }));
         }
-        const guruU = users.filter(u => u.tipe === 'guru');
-        const siswaU = users.filter(u => u.tipe === 'siswa').sort((a, b) => {
-          const c = String(a.kelas || '').localeCompare(String(b.kelas || ''), 'id', { numeric: true });
-          if (c) return c;
-          return String(a.nama || '').localeCompare(String(b.nama || ''), 'id');
-        });
-        dataIzinFp = [...siswaU, ...guruU];
-        _izinFpAllowed = allowed;
-        if (!_izinFpMode) _izinFpMode = 'siswa';
-        setIzinFpMode(_izinFpMode);
+        users = sortGuruSiswaUsers(users);
+        dataIzinFp = users;
+        if (!users.length) {
+          box.innerHTML = '<span style="color:#94a3b8;font-size:12px;">Belum ada data siswa/guru</span>';
+          return;
+        }
+        box.innerHTML = users.map(u => `
+          <label style="width:100%;">
+            <input type="checkbox" class="cb-izin-fp" data-tipe="${u.tipe}" data-ref="${u.ref_id}"
+              data-kode="${esc(u.kode || '')}" data-nama="${esc(u.nama || '')}"
+              ${allowed.has(u.tipe + ':' + u.ref_id) ? 'checked' : ''}>
+            <span style="font-size:12px;">[${u.tipe}] ${esc(u.nama)} <span style="color:#94a3b8;">(${esc(u.kode || '-')})</span></span>
+          </label>`).join('');
+        updateInfoIzinFp();
+        box.querySelectorAll('.cb-izin-fp').forEach(cb => cb.addEventListener('change', updateInfoIzinFp));
       } catch (e) {
         console.error(e);
-        if (tbodyS) tbodyS.innerHTML = '<tr><td colspan="5" style="text-align:center;padding:16px;color:#ef4444;">Gagal: ' + esc(String(e.message || e)) + '</td></tr>';
-        if (tbodyG) tbodyG.innerHTML = '<tr><td colspan="4" style="text-align:center;padding:16px;color:#ef4444;">Gagal memuat</td></tr>';
+        box.innerHTML = '<span style="color:#ef4444;font-size:12px;">Gagal memuat: ' + (e.message || e) + '</span>';
       }
     }
-
-    document.getElementById('btnIzinFpSiswa')?.addEventListener('click', () => setIzinFpMode('siswa'));
-    document.getElementById('btnIzinFpGuru')?.addEventListener('click', () => setIzinFpMode('guru'));
-
-    document.getElementById('checkAllIzinFpSiswa')?.addEventListener('change', function () {
-      document.querySelectorAll('.cb-izin-fp[data-tipe="siswa"]').forEach(cb => {
-        cb.checked = this.checked;
-        const key = 'siswa:' + cb.dataset.ref;
-        if (this.checked) _izinFpAllowed.add(key);
-        else _izinFpAllowed.delete(key);
-      });
-      updateInfoIzinFp();
-    });
-    document.getElementById('checkAllIzinFpGuru')?.addEventListener('change', function () {
-      document.querySelectorAll('.cb-izin-fp[data-tipe="guru"]').forEach(cb => {
-        cb.checked = this.checked;
-        const key = 'guru:' + cb.dataset.ref;
-        if (this.checked) _izinFpAllowed.add(key);
-        else _izinFpAllowed.delete(key);
-      });
-      updateInfoIzinFp();
-    });
-
+    function updateInfoIzinFp() {
+      const n = document.querySelectorAll('.cb-izin-fp:checked').length;
+      const el = document.getElementById('infoIzinFp');
+      if (el) el.textContent = n + ' dipilih';
+    }
     document.getElementById('btnSimpanIzinFp')?.addEventListener('click', async () => {
-      // Ambil dari set global (Guru + Siswa), bukan hanya yang terlihat di tab
-      const byKey = new Map();
-      (dataIzinFp || []).forEach(u => {
-        byKey.set(u.tipe + ':' + u.ref_id, u);
-      });
-      const checked = [..._izinFpAllowed].map(key => {
-        const u = byKey.get(key);
-        if (u) {
-          return {
-            tipe: u.tipe,
-            ref_id: Number(u.ref_id),
-            kode: u.kode || null,
-            nama: u.nama || null,
-            aktif: true
-          };
-        }
-        const parts = key.split(':');
-        return { tipe: parts[0], ref_id: Number(parts[1]), kode: null, nama: null, aktif: true };
-      });
-      if (!(await showConfirm('Simpan izin sidik jari untuk ' + checked.length + ' user (Guru + Siswa)?', 'Izin Sidik Jari', '👆'))) return;
+      const checked = [...document.querySelectorAll('.cb-izin-fp:checked')].map(cb => ({
+        tipe: cb.dataset.tipe,
+        ref_id: Number(cb.dataset.ref),
+        kode: cb.dataset.kode || null,
+        nama: cb.dataset.nama || null,
+        aktif: true
+      }));
+      if (!(await showConfirm('Simpan izin sidik jari untuk ' + checked.length + ' user?', 'Izin Sidik Jari', '👆'))) return;
       try {
         if (supabaseClient) {
+          // Hapus semua lalu insert yang dicentang
           await supabaseClient.from('izin_sidik_jari').delete().neq('id', 0);
           if (checked.length) {
             const { error } = await supabaseClient.from('izin_sidik_jari').insert(checked);
             if (error) throw error;
           }
         }
-        alert('Izin sidik jari disimpan (' + checked.length + ' user)');
+        alert('Izin sidik jari disimpan');
         await loadIzinFpList();
       } catch (e) { alert('Gagal: ' + (e.message || e)); }
     });
@@ -11255,34 +10857,23 @@
       for (const s of k9) {
         const st = statusMap[String(s.id)] || 'Lulus';
         try {
-          const statusAwal = normStatusAwal(s.status_awal) || 'Siswa Baru';
-          const tglMulai = tglMulaiSiswa(s) || null;
-          const lama = hitungLamaBelajar(statusAwal, tglMulai, tglLulus) || (statusAwal === 'Siswa Baru' ? '3 Tahun' : null);
-          // tahun_lulus dari tanggal_lulus (relasi periode)
-          const tahunLulusNum = tglLulus ? Number(String(tglLulus).slice(0, 4)) : null;
           const payload = {
             nama: s.nama,
             lp: s.lp || null,
             nisn: s.nisn || null,
-            kelas: s.kelas || null,
+            kelas_akhir: s.kelas || null,
             tmp_lahir: s.tmp_lahir || null,
             tgl_lahir: s.tgl_lahir || null,
             alamat: s.alamat || null,
             nama_ayah: s.nama_ayah || null,
             nama_ibu: s.nama_ibu || null,
             no_hp: s.no_hp || null,
-            asal_sekolah: s.asal_sekolah || null,
-            status_awal: statusAwal,
-            tgl_mulai_sekolah: tglMulai,
-            lama_belajar: lama,
+            status_awal: s.status || 'Aktif',
             status_kelulusan: st,
             tahun_ajaran: tahunAjaran,
             tanggal_lulus: tglLulus,
-            tahun_lulus: tahunLulusNum
+            siswa_id_asal: s.id
           };
-          // kolom opsional — jangan gagal jika belum ada di DB
-          try { payload.kelas_akhir = s.kelas || null; } catch (e) {}
-          try { payload.siswa_id_asal = s.id; } catch (e) {}
           if (supabaseClient) {
             const { error } = await supabaseClient.from('lulusan').insert([payload]);
             if (error) throw error;
@@ -13007,288 +12598,6 @@
     });
 
 
-    
-    // ============================================================
-    // PENGUMUMAN KELULUSAN (Siswa / Orang Tua — hanya kelas 9)
-    // ============================================================
-    function predikatColor(p) {
-      const u = String(p || '').toUpperCase();
-      if (u === 'MEMUASKAN') return '#2563eb';
-      if (u === 'BAIK') return '#16a34a';
-      if (u === 'CUKUP') return '#ea580c';
-      return '#334155';
-    }
-
-    async function resolveKelasSiswaLogin() {
-      if (currentUserKelas) return String(currentUserKelas);
-      if (currentRole !== 'siswa') return '';
-      try {
-        if (supabaseClient) {
-          // Siswa aktif
-          if (currentUserId && !currentUserIsAlumni) {
-            const { data } = await supabaseClient.from('siswa').select('kelas, nisn, nama').eq('id', currentUserId).maybeSingle();
-            if (data) {
-              currentUserKelas = data.kelas || '';
-              if (data.nisn) currentUserKode = data.nisn;
-              return String(data.kelas || '');
-            }
-          }
-          // Alumni: cari di lulusan by NISN atau id
-          if (currentUserKode || currentUserId) {
-            let q = supabaseClient.from('lulusan').select('kelas, kelas_akhir, nisn, nama');
-            if (currentUserKode) q = q.eq('nisn', String(currentUserKode));
-            else q = q.eq('id', currentUserId);
-            const { data } = await q.maybeSingle();
-            if (data) {
-              currentUserIsAlumni = true;
-              currentUserKelas = data.kelas_akhir || data.kelas || '9';
-              if (data.nisn) currentUserKode = data.nisn;
-              return String(currentUserKelas || '');
-            }
-          }
-        }
-      } catch (e) { console.warn(e); }
-      return String(currentUserKelas || '');
-    }
-
-
-    /** Format Date → value datetime-local (YYYY-MM-DDTHH:MM) lokal */
-    function toDatetimeLocalValue(d) {
-      if (!d || isNaN(d.getTime())) return '';
-      const pad = n => String(n).padStart(2, '0');
-      return d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate()) +
-        'T' + pad(d.getHours()) + ':' + pad(d.getMinutes());
-    }
-
-    /** Parse ISO / datetime-local / date string → Date lokal */
-    function parseLocalDateTime(v) {
-      if (!v) return null;
-      const s = String(v).trim();
-      // datetime-local: 2027-07-05T09:00
-      let m = s.match(/^(\d{4})-(\d{2})-(\d{2})[T ](\d{2}):(\d{2})(?::(\d{2}))?/);
-      if (m) {
-        return new Date(+m[1], +m[2] - 1, +m[3], +m[4], +m[5], +(m[6] || 0));
-      }
-      // date only
-      m = s.match(/^(\d{4})-(\d{2})-(\d{2})$/);
-      if (m) return new Date(+m[1], +m[2] - 1, +m[3], 0, 0, 0);
-      const d = new Date(s);
-      return isNaN(d.getTime()) ? null : d;
-    }
-
-    function fmtTglJamId(d) {
-      if (!d || isNaN(d.getTime())) return '-';
-      const pad = n => String(n).padStart(2, '0');
-      const hari = ['Minggu','Senin','Selasa','Rabu','Kamis','Jumat','Sabtu'];
-      return hari[d.getDay()] + ', ' + pad(d.getDate()) + '/' + pad(d.getMonth() + 1) + '/' + d.getFullYear() +
-        ' pukul ' + pad(d.getHours()) + ':' + pad(d.getMinutes());
-    }
-
-    /**
-     * Ambil rentang pengumuman dari periode aktif.
-     * Kolom DB: pengumuman_mulai, pengumuman_akhir (timestamptz/text)
-     * Fallback: tanggal_kelulusan 09:00 → +2 hari 23:59
-     */
-    function getJadwalPengumuman(periode) {
-      const p = periode || {};
-      let mulai = parseLocalDateTime(p.pengumuman_mulai || p.pg_mulai || p.pengumuman_buka);
-      let akhir = parseLocalDateTime(p.pengumuman_akhir || p.pg_akhir || p.pengumuman_tutup);
-      const tglLulus = String(p.tanggal_kelulusan || p.tgl_kelulusan || '').slice(0, 10);
-      if (!mulai && tglLulus) {
-        const d = parseLocalDateTime(tglLulus);
-        if (d) { d.setHours(9, 0, 0, 0); mulai = d; }
-      }
-      if (!akhir && tglLulus) {
-        const d = parseLocalDateTime(tglLulus);
-        if (d) { d.setDate(d.getDate() + 2); d.setHours(23, 59, 0, 0); akhir = d; }
-      }
-      return { mulai, akhir, tglLulus };
-    }
-
-    function cekAksesPengumuman(periode, now) {
-      const n = now || new Date();
-      const { mulai, akhir } = getJadwalPengumuman(periode);
-      if (!mulai && !akhir) {
-        return { ok: false, reason: 'unset', mulai: null, akhir: null };
-      }
-      if (mulai && n < mulai) {
-        return { ok: false, reason: 'belum', mulai, akhir };
-      }
-      if (akhir && n > akhir) {
-        return { ok: false, reason: 'sudah', mulai, akhir };
-      }
-      return { ok: true, reason: 'buka', mulai, akhir };
-    }
-
-        async function initPengumumanKelulusan() {
-      const blocked = document.getElementById('pgBlocked');
-      const blockedMsg = document.getElementById('pgBlockedMsg');
-      const loading = document.getElementById('pgLoading');
-      const empty = document.getElementById('pgEmpty');
-      const result = document.getElementById('pgResult');
-      if (blocked) blocked.style.display = 'none';
-      if (empty) empty.style.display = 'none';
-      if (result) result.style.display = 'none';
-      if (loading) loading.style.display = 'block';
-
-      try {
-        if (currentRole !== 'siswa') {
-          if (loading) loading.style.display = 'none';
-          if (empty) {
-            empty.style.display = 'block';
-            empty.textContent = 'Login sebagai siswa untuk melihat pengumuman kelulusan.';
-          }
-          return;
-        }
-
-        const kelas = await resolveKelasSiswaLogin();
-        const tingkat = tingkatDariKelas(kelas);
-        // Alumni (sudah di tabel lulusan) selalu boleh lihat pengumuman
-        // Kelas 7 & 8 (siswa aktif) dilarang
-        if (!currentUserIsAlumni) {
-          if (tingkat === '7' || tingkat === '8') {
-            if (loading) loading.style.display = 'none';
-            if (blocked) blocked.style.display = 'block';
-            if (blockedMsg) {
-              blockedMsg.textContent = 'Kamu tidak diizinkan mengakses pengumuman kelulusan, kelasmu : ' + (kelas || tingkat);
-            }
-            return;
-          }
-          if (tingkat && tingkat !== '9') {
-            if (loading) loading.style.display = 'none';
-            if (blocked) blocked.style.display = 'block';
-            if (blockedMsg) {
-              blockedMsg.textContent = 'Kamu tidak diizinkan mengakses pengumuman kelulusan, kelasmu : ' + (kelas || tingkat);
-            }
-            return;
-          }
-        }
-
-        if (!aktifPeriode) await loadAktifPeriode();
-        const skNo = (aktifPeriode && (aktifPeriode.sk_kelulusan || PERIODE_DUMMY?.sk_kelulusan)) || '-';
-        const ta = (aktifPeriode && aktifPeriode.tahun_ajaran) || '-';
-
-        // --- Jadwal buka/tutup pengumuman (periode) ---
-        const akses = cekAksesPengumuman(aktifPeriode);
-        if (!akses.ok) {
-          if (loading) loading.style.display = 'none';
-          if (blocked) blocked.style.display = 'block';
-          let msg = '';
-          if (akses.reason === 'belum') {
-            msg = 'Pengumuman kelulusan belum dibuka.\n\nDibuka mulai:\n' + fmtTglJamId(akses.mulai) +
-              (akses.akhir ? '\n\nBerakhir:\n' + fmtTglJamId(akses.akhir) : '');
-          } else if (akses.reason === 'sudah') {
-            msg = 'Masa pengumuman kelulusan sudah berakhir.\n\nRentang:\n' +
-              fmtTglJamId(akses.mulai) + '\n s/d \n' + fmtTglJamId(akses.akhir);
-          } else {
-            msg = 'Jadwal pengumuman kelulusan belum diatur admin.\nAdmin: Pengaturan → Periode → isi Pengumuman Mulai & Berakhir.';
-          }
-          if (blockedMsg) {
-            blockedMsg.style.whiteSpace = 'pre-line';
-            blockedMsg.style.color = akses.reason === 'belum' ? '#a16207' : '#b91c1c';
-            blockedMsg.textContent = msg;
-          }
-          return;
-        }
-
-        // Cari data lulusan by NISN / nama / id
-        const nisn = currentUserKode || '';
-        let found = null;
-        if (supabaseClient) {
-          let q = supabaseClient.from('lulusan').select('*');
-          if (nisn) {
-            const { data } = await q.eq('nisn', String(nisn)).limit(5);
-            if (data && data.length) found = data[0];
-          }
-          if (!found && currentUserName) {
-            const { data } = await supabaseClient.from('lulusan').select('*')
-              .ilike('nama', currentUserName).limit(5);
-            if (data && data.length === 1) found = data[0];
-            else if (data && data.length > 1 && nisn) {
-              found = data.find(x => String(x.nisn) === String(nisn)) || data[0];
-            }
-          }
-        } else {
-          if (!dataLulusan.length) {
-            try { await loadLulusan(); } catch (e) {}
-          }
-          found = (dataLulusan || []).find(x =>
-            (nisn && String(x.nisn) === String(nisn)) ||
-            (currentUserName && String(x.nama || '').toLowerCase() === String(currentUserName).toLowerCase())
-          ) || null;
-        }
-
-        if (loading) loading.style.display = 'none';
-
-        if (!found) {
-          // Kelas 9 tapi belum ada di tabel lulusan
-          if (empty) {
-            empty.style.display = 'block';
-            empty.innerHTML = 'Data kelulusan untuk <b>' + esc(currentUserName || 'Anda') +
-              '</b> (NISN: ' + esc(nisn || '-') + ') belum tersedia.<br>Hubungi admin sekolah.';
-          }
-          return;
-        }
-
-        // Render pengumuman
-        const st = found.status_kelulusan || found.status_lulus || 'Lulus';
-        const pred = String(found.predikat || '').toUpperCase() || 'BAIK';
-        const predCol = predikatColor(pred);
-
-        document.getElementById('pgSkText').innerHTML =
-          'Berdasarkan SK Kepala Sekolah No : <b>' + esc(skNo) +
-          '</b> tentang Kelulusan Peserta Didik Kelas 9 Tahun Ajaran <b>' + esc(ta) +
-          '</b>, bahwa :';
-        document.getElementById('pgNama').textContent = found.nama || '-';
-        document.getElementById('pgNisn').textContent = found.nisn || nisn || '-';
-
-        const stEl = document.getElementById('pgStatus');
-        const subEl = document.getElementById('pgStatusSub');
-        const predLine = document.getElementById('pgPredikatLine');
-        const stU = String(st);
-        if (stU === 'Lulus') {
-          stEl.textContent = 'LULUS';
-          stEl.style.color = '#166534';
-          subEl.textContent = '';
-          predLine.innerHTML = 'Dari <b>SMPN PANTANG MUNDUR</b> dengan predikat <b style="color:' + predCol + ';">' + esc(pred) + '</b>';
-        } else if (stU === 'Ditangguhkan') {
-          stEl.textContent = 'DITANGGUHKAN';
-          stEl.style.color = '#a16207';
-          subEl.textContent = 'Jika sampai batas H-2 akhir Tahun Ajaran, beberapa syarat kelulusan yang tertinggal tidak dipenuhi maka statusnya menjadi TIDAK LULUS permanen';
-          predLine.innerHTML = '';
-        } else {
-          stEl.textContent = 'TIDAK LULUS';
-          stEl.style.color = '#b91c1c';
-          subEl.textContent = 'lebih dari 60% syarat kelulusan tidak tercapai';
-          predLine.innerHTML = '';
-        }
-
-        // Info rentang jadwal
-        const aksesOk = cekAksesPengumuman(aktifPeriode);
-        let infoJadwal = document.getElementById('pgJadwalInfo');
-        if (!infoJadwal && result) {
-          infoJadwal = document.createElement('div');
-          infoJadwal.id = 'pgJadwalInfo';
-          infoJadwal.style.cssText = 'text-align:center;font-size:11px;color:#64748b;margin-top:10px;line-height:1.45;';
-          result.appendChild(infoJadwal);
-        }
-        if (infoJadwal && aksesOk.mulai) {
-          infoJadwal.innerHTML = 'Masa pengumuman: <b>' + fmtTglJamId(aksesOk.mulai) + '</b>' +
-            (aksesOk.akhir ? ' s/d <b>' + fmtTglJamId(aksesOk.akhir) + '</b>' : '');
-        }
-
-        if (result) result.style.display = 'block';
-      } catch (e) {
-        console.error(e);
-        if (loading) loading.style.display = 'none';
-        if (empty) {
-          empty.style.display = 'block';
-          empty.textContent = 'Gagal memuat: ' + (e.message || e);
-        }
-      }
-    }
-
-
     // ========== VALIDASI DATA LULUSAN ==========
     function fmtTglId(v) {
       if (!v) return '-';
@@ -13554,10 +12863,6 @@
         currentUserId = ses.userId || null;
         currentUserKode = ses.kode || null;
         currentUserKelas = ses.kelas || null;
-        currentUserIsAlumni = !!ses.isAlumni;
-        if (currentUserIsAlumni && ses.role === 'siswa') {
-          ROLE_DATA.siswa.label = 'Alumni';
-        }
         applyRole(ses.role, true); // skipRedirect → tetap di halaman hash saat ini
       }
     })();
