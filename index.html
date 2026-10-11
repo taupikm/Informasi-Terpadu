@@ -1710,6 +1710,13 @@
     </section>
     <section class="page" id="page-kelulusan">
       <div class="page-title">Pengumuman Kelulusan</div>
+      <div class="card" id="pgSearchCard" style="padding:12px;margin-bottom:12px;display:none;">
+        <div class="rekap-filter-row">
+          <label>Nama / NISN</label>
+          <input type="text" id="pgCariQ" placeholder="Masukkan NISN atau nama siswa">
+        </div>
+        <button type="button" class="btn btn-primary" id="btnPgCari" style="width:100%;margin-top:8px;">🔍 Cek Pengumuman</button>
+      </div>
       <div id="pgBlocked" class="card" style="display:none;padding:20px;text-align:center;">
         <div style="font-size:40px;margin-bottom:10px;">🚫</div>
         <div id="pgBlockedMsg" style="font-size:14px;font-weight:600;color:#b91c1c;line-height:1.5;"></div>
@@ -13126,14 +13133,34 @@
       const loading = document.getElementById('pgLoading');
       const empty = document.getElementById('pgEmpty');
       const result = document.getElementById('pgResult');
+      const searchCard = document.getElementById('pgSearchCard');
       if (blocked) blocked.style.display = 'none';
       if (empty) empty.style.display = 'none';
       if (result) result.style.display = 'none';
-      if (loading) loading.style.display = 'block';
+      if (loading) loading.style.display = 'none';
+
+      // Form cari: admin (seperti Lihat Nilai Saya / Cek Syarat)
+      if (searchCard) {
+        searchCard.style.display = (currentRole === 'admin') ? 'block' : 'none';
+      }
 
       try {
+        if (currentRole === 'admin') {
+          // Admin: tampilkan form, tunggu pencarian (atau jalankan jika sudah ada query)
+          const q = (document.getElementById('pgCariQ')?.value || '').trim();
+          if (!q) {
+            if (empty) {
+              empty.style.display = 'block';
+              empty.textContent = 'Masukkan NISN atau Nama siswa lalu Cek Pengumuman.';
+            }
+            return;
+          }
+          if (loading) loading.style.display = 'block';
+          await jalankanPengumumanKelulusan({ q: q, isAdmin: true });
+          return;
+        }
+
         if (currentRole !== 'siswa') {
-          if (loading) loading.style.display = 'none';
           if (empty) {
             empty.style.display = 'block';
             empty.textContent = 'Login sebagai siswa untuk melihat pengumuman kelulusan.';
@@ -13141,23 +13168,43 @@
           return;
         }
 
-        const kelas = await resolveKelasSiswaLogin();
-        const tingkat = tingkatDariKelas(kelas);
-        // Alumni (sudah di tabel lulusan) selalu boleh lihat pengumuman
-        // Kelas 7 & 8 (siswa aktif) dilarang
-        if (!currentUserIsAlumni) {
-          if (tingkat === '7' || tingkat === '8') {
+        // Siswa: proses otomatis data sendiri
+        if (loading) loading.style.display = 'block';
+        await jalankanPengumumanKelulusan({ isAdmin: false });
+      } catch (e) {
+        console.error(e);
+        if (loading) loading.style.display = 'none';
+        if (empty) {
+          empty.style.display = 'block';
+          empty.textContent = 'Gagal memuat: ' + (e.message || e);
+        }
+      }
+    }
+
+    async function jalankanPengumumanKelulusan(opts) {
+      opts = opts || {};
+      const isAdmin = !!opts.isAdmin || currentRole === 'admin';
+      const blocked = document.getElementById('pgBlocked');
+      const blockedMsg = document.getElementById('pgBlockedMsg');
+      const loading = document.getElementById('pgLoading');
+      const empty = document.getElementById('pgEmpty');
+      const result = document.getElementById('pgResult');
+      if (blocked) blocked.style.display = 'none';
+      if (empty) empty.style.display = 'none';
+      if (result) result.style.display = 'none';
+      if (loading) loading.style.display = 'block';
+
+      try {
+        // Siswa aktif: batasi kelas 7 & 8 (admin & alumni bebas)
+        if (!isAdmin && currentRole === 'siswa' && !currentUserIsAlumni) {
+          const kelas = await resolveKelasSiswaLogin();
+          const tingkat = tingkatDariKelas(kelas);
+          if (tingkat === '7' || tingkat === '8' || (tingkat && tingkat !== '9')) {
             if (loading) loading.style.display = 'none';
             if (blocked) blocked.style.display = 'block';
             if (blockedMsg) {
-              blockedMsg.textContent = 'Kamu tidak diizinkan mengakses pengumuman kelulusan, kelasmu : ' + (kelas || tingkat);
-            }
-            return;
-          }
-          if (tingkat && tingkat !== '9') {
-            if (loading) loading.style.display = 'none';
-            if (blocked) blocked.style.display = 'block';
-            if (blockedMsg) {
+              blockedMsg.style.whiteSpace = 'normal';
+              blockedMsg.style.color = '#b91c1c';
               blockedMsg.textContent = 'Kamu tidak diizinkan mengakses pengumuman kelulusan, kelasmu : ' + (kelas || tingkat);
             }
             return;
@@ -13168,64 +13215,106 @@
         const skNo = (aktifPeriode && (aktifPeriode.sk_kelulusan || PERIODE_DUMMY?.sk_kelulusan)) || '-';
         const ta = (aktifPeriode && aktifPeriode.tahun_ajaran) || '-';
 
-        // --- Jadwal buka/tutup pengumuman (periode) ---
-        const akses = cekAksesPengumuman(aktifPeriode);
-        if (!akses.ok) {
-          if (loading) loading.style.display = 'none';
-          if (blocked) blocked.style.display = 'block';
-          let msg = '';
-          if (akses.reason === 'belum') {
-            msg = 'Pengumuman kelulusan belum dibuka.\n\nDibuka mulai:\n' + fmtTglJamId(akses.mulai) +
-              (akses.akhir ? '\n\nBerakhir:\n' + fmtTglJamId(akses.akhir) : '');
-          } else if (akses.reason === 'sudah') {
-            msg = 'Masa pengumuman kelulusan sudah berakhir.\n\nRentang:\n' +
-              fmtTglJamId(akses.mulai) + '\n s/d \n' + fmtTglJamId(akses.akhir);
-          } else {
-            msg = 'Jadwal pengumuman kelulusan belum diatur admin.\nAdmin: Pengaturan → Periode → isi Pengumuman Mulai & Berakhir.';
+        // Jadwal buka/tutup: siswa wajib; admin boleh preview kapan saja
+        if (!isAdmin) {
+          const akses = cekAksesPengumuman(aktifPeriode);
+          if (!akses.ok) {
+            if (loading) loading.style.display = 'none';
+            if (blocked) blocked.style.display = 'block';
+            let msg = '';
+            if (akses.reason === 'belum') {
+              msg = 'Pengumuman kelulusan belum dibuka.\n\nDibuka mulai:\n' + fmtTglJamId(akses.mulai) +
+                (akses.akhir ? '\n\nBerakhir:\n' + fmtTglJamId(akses.akhir) : '');
+            } else if (akses.reason === 'sudah') {
+              msg = 'Masa pengumuman kelulusan sudah berakhir.\n\nRentang:\n' +
+                fmtTglJamId(akses.mulai) + '\n s/d \n' + fmtTglJamId(akses.akhir);
+            } else {
+              msg = 'Jadwal pengumuman kelulusan belum diatur admin.\nAdmin: Pengaturan → Periode → isi Pengumuman Mulai & Berakhir.';
+            }
+            if (blockedMsg) {
+              blockedMsg.style.whiteSpace = 'pre-line';
+              blockedMsg.style.color = akses.reason === 'belum' ? '#a16207' : '#b91c1c';
+              blockedMsg.textContent = msg;
+            }
+            return;
           }
-          if (blockedMsg) {
-            blockedMsg.style.whiteSpace = 'pre-line';
-            blockedMsg.style.color = akses.reason === 'belum' ? '#a16207' : '#b91c1c';
-            blockedMsg.textContent = msg;
-          }
-          return;
         }
 
-        // Cari data lulusan by NISN / nama / id
-        const nisn = currentUserKode || '';
+        // Cari data lulusan
         let found = null;
-        if (supabaseClient) {
-          let q = supabaseClient.from('lulusan').select('*');
-          if (nisn) {
-            const { data } = await q.eq('nisn', String(nisn)).limit(5);
-            if (data && data.length) found = data[0];
-          }
-          if (!found && currentUserName) {
-            const { data } = await supabaseClient.from('lulusan').select('*')
-              .ilike('nama', currentUserName).limit(5);
-            if (data && data.length === 1) found = data[0];
-            else if (data && data.length > 1 && nisn) {
-              found = data.find(x => String(x.nisn) === String(nisn)) || data[0];
+        const qSearch = String(opts.q || '').trim();
+
+        if (isAdmin && qSearch) {
+          // Admin: cari by NISN / nama
+          if (supabaseClient) {
+            const isNisn = /^\d{5,}$/.test(qSearch);
+            let query = supabaseClient.from('lulusan').select('*');
+            if (isNisn) {
+              query = query.or('nisn.eq.' + qSearch + ',nama.ilike.%' + qSearch + '%');
+            } else {
+              query = query.or('nama.ilike.%' + qSearch + '%,nisn.ilike.%' + qSearch + '%');
+            }
+            const { data, error } = await query.limit(10);
+            if (error) throw error;
+            const rows = data || [];
+            if (rows.length === 1) found = rows[0];
+            else if (rows.length > 1) {
+              found = rows.find(x => String(x.nisn) === qSearch) || rows[0];
+            }
+          } else {
+            if (!dataLulusan.length) {
+              try { await loadLulusan(); } catch (e) {}
+            }
+            const ql = qSearch.toLowerCase();
+            const rows = (dataLulusan || []).filter(x =>
+              String(x.nisn || '') === qSearch ||
+              String(x.nama || '').toLowerCase().includes(ql) ||
+              String(x.nisn || '').includes(qSearch)
+            );
+            if (rows.length === 1) found = rows[0];
+            else if (rows.length > 1) {
+              found = rows.find(x => String(x.nisn) === qSearch) || rows[0];
             }
           }
         } else {
-          if (!dataLulusan.length) {
-            try { await loadLulusan(); } catch (e) {}
+          // Siswa: by NISN / nama login
+          const nisn = currentUserKode || '';
+          if (supabaseClient) {
+            if (nisn) {
+              const { data } = await supabaseClient.from('lulusan').select('*').eq('nisn', String(nisn)).limit(5);
+              if (data && data.length) found = data[0];
+            }
+            if (!found && currentUserName) {
+              const { data } = await supabaseClient.from('lulusan').select('*')
+                .ilike('nama', currentUserName).limit(5);
+              if (data && data.length === 1) found = data[0];
+              else if (data && data.length > 1 && nisn) {
+                found = data.find(x => String(x.nisn) === String(nisn)) || data[0];
+              }
+            }
+          } else {
+            if (!dataLulusan.length) {
+              try { await loadLulusan(); } catch (e) {}
+            }
+            found = (dataLulusan || []).find(x =>
+              (nisn && String(x.nisn) === String(nisn)) ||
+              (currentUserName && String(x.nama || '').toLowerCase() === String(currentUserName).toLowerCase())
+            ) || null;
           }
-          found = (dataLulusan || []).find(x =>
-            (nisn && String(x.nisn) === String(nisn)) ||
-            (currentUserName && String(x.nama || '').toLowerCase() === String(currentUserName).toLowerCase())
-          ) || null;
         }
 
         if (loading) loading.style.display = 'none';
 
         if (!found) {
-          // Kelas 9 tapi belum ada di tabel lulusan
           if (empty) {
             empty.style.display = 'block';
-            empty.innerHTML = 'Data kelulusan untuk <b>' + esc(currentUserName || 'Anda') +
-              '</b> (NISN: ' + esc(nisn || '-') + ') belum tersedia.<br>Hubungi admin sekolah.';
+            if (isAdmin) {
+              empty.innerHTML = 'Data kelulusan untuk <b>' + esc(qSearch || '-') +
+                '</b> tidak ditemukan di tabel lulusan.';
+            } else {
+              empty.innerHTML = 'Data kelulusan untuk <b>' + esc(currentUserName || 'Anda') +
+                '</b> (NISN: ' + esc(currentUserKode || '-') + ') belum tersedia.<br>Hubungi admin sekolah.';
+            }
           }
           return;
         }
@@ -13240,7 +13329,7 @@
           '</b> tentang Kelulusan Peserta Didik Kelas 9 Tahun Ajaran <b>' + esc(ta) +
           '</b>, bahwa :';
         document.getElementById('pgNama').textContent = found.nama || '-';
-        document.getElementById('pgNisn').textContent = found.nisn || nisn || '-';
+        document.getElementById('pgNisn').textContent = found.nisn || (isAdmin ? qSearch : (currentUserKode || '-')) || '-';
 
         const stEl = document.getElementById('pgStatus');
         const subEl = document.getElementById('pgStatusSub');
@@ -13272,9 +13361,16 @@
           infoJadwal.style.cssText = 'text-align:center;font-size:11px;color:#64748b;margin-top:10px;line-height:1.45;';
           result.appendChild(infoJadwal);
         }
-        if (infoJadwal && aksesOk.mulai) {
-          infoJadwal.innerHTML = 'Masa pengumuman: <b>' + fmtTglJamId(aksesOk.mulai) + '</b>' +
-            (aksesOk.akhir ? ' s/d <b>' + fmtTglJamId(aksesOk.akhir) + '</b>' : '');
+        if (infoJadwal) {
+          if (aksesOk.mulai) {
+            infoJadwal.innerHTML = 'Masa pengumuman: <b>' + fmtTglJamId(aksesOk.mulai) + '</b>' +
+              (aksesOk.akhir ? ' s/d <b>' + fmtTglJamId(aksesOk.akhir) + '</b>' : '') +
+              (isAdmin && !aksesOk.ok ? ' <span style="color:#a16207;">(preview admin)</span>' : '');
+          } else if (isAdmin) {
+            infoJadwal.innerHTML = '<span style="color:#a16207;">Preview admin — jadwal pengumuman belum diatur</span>';
+          } else {
+            infoJadwal.innerHTML = '';
+          }
         }
 
         if (result) result.style.display = 'block';
@@ -13287,6 +13383,26 @@
         }
       }
     }
+
+    document.getElementById('btnPgCari')?.addEventListener('click', () => {
+      const q = (document.getElementById('pgCariQ')?.value || '').trim();
+      if (!q) {
+        alert('Masukkan NISN atau Nama siswa');
+        return;
+      }
+      jalankanPengumumanKelulusan({ q: q, isAdmin: true });
+    });
+    document.getElementById('pgCariQ')?.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') {
+        const q = (document.getElementById('pgCariQ')?.value || '').trim();
+        if (!q) {
+          alert('Masukkan NISN atau Nama siswa');
+          return;
+        }
+        jalankanPengumumanKelulusan({ q: q, isAdmin: true });
+      }
+    });
+
 
 
     // ========== VALIDASI DATA LULUSAN ==========
