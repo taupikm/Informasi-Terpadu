@@ -3766,9 +3766,15 @@
       // Simpan / hapus sesi
       saveSession();
 
+      // Aturan menu alumni + validasi vs jadwal pengumuman
+      try { refreshMenuVisibility(); } catch (e) { console.warn(e); }
+
       // Hanya redirect ke dashboard saat login/logout manual, BUKAN saat restore refresh
       if (!skipRedirect) {
         showPage('dashboard', false);
+      } else {
+        // Saat restore sesi: pastikan menu ter-refresh setelah periode termuat
+        setTimeout(() => { try { refreshMenuVisibility(); } catch (e) {} }, 300);
       }
     }
 
@@ -5200,6 +5206,7 @@
       if (el1) el1.textContent = label;
       if (el2) el2.textContent = label;
       if (el3) el3.textContent = label;
+      try { if (typeof refreshMenuVisibility === 'function') refreshMenuVisibility(); } catch (e) {}
     }
 
     async function fillMapelKelasSelects() {
@@ -13127,6 +13134,96 @@
       return { ok: true, reason: 'buka', mulai, akhir };
     }
 
+    /**
+     * Aturan menu terkait jadwal pengumuman:
+     * - Validasi Data Lulusan disembunyikan (non-admin) dari H-2 mulai s/d H+1 setelah berakhir
+     * - Alumni: hanya Dashboard + Pengumuman Kelulusan (+ Validasi jika di luar jendela hide)
+     */
+    function getMenuJadwalFlags(periode, now) {
+      const n = now || new Date();
+      const { mulai, akhir } = getJadwalPengumuman(periode || aktifPeriode || {});
+      let hideValidasi = false;
+      if (mulai || akhir) {
+        const startHide = mulai ? new Date(mulai.getTime()) : null;
+        if (startHide) startHide.setDate(startHide.getDate() - 2);
+        const endHide = akhir ? new Date(akhir.getTime()) : null;
+        if (endHide) endHide.setDate(endHide.getDate() + 1);
+        if (startHide && endHide) {
+          hideValidasi = n >= startHide && n <= endHide;
+        } else if (startHide) {
+          hideValidasi = n >= startHide;
+        } else if (endHide) {
+          hideValidasi = n <= endHide;
+        }
+      }
+      return {
+        mulai: mulai || null,
+        akhir: akhir || null,
+        hideValidasi: !!hideValidasi,
+        announcementEnded: !!(akhir && n > akhir),
+        announcementOpen: !!(mulai && akhir && n >= mulai && n <= akhir)
+      };
+    }
+
+    async function refreshMenuVisibility() {
+      try {
+        if (!aktifPeriode && typeof loadAktifPeriode === 'function') {
+          try { await loadAktifPeriode(); } catch (e) {}
+        }
+      } catch (e) {}
+
+      const flags = getMenuJadwalFlags(aktifPeriode);
+      const isAdmin = currentRole === 'admin';
+      const isAlumni = !!currentUserIsAlumni && currentRole === 'siswa';
+
+      // Alumni: sembunyikan semua menu siswa kecuali pengumuman + validasi
+      const alumniAllowed = new Set(['kelulusan', 'validasi-lulusan']);
+      document.querySelectorAll('.menu-group[data-role="siswa"] .menu-item').forEach(btn => {
+        const page = btn.getAttribute('data-page') || '';
+        if (isAlumni) {
+          btn.style.display = alumniAllowed.has(page) ? '' : 'none';
+        } else {
+          btn.style.display = '';
+        }
+      });
+
+      // Validasi: sembunyi non-admin di jendela H-2 s/d H+1
+      document.querySelectorAll('.menu-item[data-page="validasi-lulusan"]').forEach(btn => {
+        if (isAdmin) {
+          btn.style.display = '';
+          return;
+        }
+        if (flags.hideValidasi) {
+          btn.style.display = 'none';
+        } else if (isAlumni) {
+          btn.style.display = '';
+        } else if (currentRole === 'siswa') {
+          // Siswa aktif (bukan alumni): validasi tetap tersedia di luar jendela hide
+          btn.style.display = '';
+        } else {
+          // Guru dll: biarkan mengikuti grup menu (biasanya tidak punya item ini)
+          btn.style.display = '';
+        }
+      });
+
+      // Jika user sedang di halaman yang disembunyikan, arahkan aman
+      try {
+        const hash = (location.hash || '').replace('#', '') || 'dashboard';
+        if (hash === 'validasi-lulusan' && !isAdmin && flags.hideValidasi) {
+          if (typeof showPage === 'function') showPage(isAlumni ? 'kelulusan' : 'dashboard', false);
+        }
+        if (isAlumni && hash && !alumniAllowed.has(hash) && hash !== 'dashboard' && hash !== 'kelulusan' && hash !== 'validasi-lulusan') {
+          // Jangan paksa keluar dari halaman profil internal; hanya menu siswa umum
+          const blockedAlumniPages = ['cari-siswa','sidik-jari','syarat-naik','tugas-ujian','nilai-saya','kerjakan-ujian'];
+          if (blockedAlumniPages.includes(hash) && typeof showPage === 'function') {
+            showPage('kelulusan', false);
+          }
+        }
+      } catch (e) {}
+
+      return flags;
+    }
+
         async function initPengumumanKelulusan() {
       const blocked = document.getElementById('pgBlocked');
       const blockedMsg = document.getElementById('pgBlockedMsg');
@@ -13226,8 +13323,7 @@
               msg = 'Pengumuman kelulusan belum dibuka.\n\nDibuka mulai:\n' + fmtTglJamId(akses.mulai) +
                 (akses.akhir ? '\n\nBerakhir:\n' + fmtTglJamId(akses.akhir) : '');
             } else if (akses.reason === 'sudah') {
-              msg = 'Masa pengumuman kelulusan sudah berakhir.\n\nRentang:\n' +
-                fmtTglJamId(akses.mulai) + '\n s/d \n' + fmtTglJamId(akses.akhir);
+              msg = 'Masa Pengumuman Kelulusan Sudah Berakhir';
             } else {
               msg = 'Jadwal pengumuman kelulusan belum diatur admin.\nAdmin: Pengaturan → Periode → isi Pengumuman Mulai & Berakhir.';
             }
@@ -13682,6 +13778,8 @@
     initFromHash();
     // Muat dashboard jika di halaman utama
     if (currentPage === 'dashboard') loadDashboard();
+    // Refresh aturan menu (alumni / validasi vs jadwal pengumuman)
+    setTimeout(() => { try { refreshMenuVisibility(); } catch (e) {} }, 500);
 
     // 3. Pasang trap tombol back
     rearmTrap();
