@@ -759,6 +759,7 @@
       #page-set-arsip,
       #page-set-naik-lulus,
       #page-set-reset-pin,
+      #page-set-gdrive,
       #page-validasi-lulusan {
         max-width: 720px;
         margin-left: auto;
@@ -772,7 +773,8 @@
       #page-set-izin-fp .page-title,
       #page-set-arsip .page-title,
       #page-set-naik-lulus .page-title,
-      #page-set-reset-pin .page-title {
+      #page-set-reset-pin .page-title,
+      #page-set-gdrive .page-title {
         text-align: center;
       }
       #page-syarat-naik .card,
@@ -783,7 +785,8 @@
       #page-set-izin-fp .card,
       #page-set-arsip .card,
       #page-set-naik-lulus .card,
-      #page-set-reset-pin .card {
+      #page-set-reset-pin .card,
+      #page-set-gdrive .card {
         box-shadow: 0 2px 12px rgba(15, 23, 42, 0.06);
       }
       /* Cek Syarat: kartu hasil + tipografi lebih nyaman di laptop */
@@ -849,7 +852,8 @@
       #page-set-izin-fp,
       #page-set-arsip,
       #page-set-naik-lulus,
-      #page-set-reset-pin {
+      #page-set-reset-pin,
+      #page-set-gdrive {
         max-width: 780px;
       }
       #page-set-periode {
@@ -1399,6 +1403,7 @@
         <button class="menu-item" data-page="set-arsip"><span class="icon">📦</span> Arsip Absensi</button>
         <button class="menu-item" data-page="set-naik-lulus"><span class="icon">🎓</span> Naik Kelas &amp; Kelulusan</button>
         <button class="menu-item" data-page="set-reset-pin"><span class="icon">🔑</span> Reset PIN</button>
+        <button class="menu-item" data-page="set-gdrive"><span class="icon">☁</span> Integrasi GDrive</button>
       </div>
     </nav>
   </aside>
@@ -2124,17 +2129,6 @@
         <button class="btn btn-outline" id="btnBsKembali" style="padding:6px 10px;">← Kembali</button>
         <div class="page-title" style="margin:0;" id="bsDetailTitle">Soal</div>
       </div>
-      <div class="card" style="padding:10px;margin-bottom:10px;">
-        <div style="font-size:12px;font-weight:600;margin-bottom:6px;">Filter Jenis Soal</div>
-        <div class="bs-jenis-filter" id="bsJenisFilter">
-          <label><input type="checkbox" class="cb-bs-jenis-f" value="Pilihan Ganda" checked> Pilihan Ganda</label>
-          <label><input type="checkbox" class="cb-bs-jenis-f" value="Isian Singkat" checked> Isian Singkat</label>
-          <label><input type="checkbox" class="cb-bs-jenis-f" value="Esai" checked> Esai</label>
-          <label><input type="checkbox" class="cb-bs-jenis-f" value="Benar Salah" checked> Benar/Salah</label>
-          <label><input type="checkbox" class="cb-bs-jenis-f" value="Checkbox" checked> Checkbox</label>
-          <label><input type="checkbox" class="cb-bs-jenis-f" value="Menjodohkan" checked> Menjodohkan</label>
-        </div>
-      </div>
       <div class="toolbar">
         <button class="btn btn-primary" id="btnBsItemTambah">+ Tambah Soal</button>
         <button class="btn btn-secondary" id="btnBsItemEdit">✏️ Edit</button>
@@ -2158,6 +2152,7 @@
         <b>Isian Singkat:</b> tanpa A–D + <code>Kunci: 144</code><br>
         <b>Esai:</b> tanpa A–D + pedoman di <code>Kunci:</code><br>
         <b>Menjodohkan:</b> <code>Kunci:</code> lalu baris <code>kiri = kanan</code><br>
+        <b>Unggah File:</b> siswa mengunggah file jawaban (disimpan ke Google Drive / storage)<br>
         <span style="color:#64748b;">Gambar, tabel, equation Word ikut ter-import. Unduh contoh lengkap lewat tombol <b>Contoh Format</b>.</span>
       </div>
       <div id="tbodyBsItem" class="bs-soal-list">
@@ -2686,6 +2681,78 @@
         </div>
       </div>
     </section>
+
+    <section class="page" id="page-set-gdrive">
+      <div class="page-title">☁ Integrasi Google Drive</div>
+      <p style="font-size:12px;color:#64748b;margin-bottom:12px;line-height:1.5;">
+        Atur endpoint Google Apps Script agar file jawaban soal <b>Unggah File</b> tersimpan ke Google Drive.
+        Cukup tempel URL hasil <b>Deploy → Web app</b> di bawah. Perubahan langsung dipakai tanpa edit kode.
+      </p>
+
+      <div class="card" style="padding:14px;margin-bottom:14px;">
+        <div style="font-size:14px;font-weight:700;margin-bottom:10px;color:#0f172a;">🔗 Endpoint Web App</div>
+        <div class="form-group">
+          <label>URL Google Apps Script (Web App)</label>
+          <input type="url" id="gdEndpoint" placeholder="https://script.google.com/macros/s/XXXX/exec" style="font-size:12px;">
+          <p style="font-size:11px;color:#94a3b8;margin-top:4px;line-height:1.4;">
+            Deploy script sebagai Web App · Execute as: <b>Me</b> · Who has access: <b>Anyone</b>
+          </p>
+        </div>
+        <div class="form-group">
+          <label>ID Folder Drive default (opsional)</label>
+          <input type="text" id="gdFolderId" placeholder="1AbC...xyz dari URL folder Drive">
+          <p style="font-size:11px;color:#94a3b8;margin-top:4px;line-height:1.4;">
+            Dari URL folder: <code>drive.google.com/drive/folders/<b>ID_INI</b></code>.
+            Bisa diganti per soal di form Unggah File.
+          </p>
+        </div>
+        <div id="gdStatus" style="font-size:12px;margin:8px 0;color:#64748b;"></div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;">
+          <button type="button" class="btn btn-primary" id="btnGdSimpan" style="flex:1;">💾 Simpan Pengaturan</button>
+          <button type="button" class="btn btn-outline" id="btnGdTes" style="flex:1;">🧪 Tes Koneksi</button>
+        </div>
+      </div>
+
+      <div class="card" style="padding:14px;margin-bottom:14px;background:#f8fafc;">
+        <div style="font-size:13px;font-weight:700;margin-bottom:8px;color:#0f172a;">📋 Contoh script Apps Script</div>
+        <p style="font-size:11px;color:#64748b;margin-bottom:8px;line-height:1.45;">
+          Buat project baru di <a href="https://script.google.com" target="_blank" rel="noopener">script.google.com</a>,
+          tempel kode di bawah, lalu <b>Deploy → New deployment → Web app</b>.
+        </p>
+        <pre id="gdScriptSample" style="font-size:10px;line-height:1.4;background:#0f172a;color:#e2e8f0;padding:12px;border-radius:8px;overflow-x:auto;white-space:pre-wrap;max-height:220px;">function doPost(e) {
+  try {
+    var data = JSON.parse(e.postData.contents);
+    var bytes = Utilities.base64Decode(data.base64);
+    var blob = Utilities.newBlob(bytes, data.mimeType || 'application/octet-stream', data.filename);
+    var folder = data.folderId
+      ? DriveApp.getFolderById(data.folderId)
+      : DriveApp.getRootFolder();
+    var file = folder.createFile(blob);
+    file.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
+    return ContentService
+      .createTextOutput(JSON.stringify({
+        id: file.getId(),
+        name: file.getName(),
+        url: 'https://drive.google.com/file/d/' + file.getId() + '/view'
+      }))
+      .setMimeType(ContentService.MimeType.JSON);
+  } catch (err) {
+    return ContentService
+      .createTextOutput(JSON.stringify({ error: String(err) }))
+      .setMimeType(ContentService.MimeType.JSON);
+  }
+}</pre>
+        <button type="button" class="btn btn-outline" id="btnGdCopyScript" style="margin-top:8px;width:100%;">📋 Salin Script</button>
+      </div>
+
+      <div class="card" style="padding:12px;font-size:12px;color:#475569;line-height:1.5;">
+        <b>Urutan penyimpanan file jawaban:</b><br>
+        1. Google Drive (jika URL di atas terisi)<br>
+        2. Supabase Storage bucket <code>jawaban-file</code><br>
+        3. Fallback lokal (hanya file ≤ 1,5 MB)
+      </div>
+    </section>
+
 
   </main>
 
@@ -3435,6 +3502,7 @@
               <option value="Benar Salah">Benar / Salah</option>
               <option value="Checkbox">Checkbox (multi jawaban)</option>
               <option value="Menjodohkan">Menjodohkan</option>
+              <option value="Unggah File">Unggah File</option>
             </select>
           </div>
         </div>
@@ -3606,6 +3674,68 @@
     // ============================================================
     const SUPABASE_URL = 'https://yhivrwnumfzoncbcapgd.supabase.co';   // <-- ganti
     const SUPABASE_ANON_KEY = 'sb_publishable_FjTrPaFEwR_tNfxH7puJ_w_KZHI4RuG';              // <-- ganti
+    // Google Drive — diisi dari Pengaturan → Integrasi GDrive (localStorage + opsional tabel app_settings)
+    let GDRIVE_UPLOAD_ENDPOINT = '';
+    let GDRIVE_DEFAULT_FOLDER_ID = '';
+    const GD_SETTINGS_KEY = 'app_gdrive_settings';
+
+    function loadGdriveSettingsSync() {
+      try {
+        const raw = localStorage.getItem(GD_SETTINGS_KEY);
+        if (!raw) return;
+        const o = JSON.parse(raw);
+        if (o && typeof o === 'object') {
+          GDRIVE_UPLOAD_ENDPOINT = String(o.endpoint || '').trim();
+          GDRIVE_DEFAULT_FOLDER_ID = String(o.folderId || '').trim();
+        }
+      } catch (e) {}
+    }
+    loadGdriveSettingsSync();
+
+    async function loadGdriveSettingsFromDb() {
+      try {
+        if (!supabaseClient) return;
+        const { data, error } = await supabaseClient.from('app_settings')
+          .select('value').eq('key', 'gdrive').maybeSingle();
+        if (error || !data) return;
+        let o = data.value;
+        if (typeof o === 'string') {
+          try { o = JSON.parse(o); } catch (e) { return; }
+        }
+        if (o && typeof o === 'object') {
+          GDRIVE_UPLOAD_ENDPOINT = String(o.endpoint || '').trim();
+          GDRIVE_DEFAULT_FOLDER_ID = String(o.folderId || '').trim();
+          localStorage.setItem(GD_SETTINGS_KEY, JSON.stringify({
+            endpoint: GDRIVE_UPLOAD_ENDPOINT,
+            folderId: GDRIVE_DEFAULT_FOLDER_ID
+          }));
+        }
+      } catch (e) { console.warn('loadGdriveSettingsFromDb', e); }
+    }
+
+    async function saveGdriveSettings(endpoint, folderId) {
+      endpoint = String(endpoint || '').trim();
+      folderId = String(folderId || '').trim();
+      GDRIVE_UPLOAD_ENDPOINT = endpoint;
+      GDRIVE_DEFAULT_FOLDER_ID = folderId;
+      const payload = { endpoint, folderId };
+      localStorage.setItem(GD_SETTINGS_KEY, JSON.stringify(payload));
+      if (supabaseClient) {
+        try {
+          // Upsert key=gdrive (butuh tabel app_settings: key text PK, value jsonb)
+          const { data: existing } = await supabaseClient.from('app_settings')
+            .select('key').eq('key', 'gdrive').maybeSingle();
+          if (existing) {
+            await supabaseClient.from('app_settings').update({ value: payload }).eq('key', 'gdrive');
+          } else {
+            await supabaseClient.from('app_settings').insert([{ key: 'gdrive', value: payload }]);
+          }
+        } catch (e) {
+          console.warn('Simpan GDrive ke DB gagal (localStorage tetap tersimpan):', e);
+        }
+      }
+      return payload;
+    }
 
     let supabaseClient = null;
     try {
@@ -3613,6 +3743,7 @@
         const { createClient } = supabase;
         supabaseClient = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
         console.log('Supabase connected');
+        try { loadGdriveSettingsFromDb(); } catch (e) {}
       } else {
         console.warn('Supabase belum dikonfigurasi – memakai mode demo lokal');
       }
@@ -4104,6 +4235,7 @@
       if (pageId === 'set-arsip') { try { refreshArsipInfo(); } catch (e) {} try { loadSetAbsenForm(); } catch (e) {} }
       if (pageId === 'set-naik-lulus') { try { loadNaikLulusTable(); } catch (e) {} }
       if (pageId === 'set-reset-pin') { try { initResetPinPage(); } catch (e) {} }
+      if (pageId === 'set-gdrive') { try { initGdriveSettingsPage(); } catch (e) {} }
       if (pageId === 'pengaturan') showPage('set-mapel', true);
       if (pageId === 'scan-barcode') initScanPage();
       if (pageId === 'dashboard') loadDashboard();
@@ -8105,6 +8237,7 @@
     let _tuExam = null; // bank meta
     let _tuSoals = [];
     let _tuAnswers = {}; // { soalId: value }
+    let _tuBankId = null;
     let _tuFlags = {}; // { soalId: true } ragu
     let _tuIdx = 0;
     let _tuTimerIv = null;
@@ -8267,6 +8400,7 @@
 
       _tuExam = bank;
       _tuSoals = soals;
+      _tuBankId = bankId;
       _tuAnswers = {};
       _tuFlags = {};
       _tuIdx = 0;
@@ -8345,6 +8479,97 @@
       }
     }
 
+
+    // ========== UPLOAD FILE JAWABAN → Google Drive / Supabase Storage ==========
+    function fileToBase64(file) {
+      return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => {
+          const dataUrl = reader.result || '';
+          const base64 = String(dataUrl).split(',')[1] || '';
+          resolve({ dataUrl, base64 });
+        };
+        reader.onerror = () => reject(new Error('Gagal membaca file'));
+        reader.readAsDataURL(file);
+      });
+    }
+
+    async function uploadJawabanFile(file, meta) {
+      meta = meta || {};
+      const { dataUrl, base64 } = await fileToBase64(file);
+      const safeName = String(file.name || 'file').replace(/[^\w.\-()+ ]+/g, '_');
+      const pathPrefix = ['jawaban', meta.bankId || 'x', meta.soalId || 'x', meta.nisn || meta.siswaId || 'anon', Date.now()].join('_');
+      const storagePath = pathPrefix + '_' + safeName;
+
+      // 1) Google Drive via Apps Script endpoint
+      if (GDRIVE_UPLOAD_ENDPOINT && String(GDRIVE_UPLOAD_ENDPOINT).trim()) {
+        const body = {
+          filename: safeName,
+          mimeType: file.type || 'application/octet-stream',
+          base64: base64,
+          folderId: meta.folderId || GDRIVE_DEFAULT_FOLDER_ID || '',
+          bankId: meta.bankId || null,
+          soalId: meta.soalId || null,
+          siswaId: meta.siswaId || null,
+          nisn: meta.nisn || null
+        };
+        const resp = await fetch(GDRIVE_UPLOAD_ENDPOINT, {
+          method: 'POST',
+          headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+          body: JSON.stringify(body)
+        });
+        const textResp = await resp.text();
+        let json;
+        try { json = JSON.parse(textResp); } catch (e) {
+          throw new Error('Respons GDrive tidak valid: ' + textResp.slice(0, 120));
+        }
+        if (!json || json.error) throw new Error((json && json.error) || 'Upload GDrive gagal');
+        return {
+          name: json.name || safeName,
+          url: json.url || (json.id ? ('https://drive.google.com/file/d/' + json.id + '/view') : ''),
+          id: json.id || null,
+          size: file.size,
+          mime: file.type || '',
+          provider: 'gdrive'
+        };
+      }
+
+      // 2) Supabase Storage
+      if (supabaseClient && supabaseClient.storage) {
+        try {
+          const { error } = await supabaseClient.storage.from('jawaban-file').upload(storagePath, file, {
+            contentType: file.type || 'application/octet-stream',
+            upsert: true
+          });
+          if (error) throw error;
+          const { data: pub } = supabaseClient.storage.from('jawaban-file').getPublicUrl(storagePath);
+          return {
+            name: safeName,
+            url: (pub && pub.publicUrl) || storagePath,
+            id: storagePath,
+            size: file.size,
+            mime: file.type || '',
+            provider: 'supabase'
+          };
+        } catch (e) {
+          console.warn('Supabase storage gagal, fallback metadata', e);
+        }
+      }
+
+      // 3) Fallback: simpan metadata + data URL (file kecil < 1.5MB)
+      if (file.size > 1.5 * 1024 * 1024) {
+        throw new Error('Endpoint GDrive & Storage belum siap. File >1.5MB tidak bisa disimpan lokal. Atur di Pengaturan → Integrasi GDrive, atau buat bucket Supabase "jawaban-file".');
+      }
+      return {
+        name: safeName,
+        url: dataUrl,
+        id: null,
+        size: file.size,
+        mime: file.type || '',
+        provider: 'local'
+      };
+    }
+
     function renderTuSoal() {
       const area = document.getElementById('tuSoalArea');
       const prog = document.getElementById('tuProgress');
@@ -8400,6 +8625,24 @@
       } else if (jenis === 'Menjodohkan') {
         html += '<div class="form-group" style="margin-top:10px;"><textarea id="tuEsai" rows="4" placeholder="Tulis pasangan, contoh: 1-b, 2-d, 3-a" style="width:100%;padding:10px;border:1px solid #e2e8f0;border-radius:8px;">' +
           esc(ans || '') + '</textarea></div>';
+      } else if (jenis === 'Unggah File') {
+        const ext = String(s.opsi_a || 'pdf,doc,docx,jpg,png,zip');
+        const maxMb = Number(s.opsi_b) || 10;
+        const accept = ext.split(/[,;\s]+/).map(x => x.trim()).filter(Boolean).map(x => '.' + x.replace(/^\./, '')).join(',');
+        let infoAns = '';
+        if (ans && typeof ans === 'object' && ans.name) {
+          infoAns = '<div style="margin-top:8px;padding:8px 10px;background:#f0fdf4;border:1px solid #86efac;border-radius:8px;font-size:12px;">' +
+            '📎 <b>' + esc(ans.name) + '</b>' +
+            (ans.size ? ' · ' + (Math.round(ans.size / 1024) + ' KB') : '') +
+            (ans.url ? ' · <a href="' + esc(ans.url) + '" target="_blank" rel="noopener">Buka</a>' : '') +
+            '</div>';
+        }
+        html += '<div class="form-group" style="margin-top:10px;">' +
+          '<label style="font-size:12px;font-weight:600;color:#334155;">Unggah file jawaban</label>' +
+          '<p style="font-size:11px;color:#64748b;margin:4px 0 8px;">Format: <b>' + esc(ext) + '</b> · Maks <b>' + maxMb + ' MB</b>. File disimpan ke Google Drive / storage.</p>' +
+          '<input type="file" id="tuFileInput" accept="' + esc(accept) + '" style="width:100%;padding:8px;border:1px dashed #cbd5e1;border-radius:8px;background:#f8fafc;">' +
+          '<div id="tuFileStatus" style="font-size:11px;color:#64748b;margin-top:6px;"></div>' +
+          infoAns + '</div>';
       }
 
       html += '</div>';
@@ -8429,6 +8672,46 @@
       const esai = document.getElementById('tuEsai');
       if (esai) esai.addEventListener('input', () => { _tuAnswers[s.id] = esai.value; refreshTuSubmitBtn(); });
 
+      const fileInp = document.getElementById('tuFileInput');
+      if (fileInp) {
+        fileInp.addEventListener('change', async () => {
+          const f = fileInp.files && fileInp.files[0];
+          const st = document.getElementById('tuFileStatus');
+          if (!f) return;
+          const maxMb = Number(s.opsi_b) || 10;
+          const allowed = String(s.opsi_a || 'pdf,doc,docx,jpg,png,zip').split(/[,;\s]+/).map(x => x.trim().toLowerCase().replace(/^\./, '')).filter(Boolean);
+          const ext = (f.name.split('.').pop() || '').toLowerCase();
+          if (allowed.length && !allowed.includes(ext)) {
+            if (st) st.innerHTML = '<span style="color:#b91c1c;">Ekstensi .' + esc(ext) + ' tidak diizinkan</span>';
+            fileInp.value = '';
+            return;
+          }
+          if (f.size > maxMb * 1024 * 1024) {
+            if (st) st.innerHTML = '<span style="color:#b91c1c;">File melebihi ' + maxMb + ' MB</span>';
+            fileInp.value = '';
+            return;
+          }
+          if (st) st.textContent = 'Mengunggah ' + f.name + '...';
+          try {
+            const result = await uploadJawabanFile(f, {
+              folderId: s.opsi_c || GDRIVE_DEFAULT_FOLDER_ID || '',
+              bankId: _tuBankId,
+              soalId: s.id,
+              siswaId: currentUserId,
+              nisn: currentUserKode
+            });
+            _tuAnswers[s.id] = result;
+            if (st) st.innerHTML = '<span style="color:#166534;">✓ Terunggah: ' + esc(result.name) +
+              (result.url ? ' · <a href="' + esc(result.url) + '" target="_blank" rel="noopener">Lihat</a>' : '') + '</span>';
+            refreshTuSubmitBtn();
+            renderTuSoal();
+          } catch (err) {
+            console.error(err);
+            if (st) st.innerHTML = '<span style="color:#b91c1c;">Gagal unggah: ' + esc(String(err.message || err)) + '</span>';
+          }
+        });
+      }
+
       // Tombol ragu
       const flagged = !!_tuFlags[s.id];
       const flagHtml = document.createElement('div');
@@ -8455,6 +8738,9 @@
       const a = _tuAnswers[s.id];
       if (a == null || a === '') return false;
       if (Array.isArray(a) && !a.length) return false;
+      if (typeof a === 'object' && !Array.isArray(a)) {
+        return !!(a.name || a.url || a.id);
+      }
       return true;
     }
 
@@ -8567,7 +8853,8 @@
         const ok = k && a && (k === a || k.split(',').sort().join() === a.split(',').sort().join());
         return { benar: ok, skor: ok ? skor : 0 };
       }
-      // Esai: tidak auto
+      // Esai / Unggah File: penilaian manual
+      if (jenis === 'Unggah File') return { benar: null, skor: 0 };
       return { benar: null, skor: 0 };
     }
 
@@ -9980,6 +10267,20 @@
           makeMiniQuill('bsEdKunci', 'pasangan');
           setMiniHtml('bsEdKunci', data.kunci);
         }, 30);
+      } else if (j === 'Unggah File') {
+        box.innerHTML =
+          '<div class="form-group"><label>Ekstensi diizinkan</label>' +
+          '<input type="text" id="bsUfExt" value="' + esc(data.opsi_a || 'pdf,doc,docx,jpg,png,zip') + '" placeholder="pdf,doc,docx,jpg,png,zip"></div>' +
+          '<div class="form-group"><label>Ukuran maks (MB)</label>' +
+          '<input type="number" id="bsUfMaxMb" min="1" max="50" value="' + esc(String(data.opsi_b || '10')) + '"></div>' +
+          '<div class="form-group"><label>ID Folder Google Drive (opsional)</label>' +
+          '<input type="text" id="bsUfFolderId" value="' + esc(data.opsi_c || '') + '" placeholder="Kosong = folder default / Supabase Storage">' +
+          '<p style="font-size:11px;color:#94a3b8;margin-top:4px;">File jawaban siswa akan diunggah ke Google Drive (jika endpoint GDRIVE dikonfigurasi) atau Supabase Storage.</p></div>' +
+          block('Pedoman penilaian (opsional)', 'bsEdKunci');
+        setTimeout(() => {
+          makeMiniQuill('bsEdKunci', 'Pedoman penilaian manual');
+          setMiniHtml('bsEdKunci', data.kunci);
+        }, 30);
       } else {
         box.innerHTML = '';
       }
@@ -10396,11 +10697,7 @@
         dataBsItem = [];
       }
 
-      const jenisAktif = [...document.querySelectorAll('.cb-bs-jenis-f:checked')].map(c => c.value);
       let rows = dataBsItem;
-      if (jenisAktif.length && jenisAktif.length < 6) {
-        rows = dataBsItem.filter(r => jenisAktif.includes(r.jenis || 'Pilihan Ganda'));
-      }
 
       document.getElementById('infoBsItem').textContent = rows.length + ' soal';
       document.getElementById('checkAllBsItem').checked = false;
@@ -10447,6 +10744,11 @@
           body += '<div class="bs-opsi-line' + (r.kunci === 'Salah' ? ' key' : '') + '"><span class="bs-opsi-letter">○</span><div class="bs-opsi-content">Salah</div></div>';
         }
 
+        if (jenis === 'Unggah File') {
+          body += '<div class="bs-kunci-admin"><span>File</span> Ext: ' + esc(r.opsi_a || '-') +
+            ' · Maks ' + esc(String(r.opsi_b || '10')) + ' MB' +
+            (r.opsi_c ? ' · Folder: ' + esc(r.opsi_c) : '') + '</div>';
+        }
         // Kunci admin: ringkas di footer, bukan menumpuk di isi
         if (r.kunci) {
           body += '<div class="bs-kunci-admin"><span>Kunci</span> ' +
@@ -10484,9 +10786,6 @@
       } catch (e) {}
     }
 
-    document.querySelectorAll('.cb-bs-jenis-f').forEach(cb => {
-      cb.addEventListener('change', () => loadBsItemTable());
-    });
 
     document.getElementById('checkAllBsItem')?.addEventListener('change', function () {
       document.querySelectorAll('#tbodyBsItem .cb-bs-item').forEach(c => { c.checked = this.checked; });
@@ -10561,16 +10860,27 @@
       if (kunciEl) kunciVal = kunciEl.value.trim();
       else if (document.getElementById('bsEdKunci')) kunciVal = getMiniHtml('bsEdKunci');
 
+      let opsiA = document.getElementById('bsEdA') ? getMiniHtml('bsEdA') : null;
+      let opsiB = document.getElementById('bsEdB') ? getMiniHtml('bsEdB') : null;
+      let opsiC = document.getElementById('bsEdC') ? getMiniHtml('bsEdC') : null;
+      let opsiD = document.getElementById('bsEdD') ? getMiniHtml('bsEdD') : null;
+      if (jenis === 'Unggah File') {
+        opsiA = (document.getElementById('bsUfExt')?.value || 'pdf,doc,docx,jpg,png,zip').trim();
+        opsiB = String(document.getElementById('bsUfMaxMb')?.value || '10').trim();
+        opsiC = (document.getElementById('bsUfFolderId')?.value || '').trim() || null;
+        opsiD = null;
+      }
+
       const bankIdSave = getCurrentBankId();
       const payload = {
         bank_id: bankIdSave,
         nomor: Number(document.getElementById('bsItemNo').value) || 1,
         jenis: jenis,
         pertanyaan: pertanyaan,
-        opsi_a: document.getElementById('bsEdA') ? getMiniHtml('bsEdA') : null,
-        opsi_b: document.getElementById('bsEdB') ? getMiniHtml('bsEdB') : null,
-        opsi_c: document.getElementById('bsEdC') ? getMiniHtml('bsEdC') : null,
-        opsi_d: document.getElementById('bsEdD') ? getMiniHtml('bsEdD') : null,
+        opsi_a: opsiA,
+        opsi_b: opsiB,
+        opsi_c: opsiC,
+        opsi_d: opsiD,
         kunci: kunciVal,
         skor: Number(document.getElementById('bsItemSkor').value) || 1
       };
@@ -10940,10 +11250,20 @@
           html += '<b>No. ' + (d.nomor || (i + 1)) + '</b> · ' + esc(d.jenis || '') +
             (d.benar === true ? ' · <span style="color:#16a34a;">✓</span>' :
              d.benar === false ? ' · <span style="color:#ef4444;">✗</span>' : ' · <span style="color:#f59e0b;">Esai</span>');
-          html += '<div style="margin-top:4px;"><b>Jawaban:</b> ' + esc(Array.isArray(d.jawaban) ? d.jawaban.join(', ') : String(d.jawaban ?? '-')) + '</div>';
+          let jawDisp = '-';
+          if (Array.isArray(d.jawaban)) jawDisp = d.jawaban.join(', ');
+          else if (d.jawaban && typeof d.jawaban === 'object' && (d.jawaban.name || d.jawaban.url)) {
+            jawDisp = (d.jawaban.name || 'file') +
+              (d.jawaban.provider ? ' [' + d.jawaban.provider + ']' : '') +
+              (d.jawaban.url ? ' · ' + d.jawaban.url : '');
+          } else if (d.jawaban != null) jawDisp = String(d.jawaban);
+          html += '<div style="margin-top:4px;"><b>Jawaban:</b> ' +
+            (d.jawaban && typeof d.jawaban === 'object' && d.jawaban.url
+              ? (esc(d.jawaban.name || 'file') + ' · <a href="' + esc(d.jawaban.url) + '" target="_blank" rel="noopener">Buka file</a>')
+              : esc(jawDisp)) + '</div>';
           if (d.kunci) html += '<div><b>Kunci:</b> ' + esc(String(d.kunci)) + '</div>';
-          if (d.jenis === 'Esai' || d.benar === null) {
-            html += '<div class="form-group" style="margin-top:6px;"><label>Nilai esai</label>' +
+          if (d.jenis === 'Esai' || d.jenis === 'Unggah File' || d.benar === null) {
+            html += '<div class="form-group" style="margin-top:6px;"><label>Nilai manual</label>' +
               '<input type="number" class="mon-esai-skor" data-idx="' + i + '" value="' + (d.skor || 0) +
               '" min="0" style="width:100px;padding:6px;border:1px solid #e2e8f0;border-radius:6px;"></div>';
           }
@@ -13623,6 +13943,102 @@
 
     // ========== RESET PIN (Admin) ==========
     let _dataRpGuru = [];
+
+
+    // ========== INTEGRASI GDRIVE (Pengaturan) ==========
+    function initGdriveSettingsPage() {
+      const ep = document.getElementById('gdEndpoint');
+      const fd = document.getElementById('gdFolderId');
+      const st = document.getElementById('gdStatus');
+      if (ep) ep.value = GDRIVE_UPLOAD_ENDPOINT || '';
+      if (fd) fd.value = GDRIVE_DEFAULT_FOLDER_ID || '';
+      if (st) {
+        if (GDRIVE_UPLOAD_ENDPOINT) {
+          st.innerHTML = '<span style="color:#166534;">✓ Endpoint terisi — upload file memakai Google Drive</span>';
+        } else {
+          st.innerHTML = '<span style="color:#a16207;">Endpoint masih kosong — file memakai Supabase Storage / fallback lokal</span>';
+        }
+      }
+      // refresh from DB in background
+      loadGdriveSettingsFromDb().then(() => {
+        if (ep) ep.value = GDRIVE_UPLOAD_ENDPOINT || '';
+        if (fd) fd.value = GDRIVE_DEFAULT_FOLDER_ID || '';
+        if (st && GDRIVE_UPLOAD_ENDPOINT) {
+          st.innerHTML = '<span style="color:#166534;">✓ Endpoint terisi — upload file memakai Google Drive</span>';
+        }
+      }).catch(() => {});
+    }
+
+    document.getElementById('btnGdSimpan')?.addEventListener('click', async () => {
+      const endpoint = (document.getElementById('gdEndpoint')?.value || '').trim();
+      const folderId = (document.getElementById('gdFolderId')?.value || '').trim();
+      const st = document.getElementById('gdStatus');
+      if (endpoint && !/^https:\/\/script\.google\.com\//i.test(endpoint) && !/^https:\/\//i.test(endpoint)) {
+        alert('URL endpoint tidak valid. Tempel URL Web App (biasanya dimulai dengan https://script.google.com/...)');
+        return;
+      }
+      try {
+        await saveGdriveSettings(endpoint, folderId);
+        if (st) {
+          st.innerHTML = endpoint
+            ? '<span style="color:#166534;">✓ Pengaturan disimpan. Endpoint aktif.</span>'
+            : '<span style="color:#a16207;">Disimpan kosong — GDrive nonaktif.</span>';
+        }
+        alert('Pengaturan Google Drive disimpan.' + (endpoint ? '' : '\n(Endpoint kosong: upload tidak ke Drive)'));
+      } catch (e) {
+        alert('Gagal simpan: ' + (e.message || e));
+      }
+    });
+
+    document.getElementById('btnGdTes')?.addEventListener('click', async () => {
+      const endpoint = (document.getElementById('gdEndpoint')?.value || '').trim() || GDRIVE_UPLOAD_ENDPOINT;
+      const folderId = (document.getElementById('gdFolderId')?.value || '').trim() || GDRIVE_DEFAULT_FOLDER_ID;
+      const st = document.getElementById('gdStatus');
+      if (!endpoint) {
+        alert('Isi URL endpoint dulu, lalu Tes Koneksi.');
+        return;
+      }
+      if (st) st.textContent = 'Menguji upload ke Google Drive...';
+      try {
+        // tiny test file
+        const blob = new Blob(['tes-integrasi-gdrive-smpn'], { type: 'text/plain' });
+        const file = new File([blob], 'tes-gdrive-smpn.txt', { type: 'text/plain' });
+        // temporarily use form values
+        const prevE = GDRIVE_UPLOAD_ENDPOINT;
+        const prevF = GDRIVE_DEFAULT_FOLDER_ID;
+        GDRIVE_UPLOAD_ENDPOINT = endpoint;
+        GDRIVE_DEFAULT_FOLDER_ID = folderId;
+        const result = await uploadJawabanFile(file, { folderId, bankId: 'test', soalId: 'test', nisn: 'test' });
+        GDRIVE_UPLOAD_ENDPOINT = prevE;
+        GDRIVE_DEFAULT_FOLDER_ID = prevF;
+        if (st) {
+          st.innerHTML = '<span style="color:#166534;">✓ Berhasil via <b>' + esc(result.provider || '-') + '</b>' +
+            (result.url ? ' · <a href="' + esc(result.url) + '" target="_blank" rel="noopener">Buka file tes</a>' : '') + '</span>';
+        }
+        alert('Tes berhasil (' + (result.provider || 'ok') + ').\n' + (result.url || result.name || ''));
+      } catch (e) {
+        if (st) st.innerHTML = '<span style="color:#b91c1c;">Gagal: ' + esc(String(e.message || e)) + '</span>';
+        alert('Tes gagal: ' + (e.message || e));
+      }
+    });
+
+    document.getElementById('btnGdCopyScript')?.addEventListener('click', async () => {
+      const pre = document.getElementById('gdScriptSample');
+      const t = pre ? pre.textContent : '';
+      try {
+        await navigator.clipboard.writeText(t);
+        alert('Script disalin ke clipboard. Tempel di script.google.com');
+      } catch (e) {
+        // fallback
+        const ta = document.createElement('textarea');
+        ta.value = t;
+        document.body.appendChild(ta);
+        ta.select();
+        try { document.execCommand('copy'); alert('Script disalin.'); }
+        catch (e2) { alert('Salin manual dari kotak kode.'); }
+        ta.remove();
+      }
+    });
 
     async function initResetPinPage() {
       if (currentRole !== 'admin') {
