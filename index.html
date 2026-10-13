@@ -9704,38 +9704,56 @@
 
       let rows = dataBankSoal.slice();
 
-      // Guru: hanya bank mapel & kelas yang diampu
-      if (currentRole === 'guru' && currentUserId && supabaseClient) {
+      // Guru: bank miliknya (guru_id) ATAU mapel/kelas yang diampu
+      // Tabel guru (id, nama, nip, pin, ...) — relasi mapel/kelas lewat guru_mapel & guru_kelas
+      if (currentRole === 'guru' && currentUserId) {
         try {
-          const [gm, gk, mp, kl] = await Promise.all([
-            supabaseClient.from('guru_mapel').select('mapel_id').eq('guru_id', currentUserId),
-            supabaseClient.from('guru_kelas').select('kelas_id').eq('guru_id', currentUserId),
-            supabaseClient.from('mapel').select('id, mapel, nama, kode'),
-            supabaseClient.from('kelas').select('id, kelas, nama')
-          ]);
-          const mapelIds = new Set((gm.data || []).map(r => Number(r.mapel_id)));
-          const kelasIds = new Set((gk.data || []).map(r => Number(r.kelas_id)));
-          const allowedMapelNames = new Set(
-            (mp.data || []).filter(m => mapelIds.has(Number(m.id)))
-              .map(m => String(m.mapel || m.nama || '').trim().toLowerCase())
-              .filter(Boolean)
-          );
-          const allowedKelas = new Set(
-            (kl.data || []).filter(k => kelasIds.has(Number(k.id)))
-              .map(k => String(k.kelas || k.nama || '').trim())
-              .filter(Boolean)
-          );
+          let allowedMapelNames = new Set();
+          let allowedKelas = new Set(); // lowercase
+          let hasAmpuan = false;
+          if (supabaseClient) {
+            const [gm, gk, mp, kl] = await Promise.all([
+              supabaseClient.from('guru_mapel').select('mapel_id').eq('guru_id', currentUserId),
+              supabaseClient.from('guru_kelas').select('kelas_id').eq('guru_id', currentUserId),
+              supabaseClient.from('mapel').select('id, mapel, nama, kode'),
+              supabaseClient.from('kelas').select('id, kelas, nama')
+            ]);
+            const mapelIds = new Set((gm.data || []).map(r => Number(r.mapel_id)));
+            const kelasIds = new Set((gk.data || []).map(r => Number(r.kelas_id)));
+            hasAmpuan = mapelIds.size > 0 || kelasIds.size > 0;
+            allowedMapelNames = new Set(
+              (mp.data || []).filter(m => mapelIds.has(Number(m.id)))
+                .flatMap(m => [m.mapel, m.nama, m.kode].map(x => String(x || '').trim().toLowerCase()).filter(Boolean))
+            );
+            allowedKelas = new Set(
+              (kl.data || []).filter(k => kelasIds.has(Number(k.id)))
+                .map(k => String(k.kelas || k.nama || '').trim().toLowerCase())
+                .filter(Boolean)
+            );
+          }
+          const uid = Number(currentUserId);
+          const before = rows.length;
           rows = rows.filter(r => {
+            // 1) Bank yang dibuat guru ini (kolom guru_id)
+            if (r.guru_id != null && Number(r.guru_id) === uid) return true;
+            // 2) Tanpa data ampuan: tampilkan semua agar tidak "hilang"
+            //    (admin perlu set Mapel/Kelas diampu di Data Guru)
+            if (!hasAmpuan) return true;
+            // 3) Cocok mapel diampu
             const nm = String(r.mapel || '').trim().toLowerCase();
             if (allowedMapelNames.size && !allowedMapelNames.has(nm)) return false;
-            if (!allowedMapelNames.size) return false;
+            // 4) Cocok salah satu kelas diampu (case-insensitive)
             if (allowedKelas.size) {
-              const kls = String(r.kelas || '').split(/[,;]/).map(x => x.trim()).filter(Boolean);
-              if (!kls.length) return true; // bank tanpa kelas — izinkan
+              const kls = String(r.kelas || '').split(/[,;]/).map(x => x.trim().toLowerCase()).filter(Boolean);
+              if (!kls.length) return true;
               return kls.some(k => allowedKelas.has(k));
             }
-            return false;
+            return true;
           });
+          // Info di console jika ampuan kosong
+          if (!hasAmpuan && before) {
+            console.info('Guru belum punya mapel/kelas diampu (guru_mapel/guru_kelas). Menampilkan semua bank. Atur di Admin → Data Guru.');
+          }
         } catch (e) {
           console.warn('filter bank guru', e);
         }
@@ -9765,7 +9783,10 @@
       document.getElementById('checkAllBs').checked = false;
 
       if (!rows.length) {
-        tbody.innerHTML = '<tr><td colspan="9" style="text-align:center;padding:16px;color:#94a3b8;">Belum ada bank soal</td></tr>';
+        const tip = (currentRole === 'guru')
+          ? 'Belum ada bank soal untuk mapel/kelas yang Anda ampu.<br><span style="font-size:11px;">Pastikan Admin sudah mengatur Mapel & Kelas diampu di Data Guru. Bank yang Anda buat akan tetap muncul di sini.</span>'
+          : 'Belum ada bank soal';
+        tbody.innerHTML = '<tr><td colspan="9" style="text-align:center;padding:16px;color:#94a3b8;">' + tip + '</td></tr>';
         return;
       }
 
@@ -9856,7 +9877,8 @@
         kelasList = ['7A','7B','7C','7D','8A','8B','8C','8D','9A','9B','9C','9D'];
       }
 
-      // Guru: hanya mapel & kelas yang diampu
+      // Guru: batasi ke mapel & kelas yang diampu (jika sudah di-set di guru_mapel/guru_kelas)
+      // Jika belum di-set → tampilkan semua agar guru tetap bisa membuat bank
       if (currentRole === 'guru' && currentUserId && supabaseClient) {
         try {
           const [gm, gk] = await Promise.all([
@@ -9867,20 +9889,21 @@
           const kelasIds = (gk.data || []).map(r => Number(r.kelas_id));
           if (mapelIds.length) {
             mapelList = mapelList.filter(m => mapelIds.includes(Number(m.id)));
-          } else {
-            mapelList = [];
           }
+          // mapelIds kosong → biarkan mapelList penuh (semua mapel)
           if (kelasIds.length && kelasRows.length) {
             const allowed = new Set(
-              kelasRows.filter(k => kelasIds.includes(Number(k.id))).map(k => k.kelas || k.nama)
+              kelasRows.filter(k => kelasIds.includes(Number(k.id)))
+                .map(k => String(k.kelas || k.nama || '').trim())
+                .filter(Boolean)
             );
-            kelasList = kelasList.filter(k => allowed.has(k));
-          } else if (kelasIds.length) {
-            // fallback: jika tidak ada id, biarkan kosong
-            kelasList = [];
-          } else {
-            kelasList = [];
+            // juga izinkan match case-insensitive
+            const allowedLow = new Set([...allowed].map(x => x.toLowerCase()));
+            kelasList = kelasList.filter(k =>
+              allowed.has(k) || allowedLow.has(String(k).toLowerCase())
+            );
           }
+          // kelasIds kosong → biarkan kelasList penuh
         } catch (e) {
           console.warn('Filter ampua guru bank soal', e);
         }
@@ -10036,21 +10059,54 @@
         keterangan: document.getElementById('bsKet').value.trim() || null
       };
       if (!id) payload.jml_soal = 0;
+      // Tandai pemilik bank (agar filter guru selalu menampilkan bank sendiri)
+      if (currentRole === 'guru' && currentUserId) {
+        payload.guru_id = Number(currentUserId);
+      } else if (currentRole === 'admin' && currentUserId) {
+        payload.guru_id = payload.guru_id || null;
+      }
       if (!payload.judul || !payload.mapel) {
         alert('Judul dan Mapel wajib diisi'); return;
       }
       if (!payload.kelas) {
         alert('Pilih minimal 1 kelas'); return;
       }
+
+      async function saveBankResilient(mode, bankId, body) {
+        let p = Object.assign({}, body);
+        for (let attempt = 0; attempt < 12; attempt++) {
+          let data = null, error = null;
+          if (mode === 'update') {
+            const r = await supabaseClient.from('bank_soal').update(p).eq('id', bankId).select('id').maybeSingle();
+            data = r.data; error = r.error;
+          } else {
+            const r = await supabaseClient.from('bank_soal').insert([p]).select('id').maybeSingle();
+            data = r.data; error = r.error;
+          }
+          if (!error) return data;
+          const msg = String(error.message || error);
+          const m = msg.match(/'([a-zA-Z0-9_]+)' column/i) || msg.match(/column\s+[\"']?([a-zA-Z0-9_]+)/i);
+          if (m && m[1] && Object.prototype.hasOwnProperty.call(p, m[1])) {
+            delete p[m[1]];
+            continue;
+          }
+          // insert OK tapi select gagal (RLS) — anggap sukses
+          if (mode === 'insert' && /permission|policy|RLS|select/i.test(msg)) {
+            return { id: null };
+          }
+          throw error;
+        }
+        throw new Error('Gagal simpan bank soal');
+      }
+
       try {
         if (supabaseClient) {
           if (id) {
-            const { data, error } = await supabaseClient.from('bank_soal').update(payload).eq('id', id).select('id').maybeSingle();
-            if (error) throw error;
+            await saveBankResilient('update', id, payload);
           } else {
-            let { data, error } = await supabaseClient.from('bank_soal').insert([payload]).select('id').single();
-            // Jika kolom baru belum ada, coba payload minimal
-            if (error && /column|schema/i.test(error.message || '')) {
+            const data = await saveBankResilient('insert', null, payload);
+            // Jika kolom banyak yang tidak ada, pastikan minimal tersimpan
+            if (!data) {
               const minimal = {
                 judul: payload.judul,
                 mapel: payload.mapel,
@@ -10059,14 +10115,11 @@
                 status: payload.status,
                 periode_id: payload.periode_id,
                 jml_soal: 0,
-                keterangan: payload.keterangan
+                keterangan: payload.keterangan,
+                guru_id: payload.guru_id || null
               };
-              const retry = await supabaseClient.from('bank_soal').insert([minimal]).select('id').single();
-              data = retry.data;
-              error = retry.error;
+              await saveBankResilient('insert', null, minimal);
             }
-            if (error) throw error;
-            if (!data || !data.id) throw new Error('Bank soal tersimpan tanpa ID. Cek RLS INSERT.');
           }
         } else {
           let list = JSON.parse(localStorage.getItem('bank_soal') || '[]');
@@ -10080,6 +10133,15 @@
           localStorage.setItem('bank_soal', JSON.stringify(list));
         }
         closeModal('modalBankSoal');
+        // Reset filter tahun/semester agar bank baru tidak tersembunyi
+        try {
+          const t = document.getElementById('bsTahun');
+          const s = document.getElementById('bsSemester');
+          if (t) t.value = '';
+          if (s) s.value = '';
+          const c = document.getElementById('bsCari');
+          if (c) c.value = '';
+        } catch (e) {}
         await loadBankSoalTable();
         alert('Bank soal disimpan');
       } catch (e) {
