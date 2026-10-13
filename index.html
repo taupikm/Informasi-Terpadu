@@ -9121,7 +9121,49 @@
       });
     }
 
+    /** Hapus file di GDrive (best-effort; gagal tidak menghentikan upload baru) */
+    async function deleteGdriveFile(fileId) {
+      fileId = String(fileId || '').trim();
+      if (!fileId) return false;
+      try { await loadGdriveSettingsFromDb(); } catch (e) {}
+      try { loadGdriveSettingsSync(); } catch (e) {}
+      if (!GDRIVE_UPLOAD_ENDPOINT || !String(GDRIVE_UPLOAD_ENDPOINT).trim()) return false;
+      try {
+        const resp = await fetch(GDRIVE_UPLOAD_ENDPOINT, {
+          method: 'POST',
+          headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+          body: JSON.stringify({ action: 'delete', id: fileId, fileId: fileId })
+        });
+        const textResp = await resp.text();
+        let json;
+        try { json = JSON.parse(textResp); } catch (e) { return false; }
+        if (json && (json.ok === true || json.deleted === true)) return true;
+        console.warn('deleteGdriveFile:', json && (json.message || json.error));
+        return false;
+      } catch (e) {
+        console.warn('deleteGdriveFile', e);
+        return false;
+      }
+    }
+
+    /** Ambil id file GDrive dari objek jawaban lama */
+    function extractGdriveFileId(ans) {
+      if (!ans || typeof ans !== 'object') return null;
+      if (ans.provider === 'gdrive' && ans.id) return String(ans.id);
+      if (ans.id && /^[a-zA-Z0-9_-]{20,}$/.test(String(ans.id)) && !String(ans.id).includes('/')) {
+        // kemungkinan id Drive
+        if (ans.provider === 'gdrive' || (ans.url && String(ans.url).includes('drive.google.com'))) {
+          return String(ans.id);
+        }
+      }
+      // parse dari url
+      const m = String(ans.url || '').match(/\/d\/([a-zA-Z0-9_-]+)/);
+      if (m) return m[1];
+      return null;
+    }
+
     async function uploadJawabanFile(file, meta) {
+
       meta = meta || {};
       // Pastikan settings terbaru (siswa butuh dari DB, bukan hanya localStorage admin)
       try { await loadGdriveSettingsFromDb(); } catch (e) {}
@@ -9360,16 +9402,26 @@
           }
           if (st) st.textContent = 'Mengunggah ' + f.name + '...';
           try {
+            // Hapus file lama di GDrive jika siswa mengganti unggahan
+            const prevAns = _tuAnswers[s.id];
+            const oldId = extractGdriveFileId(prevAns);
+            if (oldId) {
+              if (st) st.textContent = 'Mengganti file (menghapus unggahan lama)...';
+              await deleteGdriveFile(oldId);
+            }
             const result = await uploadJawabanFile(f, {
               folderId: s.opsi_c || GDRIVE_DEFAULT_FOLDER_ID || '',
               bankId: _tuBankId,
               soalId: s.id,
               siswaId: currentUserId,
-              nisn: currentUserKode
+              nisn: currentUserKode,
+              replaceFileId: oldId || null
             });
             _tuAnswers[s.id] = result;
-            if (st) st.innerHTML = '<span style="color:#166534;">✓ Terunggah: ' + esc(result.name) +
-              (result.url ? ' · <a href="' + esc(result.url) + '" target="_blank" rel="noopener">Lihat</a>' : '') + '</span>';
+            if (st) st.innerHTML = '<span style="color:#166534;">✓ ' +
+              (oldId ? 'File diganti: ' : 'Terunggah: ') + esc(result.name) +
+              (result.url ? ' · <a href="' + esc(result.url) + '" target="_blank" rel="noopener">Lihat</a>' : '') +
+              (oldId ? ' <span style="color:#64748b;">(unggahan lama dihapus)</span>' : '') + '</span>';
             refreshTuSubmitBtn();
             renderTuSoal();
           } catch (err) {
