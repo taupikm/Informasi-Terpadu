@@ -2805,7 +2805,10 @@
         <div style="font-size:13px;font-weight:700;margin-bottom:8px;color:#0f172a;">📋 Contoh script Apps Script</div>
         <p style="font-size:11px;color:#64748b;margin-bottom:8px;line-height:1.45;">
           Buat project baru di <a href="https://script.google.com" target="_blank" rel="noopener">script.google.com</a>,
-          tempel kode di bawah, lalu <b>Deploy → New deployment → Web app</b>.
+          tempel kode di bawah, lalu <b>Deploy → New deployment → Web app</b>
+          (Execute as: <b>Me</b>, Who has access: <b>Anyone</b>).
+          Jika error <b>Akses ditolak: DriveApp</b>: buka script → <b>Run</b> fungsi doPost sekali → izinkan izin Drive → deploy ulang versi baru.
+          Folder ID harus milik akun Google yang sama dengan pemilik script.
         </p>
         <pre id="gdScriptSample" style="font-size:10px;line-height:1.4;background:#0f172a;color:#e2e8f0;padding:12px;border-radius:8px;overflow-x:auto;white-space:pre-wrap;max-height:220px;">function doPost(e) {
   try {
@@ -4279,6 +4282,7 @@
         }
 
         applyRole(role); // simpan sesi + ke dashboard
+        try { await loadGdriveSettingsFromDb(); } catch (e) {}
         closeModal('modalLogin');
         const extra = currentUserIsAlumni ? '\n(Alumni / Lulusan)' : '';
         alert('Login berhasil sebagai ' + ROLE_DATA[role].label + (userName ? '\n' + userName : '') + extra);
@@ -9119,14 +9123,21 @@
 
     async function uploadJawabanFile(file, meta) {
       meta = meta || {};
+      // Pastikan settings terbaru (siswa butuh dari DB, bukan hanya localStorage admin)
+      try { await loadGdriveSettingsFromDb(); } catch (e) {}
+      try { loadGdriveSettingsSync(); } catch (e) {}
       const { dataUrl, base64 } = await fileToBase64(file);
       const safeName = String(file.name || 'file').replace(/[^\w.\-()+ ]+/g, '_');
       const pathPrefix = ['jawaban', meta.bankId || 'x', meta.soalId || 'x', meta.nisn || meta.siswaId || 'anon', Date.now()].join('_');
       const storagePath = pathPrefix + '_' + safeName;
 
+      let gdriveTried = false;
+      let gdriveErr = null;
+
       // 1) Google Drive via Apps Script endpoint
       // Script user memakai: data/name/mime (atau JSON postData: base64/filename/mimeType)
       if (GDRIVE_UPLOAD_ENDPOINT && String(GDRIVE_UPLOAD_ENDPOINT).trim()) {
+        gdriveTried = true;
         const folderId = meta.folderId || GDRIVE_DEFAULT_FOLDER_ID || '';
         const mime = file.type || 'application/octet-stream';
         // Kirim SEMUA alias field agar cocok dengan script lama & baru
@@ -9204,7 +9215,15 @@
         }
       }
 
-      // 3) Fallback: simpan metadata + data URL (file kecil < 1.5MB)
+      // 3) Fallback lokal — HANYA jika GDrive belum dikonfigurasi
+      if (gdriveTried) {
+        throw new Error(
+          (gdriveErr ? (gdriveErr + ' — ') : '') +
+          'Upload Google Drive gagal. File TIDAK disimpan ke Drive. ' +
+          'Perbaiki izin Apps Script (DriveApp) lalu Tes Koneksi lagi. ' +
+          'Jangan pakai fallback lokal agar jawaban bisa dinilai stabil.'
+        );
+      }
       if (file.size > 1.5 * 1024 * 1024) {
         throw new Error('Endpoint GDrive & Storage belum siap. File >1.5MB tidak bisa disimpan lokal. Atur di Pengaturan → Integrasi GDrive, atau buat bucket Supabase "jawaban-file".');
       }
@@ -12029,11 +12048,18 @@
             jawHtml = '<div style="margin-top:4px;padding:10px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;">' +
               '<div style="font-weight:600;margin-bottom:6px;">📎 ' + esc(fname) +
               '<span style="font-weight:400;color:#64748b;">' + esc(sizeTxt + prov) + '</span></div>';
+            const isDataUrl = /^data:/i.test(fileUrl || '');
             if (fileUrl) {
-              jawHtml += '<div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:8px;">' +
-                '<a class="btn btn-primary" style="padding:6px 12px;font-size:12px;text-decoration:none;" href="' +
-                esc(fileUrl) + '" target="_blank" rel="noopener">Buka file</a>';
-              if (fileId) {
+              jawHtml += '<div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:8px;">';
+              if (isDataUrl) {
+                // data: URL besar membuat tab crash — unduh via blob
+                jawHtml += '<button type="button" class="btn btn-primary mon-dl-local" style="padding:6px 12px;font-size:12px;" data-fname="' +
+                  esc(fname) + '">Download file</button>';
+              } else {
+                jawHtml += '<a class="btn btn-primary" style="padding:6px 12px;font-size:12px;text-decoration:none;" href="' +
+                  esc(fileUrl) + '" target="_blank" rel="noopener">Buka file</a>';
+              }
+              if (fileId && !isDataUrl) {
                 jawHtml += '<a class="btn btn-outline" style="padding:6px 12px;font-size:12px;text-decoration:none;" href="https://drive.google.com/uc?export=download&id=' +
                   esc(fileId) + '" target="_blank" rel="noopener">Download</a>';
               }
@@ -12043,10 +12069,17 @@
             }
             if (isImg && (previewUrl || fileUrl)) {
               const src = previewUrl || fileUrl;
-              jawHtml += '<div style="margin-top:4px;"><img src="' + esc(src) +
-                '" alt="preview" style="max-width:100%;max-height:280px;border-radius:8px;border:1px solid #e2e8f0;background:#fff;" ' +
+              // simpan data-url di data-attr terpisah agar tombol download bisa ambil
+              jawHtml += '<div style="margin-top:4px;"><img src="' + (isDataUrl ? '' : esc(src)) + '" ' +
+                (isDataUrl ? ('data-local-src="1"') : '') +
+                ' alt="preview" class="mon-img-preview" style="max-width:100%;max-height:280px;border-radius:8px;border:1px solid #e2e8f0;background:#fff;" ' +
                 'onerror="this.style.display=\'none\';this.nextElementSibling&&(this.nextElementSibling.style.display=\'block\');">' +
-                '<div style="display:none;font-size:11px;color:#94a3b8;">Preview gambar tidak bisa dimuat (izin Drive). Gunakan tombol Buka file.</div></div>';
+                '<div style="display:none;font-size:11px;color:#94a3b8;">Preview gambar tidak bisa dimuat. Gunakan Download file.</div></div>';
+            }
+            // simpan data url di hidden untuk download (hindari href data: di <a>)
+            if (isDataUrl) {
+              jawHtml += '<textarea class="mon-local-data" style="display:none;">' +
+                String(fileUrl).replace(/</g, '&lt;') + '</textarea>';
             }
             jawHtml += '</div>';
           } else if (jw != null && jw !== '') {
@@ -12069,6 +12102,31 @@
       }
       document.getElementById('monDetailBody').innerHTML = html;
       document.getElementById('btnMonSaveEsai').dataset.id = r.id;
+      // Local file: set img dari textarea + bind download (aman, tidak crash)
+      try {
+        const body = document.getElementById('monDetailBody');
+        body.querySelectorAll('.mon-img-preview[data-local-src]').forEach((img, idx) => {
+          const ta = body.querySelectorAll('.mon-local-data')[idx];
+          if (ta && ta.value) img.src = ta.value;
+        });
+        body.querySelectorAll('.mon-dl-local').forEach((btn, idx) => {
+          btn.addEventListener('click', () => {
+            const ta = body.querySelectorAll('.mon-local-data')[idx];
+            const dataUrl = ta ? ta.value : '';
+            if (!dataUrl) { alert('Data file tidak ada'); return; }
+            try {
+              const a = document.createElement('a');
+              a.href = dataUrl;
+              a.download = btn.getAttribute('data-fname') || 'jawaban.bin';
+              document.body.appendChild(a);
+              a.click();
+              a.remove();
+            } catch (e) {
+              alert('Gagal unduh file lokal. Minta siswa unggah ulang setelah GDrive aktif.');
+            }
+          });
+        });
+      } catch (e) { console.warn(e); }
       openModal('modalMonDetail');
     });
 
@@ -14929,11 +14987,15 @@
         const result = await uploadJawabanFile(file, { folderId, bankId: 'test', soalId: 'test', nisn: 'test' });
         GDRIVE_UPLOAD_ENDPOINT = prevE;
         GDRIVE_DEFAULT_FOLDER_ID = prevF;
-        if (st) {
-          st.innerHTML = '<span style="color:#166534;">✓ Berhasil via <b>' + esc(result.provider || '-') + '</b>' +
-            (result.url ? ' · <a href="' + esc(result.url) + '" target="_blank" rel="noopener">Buka file tes</a>' : '') + '</span>';
+        if (result.provider !== 'gdrive') {
+          throw new Error('Tes tidak memakai Google Drive (provider: ' + (result.provider || '-') + '). Periksa endpoint & izin DriveApp.');
         }
-        alert('Tes berhasil (' + (result.provider || 'ok') + ').\n' + (result.url || result.name || ''));
+        if (st) {
+          st.innerHTML = '<span style="color:#166534;">✓ Berhasil via <b>gdrive</b>' +
+            (result.url ? ' · <a href="' + esc(result.url) + '" target="_blank" rel="noopener">Buka file tes</a>' : '') +
+            (result.id ? ' · id: ' + esc(result.id) : '') + '</span>';
+        }
+        alert('Tes GDrive berhasil.\nFile: ' + (result.name || '') + '\n' + (result.url || ''));
       } catch (e) {
         if (st) st.innerHTML = '<span style="color:#b91c1c;">Gagal: ' + esc(String(e.message || e)) + '</span>';
         alert('Tes gagal: ' + (e.message || e));
