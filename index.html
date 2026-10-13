@@ -2234,8 +2234,77 @@
     </div>
 
     <section class="page" id="page-download-absensi">
-      <div class="placeholder"><div class="icon">⬇️</div><h2>Download Absensi</h2><p>Halaman unduh data absensi</p></div>
+      <div class="page-title">Download Absensi</div>
+      <div class="card" style="padding:14px;margin-bottom:12px;">
+        <div class="form-row" style="display:flex;flex-wrap:wrap;gap:10px;align-items:flex-end;">
+          <div class="form-group" style="min-width:140px;flex:1;">
+            <label>Jenis</label>
+            <select id="dlAbsJenis" style="width:100%;padding:8px;border:1px solid #e2e8f0;border-radius:8px;">
+              <option value="guru">Absensi Guru (Format 1)</option>
+              <option value="siswa1">Absensi Siswa V.1 (Harian)</option>
+              <option value="siswa2">Absensi Siswa V.2 (Rekap)</option>
+            </select>
+          </div>
+          <div class="form-group" style="min-width:120px;flex:1;" id="dlAbsKelasWrap">
+            <label>Kelas</label>
+            <select id="dlAbsKelas" style="width:100%;padding:8px;border:1px solid #e2e8f0;border-radius:8px;">
+              <option value="">- Pilih -</option>
+            </select>
+          </div>
+          <div class="form-group" style="min-width:110px;">
+            <label>Bulan</label>
+            <select id="dlAbsBulan" style="width:100%;padding:8px;border:1px solid #e2e8f0;border-radius:8px;">
+              <option value="1">Januari</option><option value="2">Februari</option><option value="3">Maret</option>
+              <option value="4">April</option><option value="5">Mei</option><option value="6">Juni</option>
+              <option value="7">Juli</option><option value="8">Agustus</option><option value="9">September</option>
+              <option value="10">Oktober</option><option value="11">November</option><option value="12">Desember</option>
+            </select>
+          </div>
+          <div class="form-group" style="min-width:90px;">
+            <label>Tahun</label>
+            <input type="number" id="dlAbsTahun" min="2020" max="2100" style="width:100%;padding:8px;border:1px solid #e2e8f0;border-radius:8px;">
+          </div>
+          <div class="form-group" style="display:flex;gap:8px;">
+            <button type="button" class="btn btn-primary" id="btnDlAbsPreview">👁 Preview</button>
+            <button type="button" class="btn btn-outline" id="btnDlAbsExcel" disabled>📥 Excel</button>
+            <button type="button" class="btn btn-outline" id="btnDlAbsPrint" disabled>🖨 Cetak</button>
+          </div>
+        </div>
+        <p style="font-size:11px;color:#64748b;margin:10px 0 0;line-height:1.4;">
+          Kolom tanggal hari Minggu &amp; hari libur berwarna <span style="color:#dc2626;font-weight:700;">merah</span> (menyesuaikan jumlah baris).
+          TW/TL = tanda centang (✓). Sakit/Izin/Alpa/Bolos = huruf S / I / A / B.
+        </p>
+      </div>
+      <div class="card" style="padding:0;overflow:auto;max-height:70vh;" id="dlAbsPreviewCard">
+        <div id="dlAbsPreview" style="padding:16px;min-height:120px;color:#94a3b8;text-align:center;">
+          Pilih filter lalu klik <b>Preview</b> untuk menampilkan daftar hadir.
+        </div>
+      </div>
     </section>
+
+    <style>
+      .dl-abs-sheet { font-family: Arial, Helvetica, sans-serif; color: #0f172a; width: max-content; min-width: 100%; }
+      .dl-abs-sheet .dl-title { text-align: center; font-weight: 700; font-size: 14px; letter-spacing: 0.3px; }
+      .dl-abs-sheet .dl-sub { text-align: center; font-weight: 700; font-size: 12px; margin-bottom: 10px; }
+      .dl-abs-sheet .dl-meta { font-size: 12px; margin-bottom: 8px; }
+      .dl-abs-sheet .dl-meta div { margin: 2px 0; }
+      .dl-abs-sheet table { border-collapse: collapse; font-size: 10px; table-layout: fixed; }
+      .dl-abs-sheet th, .dl-abs-sheet td {
+        border: 1px solid #1e3a8a; padding: 2px 1px; text-align: center; vertical-align: middle;
+        word-wrap: break-word; overflow: hidden;
+      }
+      .dl-abs-sheet th { background: #1d4ed8; color: #fff; font-weight: 700; }
+      .dl-abs-sheet td.dl-nama { text-align: left; padding-left: 4px; font-size: 10px; line-height: 1.25; }
+      .dl-abs-sheet td.dl-libur, .dl-abs-sheet th.dl-libur { background: #fecaca !important; color: #7f1d1d !important; }
+      .dl-abs-sheet .dl-ver { text-align: right; font-size: 10px; color: #64748b; margin-bottom: 4px; }
+      @media print {
+        body * { visibility: hidden !important; }
+        #dlAbsPrintArea, #dlAbsPrintArea * { visibility: visible !important; }
+        #dlAbsPrintArea { position: absolute; left: 0; top: 0; width: 100%; padding: 8mm; }
+        .dl-abs-sheet table { page-break-inside: auto; }
+        .dl-abs-sheet tr { page-break-inside: avoid; }
+      }
+    </style>
 
     <!-- ========== DATA SISWA ========== -->
     <section class="page" id="page-data-siswa">
@@ -2724,24 +2793,50 @@
         </p>
         <pre id="gdScriptSample" style="font-size:10px;line-height:1.4;background:#0f172a;color:#e2e8f0;padding:12px;border-radius:8px;overflow-x:auto;white-space:pre-wrap;max-height:220px;">function doPost(e) {
   try {
-    var data = JSON.parse(e.postData.contents);
-    var bytes = Utilities.base64Decode(data.base64);
-    var blob = Utilities.newBlob(bytes, data.mimeType || 'application/octet-stream', data.filename);
-    var folder = data.folderId
-      ? DriveApp.getFolderById(data.folderId)
-      : DriveApp.getRootFolder();
+    // Baca JSON body (dari aplikasi) ATAU e.parameter
+    var data = {};
+    if (e && e.postData && e.postData.contents) {
+      try { data = JSON.parse(e.postData.contents); } catch (errParse) { data = {}; }
+    }
+    var params = (e && e.parameter) ? e.parameter : {};
+    var action = String(data.action || params.action || 'upload').toLowerCase();
+
+    if (action === 'delete') {
+      var delId = data.id || data.fileId || params.id || params.fileId || '';
+      if (!delId) {
+        return ContentService.createTextOutput(JSON.stringify({ ok: false, message: 'id wajib' }))
+          .setMimeType(ContentService.MimeType.JSON);
+      }
+      DriveApp.getFileById(delId).setTrashed(true);
+      return ContentService.createTextOutput(JSON.stringify({ ok: true, deleted: true, id: delId }))
+        .setMimeType(ContentService.MimeType.JSON);
+    }
+
+    var b64 = data.base64 || data.data || params.data || '';
+    var name = data.filename || data.name || params.name || ('jawaban_' + new Date().getTime() + '.bin');
+    var mime = data.mimeType || data.mime || params.mime || 'application/octet-stream';
+    var folderId = data.folderId || params.folderId || '';
+    var nisn = data.nisn || params.nisn || '';
+    if (nisn) name = nisn + '_' + name;
+
+    if (!b64) {
+      return ContentService.createTextOutput(JSON.stringify({ ok: false, message: 'data/base64 kosong' }))
+        .setMimeType(ContentService.MimeType.JSON);
+    }
+
+    var folder = folderId ? DriveApp.getFolderById(folderId) : DriveApp.getRootFolder();
+    var blob = Utilities.newBlob(Utilities.base64Decode(b64), mime, name);
     var file = folder.createFile(blob);
     file.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
-    return ContentService
-      .createTextOutput(JSON.stringify({
-        id: file.getId(),
-        name: file.getName(),
-        url: 'https://drive.google.com/file/d/' + file.getId() + '/view'
-      }))
-      .setMimeType(ContentService.MimeType.JSON);
+
+    return ContentService.createTextOutput(JSON.stringify({
+      ok: true,
+      id: file.getId(),
+      name: file.getName(),
+      url: 'https://drive.google.com/file/d/' + file.getId() + '/view'
+    })).setMimeType(ContentService.MimeType.JSON);
   } catch (err) {
-    return ContentService
-      .createTextOutput(JSON.stringify({ error: String(err) }))
+    return ContentService.createTextOutput(JSON.stringify({ ok: false, error: String(err), message: String(err) }))
       .setMimeType(ContentService.MimeType.JSON);
   }
 }</pre>
@@ -4244,6 +4339,7 @@
       if (pageId === 'dashboard') loadDashboard();
       if (pageId === 'input-izin') initIzinPage();
       if (pageId === 'rekap-data') initRekapPage();
+      if (pageId === 'download-absensi') initDownloadAbsensiPage();
       if (pageId === 'cari-siswa') initCariSiswaPage();
       if (pageId === 'syarat-naik') initSyaratNaikPage();
       if (pageId === 'sidik-jari') initSidikJariSiswaPage();
@@ -7827,6 +7923,463 @@
     // Setelah CRUD hari libur, clear cache
     function clearLiburCache() { _cacheLiburMap = null; }
 
+    // ========== DOWNLOAD ABSENSI (Guru / Siswa V1 / Siswa V2) ==========
+    const DL_BULAN_NAMA = ['', 'Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni',
+      'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'];
+
+    let _dlAbsLast = null; // { jenis, html, aoa, filename }
+
+    function dlAbsMm(mm) {
+      // approx px for screen preview (1mm ≈ 3.78px at 96dpi)
+      return Math.max(14, Math.round(mm * 3.78));
+    }
+
+    function dlNormStatus(st) {
+      const u = String(st || '').trim().toUpperCase();
+      if (u === 'TW' || u === 'H' || u === 'HADIR' || u === 'TEPAT WAKTU') return 'TW';
+      if (u === 'TL' || u === 'TERLAMBAT') return 'TL';
+      if (u === 'S' || u === 'SAKIT') return 'S';
+      if (u === 'I' || u === 'IZIN') return 'I';
+      if (u === 'A' || u === 'ALPA' || u === 'ALPHA' || u === 'ABSEN') return 'A';
+      if (u === 'B' || u === 'BOLOS') return 'B';
+      return u || '';
+    }
+
+    /** Prioritas status harian (terbaik dulu) */
+    function dlBestStatus(list) {
+      const rank = { TW: 1, TL: 2, S: 3, I: 4, A: 5, B: 6 };
+      let best = '';
+      let bestR = 99;
+      (list || []).forEach(st => {
+        const n = dlNormStatus(st);
+        const r = rank[n] || 50;
+        if (r < bestR) { bestR = r; best = n; }
+      });
+      return best;
+    }
+
+    function dlCellMark(st) {
+      if (st === 'TW' || st === 'TL') return '✓';
+      if (st === 'S' || st === 'I' || st === 'A' || st === 'B') return st;
+      return '';
+    }
+
+    function dlDaysInMonth(y, m) {
+      return new Date(y, m, 0).getDate();
+    }
+
+    function dlIsSunday(y, m, d) {
+      return new Date(y, m - 1, d).getDay() === 0;
+    }
+
+    function dlDateStr(y, m, d) {
+      return y + '-' + String(m).padStart(2, '0') + '-' + String(d).padStart(2, '0');
+    }
+
+    async function initDownloadAbsensiPage() {
+      const now = new Date();
+      const bl = document.getElementById('dlAbsBulan');
+      const th = document.getElementById('dlAbsTahun');
+      if (bl && !bl.dataset.ready) {
+        bl.value = String(now.getMonth() + 1);
+        bl.dataset.ready = '1';
+      }
+      if (th && !th.value) th.value = String(now.getFullYear());
+
+      // isi kelas
+      const selK = document.getElementById('dlAbsKelas');
+      if (selK) {
+        let kelasList = [];
+        try {
+          if (supabaseClient) {
+            const { data } = await supabaseClient.from('kelas').select('kelas, nama').order('kelas');
+            kelasList = (data || []).map(k => k.kelas || k.nama).filter(Boolean);
+          }
+        } catch (e) {}
+        if (!kelasList.length && typeof masterKelas !== 'undefined') {
+          kelasList = (masterKelas || []).map(k => (typeof k === 'string' ? k : (k.kelas || k.nama))).filter(Boolean);
+        }
+        if (!kelasList.length) {
+          kelasList = ['7A','7B','7C','7D','8A','8B','8C','8D','9A','9B','9C','9D'];
+        }
+        kelasList = [...new Set(kelasList)].sort((a, b) => String(a).localeCompare(String(b), 'id', { numeric: true }));
+        const cur = selK.value;
+        selK.innerHTML = '<option value="">- Pilih -</option>' +
+          kelasList.map(k => '<option value="' + esc(k) + '">' + esc(k) + '</option>').join('');
+        if (cur) selK.value = cur;
+      }
+
+      const jenis = document.getElementById('dlAbsJenis');
+      const wrap = document.getElementById('dlAbsKelasWrap');
+      function syncJenis() {
+        const j = jenis?.value || 'guru';
+        if (wrap) wrap.style.display = (j === 'guru') ? 'none' : '';
+      }
+      jenis?.removeEventListener('change', syncJenis);
+      jenis?.addEventListener('change', syncJenis);
+      syncJenis();
+
+      try { await loadLiburMap(); } catch (e) {}
+      try { await loadAktifPeriode(); } catch (e) {}
+    }
+
+    async function dlFetchAbsensiMonth(y, m, tipe) {
+      const start = dlDateStr(y, m, 1);
+      const end = dlDateStr(y, m, dlDaysInMonth(y, m));
+      let rows = [];
+      if (supabaseClient) {
+        let q = supabaseClient.from('absensi')
+          .select('id, tanggal, tipe, ref_id, kode, nama, status, jam_scan, sesi_id, sesi_nama')
+          .gte('tanggal', start).lte('tanggal', end);
+        if (tipe) q = q.eq('tipe', tipe);
+        const { data, error } = await q;
+        if (error) throw error;
+        rows = data || [];
+      }
+      return rows;
+    }
+
+    async function dlLoadPeople(jenis, kelas) {
+      if (jenis === 'guru') {
+        let list = [];
+        if (supabaseClient) {
+          const { data, error } = await supabaseClient.from('guru')
+            .select('id, nama, lp, nip, pangkat_gol, status').order('nama');
+          if (error) throw error;
+          list = (data || []).filter(g => !g.status || String(g.status).toLowerCase() === 'aktif');
+        }
+        return list.map(g => ({
+          id: g.id,
+          nama: g.nama || '',
+          lp: g.lp || '',
+          nisn: g.nip || '',
+          pangkat: g.pangkat_gol || '',
+          kode: null
+        }));
+      }
+      // siswa
+      let list = [];
+      if (supabaseClient) {
+        let q = supabaseClient.from('siswa')
+          .select('id, nama, lp, nisn, kelas, status').eq('kelas', kelas).order('nama');
+        const { data, error } = await q;
+        if (error) throw error;
+        list = (data || []).filter(s => {
+          const st = String(s.status || 'Aktif').toLowerCase();
+          return st === 'aktif' || st === '';
+        });
+      }
+      return list.map(s => ({
+        id: s.id,
+        nama: s.nama || '',
+        lp: s.lp || '',
+        nisn: s.nisn || '',
+        pangkat: '',
+        kelas: s.kelas || kelas
+      }));
+    }
+
+    function dlBuildDayMap(absRows, people) {
+      // map: personKey -> date -> [statuses]
+      const byPerson = {};
+      people.forEach(p => { byPerson[String(p.id)] = {}; });
+      absRows.forEach(r => {
+        const key = String(r.ref_id || '');
+        if (!byPerson[key]) byPerson[key] = {};
+        const tgl = String(r.tanggal || '').slice(0, 10);
+        if (!tgl) return;
+        if (!byPerson[key][tgl]) byPerson[key][tgl] = [];
+        byPerson[key][tgl].push(r.status);
+      });
+      return byPerson;
+    }
+
+    function dlCountStats(dayStatuses, daysInfo) {
+      const c = { TW: 0, TL: 0, S: 0, I: 0, A: 0, B: 0 };
+      let efektif = 0;
+      daysInfo.forEach(di => {
+        if (di.libur) return;
+        efektif++;
+        const st = dayStatuses[di.date] || '';
+        if (st === 'TW') c.TW++;
+        else if (st === 'TL') c.TL++;
+        else if (st === 'S') c.S++;
+        else if (st === 'I') c.I++;
+        else if (st === 'B') c.B++;
+        else c.A++; // kosong / A
+      });
+      // % hadir: TW=1, TL=0.8, S=0.75, I=0.5 (sama bobot syarat)
+      const skor = c.TW * 1 + c.TL * 0.8 + c.S * 0.75 + c.I * 0.5;
+      const persen = efektif > 0 ? Math.round((skor / efektif) * 1000) / 10 : 0;
+      const jml = c.TW + c.TL + c.S + c.I + c.A + c.B;
+      return { c, persen, jml, efektif };
+    }
+
+    async function dlBuildSheet() {
+      const jenis = document.getElementById('dlAbsJenis')?.value || 'guru';
+      const bulan = Number(document.getElementById('dlAbsBulan')?.value) || (new Date().getMonth() + 1);
+      const tahun = Number(document.getElementById('dlAbsTahun')?.value) || new Date().getFullYear();
+      const kelas = (document.getElementById('dlAbsKelas')?.value || '').trim();
+
+      if ((jenis === 'siswa1' || jenis === 'siswa2') && !kelas) {
+        throw new Error('Pilih kelas terlebih dahulu');
+      }
+
+      await loadLiburMap();
+      try { await loadAktifPeriode(); } catch (e) {}
+
+      const nDays = dlDaysInMonth(tahun, bulan);
+      const daysInfo = [];
+      for (let d = 1; d <= nDays; d++) {
+        const date = dlDateStr(tahun, bulan, d);
+        const sun = dlIsSunday(tahun, bulan, d);
+        const lib = !!(isTanggalLibur(date) || sun);
+        daysInfo.push({ d, date, libur: lib, sunday: sun });
+      }
+
+      const tipeDb = jenis === 'guru' ? 'guru' : 'siswa';
+      const [people, absRows] = await Promise.all([
+        dlLoadPeople(jenis === 'guru' ? 'guru' : 'siswa', kelas),
+        dlFetchAbsensiMonth(tahun, bulan, tipeDb)
+      ]);
+
+      // filter absensi siswa by kelas via people ids
+      const idSet = new Set(people.map(p => String(p.id)));
+      const absFiltered = absRows.filter(r => idSet.has(String(r.ref_id)));
+      const byPerson = dlBuildDayMap(absFiltered, people);
+
+      // resolve daily best status
+      const daily = {};
+      people.forEach(p => {
+        const key = String(p.id);
+        daily[key] = {};
+        daysInfo.forEach(di => {
+          const arr = (byPerson[key] && byPerson[key][di.date]) || [];
+          daily[key][di.date] = dlBestStatus(arr);
+        });
+      });
+
+      let minHadir = 80;
+      try {
+        if (typeof getAbsenSettings === 'function') {
+          const s = await getAbsenSettings();
+          minHadir = Number(s.minHadir) || 80;
+        } else if (typeof loadAbsenSettings === 'function') {
+          const s = await loadAbsenSettings();
+          minHadir = Number(s && s.minHadir) || 80;
+        }
+      } catch (e) {}
+
+      const ta = aktifPeriode
+        ? ((aktifPeriode.tahun_ajaran || '') + '').trim()
+        : (tahun + '/' + (tahun + 1));
+      const sm = aktifPeriode ? (aktifPeriode.semester || 'Ganjil') : 'Ganjil';
+      const periodeLabel = 'SEMESTER ' + String(sm).toUpperCase() + ' TAHUN AJARAN ' + ta;
+      const bulanLabel = DL_BULAN_NAMA[bulan] + ' ' + tahun;
+
+      const wNo = dlAbsMm(3);
+      const wLP = dlAbsMm(3);
+      const wDay = dlAbsMm(3);
+      const wNisn = dlAbsMm(20);
+      const wPangkat = dlAbsMm(20);
+      const wNama = dlAbsMm(40);
+      const wPct = dlAbsMm(12);
+      const wLetter = dlAbsMm(4);
+
+      let html = '';
+      let aoa = [];
+      let filename = 'absensi.xlsx';
+
+      if (jenis === 'guru') {
+        filename = 'Daftar_Hadir_Guru_' + bulanLabel.replace(/\s+/g, '_') + '.xlsx';
+        html += '<div class="dl-abs-sheet" id="dlAbsPrintArea">';
+        html += '<div class="dl-title">DAFTAR HADIR GURU</div>';
+        html += '<div class="dl-sub">' + esc(periodeLabel) + '</div>';
+        html += '<div class="dl-meta"><div>Bulan&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;: ' + esc(bulanLabel) + '</div></div>';
+        html += '<table><thead><tr>';
+        html += '<th style="width:' + wNo + 'px;">No</th>';
+        html += '<th style="width:' + wNama + 'px;">Nama</th>';
+        html += '<th style="width:' + wLP + 'px;">L/P</th>';
+        html += '<th style="width:' + wPangkat + 'px;">Pangkat/Gol</th>';
+        daysInfo.forEach(di => {
+          html += '<th class="' + (di.libur ? 'dl-libur' : '') + '" style="width:' + wDay + 'px;">' + di.d + '</th>';
+        });
+        html += '<th style="width:' + wLetter + 'px;">S</th><th style="width:' + wLetter + 'px;">I</th>';
+        html += '<th style="width:' + wLetter + 'px;">A</th><th style="width:' + wLetter + 'px;">B</th>';
+        html += '<th style="width:' + wPct + 'px;">%Hadir</th>';
+        html += '</tr></thead><tbody>';
+
+        const headAoa = ['No', 'Nama', 'L/P', 'Pangkat/Gol'];
+        daysInfo.forEach(di => headAoa.push(di.d));
+        headAoa.push('S', 'I', 'A', 'B', '%Hadir');
+        aoa.push(headAoa);
+
+        people.forEach((p, i) => {
+          const stats = dlCountStats(daily[String(p.id)] || {}, daysInfo);
+          const namaCell = esc(p.nama) + (p.nisn ? '<br><span style="font-size:9px;color:#475569;">NIP ' + esc(p.nisn) + '</span>' : '');
+          html += '<tr>';
+          html += '<td>' + (i + 1) + '</td>';
+          html += '<td class="dl-nama">' + namaCell + '</td>';
+          html += '<td>' + esc(p.lp || '') + '</td>';
+          html += '<td style="font-size:9px;">' + esc(p.pangkat || '') + '</td>';
+          const rowA = [i + 1, p.nama + (p.nisn ? ' | NIP ' + p.nisn : ''), p.lp || '', p.pangkat || ''];
+          daysInfo.forEach(di => {
+            const st = (daily[String(p.id)] || {})[di.date] || '';
+            const mark = di.libur ? '' : dlCellMark(st);
+            html += '<td class="' + (di.libur ? 'dl-libur' : '') + '">' + esc(mark) + '</td>';
+            rowA.push(mark);
+          });
+          html += '<td>' + (stats.c.S || '') + '</td><td>' + (stats.c.I || '') + '</td>';
+          html += '<td>' + (stats.c.A || '') + '</td><td>' + (stats.c.B || '') + '</td>';
+          html += '<td>' + stats.persen + '</td>';
+          html += '</tr>';
+          rowA.push(stats.c.S, stats.c.I, stats.c.A, stats.c.B, stats.persen);
+          aoa.push(rowA);
+        });
+        if (!people.length) {
+          html += '<tr><td colspan="' + (4 + nDays + 5) + '" style="padding:12px;color:#94a3b8;">Tidak ada data guru</td></tr>';
+        }
+        html += '</tbody></table></div>';
+
+      } else if (jenis === 'siswa1') {
+        filename = 'Daftar_Hadir_Siswa_V1_' + kelas + '_' + bulanLabel.replace(/\s+/g, '_') + '.xlsx';
+        html += '<div class="dl-abs-sheet" id="dlAbsPrintArea">';
+        html += '<div class="dl-title">DAFTAR HADIR SISWA</div>';
+        html += '<div class="dl-sub">' + esc(periodeLabel) + '</div>';
+        html += '<div class="dl-meta"><div>Kelas&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;: ' + esc(kelas) + '</div>';
+        html += '<div>Bulan&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;: ' + esc(bulanLabel) + '</div></div>';
+        html += '<div class="dl-ver">V.1</div>';
+        html += '<table><thead><tr>';
+        html += '<th style="width:' + wNo + 'px;">No</th>';
+        html += '<th style="width:' + wNisn + 'px;">NISN</th>';
+        html += '<th style="width:' + wNama + 'px;">Nama</th>';
+        html += '<th style="width:' + wLP + 'px;">L/P</th>';
+        daysInfo.forEach(di => {
+          html += '<th class="' + (di.libur ? 'dl-libur' : '') + '" style="width:' + wDay + 'px;">' + di.d + '</th>';
+        });
+        html += '<th style="width:' + wLetter + 'px;">S</th><th style="width:' + wLetter + 'px;">I</th>';
+        html += '<th style="width:' + wLetter + 'px;">A</th><th style="width:' + wLetter + 'px;">B</th>';
+        html += '<th style="width:' + wLetter + 'px;">Jml</th>';
+        html += '</tr></thead><tbody>';
+
+        const headAoa = ['No', 'NISN', 'Nama', 'L/P'];
+        daysInfo.forEach(di => headAoa.push(di.d));
+        headAoa.push('S', 'I', 'A', 'B', 'Jml');
+        aoa.push(headAoa);
+
+        people.forEach((p, i) => {
+          const stats = dlCountStats(daily[String(p.id)] || {}, daysInfo);
+          html += '<tr>';
+          html += '<td>' + (i + 1) + '</td>';
+          html += '<td style="font-size:9px;">' + esc(p.nisn || '') + '</td>';
+          html += '<td class="dl-nama">' + esc(p.nama) + '</td>';
+          html += '<td>' + esc(p.lp || '') + '</td>';
+          const rowA = [i + 1, p.nisn || '', p.nama, p.lp || ''];
+          daysInfo.forEach(di => {
+            const st = (daily[String(p.id)] || {})[di.date] || '';
+            const mark = di.libur ? '' : dlCellMark(st);
+            html += '<td class="' + (di.libur ? 'dl-libur' : '') + '">' + esc(mark) + '</td>';
+            rowA.push(mark);
+          });
+          html += '<td>' + (stats.c.S || '') + '</td><td>' + (stats.c.I || '') + '</td>';
+          html += '<td>' + (stats.c.A || '') + '</td><td>' + (stats.c.B || '') + '</td>';
+          html += '<td>' + (stats.jml || '') + '</td>';
+          html += '</tr>';
+          rowA.push(stats.c.S, stats.c.I, stats.c.A, stats.c.B, stats.jml);
+          aoa.push(rowA);
+        });
+        if (!people.length) {
+          html += '<tr><td colspan="' + (4 + nDays + 5) + '" style="padding:12px;color:#94a3b8;">Tidak ada siswa di kelas ' + esc(kelas) + '</td></tr>';
+        }
+        html += '</tbody></table></div>';
+
+      } else {
+        // siswa2 rekap
+        filename = 'Daftar_Hadir_Siswa_V2_' + kelas + '_' + bulanLabel.replace(/\s+/g, '_') + '.xlsx';
+        html += '<div class="dl-abs-sheet" id="dlAbsPrintArea">';
+        html += '<div class="dl-title">DAFTAR HADIR SISWA</div>';
+        html += '<div class="dl-sub">' + esc(periodeLabel) + '</div>';
+        html += '<div class="dl-meta"><div>Kelas&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;: ' + esc(kelas) + '</div>';
+        html += '<div>Bulan&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;: ' + esc(bulanLabel) + '</div></div>';
+        html += '<div class="dl-ver">V.2</div>';
+        html += '<table><thead><tr>';
+        html += '<th style="width:' + wNo + 'px;">No</th>';
+        html += '<th style="width:' + wNisn + 'px;">NISN</th>';
+        html += '<th style="width:' + wNama + 'px;">Nama</th>';
+        html += '<th style="width:' + wLP + 'px;">L/P</th>';
+        html += '<th style="width:' + wLetter + 'px;">TW</th><th style="width:' + wLetter + 'px;">TL</th>';
+        html += '<th style="width:' + wLetter + 'px;">S</th><th style="width:' + wLetter + 'px;">I</th>';
+        html += '<th style="width:' + wLetter + 'px;">A</th><th style="width:' + wLetter + 'px;">B</th>';
+        html += '<th style="width:' + wPct + 'px;">% Hadir</th>';
+        html += '<th style="width:' + dlAbsMm(22) + 'px;">Naik/Lulus</th>';
+        html += '</tr></thead><tbody>';
+
+        aoa.push(['No', 'NISN', 'Nama', 'L/P', 'TW', 'TL', 'S', 'I', 'A', 'B', '% Hadir', 'Naik/Lulus']);
+
+        people.forEach((p, i) => {
+          const stats = dlCountStats(daily[String(p.id)] || {}, daysInfo);
+          const ok = stats.persen >= minHadir;
+          const label = ok ? 'Memenuhi' : 'Tidak Memenuhi';
+          html += '<tr>';
+          html += '<td>' + (i + 1) + '</td>';
+          html += '<td style="font-size:9px;">' + esc(p.nisn || '') + '</td>';
+          html += '<td class="dl-nama">' + esc(p.nama) + '</td>';
+          html += '<td>' + esc(p.lp || '') + '</td>';
+          html += '<td>' + (stats.c.TW || 0) + '</td><td>' + (stats.c.TL || 0) + '</td>';
+          html += '<td>' + (stats.c.S || 0) + '</td><td>' + (stats.c.I || 0) + '</td>';
+          html += '<td>' + (stats.c.A || 0) + '</td><td>' + (stats.c.B || 0) + '</td>';
+          html += '<td>' + stats.persen + '</td>';
+          html += '<td style="color:' + (ok ? '#166534' : '#b91c1c') + ';font-weight:600;">' + label + '</td>';
+          html += '</tr>';
+          aoa.push([i + 1, p.nisn || '', p.nama, p.lp || '', stats.c.TW, stats.c.TL, stats.c.S, stats.c.I, stats.c.A, stats.c.B, stats.persen, label]);
+        });
+        if (!people.length) {
+          html += '<tr><td colspan="12" style="padding:12px;color:#94a3b8;">Tidak ada siswa di kelas ' + esc(kelas) + '</td></tr>';
+        }
+        html += '</tbody></table></div>';
+      }
+
+      return { html, aoa, filename, jenis, peopleCount: people.length };
+    }
+
+    document.getElementById('btnDlAbsPreview')?.addEventListener('click', async () => {
+      const box = document.getElementById('dlAbsPreview');
+      const btnEx = document.getElementById('btnDlAbsExcel');
+      const btnPr = document.getElementById('btnDlAbsPrint');
+      if (!box) return;
+      box.innerHTML = '<div style="padding:24px;color:#94a3b8;">Memuat data absensi...</div>';
+      if (btnEx) btnEx.disabled = true;
+      if (btnPr) btnPr.disabled = true;
+      try {
+        const res = await dlBuildSheet();
+        _dlAbsLast = res;
+        box.innerHTML = res.html;
+        if (btnEx) btnEx.disabled = false;
+        if (btnPr) btnPr.disabled = false;
+        if (!res.peopleCount) {
+          // tetap boleh unduh template kosong
+        }
+      } catch (e) {
+        console.warn(e);
+        box.innerHTML = '<div style="padding:20px;color:#ef4444;">Gagal: ' + esc(e.message || e) + '</div>';
+        _dlAbsLast = null;
+      }
+    });
+
+    document.getElementById('btnDlAbsExcel')?.addEventListener('click', () => {
+      if (!_dlAbsLast || !_dlAbsLast.aoa) { alert('Preview dulu'); return; }
+      if (typeof XLSX === 'undefined') { alert('Library Excel belum termuat'); return; }
+      const ws = XLSX.utils.aoa_to_sheet(_dlAbsLast.aoa);
+      const wb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb, ws, 'Absensi');
+      XLSX.writeFile(wb, _dlAbsLast.filename || 'absensi.xlsx');
+    });
+
+    document.getElementById('btnDlAbsPrint')?.addEventListener('click', () => {
+      if (!_dlAbsLast) { alert('Preview dulu'); return; }
+      window.print();
+    });
+
     // ----- IZIN SIDIK JARI -----
     let _izinFpMode = 'siswa'; // 'siswa' | 'guru'
     let _izinFpAllowed = new Set(); // 'tipe:ref_id'
@@ -8547,16 +9100,27 @@
       const storagePath = pathPrefix + '_' + safeName;
 
       // 1) Google Drive via Apps Script endpoint
+      // Script user memakai: data/name/mime (atau JSON postData: base64/filename/mimeType)
       if (GDRIVE_UPLOAD_ENDPOINT && String(GDRIVE_UPLOAD_ENDPOINT).trim()) {
+        const folderId = meta.folderId || GDRIVE_DEFAULT_FOLDER_ID || '';
+        const mime = file.type || 'application/octet-stream';
+        // Kirim SEMUA alias field agar cocok dengan script lama & baru
         const body = {
+          // format sample app
           filename: safeName,
-          mimeType: file.type || 'application/octet-stream',
+          mimeType: mime,
           base64: base64,
-          folderId: meta.folderId || GDRIVE_DEFAULT_FOLDER_ID || '',
+          folderId: folderId,
+          // format script user (gscript.js)
+          name: safeName,
+          mime: mime,
+          data: base64,
+          // meta
           bankId: meta.bankId || null,
           soalId: meta.soalId || null,
           siswaId: meta.siswaId || null,
-          nisn: meta.nisn || null
+          nisn: meta.nisn || null,
+          action: 'upload'
         };
         const resp = await fetch(GDRIVE_UPLOAD_ENDPOINT, {
           method: 'POST',
@@ -8566,22 +9130,29 @@
         const textResp = await resp.text();
         let json;
         try { json = JSON.parse(textResp); } catch (e) {
-          throw new Error('Respons GDrive tidak valid: ' + textResp.slice(0, 120));
+          throw new Error('Respons GDrive tidak valid: ' + textResp.slice(0, 160));
         }
-        if (!json || json.error) throw new Error((json && json.error) || 'Upload GDrive gagal');
+        // Terima error dari kedua format: {error} atau {ok:false, message}
+        if (!json) throw new Error('Respons GDrive kosong');
+        if (json.ok === false || json.error) {
+          throw new Error(json.message || json.error || 'Upload GDrive gagal');
+        }
         const gid = json.id || json.fileId || null;
         let gurl = json.url || json.link || '';
         if (!gurl && gid) gurl = 'https://drive.google.com/file/d/' + gid + '/view';
-        // Beberapa script mengembalikan name = id; pakai nama asli file
+        if (!gid && !gurl) {
+          throw new Error('Upload GDrive tidak mengembalikan id/url. Cek script (harus baca postData JSON, bukan hanya e.parameter).');
+        }
         let gname = json.name || safeName;
-        if (gid && gname === gid) gname = safeName;
-        if (gid && String(gname).replace(/\.[a-z0-9]+$/i, '') === String(gid)) gname = safeName;
+        if (gid && (gname === gid || String(gname).replace(/\.[a-z0-9]+$/i, '') === String(gid))) {
+          gname = safeName;
+        }
         return {
           name: gname,
           url: gurl,
           id: gid,
           size: file.size,
-          mime: file.type || json.mimeType || '',
+          mime: mime,
           provider: 'gdrive'
         };
       }
