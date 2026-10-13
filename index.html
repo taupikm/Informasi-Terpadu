@@ -1626,6 +1626,9 @@
       <div class="page-title">Kerjakan Tugas / Ujian</div>
       <div class="card" style="padding:12px;margin-bottom:10px;font-size:13px;">
         Siswa: <b id="tuSiswaNama">-</b> · Kelas: <b id="tuSiswaKelas">-</b>
+        <div id="tuAdminHint" style="display:none;margin-top:6px;font-size:11px;color:#a16207;line-height:1.4;">
+          Mode <b>Admin preview</b>: semua bank aktif bisa dikerjakan (abaikan jadwal & batas percobaan). Hasil ditandai [Admin].
+        </div>
       </div>
       <div id="tuList" class="bs-soal-list">
         <div style="text-align:center;padding:20px;color:#94a3b8;">Memuat daftar tugas...</div>
@@ -8266,13 +8269,23 @@
     async function initTugasSiswaPage() {
       const list = document.getElementById('tuList');
       if (!list) return;
-      if (currentRole !== 'siswa') {
-        list.innerHTML = '<div style="text-align:center;padding:20px;color:#f59e0b;">Login sebagai <b>siswa</b> untuk mengerjakan tugas/ujian.</div>';
+      // Siswa + Admin (preview/tes fitur, mirip Lihat Nilai Saya)
+      if (currentRole !== 'siswa' && currentRole !== 'admin') {
+        list.innerHTML = '<div style="text-align:center;padding:20px;color:#f59e0b;">Login sebagai <b>siswa</b> atau <b>admin</b> untuk mengerjakan tugas/ujian.</div>';
         return;
       }
-      await ensureSiswaKelas();
-      document.getElementById('tuSiswaNama').textContent = currentUserName || '-';
-      document.getElementById('tuSiswaKelas').textContent = currentUserKelas || '-';
+      const isAdminTu = currentRole === 'admin';
+      if (!isAdminTu) {
+        try { await ensureSiswaKelas(); } catch (e) {}
+      }
+      document.getElementById('tuSiswaNama').textContent = isAdminTu
+        ? ((currentUserName || 'Admin') + ' (preview)')
+        : (currentUserName || '-');
+      document.getElementById('tuSiswaKelas').textContent = isAdminTu
+        ? 'Semua kelas'
+        : (currentUserKelas || '-');
+      const tuHint = document.getElementById('tuAdminHint');
+      if (tuHint) tuHint.style.display = isAdminTu ? 'block' : 'none';
       list.innerHTML = '<div style="text-align:center;padding:20px;color:#94a3b8;">Memuat...</div>';
 
       try {
@@ -8285,18 +8298,20 @@
         } else {
           banks = JSON.parse(localStorage.getItem('bank_soal') || '[]').filter(b => b.status === 'Aktif');
         }
-        // Filter kelas siswa
-        const kelas = String(currentUserKelas || '').trim().toLowerCase();
-        if (kelas) {
-          banks = banks.filter(b => {
-            const k = String(b.kelas || '').toLowerCase();
-            if (!k || k === 'semua' || k.includes('semua')) return true;
-            return k.split(/[,;|]/).map(s => s.trim()).some(x => x === kelas || kelas.startsWith(x) || x.startsWith(kelas));
-          });
+        // Filter kelas: siswa by kelas sendiri; admin lihat semua
+        if (!isAdminTu) {
+          const kelas = String(currentUserKelas || '').trim().toLowerCase();
+          if (kelas) {
+            banks = banks.filter(b => {
+              const k = String(b.kelas || '').toLowerCase();
+              if (!k || k === 'semua' || k.includes('semua')) return true;
+              return k.split(/[,;|]/).map(s => s.trim()).some(x => x === kelas || kelas.startsWith(x) || x.startsWith(kelas));
+            });
+          }
         }
-        // Cek attempt
+        // Cek attempt (admin tidak dihitung limit)
         let hasil = [];
-        if (supabaseClient && currentUserId) {
+        if (!isAdminTu && supabaseClient && currentUserId) {
           const { data } = await supabaseClient.from('bank_soal_hasil')
             .select('bank_id, skor, submitted_at').eq('siswa_id', currentUserId);
           hasil = data || [];
@@ -8309,10 +8324,10 @@
         list.innerHTML = banks.map(b => {
           const attempts = hasil.filter(h => Number(h.bank_id) === Number(b.id)).length;
           const maxA = b.max_attempt != null ? b.max_attempt : 1;
-          const sisa = Math.max(0, maxA - attempts);
+          const sisa = (currentRole === 'admin') ? 99 : Math.max(0, maxA - attempts);
           const last = hasil.filter(h => Number(h.bank_id) === Number(b.id)).sort((a,c) =>
             String(c.submitted_at).localeCompare(String(a.submitted_at)))[0];
-          const disabled = sisa <= 0;
+          const disabled = currentRole === 'admin' ? false : (sisa <= 0);
           // waktu
           let waktuInfo = '';
           if (b.waktu_mulai || b.waktu_selesai) {
@@ -8349,15 +8364,17 @@
       const bank = _tuBanks.find(b => Number(b.id) === bankId);
       if (!bank) { alert('Bank soal tidak ditemukan'); return; }
 
-      // Cek jendela waktu
+      // Cek jendela waktu (admin boleh preview di luar jadwal)
       const now = Date.now();
-      if (bank.waktu_mulai && now < new Date(bank.waktu_mulai).getTime()) {
-        alert('Ujian belum dimulai.\nMulai: ' + new Date(bank.waktu_mulai).toLocaleString('id-ID'));
-        return;
-      }
-      if (bank.waktu_selesai && now > new Date(bank.waktu_selesai).getTime()) {
-        alert('Waktu ujian sudah berakhir.');
-        return;
+      if (currentRole !== 'admin') {
+        if (bank.waktu_mulai && now < new Date(bank.waktu_mulai).getTime()) {
+          alert('Ujian belum dimulai.\nMulai: ' + new Date(bank.waktu_mulai).toLocaleString('id-ID'));
+          return;
+        }
+        if (bank.waktu_selesai && now > new Date(bank.waktu_selesai).getTime()) {
+          alert('Waktu ujian sudah berakhir.');
+          return;
+        }
       }
 
       let soals = [];
@@ -8432,13 +8449,16 @@
     }
 
     async function createTuSession(bank, deadlineMs) {
-      try { await ensureSiswaKelas(); } catch (e) {}
+      const isAdminTu = currentRole === 'admin';
+      if (!isAdminTu) {
+        try { await ensureSiswaKelas(); } catch (e) {}
+      }
       const payload = {
         bank_id: Number(bank.id),
-        siswa_id: currentUserId,
-        nisn: currentUserKode,
-        nama: currentUserName,
-        kelas: currentUserKelas || null,
+        siswa_id: isAdminTu ? null : currentUserId,
+        nisn: isAdminTu ? ('ADMIN-' + (currentUserId || '0')) : currentUserKode,
+        nama: isAdminTu ? ('[Admin] ' + (currentUserName || 'Admin')) : currentUserName,
+        kelas: isAdminTu ? 'ADMIN' : (currentUserKelas || null),
         status: 'sedang',
         skor: null,
         benar: null,
@@ -8450,10 +8470,35 @@
       };
       if (supabaseClient) {
         // hapus sesi sedang lama untuk bank+siswa yang sama
-        await supabaseClient.from('bank_soal_hasil')
-          .delete().eq('bank_id', payload.bank_id).eq('siswa_id', currentUserId).eq('status', 'sedang');
-        const { data, error } = await supabaseClient.from('bank_soal_hasil').insert([payload]).select().single();
-        if (!error && data) window._tuSessionId = data.id;
+        if (!isAdminTu && currentUserId) {
+          await supabaseClient.from('bank_soal_hasil')
+            .delete().eq('bank_id', payload.bank_id).eq('siswa_id', currentUserId).eq('status', 'sedang');
+        }
+        // insert resilient (strip kolom tak dikenal)
+        let p = Object.assign({}, payload);
+        let lastErr = null;
+        for (let i = 0; i < 10; i++) {
+          const { data, error } = await supabaseClient.from('bank_soal_hasil').insert([p]).select('id').maybeSingle();
+          if (!error) {
+            if (data && data.id) window._tuSessionId = data.id;
+            lastErr = null;
+            break;
+          }
+          lastErr = error;
+          const msg = String(error.message || error);
+          const m = msg.match(/'([a-zA-Z0-9_]+)' column/i);
+          if (m && m[1] && Object.prototype.hasOwnProperty.call(p, m[1])) {
+            delete p[m[1]];
+            continue;
+          }
+          // jika select setelah insert gagal karena RLS, anggap OK tanpa session id
+          if (/select|permission|policy/i.test(msg)) {
+            lastErr = null;
+            break;
+          }
+          break;
+        }
+        if (lastErr) console.warn('createTuSession', lastErr);
       } else {
         const list = JSON.parse(localStorage.getItem('bank_soal_hasil') || '[]');
         const filtered = list.filter(x => !(Number(x.bank_id) === payload.bank_id && x.siswa_id === currentUserId && x.status === 'sedang'));
@@ -8977,10 +9022,7 @@
     async function submitTuJawaban(auto) {
       saveCurrentTuAnswer();
       if (!auto) {
-        const unanswered = _tuSoals.filter(s => {
-          const a = _tuAnswers[s.id];
-          return a == null || a === '' || (Array.isArray(a) && !a.length);
-        }).length;
+        const unanswered = _tuSoals.filter(s => !isTuAnswered(s)).length;
         const msg = unanswered
           ? 'Masih ada ' + unanswered + ' soal belum dijawab. Kirim sekarang?'
           : 'Kirim semua jawaban sekarang?';
@@ -9003,52 +9045,86 @@
       });
 
       const isTimeout = !!auto && _tuDeadline && Date.now() >= _tuDeadline;
+      const isAdminTu = currentRole === 'admin';
+      // Jangan kirim kolom yang tidak ada di DB (total_skor dsb.)
+      // max skor disimpan di dalam detail meta agar monitoring tetap bisa hitung
+      if (detail.length) {
+        detail[0] = Object.assign({}, detail[0], { _max_skor: maxSkor });
+      }
       const payload = {
         bank_id: Number(_tuExam.id),
-        siswa_id: currentUserId,
-        nisn: currentUserKode,
-        nama: currentUserName,
-        kelas: currentUserKelas,
+        siswa_id: isAdminTu ? null : currentUserId,
+        nisn: isAdminTu ? ('ADMIN-' + (currentUserId || '0')) : currentUserKode,
+        nama: isAdminTu ? ('[Admin] ' + (currentUserName || 'Admin')) : currentUserName,
+        kelas: isAdminTu ? (currentUserKelas || 'ADMIN') : (currentUserKelas || null),
         skor: totalSkor,
         benar: benar,
         total: total,
-        total_skor: maxSkor,
         detail: detail,
         cheat_count: _tuCheatCount || 0,
         status: isTimeout ? 'timeout' : 'selesai',
-        kelas: currentUserKelas || null,
         submitted_at: new Date().toISOString()
       };
+
+      async function saveHasilResilient(mode, id, body) {
+        let p = Object.assign({}, body);
+        for (let attempt = 0; attempt < 12; attempt++) {
+          let error = null;
+          if (mode === 'update') {
+            const r = await supabaseClient.from('bank_soal_hasil').update(p).eq('id', id);
+            error = r.error;
+          } else {
+            const r = await supabaseClient.from('bank_soal_hasil').insert([p]);
+            error = r.error;
+          }
+          if (!error) return;
+          const msg = String(error.message || error);
+          // PostgREST unknown column
+          const m = msg.match(/'([a-zA-Z0-9_]+)' column/i) || msg.match(/column\s+[\"']?([a-zA-Z0-9_]+)/i);
+          if (m && m[1] && Object.prototype.hasOwnProperty.call(p, m[1])) {
+            delete p[m[1]];
+            continue;
+          }
+          throw error;
+        }
+        throw new Error('Gagal simpan hasil setelah strip kolom');
+      }
 
       try {
         if (supabaseClient) {
           // Hindari data ganda: update sesi sedang, atau hapus sedang lalu insert 1 baris
           let done = false;
           if (window._tuSessionId) {
-            const { error } = await supabaseClient.from('bank_soal_hasil').update(payload).eq('id', window._tuSessionId);
-            if (!error) done = true;
+            try {
+              await saveHasilResilient('update', window._tuSessionId, payload);
+              done = true;
+            } catch (e) {
+              console.warn('update sesi gagal', e);
+            }
           }
-          if (!done) {
+          if (!done && currentUserId && !isAdminTu) {
             // cari sesi sedang milik siswa ini
             const { data: existing } = await supabaseClient.from('bank_soal_hasil')
               .select('id').eq('bank_id', payload.bank_id).eq('siswa_id', currentUserId).eq('status', 'sedang');
             if (existing && existing.length) {
-              const { error } = await supabaseClient.from('bank_soal_hasil').update(payload).eq('id', existing[0].id);
-              if (!error) {
-                // hapus sisa sedang ganda
+              try {
+                await saveHasilResilient('update', existing[0].id, payload);
                 for (let i = 1; i < existing.length; i++) {
                   await supabaseClient.from('bank_soal_hasil').delete().eq('id', existing[i].id);
                 }
                 done = true;
+              } catch (e) {
+                console.warn('update existing gagal', e);
               }
             }
           }
           if (!done) {
             // bersihkan sedang lalu insert sekali
-            await supabaseClient.from('bank_soal_hasil')
-              .delete().eq('bank_id', payload.bank_id).eq('siswa_id', currentUserId).eq('status', 'sedang');
-            const { error } = await supabaseClient.from('bank_soal_hasil').insert([payload]);
-            if (error) throw error;
+            if (currentUserId && !isAdminTu) {
+              await supabaseClient.from('bank_soal_hasil')
+                .delete().eq('bank_id', payload.bank_id).eq('siswa_id', currentUserId).eq('status', 'sedang');
+            }
+            await saveHasilResilient('insert', null, payload);
           }
           window._tuSessionId = null;
         } else {
