@@ -2283,20 +2283,36 @@
     </section>
 
     <style>
-      .dl-abs-sheet { font-family: Arial, Helvetica, sans-serif; color: #0f172a; width: max-content; min-width: 100%; }
-      .dl-abs-sheet .dl-title { text-align: center; font-weight: 700; font-size: 14px; letter-spacing: 0.3px; }
-      .dl-abs-sheet .dl-sub { text-align: center; font-weight: 700; font-size: 12px; margin-bottom: 10px; }
-      .dl-abs-sheet .dl-meta { font-size: 12px; margin-bottom: 8px; }
+      .dl-abs-sheet { font-family: Arial, Helvetica, sans-serif; color: #0f172a; width: fit-content; max-width: none; }
+      .dl-abs-sheet .dl-title { text-align: center; font-weight: 700; font-size: 13px; letter-spacing: 0.3px; }
+      .dl-abs-sheet .dl-sub { text-align: center; font-weight: 700; font-size: 11px; margin-bottom: 8px; }
+      .dl-abs-sheet .dl-meta { font-size: 11px; margin-bottom: 6px; }
       .dl-abs-sheet .dl-meta div { margin: 2px 0; }
-      .dl-abs-sheet table { border-collapse: collapse; font-size: 10px; table-layout: fixed; }
-      .dl-abs-sheet th, .dl-abs-sheet td {
-        border: 1px solid #1e3a8a; padding: 2px 1px; text-align: center; vertical-align: middle;
-        word-wrap: break-word; overflow: hidden;
+      .dl-abs-sheet table {
+        border-collapse: collapse; font-size: 8px; table-layout: fixed;
+        width: auto !important; max-width: none !important;
       }
-      .dl-abs-sheet th { background: #1d4ed8; color: #fff; font-weight: 700; }
-      .dl-abs-sheet td.dl-nama { text-align: left; padding-left: 4px; font-size: 10px; line-height: 1.25; }
+      .dl-abs-sheet col.dl-c-no,
+      .dl-abs-sheet col.dl-c-lp,
+      .dl-abs-sheet col.dl-c-day { width: 3mm; }
+      .dl-abs-sheet col.dl-c-nisn,
+      .dl-abs-sheet col.dl-c-pangkat { width: 20mm; }
+      .dl-abs-sheet col.dl-c-nama { width: 40mm; }
+      .dl-abs-sheet col.dl-c-pct { width: 12mm; }
+      .dl-abs-sheet col.dl-c-letter { width: 4mm; }
+      .dl-abs-sheet col.dl-c-naik { width: 18mm; }
+      .dl-abs-sheet th, .dl-abs-sheet td {
+        border: 0.5pt solid #1e3a8a; padding: 1px 0; text-align: center; vertical-align: middle;
+        overflow: hidden; white-space: nowrap; box-sizing: border-box;
+        line-height: 1.15;
+      }
+      .dl-abs-sheet th { background: #1d4ed8; color: #fff; font-weight: 700; font-size: 7.5px; }
+      .dl-abs-sheet td.dl-nama {
+        text-align: left; padding-left: 2px; font-size: 8px; line-height: 1.2;
+        white-space: normal; word-break: break-word;
+      }
       .dl-abs-sheet td.dl-libur, .dl-abs-sheet th.dl-libur { background: #fecaca !important; color: #7f1d1d !important; }
-      .dl-abs-sheet .dl-ver { text-align: right; font-size: 10px; color: #64748b; margin-bottom: 4px; }
+      .dl-abs-sheet .dl-ver { text-align: right; font-size: 9px; color: #64748b; margin-bottom: 2px; }
       @media print {
         body * { visibility: hidden !important; }
         #dlAbsPrintArea, #dlAbsPrintArea * { visibility: visible !important; }
@@ -7930,8 +7946,41 @@
     let _dlAbsLast = null; // { jenis, html, aoa, filename }
 
     function dlAbsMm(mm) {
-      // approx px for screen preview (1mm ≈ 3.78px at 96dpi)
-      return Math.max(14, Math.round(mm * 3.78));
+      // hanya untuk fallback; lebar tabel memakai satuan mm via <col>
+      return mm;
+    }
+
+    /** colgroup sesuai spesifikasi: No/L/P/tgl=3mm, NISN/Pangkat=20mm, Nama=40mm, %Hadir=12mm */
+    function dlColgroupGuru(nDays) {
+      let h = '<colgroup>';
+      h += '<col class="dl-c-no">';
+      h += '<col class="dl-c-nama">';
+      h += '<col class="dl-c-lp">';
+      h += '<col class="dl-c-pangkat">';
+      for (let i = 0; i < nDays; i++) h += '<col class="dl-c-day">';
+      h += '<col class="dl-c-letter"><col class="dl-c-letter"><col class="dl-c-letter"><col class="dl-c-letter">';
+      h += '<col class="dl-c-pct">';
+      h += '</colgroup>';
+      return h;
+    }
+    function dlColgroupSiswa1(nDays) {
+      let h = '<colgroup>';
+      h += '<col class="dl-c-no">';
+      h += '<col class="dl-c-nisn">';
+      h += '<col class="dl-c-nama">';
+      h += '<col class="dl-c-lp">';
+      for (let i = 0; i < nDays; i++) h += '<col class="dl-c-day">';
+      h += '<col class="dl-c-letter"><col class="dl-c-letter"><col class="dl-c-letter"><col class="dl-c-letter">';
+      h += '<col class="dl-c-letter">'; // Jml
+      h += '</colgroup>';
+      return h;
+    }
+    function dlColgroupSiswa2() {
+      return '<colgroup>' +
+        '<col class="dl-c-no"><col class="dl-c-nisn"><col class="dl-c-nama"><col class="dl-c-lp">' +
+        '<col class="dl-c-letter"><col class="dl-c-letter"><col class="dl-c-letter"><col class="dl-c-letter">' +
+        '<col class="dl-c-letter"><col class="dl-c-letter"><col class="dl-c-pct"><col class="dl-c-naik">' +
+        '</colgroup>';
     }
 
     function dlNormStatus(st) {
@@ -8177,15 +8226,6 @@
       const periodeLabel = 'SEMESTER ' + String(sm).toUpperCase() + ' TAHUN AJARAN ' + ta;
       const bulanLabel = DL_BULAN_NAMA[bulan] + ' ' + tahun;
 
-      const wNo = dlAbsMm(3);
-      const wLP = dlAbsMm(3);
-      const wDay = dlAbsMm(3);
-      const wNisn = dlAbsMm(20);
-      const wPangkat = dlAbsMm(20);
-      const wNama = dlAbsMm(40);
-      const wPct = dlAbsMm(12);
-      const wLetter = dlAbsMm(4);
-
       let html = '';
       let aoa = [];
       let filename = 'absensi.xlsx';
@@ -8196,17 +8236,12 @@
         html += '<div class="dl-title">DAFTAR HADIR GURU</div>';
         html += '<div class="dl-sub">' + esc(periodeLabel) + '</div>';
         html += '<div class="dl-meta"><div>Bulan&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;: ' + esc(bulanLabel) + '</div></div>';
-        html += '<table><thead><tr>';
-        html += '<th style="width:' + wNo + 'px;">No</th>';
-        html += '<th style="width:' + wNama + 'px;">Nama</th>';
-        html += '<th style="width:' + wLP + 'px;">L/P</th>';
-        html += '<th style="width:' + wPangkat + 'px;">Pangkat/Gol</th>';
+        html += '<table>' + dlColgroupGuru(nDays) + '<thead><tr>';
+        html += '<th>No</th><th>Nama</th><th>L/P</th><th>Pangkat/Gol</th>';
         daysInfo.forEach(di => {
-          html += '<th class="' + (di.libur ? 'dl-libur' : '') + '" style="width:' + wDay + 'px;">' + di.d + '</th>';
+          html += '<th class="' + (di.libur ? 'dl-libur' : '') + '">' + di.d + '</th>';
         });
-        html += '<th style="width:' + wLetter + 'px;">S</th><th style="width:' + wLetter + 'px;">I</th>';
-        html += '<th style="width:' + wLetter + 'px;">A</th><th style="width:' + wLetter + 'px;">B</th>';
-        html += '<th style="width:' + wPct + 'px;">%Hadir</th>';
+        html += '<th>S</th><th>I</th><th>A</th><th>B</th><th>%Hadir</th>';
         html += '</tr></thead><tbody>';
 
         const headAoa = ['No', 'Nama', 'L/P', 'Pangkat/Gol'];
@@ -8249,17 +8284,12 @@
         html += '<div class="dl-meta"><div>Kelas&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;: ' + esc(kelas) + '</div>';
         html += '<div>Bulan&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;: ' + esc(bulanLabel) + '</div></div>';
         html += '<div class="dl-ver">V.1</div>';
-        html += '<table><thead><tr>';
-        html += '<th style="width:' + wNo + 'px;">No</th>';
-        html += '<th style="width:' + wNisn + 'px;">NISN</th>';
-        html += '<th style="width:' + wNama + 'px;">Nama</th>';
-        html += '<th style="width:' + wLP + 'px;">L/P</th>';
+        html += '<table>' + dlColgroupSiswa1(nDays) + '<thead><tr>';
+        html += '<th>No</th><th>NISN</th><th>Nama</th><th>L/P</th>';
         daysInfo.forEach(di => {
-          html += '<th class="' + (di.libur ? 'dl-libur' : '') + '" style="width:' + wDay + 'px;">' + di.d + '</th>';
+          html += '<th class="' + (di.libur ? 'dl-libur' : '') + '">' + di.d + '</th>';
         });
-        html += '<th style="width:' + wLetter + 'px;">S</th><th style="width:' + wLetter + 'px;">I</th>';
-        html += '<th style="width:' + wLetter + 'px;">A</th><th style="width:' + wLetter + 'px;">B</th>';
-        html += '<th style="width:' + wLetter + 'px;">Jml</th>';
+        html += '<th>S</th><th>I</th><th>A</th><th>B</th><th>Jml</th>';
         html += '</tr></thead><tbody>';
 
         const headAoa = ['No', 'NISN', 'Nama', 'L/P'];
@@ -8302,16 +8332,10 @@
         html += '<div class="dl-meta"><div>Kelas&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;: ' + esc(kelas) + '</div>';
         html += '<div>Bulan&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;: ' + esc(bulanLabel) + '</div></div>';
         html += '<div class="dl-ver">V.2</div>';
-        html += '<table><thead><tr>';
-        html += '<th style="width:' + wNo + 'px;">No</th>';
-        html += '<th style="width:' + wNisn + 'px;">NISN</th>';
-        html += '<th style="width:' + wNama + 'px;">Nama</th>';
-        html += '<th style="width:' + wLP + 'px;">L/P</th>';
-        html += '<th style="width:' + wLetter + 'px;">TW</th><th style="width:' + wLetter + 'px;">TL</th>';
-        html += '<th style="width:' + wLetter + 'px;">S</th><th style="width:' + wLetter + 'px;">I</th>';
-        html += '<th style="width:' + wLetter + 'px;">A</th><th style="width:' + wLetter + 'px;">B</th>';
-        html += '<th style="width:' + wPct + 'px;">% Hadir</th>';
-        html += '<th style="width:' + dlAbsMm(22) + 'px;">Naik/Lulus</th>';
+        html += '<table>' + dlColgroupSiswa2() + '<thead><tr>';
+        html += '<th>No</th><th>NISN</th><th>Nama</th><th>L/P</th>';
+        html += '<th>TW</th><th>TL</th><th>S</th><th>I</th><th>A</th><th>B</th>';
+        html += '<th>% Hadir</th><th>Naik/Lulus</th>';
         html += '</tr></thead><tbody>';
 
         aoa.push(['No', 'NISN', 'Nama', 'L/P', 'TW', 'TL', 'S', 'I', 'A', 'B', '% Hadir', 'Naik/Lulus']);
