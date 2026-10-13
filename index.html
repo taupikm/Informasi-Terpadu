@@ -11348,8 +11348,12 @@
       return String(n + 1) + (m[2] || '');
     }
     function tingkatDariKelas(kelas) {
-      const m = String(kelas || '').match(/^(\d+)/);
-      return m ? m[1] : '';
+      const s = String(kelas || '').trim();
+      // 9A, 09B, 9 A, Kelas 9A, IX (abaikan romawi)
+      let m = s.match(/(?:^|\s|-)(0?[789])(?![0-9])/);
+      if (m) return String(Number(m[1])); // "09" → "9"
+      m = s.match(/^(\d+)/);
+      return m ? String(Number(m[1])) : '';
     }
 
     let _nlMode = 'naik'; // 'naik' | 'lulus'
@@ -11525,9 +11529,14 @@
       }
       if (!(await showConfirm('Naikkan ' + naik.length + ' siswa ke kelas berikutnya?', 'Naik Kelas', '⬆️'))) return;
       let ok = 0, fail = 0;
+      const errLines = [];
       for (const s of naik) {
         const next = nextKelasNama(s.kelas);
-        if (!next) { fail++; continue; }
+        if (!next) {
+          fail++;
+          errLines.push((s.nama || s.nisn || s.id) + ': format kelas tidak dikenali (' + (s.kelas || '-') + ')');
+          continue;
+        }
         try {
           if (supabaseClient) {
             const { error } = await supabaseClient.from('siswa').update({ kelas: next }).eq('id', s.id);
@@ -11540,12 +11549,127 @@
         } catch (e) {
           console.warn(e);
           fail++;
+          errLines.push((s.nama || s.nisn || s.id) + ': ' + String(e.message || e).slice(0, 120));
         }
       }
-      alert('Naik kelas: ' + ok + ' berhasil' + (fail ? ', ' + fail + ' gagal' : ''));
+      let msg = 'Naik kelas: ' + ok + ' berhasil' + (fail ? ', ' + fail + ' gagal' : '');
+      if (errLines.length) msg += '\n\nDetail:\n- ' + errLines.slice(0, 8).join('\n- ');
+      alert(msg);
       await loadNaikLulusTable();
       try { await loadSiswa(); } catch (e) {}
     });
+
+    // ----- Helper: simpan ke tabel lulusan (skema nyata) -----
+    // Kolom lulusan yang ADA di DB:
+    // id, nisn, nama, lp, tmp_lahir, tgl_lahir, tgl_mulai_sekolah, tanggal_lulus,
+    // tahun_lulus, lama_belajar, status_awal, asal_sekolah, created_at,
+    // status_kelulusan, kelas, nama_ayah, nama_ibu, alamat, no_hp, predikat
+    // Siswa: mulai_sekolah (bukan tgl_mulai_sekolah)
+    function nlCleanDate(v) {
+      if (v == null || v === '') return null;
+      const s = String(v).slice(0, 10);
+      return /^\d{4}-\d{2}-\d{2}$/.test(s) ? s : null;
+    }
+
+    function nlCleanHp(v) {
+      if (v == null || v === '') return null;
+      const s = String(v).trim();
+      if (!s || s === '0' || s === '-') return null;
+      return s;
+    }
+
+    function buildLulusanPayload(s, statusKelulusan, tglLulus) {
+      const statusAwal = normStatusAwal(s.status_awal) || null;
+      const tglMulai = nlCleanDate(tglMulaiSiswa(s));
+      const tl = nlCleanDate(tglLulus) || todayLocal();
+      const lama = hitungLamaBelajar(statusAwal, tglMulai, tl)
+        || (statusAwal === 'Siswa Baru' ? '3 Tahun' : null);
+      const tahunLulusNum = tl ? Number(String(tl).slice(0, 4)) : null;
+      // HANYA kolom yang ada di tabel lulusan (lihat lulusan_rows.sql)
+      return {
+        nama: s.nama || null,
+        nisn: s.nisn ? String(s.nisn) : null,
+        lp: s.lp || null,
+        tmp_lahir: s.tmp_lahir || null,
+        tgl_lahir: nlCleanDate(s.tgl_lahir),
+        tgl_mulai_sekolah: tglMulai,
+        tanggal_lulus: tl,
+        tahun_lulus: tahunLulusNum,
+        lama_belajar: lama,
+        status_awal: statusAwal,
+        asal_sekolah: s.asal_sekolah || null,
+        status_kelulusan: statusKelulusan || 'Lulus',
+        kelas: s.kelas || null,
+        nama_ayah: s.nama_ayah || null,
+        nama_ibu: s.nama_ibu || null,
+        alamat: s.alamat || null,
+        no_hp: nlCleanHp(s.no_hp),
+        predikat: null
+      };
+    }
+
+    async function insertOrUpdateLulusan(payload) {
+      if (!supabaseClient) {
+        const list = dataLulusan || [];
+        const nisn = payload.nisn ? String(payload.nisn) : '';
+        const idx = nisn ? list.findIndex(x => String(x.nisn) === nisn) : -1;
+        if (idx >= 0) {
+          dataLulusan[idx] = Object.assign({}, dataLulusan[idx], payload);
+          return dataLulusan[idx];
+        }
+        payload.id = Date.now() + Math.floor(Math.random() * 1000);
+        dataLulusan.push(payload);
+        return payload;
+      }
+
+      // Duplikat NISN → update
+      if (payload.nisn) {
+        const { data: existing, error: findErr } = await supabaseClient.from('lulusan')
+          .select('id').eq('nisn', String(payload.nisn)).limit(1);
+        if (!findErr && existing && existing.length) {
+          const { error } = await supabaseClient.from('lulusan').update(payload).eq('id', existing[0].id);
+          if (error) throw error;
+          return { id: existing[0].id };
+        }
+      }
+
+      // Insert tanpa .select() agar tidak gagal jika policy SELECT ketat
+      const { error } = await supabaseClient.from('lulusan').insert([payload]);
+      if (error) {
+        const msg = String(error.message || error);
+        // unique → update
+        if (/duplicate|unique|already exists/i.test(msg) && payload.nisn) {
+          const { data: ex2 } = await supabaseClient.from('lulusan')
+            .select('id').eq('nisn', String(payload.nisn)).limit(1);
+          if (ex2 && ex2.length) {
+            const { error: e2 } = await supabaseClient.from('lulusan').update(payload).eq('id', ex2[0].id);
+            if (e2) throw e2;
+            return { id: ex2[0].id };
+          }
+        }
+        throw error;
+      }
+      return payload;
+    }
+
+    async function removeSiswaAfterLulus(siswaId) {
+      if (!supabaseClient) {
+        dataSiswa = (dataSiswa || []).filter(x => String(x.id) !== String(siswaId));
+        return { mode: 'local-delete' };
+      }
+      // 1) Hard delete (gagal jika masih ada nilai/absensi/FK)
+      const { error: delErr } = await supabaseClient.from('siswa').delete().eq('id', siswaId);
+      if (!delErr) return { mode: 'delete' };
+
+      const msg = String(delErr.message || delErr);
+      // 2) Soft: status Alumni — siswa tidak muncul di filter Aktif
+      const statusTries = ['Alumni', 'Lulus', 'Tidak Aktif'];
+      for (const st of statusTries) {
+        const { error: uErr } = await supabaseClient.from('siswa').update({ status: st }).eq('id', siswaId);
+        if (!uErr) return { mode: 'status', status: st, deleteError: msg };
+      }
+      throw delErr;
+    }
 
     // Luluskan — status per siswa dari dropdown baris
     document.getElementById('btnNlLulus')?.addEventListener('click', async () => {
@@ -11558,11 +11682,10 @@
       const targets = sel.map(x => dataNlRows.find(r => String(r.id) === String(x.id) && r._src === 'siswa')).filter(Boolean);
       const k9 = targets.filter(s => tingkatDariKelas(s.kelas) === '9');
       if (!k9.length) {
-        alert('Tidak ada siswa kelas 9 terpilih.');
+        alert('Tidak ada siswa kelas 9 terpilih.\nPastikan kolom Kelas diawali 9 (contoh: 9A, 9B).');
         return;
       }
 
-      // Ambil status per baris
       const statusMap = {};
       document.querySelectorAll('.nl-status-row').forEach(selEl => {
         statusMap[String(selEl.dataset.id)] = selEl.value || 'Lulus';
@@ -11575,64 +11698,62 @@
       });
       const ringkasTxt = Object.keys(ringkas).map(k => k + ': ' + ringkas[k]).join(', ');
       if (!(await showConfirm(
-        'Luluskan ' + k9.length + ' siswa?\n(' + ringkasTxt + ')\nData pindah ke tabel Lulusan.',
+        'Luluskan ' + k9.length + ' siswa?\n(' + ringkasTxt + ')\nData disalin ke tabel Lulusan.\nSiswa dihapus atau ditandai Alumni jika masih terikat nilai/absensi.',
         'Kelulusan', '🎓'
       ))) return;
 
-      if (!aktifPeriode) await loadAktifPeriode();
-      const tglLulus = (aktifPeriode && (aktifPeriode.tanggal_kelulusan || aktifPeriode.tgl_kelulusan))
-        ? String(aktifPeriode.tanggal_kelulusan || aktifPeriode.tgl_kelulusan).slice(0, 10)
-        : todayLocal();
-      const tahunAjaran = aktifPeriode ? (aktifPeriode.tahun_ajaran || '') : '';
+      if (!aktifPeriode) {
+        try { await loadAktifPeriode(); } catch (e) {}
+      }
+      // Pakai tanggal_kelulusan periode; jika kosong → hari ini
+      const tglLulus = nlCleanDate(
+        aktifPeriode && (aktifPeriode.tanggal_kelulusan || aktifPeriode.tgl_kelulusan)
+      ) || todayLocal();
 
-      let ok = 0, fail = 0;
+      let ok = 0, fail = 0, softN = 0;
+      const errLines = [];
+
       for (const s of k9) {
         const st = statusMap[String(s.id)] || 'Lulus';
+        const label = (s.nama || s.nisn || ('id=' + s.id)) + '';
         try {
-          const statusAwal = normStatusAwal(s.status_awal) || 'Siswa Baru';
-          const tglMulai = tglMulaiSiswa(s) || null;
-          const lama = hitungLamaBelajar(statusAwal, tglMulai, tglLulus) || (statusAwal === 'Siswa Baru' ? '3 Tahun' : null);
-          // tahun_lulus dari tanggal_lulus (relasi periode)
-          const tahunLulusNum = tglLulus ? Number(String(tglLulus).slice(0, 4)) : null;
-          const payload = {
-            nama: s.nama,
-            lp: s.lp || null,
-            nisn: s.nisn || null,
-            kelas: s.kelas || null,
-            tmp_lahir: s.tmp_lahir || null,
-            tgl_lahir: s.tgl_lahir || null,
-            alamat: s.alamat || null,
-            nama_ayah: s.nama_ayah || null,
-            nama_ibu: s.nama_ibu || null,
-            no_hp: s.no_hp || null,
-            asal_sekolah: s.asal_sekolah || null,
-            status_awal: statusAwal,
-            tgl_mulai_sekolah: tglMulai,
-            lama_belajar: lama,
-            status_kelulusan: st,
-            tahun_ajaran: tahunAjaran,
-            tanggal_lulus: tglLulus,
-            tahun_lulus: tahunLulusNum
-          };
-          // kolom opsional — jangan gagal jika belum ada di DB
-          try { payload.kelas_akhir = s.kelas || null; } catch (e) {}
-          try { payload.siswa_id_asal = s.id; } catch (e) {}
-          if (supabaseClient) {
-            const { error } = await supabaseClient.from('lulusan').insert([payload]);
-            if (error) throw error;
-            await supabaseClient.from('siswa').delete().eq('id', s.id);
-          } else {
-            payload.id = Date.now() + Math.random();
-            dataLulusan.push(payload);
-            dataSiswa = dataSiswa.filter(x => String(x.id) !== String(s.id));
+          const payload = buildLulusanPayload(s, st, tglLulus);
+          if (!payload.nama) throw new Error('Nama kosong');
+
+          await insertOrUpdateLulusan(payload);
+
+          try {
+            const rm = await removeSiswaAfterLulus(s.id);
+            if (rm && rm.mode === 'status') softN++;
+          } catch (delE) {
+            console.warn('Hapus/tandai siswa gagal', delE);
+            errLines.push(label + ': di Lulusan OK, tapi masih Aktif di Siswa — ' +
+              String(delE.message || delE).slice(0, 100));
           }
           ok++;
         } catch (e) {
-          console.warn(e);
+          console.warn('Kelulusan gagal', s, e);
           fail++;
+          const em = String(e.message || e || 'error');
+          let hint = em;
+          if (/permission|policy|RLS|row-level/i.test(em)) {
+            hint = 'RLS/izin DB. Di Supabase SQL jalankan policy INSERT/UPDATE lulusan & UPDATE/DELETE siswa. ' + em;
+          } else if (/column/i.test(em)) {
+            hint = 'Kolom tidak cocok: ' + em;
+          } else if (/foreign key|violates|constraint/i.test(em)) {
+            hint = 'Kendala relasi: ' + em;
+          }
+          errLines.push(label + ': ' + hint.slice(0, 180));
         }
       }
-      alert('Kelulusan: ' + ok + ' berhasil' + (fail ? ', ' + fail + ' gagal' : ''));
+
+      let msg = 'Kelulusan: ' + ok + ' berhasil' + (fail ? ', ' + fail + ' gagal' : '');
+      if (softN) msg += '\n(' + softN + ' siswa ditandai Alumni karena masih terikat data nilai/absensi)';
+      if (errLines.length) {
+        msg += '\n\nDetail:\n- ' + errLines.slice(0, 8).join('\n- ');
+        if (errLines.length > 8) msg += '\n… +' + (errLines.length - 8) + ' lainnya';
+      }
+      alert(msg);
       await loadNaikLulusTable();
       try { await loadSiswa(); } catch (e) {}
       try { await loadLulusan(); } catch (e) {}
@@ -13369,13 +13490,13 @@
           }
           // Alumni: cari di lulusan by NISN atau id
           if (currentUserKode || currentUserId) {
-            let q = supabaseClient.from('lulusan').select('kelas, kelas_akhir, nisn, nama');
+            let q = supabaseClient.from('lulusan').select('kelas, nisn, nama');
             if (currentUserKode) q = q.eq('nisn', String(currentUserKode));
             else q = q.eq('id', currentUserId);
             const { data } = await q.maybeSingle();
             if (data) {
               currentUserIsAlumni = true;
-              currentUserKelas = data.kelas_akhir || data.kelas || '9';
+              currentUserKelas = data.kelas || '9';
               if (data.nisn) currentUserKode = data.nisn;
               return String(currentUserKelas || '');
             }
