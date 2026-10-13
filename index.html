@@ -8093,9 +8093,10 @@
         let list = [];
         if (supabaseClient) {
           const { data, error } = await supabaseClient.from('guru')
-            .select('id, nama, lp, nip, pangkat_gol, status').order('nama');
+            .select('id, nama, lp, nip, pangkat_gol, status').order('id', { ascending: true });
           if (error) throw error;
           list = (data || []).filter(g => !g.status || String(g.status).toLowerCase() === 'aktif');
+          list.sort((a, b) => Number(a.id) - Number(b.id));
         }
         return list.map(g => ({
           id: g.id,
