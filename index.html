@@ -8569,12 +8569,19 @@
           throw new Error('Respons GDrive tidak valid: ' + textResp.slice(0, 120));
         }
         if (!json || json.error) throw new Error((json && json.error) || 'Upload GDrive gagal');
+        const gid = json.id || json.fileId || null;
+        let gurl = json.url || json.link || '';
+        if (!gurl && gid) gurl = 'https://drive.google.com/file/d/' + gid + '/view';
+        // Beberapa script mengembalikan name = id; pakai nama asli file
+        let gname = json.name || safeName;
+        if (gid && gname === gid) gname = safeName;
+        if (gid && String(gname).replace(/\.[a-z0-9]+$/i, '') === String(gid)) gname = safeName;
         return {
-          name: json.name || safeName,
-          url: json.url || (json.id ? ('https://drive.google.com/file/d/' + json.id + '/view') : ''),
-          id: json.id || null,
+          name: gname,
+          url: gurl,
+          id: gid,
           size: file.size,
-          mime: file.type || '',
+          mime: file.type || json.mimeType || '',
           provider: 'gdrive'
         };
       }
@@ -11388,18 +11395,74 @@
           html += '<b>No. ' + (d.nomor || (i + 1)) + '</b> · ' + esc(d.jenis || '') +
             (d.benar === true ? ' · <span style="color:#16a34a;">✓</span>' :
              d.benar === false ? ' · <span style="color:#ef4444;">✗</span>' : ' · <span style="color:#f59e0b;">Esai</span>');
-          let jawDisp = '-';
-          if (Array.isArray(d.jawaban)) jawDisp = d.jawaban.join(', ');
-          else if (d.jawaban && typeof d.jawaban === 'object' && (d.jawaban.name || d.jawaban.url)) {
-            jawDisp = (d.jawaban.name || 'file') +
-              (d.jawaban.provider ? ' [' + d.jawaban.provider + ']' : '') +
-              (d.jawaban.url ? ' · ' + d.jawaban.url : '');
-          } else if (d.jawaban != null) jawDisp = String(d.jawaban);
-          html += '<div style="margin-top:4px;"><b>Jawaban:</b> ' +
-            (d.jawaban && typeof d.jawaban === 'object' && d.jawaban.url
-              ? (esc(d.jawaban.name || 'file') + ' · <a href="' + esc(d.jawaban.url) + '" target="_blank" rel="noopener">Buka file</a>')
-              : esc(jawDisp)) + '</div>';
-          if (d.kunci) html += '<div><b>Kunci:</b> ' + esc(String(d.kunci)) + '</div>';
+          // ---- Tampilkan jawaban (teks / file) ----
+          let jawHtml = '<span style="color:#94a3b8;">-</span>';
+          const jw = d.jawaban;
+          if (Array.isArray(jw)) {
+            jawHtml = esc(jw.join(', '));
+          } else if (jw && typeof jw === 'object') {
+            // Normalisasi URL file (GDrive sering hanya kirim id)
+            let fileUrl = jw.url || jw.link || '';
+            let fileId = jw.id || jw.fileId || '';
+            // Jika name berupa id Drive (angka/huruf panjang) tanpa url
+            if (!fileId && jw.name && /^[a-zA-Z0-9_-]{20,}$/.test(String(jw.name).replace(/\.[a-z0-9]+$/i, ''))) {
+              fileId = String(jw.name).replace(/\.[a-z0-9]+$/i, '');
+            }
+            if (!fileUrl && fileId) {
+              fileUrl = 'https://drive.google.com/file/d/' + fileId + '/view';
+            }
+            // Preview link (gambar) via Google usercontent
+            let previewUrl = '';
+            if (fileId) {
+              previewUrl = 'https://drive.google.com/uc?export=view&id=' + fileId;
+            } else if (fileUrl && /drive\.google\.com\/file\/d\/([^/]+)/.test(fileUrl)) {
+              const mid = fileUrl.match(/drive\.google\.com\/file\/d\/([^/]+)/);
+              if (mid) {
+                fileId = mid[1];
+                previewUrl = 'https://drive.google.com/uc?export=view&id=' + fileId;
+              }
+            } else if (fileUrl && /^https?:\/\//i.test(fileUrl)) {
+              previewUrl = fileUrl;
+            }
+            const fname = jw.name || (fileId ? (fileId + '.file') : 'file');
+            const mime = String(jw.mime || jw.type || '').toLowerCase();
+            const isImg = /^image\//.test(mime) || /\.(jpe?g|png|gif|webp|bmp)$/i.test(fname);
+            const sizeTxt = jw.size ? (' · ' + (Math.round(Number(jw.size) / 1024) + ' KB')) : '';
+            const prov = jw.provider ? (' · ' + jw.provider) : '';
+
+            jawHtml = '<div style="margin-top:4px;padding:10px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;">' +
+              '<div style="font-weight:600;margin-bottom:6px;">📎 ' + esc(fname) +
+              '<span style="font-weight:400;color:#64748b;">' + esc(sizeTxt + prov) + '</span></div>';
+            if (fileUrl) {
+              jawHtml += '<div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:8px;">' +
+                '<a class="btn btn-primary" style="padding:6px 12px;font-size:12px;text-decoration:none;" href="' +
+                esc(fileUrl) + '" target="_blank" rel="noopener">Buka file</a>';
+              if (fileId) {
+                jawHtml += '<a class="btn btn-outline" style="padding:6px 12px;font-size:12px;text-decoration:none;" href="https://drive.google.com/uc?export=download&id=' +
+                  esc(fileId) + '" target="_blank" rel="noopener">Download</a>';
+              }
+              jawHtml += '</div>';
+            } else {
+              jawHtml += '<div style="color:#ef4444;font-size:11px;margin-bottom:6px;">URL file tidak tersedia. Pastikan Apps Script mengembalikan <code>id</code> atau <code>url</code>.</div>';
+            }
+            if (isImg && (previewUrl || fileUrl)) {
+              const src = previewUrl || fileUrl;
+              jawHtml += '<div style="margin-top:4px;"><img src="' + esc(src) +
+                '" alt="preview" style="max-width:100%;max-height:280px;border-radius:8px;border:1px solid #e2e8f0;background:#fff;" ' +
+                'onerror="this.style.display=\'none\';this.nextElementSibling&&(this.nextElementSibling.style.display=\'block\');">' +
+                '<div style="display:none;font-size:11px;color:#94a3b8;">Preview gambar tidak bisa dimuat (izin Drive). Gunakan tombol Buka file.</div></div>';
+            }
+            jawHtml += '</div>';
+          } else if (jw != null && jw !== '') {
+            jawHtml = esc(String(jw));
+          }
+          html += '<div style="margin-top:4px;"><b>Jawaban:</b> ' + jawHtml + '</div>';
+          if (d.kunci) {
+            // kunci bisa HTML dari editor — tampilkan aman
+            const kRaw = String(d.kunci);
+            const kPlain = kRaw.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
+            if (kPlain) html += '<div style="margin-top:4px;"><b>Kunci:</b> ' + esc(kPlain) + '</div>';
+          }
           if (d.jenis === 'Esai' || d.jenis === 'Unggah File' || d.benar === null) {
             html += '<div class="form-group" style="margin-top:6px;"><label>Nilai manual</label>' +
               '<input type="number" class="mon-esai-skor" data-idx="' + i + '" value="' + (d.skor || 0) +
