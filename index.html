@@ -1868,9 +1868,12 @@
           <label>Sampai Tanggal</label>
           <input type="date" id="rekapSampai">
         </div>
-        <div class="rekap-filter-row">
-          <label>Nama / NISN</label>
-          <input type="text" id="rekapNama" placeholder="Kosongkan = semua">
+        <div class="rekap-filter-row" style="align-items:flex-start;">
+          <label style="padding-top:10px;">Nama / NISN</label>
+          <div style="flex:1;min-width:0;position:relative;">
+            <input type="text" id="rekapNama" placeholder="Ketik nama / NISN (kosong = semua)" autocomplete="off" style="width:100%;">
+            <div id="rekapSuggest" class="siswa-suggest-box" style="display:none;"></div>
+          </div>
         </div>
         <div class="rekap-filter-row">
           <label>Kelas</label>
@@ -5764,6 +5767,9 @@
       });
       attachSiswaLiveSearch('cariSiswaQ', 'cariSiswaSuggest', (s) => {
         if (typeof loadCariSiswaRekap === 'function') loadCariSiswaRekap();
+      });
+      attachSiswaLiveSearch('rekapNama', 'rekapSuggest', (s) => {
+        if (typeof loadRekapData === 'function') loadRekapData();
       });
     })();
 
@@ -13326,14 +13332,25 @@ document.getElementById('btnBsContohFormat')?.addEventListener('click', () => {
       await loadLiburMap();
       await loadSesi();
 
+      // Default: pertama berlaku absen s/d hari ini
       if (!dari || !sampai) {
-        if (aktifPeriode) {
-          if (!dari) dari = (aktifPeriode.tgl_mulai || '').toString().slice(0, 10);
-          if (!sampai) sampai = (aktifPeriode.tgl_akhir || '').toString().slice(0, 10);
+        try {
+          const s = await loadAbsenSettings();
+          if (!dari && s && s.mulai) dari = String(s.mulai).slice(0, 10);
+          if (!sampai) {
+            const today = todayLocal();
+            const akhirSet = (s && s.akhir) ? String(s.akhir).slice(0, 10) : today;
+            sampai = akhirSet > today ? today : akhirSet;
+          }
+        } catch (e) { console.warn(e); }
+        if (!dari && aktifPeriode) {
+          dari = String(aktifPeriode.tanggal_mulai_absen || aktifPeriode.tgl_mulai_absen ||
+            aktifPeriode.tanggal_mulai || aktifPeriode.tgl_mulai || '').slice(0, 10);
         }
       }
       if (!dari) dari = todayLocal();
-      if (!sampai) sampai = dari;
+      if (!sampai) sampai = todayLocal();
+      if (sampai > todayLocal()) sampai = todayLocal();
       const elDari = document.getElementById('rekapDari');
       const elSampai = document.getElementById('rekapSampai');
       if (elDari) elDari.value = dari;
@@ -13373,7 +13390,7 @@ document.getElementById('btnBsContohFormat')?.addEventListener('click', () => {
           }
           let cur = new Date(d0);
           let guard = 0;
-          while (cur <= d1 && guard < 120) {
+          while (cur <= d1 && guard < 400) {
             dates.push(localDateStr(cur));
             cur.setDate(cur.getDate() + 1);
             guard++;
