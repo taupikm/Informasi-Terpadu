@@ -1474,7 +1474,7 @@
         </div>
       </div>
 <div id="dashSesiInfo" style="background:#e0f7fa;border:1px solid #67e8f9;border-radius:12px;padding:12px 14px;text-align:center;margin-bottom:12px;">
-        <div style="font-size:12px;font-weight:600;color:#0e7490;">Sesi Berlangsung</div>
+        <div style="font-size:12px;font-weight:600;color:#0e7490;">Informasi Sesi</div>
         <div id="dashSesiDetail" style="font-size:13px;font-weight:700;color:#155e75;margin-top:4px;">Memuat...</div>
       </div>
 <div class="section-title">Rekap Kehadiran Guru</div>
@@ -1524,7 +1524,7 @@
             <tr><th>No</th><th>Tanggal</th><th>NISN</th><th>Nama</th><th>Kelas</th></tr>
           </thead>
           <tbody id="tbodyCariSiswa">
-            <tr><td colspan="5" style="text-align:center;padding:16px;color:#94a3b8;">Masukkan Nama/NISN lalu Cari</td></tr>
+            <tr><td colspan="5" style="text-align:center;padding:16px;color:#94a3b8;">Masukkan Nama/NISN lalu Cari (tanggal kosong = mulai absen s/d hari ini)</td></tr>
           </tbody>
         </table>
       </div>
@@ -6664,7 +6664,7 @@
             const tglStr = now.toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' });
             det.innerHTML = '<span style="color:#dc2626;">' + ket + '</span><br><span style="font-weight:600;font-size:12px;">' + tglStr + '</span>';
           } else if (aktif) {
-            det.textContent = 'Sesi berlangsung: ' + (aktif.nama || 'Sesi') + ' (' + fmt3(aktif) + ')';
+            det.textContent = (aktif.nama || 'Sesi') + ' berlangsung (' + fmt3(aktif) + ')';
           } else if (!list.length) {
             det.textContent = 'Belum ada sesi yang diatur';
           } else {
@@ -6678,9 +6678,9 @@
             }
             if (next && lastEnded) {
               det.textContent = (lastEnded.nama || 'Sesi') + ' selesai, ' +
-                (next.nama || 'sesi berikutnya') + ' akan berlangsung pada ' + fmt3(next);
+                (next.nama || 'sesi berikutnya') + ' Akan Berlangsung Dari Jam ' + fmt3(next);
             } else if (next && !lastEnded) {
-              det.textContent = (next.nama || 'Sesi 1') + ' akan berlangsung pada ' + fmt3(next);
+              det.textContent = (next.nama || 'Sesi 1') + ' Akan Berlangsung Dari Jam ' + fmt3(next);
             } else {
               det.textContent = 'Sesi Absen Hari Ini Telah Berakhir';
             }
@@ -12883,14 +12883,10 @@ document.getElementById('btnBsContohFormat')?.addEventListener('click', () => {
     async function initCariSiswaPage() {
       if (!aktifPeriode) await loadAktifPeriode();
       await loadSesi();
+      // Jangan isi otomatis — kosong = dari mulai absen s/d hari ini saat Cari
       const dari = document.getElementById('cariSiswaDari');
       const sampai = document.getElementById('cariSiswaSampai');
-      if (dari && !dari.value && aktifPeriode) {
-        dari.value = (aktifPeriode.tgl_mulai || '').toString().slice(0, 10);
-      }
-      if (sampai && !sampai.value && aktifPeriode) {
-        sampai.value = (aktifPeriode.tgl_akhir || '').toString().slice(0, 10);
-      }
+      // biarkan kosong agar loadCariSiswaRekap memakai default
     }
 
     document.getElementById('btnCariSiswaOrtu')?.addEventListener('click', () => loadCariSiswaRekap());
@@ -12905,8 +12901,8 @@ document.getElementById('btnBsContohFormat')?.addEventListener('click', () => {
 
     async function loadCariSiswaRekap() {
       const q = (document.getElementById('cariSiswaQ')?.value || '').trim();
-      const dari = document.getElementById('cariSiswaDari')?.value || '';
-      const sampai = document.getElementById('cariSiswaSampai')?.value || '';
+      let dari = document.getElementById('cariSiswaDari')?.value || '';
+      let sampai = document.getElementById('cariSiswaSampai')?.value || '';
       const tbody = document.getElementById('tbodyCariSiswa');
       const thead = document.getElementById('theadCariSiswa');
       const info = document.getElementById('cariSiswaInfo');
@@ -12915,9 +12911,32 @@ document.getElementById('btnBsContohFormat')?.addEventListener('click', () => {
         alert('Isi Nama atau NISN siswa');
         return;
       }
+      // Kosong = dari pertama berlaku absen s/d hari ini
       if (!dari || !sampai) {
-        alert('Isi rentang tanggal');
-        return;
+        try {
+          const s = await loadAbsenSettings();
+          if (!dari) dari = (s && s.mulai) ? String(s.mulai).slice(0, 10) : '';
+          if (!sampai) {
+            const today = todayLocal();
+            const akhirSet = (s && s.akhir) ? String(s.akhir).slice(0, 10) : today;
+            sampai = akhirSet > today ? today : akhirSet;
+          }
+        } catch (e) {
+          console.warn(e);
+        }
+        if (!dari) {
+          if (!aktifPeriode) await loadAktifPeriode();
+          dari = aktifPeriode
+            ? String(aktifPeriode.tanggal_mulai_absen || aktifPeriode.tgl_mulai_absen || aktifPeriode.tanggal_mulai || aktifPeriode.tgl_mulai || '').slice(0, 10)
+            : '';
+        }
+        if (!sampai) sampai = todayLocal();
+        if (!dari) dari = sampai;
+        // tampilkan di input agar user tahu rentang yang dipakai
+        const elDari = document.getElementById('cariSiswaDari');
+        const elSampai = document.getElementById('cariSiswaSampai');
+        if (elDari && !elDari.value) elDari.value = dari;
+        if (elSampai && !elSampai.value) elSampai.value = sampai;
       }
       tbody.innerHTML = '<tr><td colspan="10" style="text-align:center;padding:16px;color:#94a3b8;">Memuat...</td></tr>';
       try {
