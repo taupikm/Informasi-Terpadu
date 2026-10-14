@@ -1503,9 +1503,12 @@
 <section class="page" id="page-cari-siswa">
       <div class="page-title">Cari Data Siswa (Orang Tua)</div>
       <div class="card" style="padding:12px;margin-bottom:10px;">
-        <div class="rekap-filter-row">
-          <label>Nama / NISN</label>
-          <input type="text" id="cariSiswaQ" placeholder="Wajib diisi">
+        <div class="rekap-filter-row" style="align-items:flex-start;">
+          <label style="padding-top:10px;">Nama / NISN</label>
+          <div style="flex:1;min-width:0;position:relative;">
+            <input type="text" id="cariSiswaQ" placeholder="Ketik nama atau NISN..." autocomplete="off" style="width:100%;">
+            <div id="cariSiswaSuggest" class="siswa-suggest-box" style="display:none;"></div>
+          </div>
         </div>
         <div class="rekap-filter-row">
           <label>Dari Tanggal</label>
@@ -5758,6 +5761,9 @@
       });
       attachSiswaLiveSearch('nsCariQ', 'nsSuggest', (s) => {
         if (typeof loadNilaiSaya === 'function') loadNilaiSaya({ q: s.nisn || s.nama, id: s.id });
+      });
+      attachSiswaLiveSearch('cariSiswaQ', 'cariSiswaSuggest', (s) => {
+        if (typeof loadCariSiswaRekap === 'function') loadCariSiswaRekap();
       });
     })();
 
