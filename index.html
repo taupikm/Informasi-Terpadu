@@ -1304,6 +1304,48 @@
       background: #dcfce7;
       color: #166534;
     }
+    /* Live search saran siswa (Cek Syarat / Nilai Saya / dll) */
+    .siswa-suggest-box {
+      margin-top: 8px;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      max-height: 220px;
+      overflow-y: auto;
+      -webkit-overflow-scrolling: touch;
+    }
+    .siswa-suggest-item {
+      display: block;
+      width: 100%;
+      text-align: left;
+      padding: 10px 12px;
+      border-radius: 12px;
+      border: 1px solid #e2e8f0;
+      background: #fff;
+      font-size: 13px;
+      color: #1e40af;
+      font-weight: 600;
+      cursor: pointer;
+      line-height: 1.35;
+      transition: background 0.15s, border-color 0.15s;
+    }
+    .siswa-suggest-item:hover,
+    .siswa-suggest-item:active {
+      background: #eff6ff;
+      border-color: #93c5fd;
+    }
+    .siswa-suggest-item .meta {
+      color: #64748b;
+      font-weight: 500;
+      font-size: 12px;
+    }
+    .siswa-suggest-empty {
+      padding: 10px 12px;
+      font-size: 12px;
+      color: #94a3b8;
+      text-align: center;
+    }
+
     .badge-nonaktif {
       display: inline-block;
       padding: 2px 8px;
@@ -1581,9 +1623,12 @@
     <section class="page" id="page-syarat-naik">
       <div class="page-title">Cek Syarat Naik Kelas / Lulus</div>
       <div class="card" id="syaratSearchCard" style="padding:12px;margin-bottom:12px;">
-        <div class="rekap-filter-row">
-          <label>Nama / NISN</label>
-          <input type="text" id="syaratQ" placeholder="Kosongkan = data saya">
+        <div class="rekap-filter-row" style="align-items:flex-start;">
+          <label style="padding-top:10px;">Nama / NISN</label>
+          <div style="flex:1;min-width:0;position:relative;">
+            <input type="text" id="syaratQ" placeholder="Ketik nama atau NISN..." autocomplete="off" style="width:100%;">
+            <div id="syaratSuggest" class="siswa-suggest-box" style="display:none;"></div>
+          </div>
         </div>
         <button type="button" class="btn btn-primary" id="btnSyaratCek" style="width:100%;margin-top:8px;">🔍 Cek Syarat</button>
       </div>
@@ -1675,9 +1720,12 @@
     <section class="page" id="page-nilai-saya">
       <div class="page-title">Lihat Nilai Saya</div>
       <div class="card" id="nsSearchCard" style="padding:12px;margin-bottom:12px;display:none;">
-        <div class="rekap-filter-row">
-          <label>Nama / NISN</label>
-          <input type="text" id="nsCariQ" placeholder="Masukkan NISN atau nama siswa">
+        <div class="rekap-filter-row" style="align-items:flex-start;">
+          <label style="padding-top:10px;">Nama / NISN</label>
+          <div style="flex:1;min-width:0;position:relative;">
+            <input type="text" id="nsCariQ" placeholder="Ketik nama atau NISN..." autocomplete="off" style="width:100%;">
+            <div id="nsSuggest" class="siswa-suggest-box" style="display:none;"></div>
+          </div>
         </div>
         <button type="button" class="btn btn-primary" id="btnNsCari" style="width:100%;margin-top:8px;">🔍 Cek Nilai</button>
       </div>
@@ -6004,8 +6052,146 @@
       return { rnh, otherCols, nr };
     }
 
-    async function resolveSiswaUntukNilai(q) {
+    // ============================================================
+    // Live search saran siswa (admin) — tampil di bawah input
+    // ============================================================
+    async function searchSiswaSuggest(q, limit) {
       q = String(q || '').trim();
+      limit = limit || 12;
+      if (q.length < 2) return [];
+      try {
+        if (supabaseClient) {
+          // Escape karakter khusus filter PostgREST sederhana
+          const safe = q.replace(/[%_,]/g, '');
+          const { data, error } = await supabaseClient.from('siswa')
+            .select('id, nama, nisn, kelas')
+            .or('nama.ilike.%' + safe + '%,nisn.ilike.%' + safe + '%')
+            .order('nama')
+            .limit(limit);
+          if (error) { console.warn(error); return []; }
+          return data || [];
+        }
+        if (!dataSiswa.length) await loadSiswa();
+        const ql = q.toLowerCase();
+        return (dataSiswa || []).filter(s =>
+          String(s.nama || '').toLowerCase().includes(ql) ||
+          String(s.nisn || '').includes(q)
+        ).slice(0, limit);
+      } catch (e) {
+        console.warn('searchSiswaSuggest', e);
+        return [];
+      }
+    }
+
+    function renderSiswaSuggest(boxEl, list, onPick) {
+      if (!boxEl) return;
+      if (!list || !list.length) {
+        boxEl.innerHTML = '<div class="siswa-suggest-empty">Tidak ditemukan</div>';
+        boxEl.style.display = 'flex';
+        return;
+      }
+      boxEl.innerHTML = list.map(s => {
+        const nama = esc(s.nama || '-');
+        const nisn = esc(s.nisn || '-');
+        const kls = esc(s.kelas || '-');
+        return '<button type="button" class="siswa-suggest-item" data-id="' + esc(String(s.id)) +
+          '" data-nisn="' + nisn + '" data-nama="' + nama + '" data-kelas="' + kls + '">' +
+          '<span>' + nama + '</span>' +
+          ' <span class="meta">· NISN ' + nisn + ' · Kelas ' + kls + '</span></button>';
+      }).join('');
+      boxEl.style.display = 'flex';
+      boxEl.querySelectorAll('.siswa-suggest-item').forEach(btn => {
+        btn.addEventListener('click', () => {
+          if (typeof onPick === 'function') {
+            onPick({
+              id: Number(btn.dataset.id),
+              nisn: btn.dataset.nisn,
+              nama: btn.dataset.nama,
+              kelas: btn.dataset.kelas
+            });
+          }
+        });
+      });
+    }
+
+    function hideSiswaSuggest(boxEl) {
+      if (!boxEl) return;
+      boxEl.style.display = 'none';
+      boxEl.innerHTML = '';
+    }
+
+    /**
+     * Pasang live-search di input.
+     * onPick(siswa) dipanggil saat item diklik.
+     */
+    function attachSiswaLiveSearch(inputId, suggestId, onPick) {
+      const input = document.getElementById(inputId);
+      const box = document.getElementById(suggestId);
+      if (!input || !box) return;
+      let timer = null;
+      input.addEventListener('input', function () {
+        clearTimeout(timer);
+        const q = this.value.trim();
+        // Hapus pilihan id tersimpan jika user mengetik ulang
+        input.dataset.selectedId = '';
+        if (q.length < 2) {
+          hideSiswaSuggest(box);
+          return;
+        }
+        timer = setTimeout(async () => {
+          const list = await searchSiswaSuggest(q, 12);
+          // Jika query sudah berubah, abaikan
+          if (input.value.trim() !== q) return;
+          renderSiswaSuggest(box, list, (s) => {
+            // Isi input dengan NISN (unik) + tampilkan nama di samping lewat value yang jelas
+            input.value = s.nisn && s.nisn !== '-' ? s.nisn : s.nama;
+            input.dataset.selectedId = String(s.id || '');
+            hideSiswaSuggest(box);
+            if (typeof onPick === 'function') onPick(s);
+          });
+        }, 280);
+      });
+      input.addEventListener('focus', function () {
+        const q = this.value.trim();
+        if (q.length >= 2 && box.style.display === 'none') {
+          input.dispatchEvent(new Event('input'));
+        }
+      });
+      // Tutup saran saat klik di luar
+      document.addEventListener('click', (e) => {
+        if (e.target === input || box.contains(e.target)) return;
+        hideSiswaSuggest(box);
+      });
+      input.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape') hideSiswaSuggest(box);
+      });
+    }
+
+    // Pasang live search (admin) — Cek Syarat & Lihat Nilai Saya
+    (function initSiswaLiveSearchWidgets() {
+      attachSiswaLiveSearch('syaratQ', 'syaratSuggest', (s) => {
+        // Auto-jalankan cek setelah pilih
+        if (typeof jalankanCekSyarat === 'function') jalankanCekSyarat();
+      });
+      attachSiswaLiveSearch('nsCariQ', 'nsSuggest', (s) => {
+        if (typeof loadNilaiSaya === 'function') loadNilaiSaya({ q: s.nisn || s.nama, id: s.id });
+      });
+    })();
+
+    async function resolveSiswaUntukNilai(q, opts) {
+      opts = opts || {};
+      q = String(q || '').trim();
+      // Prefer id yang dipilih dari saran
+      const selId = opts.id || (document.getElementById('nsCariQ')?.dataset?.selectedId);
+      if (selId) {
+        if (supabaseClient) {
+          const { data } = await supabaseClient.from('siswa').select('id, nama, nisn, kelas').eq('id', Number(selId)).maybeSingle();
+          if (data) return data;
+        }
+        if (!dataSiswa.length) await loadSiswa();
+        const hit = (dataSiswa || []).find(s => Number(s.id) === Number(selId));
+        if (hit) return hit;
+      }
       // Siswa login → data sendiri
       if (!q && currentRole === 'siswa' && currentUserId) {
         if (supabaseClient) {
@@ -6017,20 +6203,52 @@
       }
       if (!q) return null;
       if (supabaseClient) {
+        const safe = q.replace(/[%_,]/g, '');
         const { data } = await supabaseClient.from('siswa').select('id, nama, nisn, kelas')
-          .or('nama.ilike.%' + q + '%,nisn.ilike.%' + q + '%').limit(8);
+          .or('nama.ilike.%' + safe + '%,nisn.ilike.%' + safe + '%').limit(12);
         if (data && data.length === 1) return data[0];
         if (data && data.length > 1) {
-          const exact = data.find(s => String(s.nisn) === q);
-          return exact || data[0];
+          const exactNisn = data.find(s => String(s.nisn) === q);
+          if (exactNisn) return exactNisn;
+          const exactNama = data.find(s => String(s.nama || '').toLowerCase() === q.toLowerCase());
+          if (exactNama) return exactNama;
+          // Banyak hasil: tampilkan saran, jangan ambil sembarang
+          const box = document.getElementById('nsSuggest');
+          if (box) renderSiswaSuggest(box, data, (s) => {
+            const inp = document.getElementById('nsCariQ');
+            if (inp) {
+              inp.value = s.nisn && s.nisn !== '-' ? s.nisn : s.nama;
+              inp.dataset.selectedId = String(s.id || '');
+            }
+            hideSiswaSuggest(box);
+            loadNilaiSaya({ q: s.nisn || s.nama, id: s.id });
+          });
+          return null;
         }
         return null;
       }
       if (!dataSiswa.length) await loadSiswa();
       const ql = q.toLowerCase();
-      return dataSiswa.find(s =>
+      const matches = (dataSiswa || []).filter(s =>
         String(s.nisn) === q || String(s.nama || '').toLowerCase().includes(ql)
-      ) || null;
+      );
+      if (matches.length === 1) return matches[0];
+      if (matches.length > 1) {
+        const exactNisn = matches.find(s => String(s.nisn) === q);
+        if (exactNisn) return exactNisn;
+        const box = document.getElementById('nsSuggest');
+        if (box) renderSiswaSuggest(box, matches.slice(0, 12), (s) => {
+          const inp = document.getElementById('nsCariQ');
+          if (inp) {
+            inp.value = s.nisn && s.nisn !== '-' ? s.nisn : s.nama;
+            inp.dataset.selectedId = String(s.id || '');
+          }
+          hideSiswaSuggest(box);
+          loadNilaiSaya({ q: s.nisn || s.nama, id: s.id });
+        });
+        return null;
+      }
+      return null;
     }
 
     async function loadNilaiSaya(opts) {
@@ -6059,7 +6277,7 @@
         } else if (currentRole === 'admin') {
           const q = (opts.q != null) ? opts.q : (document.getElementById('nsCariQ')?.value || '');
           if (String(q).trim()) {
-            siswa = await resolveSiswaUntukNilai(q);
+            siswa = await resolveSiswaUntukNilai(q, { id: opts.id });
           } else if (opts.forceEmpty) {
             siswa = null;
           }
@@ -13257,8 +13475,19 @@
       };
     }
 
-    async function resolveSiswaForSyarat(q) {
+    async function resolveSiswaForSyarat(q, opts) {
+      opts = opts || {};
       q = String(q || '').trim();
+      const selId = opts.id || (document.getElementById('syaratQ')?.dataset?.selectedId);
+      if (selId) {
+        if (supabaseClient) {
+          const { data } = await supabaseClient.from('siswa').select('*').eq('id', Number(selId)).maybeSingle();
+          if (data) return data;
+        }
+        if (!dataSiswa.length) await loadSiswa();
+        const hit = (dataSiswa || []).find(s => Number(s.id) === Number(selId));
+        if (hit) return hit;
+      }
       if (!q && currentRole === 'siswa' && currentUserId) {
         if (supabaseClient) {
           const { data } = await supabaseClient.from('siswa').select('*').eq('id', currentUserId).maybeSingle();
@@ -13269,21 +13498,54 @@
       }
       if (!q) return null;
       if (supabaseClient) {
+        const safe = q.replace(/[%_,]/g, '');
         const { data } = await supabaseClient.from('siswa').select('*')
-          .or('nama.ilike.%' + q + '%,nisn.ilike.%' + q + '%').limit(8);
+          .or('nama.ilike.%' + safe + '%,nisn.ilike.%' + safe + '%').limit(12);
         if (data && data.length === 1) return data[0];
         if (data && data.length > 1) {
-          const exact = data.find(s => String(s.nisn) === q);
-          return exact || data[0];
+          const exactNisn = data.find(s => String(s.nisn) === q);
+          if (exactNisn) return exactNisn;
+          const exactNama = data.find(s => String(s.nama || '').toLowerCase() === q.toLowerCase());
+          if (exactNama) return exactNama;
+          // Banyak hasil → tampilkan daftar agar admin memilih
+          const box = document.getElementById('syaratSuggest');
+          if (box) renderSiswaSuggest(box, data, (s) => {
+            const inp = document.getElementById('syaratQ');
+            if (inp) {
+              inp.value = s.nisn && s.nisn !== '-' ? s.nisn : s.nama;
+              inp.dataset.selectedId = String(s.id || '');
+            }
+            hideSiswaSuggest(box);
+            jalankanCekSyarat();
+          });
+          return null;
         }
         return null;
       }
       if (!dataSiswa.length) await loadSiswa();
       const ql = q.toLowerCase();
-      return dataSiswa.find(s =>
+      const matches = (dataSiswa || []).filter(s =>
         String(s.nisn) === q || String(s.nama || '').toLowerCase().includes(ql)
-      ) || null;
+      );
+      if (matches.length === 1) return matches[0];
+      if (matches.length > 1) {
+        const exactNisn = matches.find(s => String(s.nisn) === q);
+        if (exactNisn) return exactNisn;
+        const box = document.getElementById('syaratSuggest');
+        if (box) renderSiswaSuggest(box, matches.slice(0, 12), (s) => {
+          const inp = document.getElementById('syaratQ');
+          if (inp) {
+            inp.value = s.nisn && s.nisn !== '-' ? s.nisn : s.nama;
+            inp.dataset.selectedId = String(s.id || '');
+          }
+          hideSiswaSuggest(box);
+          jalankanCekSyarat();
+        });
+        return null;
+      }
+      return null;
     }
+
 
     function renderSyaratCard(siswa, hitung, settings) {
       const box = document.getElementById('syaratResult');
@@ -13373,9 +13635,20 @@
         }
         const siswa = await resolveSiswaForSyarat(currentRole === 'siswa' ? '' : q);
         if (!siswa) {
-          if (empty) empty.textContent = (currentRole === 'siswa')
-            ? 'Data siswa tidak ditemukan. Login ulang.'
-            : (q ? 'Siswa tidak ditemukan untuk "' + q + '"' : 'Masukkan NISN atau Nama siswa.');
+          const hasSuggest = document.getElementById('syaratSuggest') &&
+            document.getElementById('syaratSuggest').style.display !== 'none' &&
+            document.getElementById('syaratSuggest').children.length > 0;
+          if (empty) {
+            if (currentRole === 'siswa') {
+              empty.textContent = 'Data siswa tidak ditemukan. Login ulang.';
+            } else if (hasSuggest) {
+              empty.textContent = 'Ditemukan beberapa siswa. Pilih salah satu dari daftar di atas.';
+            } else if (q) {
+              empty.textContent = 'Siswa tidak ditemukan untuk "' + q + '"';
+            } else {
+              empty.textContent = 'Masukkan NISN atau Nama siswa.';
+            }
+          }
           return;
         }
 
