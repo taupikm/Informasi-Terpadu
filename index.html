@@ -2,15 +2,11 @@
 <html lang="id">
 <head>
   <meta charset="UTF-8" />
-  <!-- CACHE_BUST 2026-10-08-b -->
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
   <title>SMPN PANTANG MUNDUR</title>
-  <!-- Supabase JS Client (CDN) -->
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <!-- HTML5 QR Code Scanner -->
-  <script src="https://cdn.jsdelivr.net/npm/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
-  <!-- SheetJS untuk Excel (.xlsx) -->
-  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://cdn.jsdelivr.net/npm/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/mammoth@1.8.0/mammoth.browser.min.js"></script>
   <link href="https://cdn.jsdelivr.net/npm/quill@2.0.2/dist/quill.snow.css" rel="stylesheet">
   <script src="https://cdn.jsdelivr.net/npm/quill@2.0.2/dist/quill.js"></script>
@@ -207,8 +203,6 @@
       padding-bottom: var(--footer-h);
       overflow-x: hidden;
     }
-
-    /* ========== TOPBAR ========== */
     .topbar {
       position: fixed;
       top: 0;
@@ -367,8 +361,6 @@
     .profile-menu a:hover, .profile-menu a:active {
       background: #f1f5f9;
     }
-
-    /* ========== SIDEBAR OVERLAY ========== */
     .sidebar-overlay {
       position: fixed;
       inset: 0;
@@ -477,8 +469,6 @@
       text-align: center;
       font-size: 16px;
     }
-
-    /* ========== MAIN CONTENT ========== */
     .main {
       padding: 12px;
       min-height: calc(100vh - var(--topbar-h) - var(--footer-h));
@@ -497,8 +487,6 @@
       margin-bottom: 14px;
       color: var(--text);
     }
-
-    /* Dashboard cards */
     .stats-row {
       display: grid;
       grid-template-columns: 1fr 1fr;
@@ -594,7 +582,6 @@
       font-size: 12px;
       min-width: 480px;
     }
-    /* Filter rekap: label sejajar kiri, input kanan */
     .rekap-filter-row {
       display: flex;
       align-items: center;
@@ -618,7 +605,6 @@
       font-size: 13px;
       background: #fff;
     }
-    /* Tabel rekap: boleh scroll horizontal, kolom tidak tumpuk */
     #page-rekap-data .table-wrap {
       overflow-x: auto;
       -webkit-overflow-scrolling: touch;
@@ -641,8 +627,6 @@
       overflow: hidden;
       text-overflow: ellipsis;
     }
-
-    /* Tabel rekap dashboard: kompak, tanpa min-width agar 3+ sesi muat di HP */
     #page-dashboard .table-wrap table {
       min-width: 0;
       width: 100%;
@@ -656,8 +640,6 @@
       overflow: hidden;
       text-overflow: ellipsis;
     }
-
-    /* Lihat Nilai Saya — HP: kompak full width; Laptop: center + proporsional */
     #page-nilai-saya .table-wrap {
       overflow-x: auto;
       -webkit-overflow-scrolling: touch;
@@ -697,8 +679,6 @@
       font-size: 12px;
       font-weight: 600;
     }
-
-    /* Laptop / tablet landscape: konten di tengah, tidak melebar penuh */
     @media (min-width: 768px) {
       #page-nilai-saya {
         max-width: 720px;
@@ -748,7 +728,6 @@
         max-width: 780px;
       }
     }
-    /* Laptop: halaman Cek Syarat + semua submenu Pengaturan — center, tidak full width */
     @media (min-width: 768px) {
       #page-syarat-naik,
       #page-set-mapel,
@@ -789,7 +768,6 @@
       #page-set-gdrive .card {
         box-shadow: 0 2px 12px rgba(15, 23, 42, 0.06);
       }
-      /* Cek Syarat: kartu hasil + tipografi lebih nyaman di laptop */
       #page-syarat-naik #syaratCardPrint {
         max-width: 480px;
         margin-left: auto;
@@ -818,7 +796,6 @@
         margin-right: auto;
         display: block;
       }
-      /* Tabel pengaturan: font & padding lebih lega */
       #page-set-mapel table,
       #page-set-kelas table,
       #page-set-periode table,
@@ -857,15 +834,12 @@
         max-width: 780px;
       }
       #page-set-periode {
-        max-width: 900px; /* tabel periode punya banyak kolom */
+        max-width: 900px; 
       }
       #page-set-sesi-libur {
         max-width: 860px;
       }
     }
-
-
-    /* Tabel Input Nilai: kompak, tanpa scroll horizontal di HP */
     #page-input-nilai .table-wrap {
       overflow-x: hidden;
       -webkit-overflow-scrolling: touch;
@@ -941,8 +915,6 @@
     .badge-izin { background: #fef3c7; color: #92400e; }
     .badge-sakit { background: #fee2e2; color: #991b1b; }
     .badge-alpha { background: #f1f5f9; color: #475569; }
-
-    /* Generic page content */
     .card {
       background: var(--card);
       border-radius: 12px;
@@ -982,8 +954,6 @@
       border: 1px solid var(--border);
       color: var(--text);
     }
-
-    /* ========== FOOTER ========== */
     .footer {
       position: fixed;
       bottom: 0;
@@ -998,8 +968,6 @@
       font-size: 11px;
       z-index: 1000;
     }
-
-    /* Placeholder pages */
     .placeholder {
       text-align: center;
       padding: 40px 20px;
@@ -1016,8 +984,6 @@
       font-size: 13px;
       color: var(--text-muted);
     }
-
-    /* ========== MODAL ========== */
     .modal-overlay {
       position: fixed;
       inset: 0;
@@ -1140,8 +1106,6 @@
     .modal-footer .btn {
       flex: 1;
     }
-
-    /* Toolbar CRUD – compact agar 1 baris di HP */
     .toolbar {
       display: flex;
       flex-wrap: nowrap;
@@ -1256,7 +1220,6 @@
       border-color: var(--primary);
       outline: none;
     }
-    /* Accordion */
     .accordion {
       background: var(--card);
       border-radius: 12px;
@@ -1304,7 +1267,6 @@
       background: #dcfce7;
       color: #166534;
     }
-    /* Live search saran siswa (Cek Syarat / Nilai Saya / dll) */
     .siswa-suggest-box {
       margin-top: 8px;
       display: flex;
@@ -1358,9 +1320,7 @@
   </style>
 </head>
 <body>
-
-  <!-- TOPBAR -->
-  <header class="topbar">
+<header class="topbar">
     <div class="topbar-left">
       <button class="btn-toggle" id="btnToggle" aria-label="Menu" style="display:none;">☰</button>
       <div class="logo">SP</div>
@@ -1387,9 +1347,7 @@
       </div>
     </div>
   </header>
-
-  <!-- SIDEBAR OVERLAY -->
-  <div class="sidebar-overlay" id="sidebarOverlay"></div>
+<div class="sidebar-overlay" id="sidebarOverlay"></div>
   <aside class="sidebar" id="sidebar">
     <div class="sidebar-header">
       <div class="avatar" id="sidebarAvatar">?</div>
@@ -1449,14 +1407,9 @@
       </div>
     </nav>
   </aside>
-
-  <!-- MAIN CONTENT -->
-  <main class="main">
-
-    <!-- DASHBOARD -->
-    <section class="page active" id="page-dashboard">
-      <!-- Statistik Guru -->
-      <div class="card" style="padding:12px;margin-bottom:10px;">
+<main class="main">
+<section class="page active" id="page-dashboard">
+<div class="card" style="padding:12px;margin-bottom:10px;">
         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
           <div style="font-size:13px;font-weight:700;">Statistik Guru</div>
           <div id="dashTotalGuru" style="background:#e0f2fe;color:#0369a1;font-size:12px;font-weight:700;padding:2px 10px;border-radius:8px;">0</div>
@@ -1488,9 +1441,7 @@
           </div>
         </div>
       </div>
-
-      <!-- Statistik Siswa -->
-      <div class="card" style="padding:12px;margin-bottom:10px;">
+<div class="card" style="padding:12px;margin-bottom:10px;">
         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
           <div style="font-size:13px;font-weight:700;">Statistik Siswa</div>
           <div id="dashTotalSiswa" style="background:#e0f2fe;color:#0369a1;font-size:12px;font-weight:700;padding:2px 10px;border-radius:8px;">0</div>
@@ -1522,15 +1473,11 @@
           </div>
         </div>
       </div>
-
-      <!-- Informasi Sesi -->
-      <div id="dashSesiInfo" style="background:#e0f7fa;border:1px solid #67e8f9;border-radius:12px;padding:12px 14px;text-align:center;margin-bottom:12px;">
+<div id="dashSesiInfo" style="background:#e0f7fa;border:1px solid #67e8f9;border-radius:12px;padding:12px 14px;text-align:center;margin-bottom:12px;">
         <div style="font-size:12px;font-weight:600;color:#0e7490;">Sesi Berlangsung</div>
         <div id="dashSesiDetail" style="font-size:13px;font-weight:700;color:#155e75;margin-top:4px;">Memuat...</div>
       </div>
-
-      <!-- Rekap Guru -->
-      <div class="section-title">Rekap Kehadiran Guru</div>
+<div class="section-title">Rekap Kehadiran Guru</div>
       <div class="table-wrap">
         <table>
           <thead id="theadDashGuru">
@@ -1541,9 +1488,7 @@
           </tbody>
         </table>
       </div>
-
-      <!-- Rekap Siswa -->
-      <div class="section-title">Rekap Kehadiran Siswa</div>
+<div class="section-title">Rekap Kehadiran Siswa</div>
       <div class="table-wrap">
         <table>
           <thead id="theadDashSiswa">
@@ -1555,9 +1500,7 @@
         </table>
       </div>
     </section>
-
-    <!-- PLACEHOLDER PAGES -->
-    <section class="page" id="page-cari-siswa">
+<section class="page" id="page-cari-siswa">
       <div class="page-title">Cari Data Siswa (Orang Tua)</div>
       <div class="card" style="padding:12px;margin-bottom:10px;">
         <div class="rekap-filter-row">
@@ -1605,7 +1548,7 @@
           👆 <span id="labelFpSiswaAksi">Daftarkan Sidik Jari</span>
         </button>
         <p id="fpSiswaKet" style="font-size:12px;color:#64748b;margin-top:10px;line-height:1.45;text-align:center;">
-          Login sebagai siswa. Izin sidik jari diatur admin di Pengaturan.
+          Login sebagai siswa.
         </p>
       </div>
       <div class="section-title">Riwayat Absen Hari Ini</div>
@@ -1651,7 +1594,6 @@
               <span style="color:#334155;">◎ Akumulasi Sesi Efektif</span>
               <b id="syaratSesi" style="color:#0f172a;">0 sesi</b>
             </div>
-            <div style="font-size:10px;color:#94a3b8;margin-top:6px;line-height:1.35;">(sesi real dari mulai absen s/d hari ini; unik tanggal+sesi di absensi &amp; historis; jumlah sesi per hari fleksibel)</div>
           </div>
           <div id="syaratRows" style="display:flex;flex-direction:column;gap:6px;"></div>
           <div style="margin-top:12px;background:linear-gradient(135deg,#eff6ff,#e0e7ff);border-radius:12px;padding:16px 12px;text-align:center;">
@@ -1671,9 +1613,7 @@
       <div class="page-title">Kerjakan Tugas / Ujian</div>
       <div class="card" style="padding:12px;margin-bottom:10px;font-size:13px;">
         Siswa: <b id="tuSiswaNama">-</b> · Kelas: <b id="tuSiswaKelas">-</b>
-        <div id="tuAdminHint" style="display:none;margin-top:6px;font-size:11px;color:#a16207;line-height:1.4;">
-          Mode <b>Admin preview</b>: semua bank aktif bisa dikerjakan (abaikan jadwal & batas percobaan). Hasil ditandai [Admin].
-        </div>
+        <div id="tuAdminHint" style="display:none;margin-top:6px;font-size:11px;color:#a16207;line-height:1.4;">Mode Admin preview</div>
       </div>
       <div id="tuList" class="bs-soal-list">
         <div style="text-align:center;padding:20px;color:#94a3b8;">Memuat daftar tugas...</div>
@@ -1695,9 +1635,7 @@
         <button class="btn btn-outline" id="btnTuNext" style="flex:1;">Next →</button>
         <button class="btn btn-primary" id="btnTuSubmit" style="flex:1.2;">Kirim</button>
       </div>
-
-      <!-- Overlay navigasi nomor soal -->
-      <div id="tuNavOverlay" class="tu-nav-overlay" style="display:none;">
+<div id="tuNavOverlay" class="tu-nav-overlay" style="display:none;">
         <div class="tu-nav-panel">
           <div class="tu-nav-head">
             <b>Nomor Soal</b>
@@ -1754,15 +1692,6 @@
           </tbody>
         </table>
       </div>
-      <div class="card" style="margin-top:12px;font-size:12px;line-height:1.55;color:#334155;">
-        <div style="font-weight:700;margin-bottom:6px;">KETERANGAN :</div>
-        <ol style="padding-left:18px;margin:0;">
-          <li style="margin-bottom:4px;"><b>RNH</b> = Nilai Rata-rata harian</li>
-          <li style="margin-bottom:4px;"><b>PTS, PAS, PAT</b> dst tampil dinamis sesuai dengan jenis nilai yang sudah diinput guru</li>
-          <li style="margin-bottom:4px;"><b>NR</b> = Nilai Rapor, rata-rata dari RNH dan PTS, PAS dst. Rata-rata ini adalah jumlah semua nilai siswa dibagi banyaknya penilaian yang telah dilaksanakan guru, bukan yang diikuti siswa, misalnya : guru sudah melaksanakan 4 kali penilaian tetapi siswa hanya mengikuti 2 penilaian, maka reratanya tetap harus dibagi 4 sebanyak penilaian yang telah dilaksanakan guru</li>
-          <li style="margin-bottom:4px;">untuk membedakan nilai yang melampaui, memenuhi dan masih kurang, maka warna nilai dibedakan : 90 keatas (<span style="color:#2563eb;font-weight:700;">Biru</span>), 80-90 (<span style="color:#16a34a;font-weight:700;">Hijau</span>), 70-80 (<span style="color:#ea580c;font-weight:700;">Oranye</span>), dibawah 70 (<span style="color:#dc2626;font-weight:700;">merah</span>)</li>
-        </ol>
-      </div>
     </section>
     <section class="page" id="page-kelulusan">
       <div class="page-title">Pengumuman Kelulusan</div>
@@ -1791,18 +1720,7 @@
           <div id="pgStatus" style="text-align:center;font-size:26px;font-weight:800;letter-spacing:.06em;margin:6px 0 10px;"></div>
           <div id="pgStatusSub" style="text-align:center;font-size:13px;line-height:1.55;color:#334155;margin-bottom:8px;"></div>
           <div id="pgPredikatLine" style="text-align:center;font-size:14px;line-height:1.5;margin-top:10px;"></div>
-          <div style="border-top:1px dashed #cbd5e1;margin:16px 0 10px;"></div>
-          <div style="font-size:12px;color:#334155;line-height:1.55;">
-            <div style="font-weight:700;margin-bottom:6px;text-decoration:underline;">KETERANGAN :</div>
-            <ol style="padding-left:18px;margin:0;">
-              <li style="margin-bottom:4px;">Predikat kelulusan diambil dari data lulusan</li>
-              <li style="margin-bottom:4px;">Jika lulus maka kalimat dibawahnya : “Dari <b>SMPN PANTANG MUNDUR</b> dengan Predikat <b style="color:#16a34a;">BAIK</b>”</li>
-              <li style="margin-bottom:4px;">Untuk warna Predikat : <span style="color:#2563eb;font-weight:700;">MEMUASKAN</span> (biru), <span style="color:#16a34a;font-weight:700;">BAIK</span> (hijau), <span style="color:#ea580c;font-weight:700;">CUKUP</span> (orange)</li>
-              <li style="margin-bottom:4px;">Jika ditangguhkan, kalimat dibawahnya : “Jika sampai batas H-2 akhir Tahun Ajaran, beberapa syarat kelulusan yang tertinggal tidak dipenuhi maka statusnya menjadi <b>TIDAK LULUS</b> permanen”</li>
-              <li style="margin-bottom:4px;">Jika tidak lulus, kalimat dibawahnya : “lebih dari 60% syarat kelulusan tidak tercapai”</li>
-            </ol>
-          </div>
-        </div>
+</div>
       </div>
     </section>
     <section class="page" id="page-validasi-lulusan">
@@ -1835,9 +1753,7 @@
         </div>
       </div>
     </section>
-
-    <!-- ========== SCAN BARCODE ========== -->
-    <section class="page" id="page-scan-barcode">
+<section class="page" id="page-scan-barcode">
       <div class="page-title">Absensi QR / Sidik Jari</div>
 
       <div class="card" style="margin-bottom:12px;">
@@ -1848,16 +1764,12 @@
           Sesi aktif : <b id="scanLabelSesi">-</b>
           <span id="scanLabelJam" style="color:#64748b;font-size:12px;"></span>
         </div>
-
-        <!-- Tombol Sidik Jari -->
-        <div style="margin-top:12px;">
+<div style="margin-top:12px;">
           <button class="btn btn-primary" id="btnSidikJari" style="width:100%;background:#1e40af;">
             👆 <span id="labelSidikJari">Daftar Sidik Jari</span>
           </button>
         </div>
-
-        <!-- Switch Siswa / Guru (hanya Admin) -->
-        <div id="scanTipeSwitch" style="display:none;margin-top:12px;">
+<div id="scanTipeSwitch" style="display:none;margin-top:12px;">
           <div style="display:flex;border-radius:10px;overflow:hidden;border:1px solid #1e40af;">
             <button type="button" class="scan-tipe-btn active" data-tipe="siswa" id="btnScanSiswa"
               style="flex:1;padding:10px;border:none;font-weight:700;font-size:13px;cursor:pointer;background:#38bdf8;color:#0f172a;">Siswa</button>
@@ -1865,15 +1777,11 @@
               style="flex:1;padding:10px;border:none;font-weight:700;font-size:13px;cursor:pointer;background:#1e40af;color:white;">Guru</button>
           </div>
         </div>
-
-        <!-- Tombol kamera -->
-        <div style="display:flex;gap:8px;margin-top:12px;">
+<div style="display:flex;gap:8px;margin-top:12px;">
           <button class="btn btn-primary" id="btnBukaKamera" style="flex:1;">📷 Buka Kamera</button>
           <button class="btn btn-outline" id="btnTutupKamera" style="flex:1;display:none;">✕ Tutup Kamera</button>
         </div>
-
-        <!-- Area preview kamera -->
-        <div id="qrReaderWrap" style="display:none;margin-top:12px;">
+<div id="qrReaderWrap" style="display:none;margin-top:12px;">
           <div id="qrReader" style="width:100%;min-height:340px;border-radius:12px;overflow:hidden;background:#111;"></div>
           <p style="font-size:11px;color:#64748b;text-align:center;margin-top:6px;">Arahkan kamera ke barcode / QR code</p>
         </div>
@@ -2004,8 +1912,7 @@
     <section class="page" id="page-jadwal-mapel">
       <div class="placeholder"><div class="icon">📅</div><h2>Jadwal Mapel</h2><p>Halaman jadwal mata pelajaran</p></div>
     </section>
-    <!-- ========== INPUT NILAI ========== -->
-    <section class="page" id="page-input-nilai">
+<section class="page" id="page-input-nilai">
       <div class="page-title">Input Nilai</div>
       <div class="card" style="margin-bottom:12px;">
         <div class="periode-bar" id="periodeBarInput">
@@ -2064,9 +1971,7 @@
         </table>
       </div>
     </section>
-
-    <!-- ========== DAFTAR NILAI ========== -->
-    <section class="page" id="page-daftar-nilai">
+<section class="page" id="page-daftar-nilai">
       <div class="page-title">Daftar Nilai</div>
       <div class="card" style="margin-bottom:12px;">
         <div class="periode-bar" id="periodeBarDaftar">
@@ -2102,9 +2007,7 @@
         </table>
       </div>
     </section>
-
-    <!-- Modal Edit Nilai (Daftar Nilai) -->
-    <div class="modal-overlay" id="modalEditDn">
+<div class="modal-overlay" id="modalEditDn">
       <div class="modal modal-lg">
         <div class="modal-header">
           <h3>Edit Nilai</h3>
@@ -2122,9 +2025,7 @@
     </div>
     <section class="page" id="page-kelola-tugas">
       <div class="page-title">Bank Soal — Tugas / Ujian</div>
-
-      <!-- Filter -->
-      <div class="card" style="margin-bottom:10px;padding:12px;">
+<div class="card" style="margin-bottom:10px;padding:12px;">
         <div class="rekap-filter-row">
           <label>Tahun Ajaran</label>
           <select id="bsTahun"><option value="">Semua</option></select>
@@ -2173,9 +2074,7 @@
         </table>
       </div>
     </section>
-
-    <!-- Sub: kelola soal dalam 1 bank -->
-    <section class="page" id="page-bank-soal-detail">
+<section class="page" id="page-bank-soal-detail">
       <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;">
         <button class="btn btn-outline" id="btnBsKembali" style="padding:6px 10px;">← Kembali</button>
         <div class="page-title" style="margin:0;" id="bsDetailTitle">Soal</div>
@@ -2193,26 +2092,12 @@
         <label style="display:flex;align-items:center;gap:4px;cursor:pointer;">
           <input type="checkbox" id="checkAllBsItem"> Pilih semua
         </label>
-        <button type="button" id="btnBsTogglePanduan" class="btn btn-outline" style="padding:3px 8px;font-size:11px;margin-left:auto;">❓ Panduan format</button>
-      </div>
-      <div id="bsPanduanFormat" class="card" style="display:none;padding:12px;margin-bottom:10px;font-size:12px;line-height:1.5;color:#334155;">
-        <b>Format nomor:</b> 1. &nbsp; 2. &nbsp; atau No.1<br>
-        <b>Pilihan Ganda:</b> A. B. C. D. + baris <code>Kunci: B</code><br>
-        <b>Benar/Salah:</b> A. Benar &nbsp; B. Salah + <code>Kunci: Benar</code><br>
-        <b>Checkbox:</b> A–D + <code>Kunci: A,C</code> (boleh multi)<br>
-        <b>Isian Singkat:</b> tanpa A–D + <code>Kunci: 144</code><br>
-        <b>Esai:</b> tanpa A–D + pedoman di <code>Kunci:</code><br>
-        <b>Menjodohkan:</b> <code>Kunci:</code> lalu baris <code>kiri = kanan</code><br>
-        <b>Unggah File:</b> siswa mengunggah file jawaban (disimpan ke Google Drive / storage)<br>
-        <span style="color:#64748b;">Gambar, tabel, equation Word ikut ter-import. Unduh contoh lengkap lewat tombol <b>Contoh Format</b>.</span>
-      </div>
+</div>
       <div id="tbodyBsItem" class="bs-soal-list">
         <div style="text-align:center;padding:16px;color:#94a3b8;">Belum ada soal</div>
       </div>
     </section>
-
-    <!-- Sub: hasil -->
-    <section class="page" id="page-bank-soal-hasil">
+<section class="page" id="page-bank-soal-hasil">
       <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;flex-wrap:wrap;">
         <button class="btn btn-outline" id="btnBsHasilKembali" style="padding:6px 10px;">← Kembali</button>
         <div class="page-title" style="margin:0;flex:1;" id="bsHasilTitle">Monitoring</div>
@@ -2265,9 +2150,7 @@
         </table>
       </div>
     </section>
-
-    <!-- Modal detail jawaban siswa -->
-    <div class="modal-overlay" id="modalMonDetail">
+<div class="modal-overlay" id="modalMonDetail">
       <div class="modal" style="max-width:560px;max-height:92vh;overflow-y:auto;">
         <div class="modal-header">
           <h3 id="monDetailTitle">Detail Jawaban</h3>
@@ -2369,9 +2252,7 @@
         .dl-abs-sheet tr { page-break-inside: avoid; }
       }
     </style>
-
-    <!-- ========== DATA SISWA ========== -->
-    <section class="page" id="page-data-siswa">
+<section class="page" id="page-data-siswa">
       <div class="page-title">Data Siswa</div>
       <div class="toolbar" id="toolbarSiswa">
         <button class="btn btn-primary" id="btnTambahSiswa">+ Tambah</button>
@@ -2407,9 +2288,7 @@
         </table>
       </div>
     </section>
-
-    <!-- ========== DATA GURU ========== -->
-    <section class="page" id="page-data-guru">
+<section class="page" id="page-data-guru">
       <div class="page-title">Data Guru</div>
       <div class="toolbar" id="toolbarGuru">
         <button class="btn btn-primary" id="btnTambahGuru">+ Tambah</button>
@@ -2441,9 +2320,7 @@
         </table>
       </div>
     </section>
-
-    <!-- ========== DATA LULUSAN ========== -->
-    <section class="page" id="page-data-lulusan">
+<section class="page" id="page-data-lulusan">
       <div class="page-title">Data Lulusan</div>
       <div class="toolbar" id="toolbarLulusan">
         <button class="btn btn-primary" id="btnTambahLulusan">+ Tambah</button>
@@ -2481,9 +2358,7 @@
         </table>
       </div>
     </section>
-
-    <!-- ========== PENGATURAN: 📚 Mapel ========== -->
-    <section class="page" id="page-set-mapel">
+<section class="page" id="page-set-mapel">
       <div class="page-title">📚 Mapel</div>
       <div class="toolbar">
             <button class="btn btn-primary" id="btnTambahMapel">+ Tambah</button>
@@ -2507,9 +2382,7 @@
             </table>
       </div>
     </section>
-
-    <!-- ========== PENGATURAN: 🏫 Kelas ========== -->
-    <section class="page" id="page-set-kelas">
+<section class="page" id="page-set-kelas">
       <div class="page-title">🏫 Kelas</div>
       <div class="toolbar">
             <button class="btn btn-primary" id="btnTambahKelas">+ Tambah</button>
@@ -2532,9 +2405,7 @@
             </table>
       </div>
     </section>
-
-    <!-- ========== PENGATURAN: 📅 Periode ========== -->
-    <section class="page" id="page-set-periode">
+<section class="page" id="page-set-periode">
       <div class="page-title">📅 Periode</div>
       <div class="toolbar">
             <button class="btn btn-primary" id="btnTambahPeriode">+ Tambah</button>
@@ -2569,9 +2440,7 @@
             </table>
       </div>
     </section>
-
-    <!-- ========== PENGATURAN: ⏰ Sesi & Hari Libur ========== -->
-    <section class="page" id="page-set-sesi-libur">
+<section class="page" id="page-set-sesi-libur">
       <div class="page-title">⏰ Sesi & Hari Libur</div>
       <div style="font-size:13px;font-weight:700;margin-bottom:8px;">Setting Sesi</div>
           <div class="toolbar">
@@ -2601,8 +2470,7 @@
           </div>
 
           <div style="font-size:13px;font-weight:700;margin-bottom:8px;">Hari Libur</div>
-          <p style="font-size:11px;color:#64748b;margin-bottom:8px;">Pada hari libur, kamera scanner &amp; sidik jari nonaktif.</p>
-          <div class="toolbar">
+            <div class="toolbar">
             <button class="btn btn-primary" id="btnTambahLibur">+ Tambah</button>
             <button class="btn btn-outline" id="btnHapusLibur" style="color:#ef4444;border-color:#fca5a5;">🗑️</button>
             <span class="toolbar-info" id="infoLibur">0 data</span>
@@ -2623,9 +2491,7 @@
             </table>
       </div>
     </section>
-
-    <!-- ========== PENGATURAN: 👆 Izin Sidik Jari ========== -->
-    <section class="page" id="page-set-izin-fp">
+<section class="page" id="page-set-izin-fp">
       <div class="page-title">👆 Izin Sidik Jari</div>
       <p style="font-size:12px;color:#64748b;margin-bottom:10px;">Centang user yang diizinkan memakai fitur sidik jari, lalu simpan. Pilihan Guru dan Siswa disimpan bersama.</p>
 
@@ -2638,9 +2504,7 @@
         <button class="btn btn-primary" id="btnSimpanIzinFp">💾 Simpan Izin</button>
         <span class="toolbar-info" id="infoIzinFp">0 dipilih</span>
       </div>
-
-      <!-- Tabel Siswa -->
-      <div id="izinFpPanelSiswa">
+<div id="izinFpPanelSiswa">
         <div class="table-wrap">
           <table id="tableIzinFpSiswa">
             <thead>
@@ -2658,9 +2522,7 @@
           </table>
         </div>
       </div>
-
-      <!-- Tabel Guru -->
-      <div id="izinFpPanelGuru" style="display:none;">
+<div id="izinFpPanelGuru" style="display:none;">
         <div class="table-wrap">
           <table id="tableIzinFpGuru">
             <thead>
@@ -2678,16 +2540,11 @@
         </div>
       </div>
     </section>
-
-    <!-- ========== PENGATURAN: 📦 Arsip Absensi ========== -->
-    <section class="page" id="page-set-arsip">
+<section class="page" id="page-set-arsip">
       <div class="page-title">📦 Arsip Absensi</div>
 
       <div class="card" style="padding:14px;margin-bottom:12px;">
         <div style="font-size:14px;font-weight:700;margin-bottom:10px;color:#0f172a;">⚙️ Pengaturan Absensi (Syarat)</div>
-        <p style="font-size:11px;color:#64748b;margin-bottom:10px;line-height:1.4;">
-          Digunakan untuk menghitung syarat naik kelas / kelulusan. Minimal hadir contoh: 80.
-        </p>
         <div class="rekap-filter-row">
           <label>Mulai tanggal</label>
           <input type="date" id="setAbsenMulai">
@@ -2706,10 +2563,6 @@
 
       <div class="card" style="padding:14px;">
         <div style="font-size:14px;font-weight:700;margin-bottom:8px;">📦 Pindah ke Historis</div>
-        <p style="font-size:12px;color:#64748b;line-height:1.45;margin-bottom:10px;">
-          Pindahkan data absensi lama ke tabel <b>absensi_historis</b> agar tabel aktif tetap ringan.
-          Rekap &amp; Cari Siswa tetap membaca absensi + historis.
-        </p>
         <div id="arsipInfo" style="font-size:12px;margin-bottom:10px;color:#334155;">Memuat info...</div>
         <div class="form-group">
           <label>Pindahkan data s/d tanggal (inklusif)</label>
@@ -2722,9 +2575,7 @@
         <div id="arsipHasil" style="font-size:12px;margin-top:10px;color:#64748b;"></div>
       </div>
     </section>
-
-    <!-- ========== PENGATURAN: 🎓 Naik Kelas & Kelulusan ========== -->
-    <section class="page" id="page-set-naik-lulus">
+<section class="page" id="page-set-naik-lulus">
       <div class="page-title">🎓 Naik Kelas & Kelulusan</div>
       <div id="nlModeSwitch" style="display:flex;border-radius:10px;overflow:hidden;border:1px solid #2563eb;margin-bottom:12px;">
             <button type="button" id="btnModeNaikKelas" style="flex:1;padding:10px;border:none;font-weight:700;font-size:12px;cursor:pointer;background:#2563eb;color:#fff;">⬆️ Naik Kelas</button>
@@ -2766,9 +2617,7 @@
             </table>
       </div>
     </section>
-
-    <!-- ========== PENGATURAN: Reset PIN ========== -->
-    <section class="page" id="page-set-reset-pin">
+<section class="page" id="page-set-reset-pin">
       <div class="page-title">🔑 Reset PIN</div>
       <p style="font-size:12px;color:#64748b;margin-bottom:12px;line-height:1.45;">
         Admin dapat mereset PIN guru dan mengubah PIN admin sendiri. PIN dipakai untuk login.
@@ -2820,27 +2669,17 @@
 
     <section class="page" id="page-set-gdrive">
       <div class="page-title">☁ Integrasi Google Drive</div>
-      <p style="font-size:12px;color:#64748b;margin-bottom:12px;line-height:1.5;">
-        Atur endpoint Google Apps Script agar file jawaban soal <b>Unggah File</b> tersimpan ke Google Drive.
-        Cukup tempel URL hasil <b>Deploy → Web app</b> di bawah. Perubahan langsung dipakai tanpa edit kode.
-      </p>
+      
 
       <div class="card" style="padding:14px;margin-bottom:14px;">
         <div style="font-size:14px;font-weight:700;margin-bottom:10px;color:#0f172a;">🔗 Endpoint Web App</div>
         <div class="form-group">
           <label>URL Google Apps Script (Web App)</label>
           <input type="url" id="gdEndpoint" placeholder="https://script.google.com/macros/s/XXXX/exec" style="font-size:12px;">
-          <p style="font-size:11px;color:#94a3b8;margin-top:4px;line-height:1.4;">
-            Deploy script sebagai Web App · Execute as: <b>Me</b> · Who has access: <b>Anyone</b>
-          </p>
         </div>
         <div class="form-group">
           <label>ID Folder Drive default (opsional)</label>
           <input type="text" id="gdFolderId" placeholder="1AbC...xyz dari URL folder Drive">
-          <p style="font-size:11px;color:#94a3b8;margin-top:4px;line-height:1.4;">
-            Dari URL folder: <code>drive.google.com/drive/folders/<b>ID_INI</b></code>.
-            Bisa diganti per soal di form Unggah File.
-          </p>
         </div>
         <div id="gdStatus" style="font-size:12px;margin:8px 0;color:#64748b;"></div>
         <div style="display:flex;gap:8px;flex-wrap:wrap;">
@@ -2849,85 +2688,13 @@
         </div>
       </div>
 
-      <div class="card" style="padding:14px;margin-bottom:14px;background:#f8fafc;">
-        <div style="font-size:13px;font-weight:700;margin-bottom:8px;color:#0f172a;">📋 Contoh script Apps Script</div>
-        <p style="font-size:11px;color:#64748b;margin-bottom:8px;line-height:1.45;">
-          Buat project baru di <a href="https://script.google.com" target="_blank" rel="noopener">script.google.com</a>,
-          tempel kode di bawah, lalu <b>Deploy → New deployment → Web app</b>
-          (Execute as: <b>Me</b>, Who has access: <b>Anyone</b>).
-          Jika error <b>Akses ditolak: DriveApp</b>: buka script → <b>Run</b> fungsi doPost sekali → izinkan izin Drive → deploy ulang versi baru.
-          Folder ID harus milik akun Google yang sama dengan pemilik script.
-        </p>
-        <pre id="gdScriptSample" style="font-size:10px;line-height:1.4;background:#0f172a;color:#e2e8f0;padding:12px;border-radius:8px;overflow-x:auto;white-space:pre-wrap;max-height:220px;">function doPost(e) {
-  try {
-    // Baca JSON body (dari aplikasi) ATAU e.parameter
-    var data = {};
-    if (e && e.postData && e.postData.contents) {
-      try { data = JSON.parse(e.postData.contents); } catch (errParse) { data = {}; }
-    }
-    var params = (e && e.parameter) ? e.parameter : {};
-    var action = String(data.action || params.action || 'upload').toLowerCase();
-
-    if (action === 'delete') {
-      var delId = data.id || data.fileId || params.id || params.fileId || '';
-      if (!delId) {
-        return ContentService.createTextOutput(JSON.stringify({ ok: false, message: 'id wajib' }))
-          .setMimeType(ContentService.MimeType.JSON);
-      }
-      DriveApp.getFileById(delId).setTrashed(true);
-      return ContentService.createTextOutput(JSON.stringify({ ok: true, deleted: true, id: delId }))
-        .setMimeType(ContentService.MimeType.JSON);
-    }
-
-    var b64 = data.base64 || data.data || params.data || '';
-    var name = data.filename || data.name || params.name || ('jawaban_' + new Date().getTime() + '.bin');
-    var mime = data.mimeType || data.mime || params.mime || 'application/octet-stream';
-    var folderId = data.folderId || params.folderId || '';
-    var nisn = data.nisn || params.nisn || '';
-    if (nisn) name = nisn + '_' + name;
-
-    if (!b64) {
-      return ContentService.createTextOutput(JSON.stringify({ ok: false, message: 'data/base64 kosong' }))
-        .setMimeType(ContentService.MimeType.JSON);
-    }
-
-    var folder = folderId ? DriveApp.getFolderById(folderId) : DriveApp.getRootFolder();
-    var blob = Utilities.newBlob(Utilities.base64Decode(b64), mime, name);
-    var file = folder.createFile(blob);
-    file.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
-
-    return ContentService.createTextOutput(JSON.stringify({
-      ok: true,
-      id: file.getId(),
-      name: file.getName(),
-      url: 'https://drive.google.com/file/d/' + file.getId() + '/view'
-    })).setMimeType(ContentService.MimeType.JSON);
-  } catch (err) {
-    return ContentService.createTextOutput(JSON.stringify({ ok: false, error: String(err), message: String(err) }))
-      .setMimeType(ContentService.MimeType.JSON);
-  }
-}</pre>
-        <button type="button" class="btn btn-outline" id="btnGdCopyScript" style="margin-top:8px;width:100%;">📋 Salin Script</button>
-      </div>
-
-      <div class="card" style="padding:12px;font-size:12px;color:#475569;line-height:1.5;">
-        <b>Urutan penyimpanan file jawaban:</b><br>
-        1. Google Drive (jika URL di atas terisi)<br>
-        2. Supabase Storage bucket <code>jawaban-file</code><br>
-        3. Fallback lokal (hanya file ≤ 1,5 MB)
-      </div>
     </section>
 
-
   </main>
-
-  <!-- FOOTER -->
-  <footer class="footer">
+<footer class="footer">
     © 2026 SMPN PANTANG MUNDUR * <span style="opacity:.7">· v2026.10.08d</span>
   </footer>
-
-  <!-- ========== MODAL LOGIN ========== -->
-  <div class="modal-overlay" id="modalLogin">
+<div class="modal-overlay" id="modalLogin">
     <div class="modal">
       <div class="modal-header">
         <h3>Login</h3>
@@ -2941,8 +2708,7 @@
                  style="text-align:center;letter-spacing:6px;font-size:20px;">
         </div>
         <p style="font-size:11px;color:#64748b;margin-top:-6px;line-height:1.4;">
-          Login dengan NISN (siswa) atau PIN (guru/admin).<br>
-          Demo: Siswa <b>0123456789</b> · Guru <b>123456</b> · Admin <b>456789</b>
+          Login dengan NISN (siswa) atau PIN (guru/admin).
         </p>
       </div>
       <div class="modal-footer">
@@ -2951,9 +2717,7 @@
       </div>
     </div>
   </div>
-
-  <!-- ========== MODAL EDIT PROFIL ========== -->
-  <div class="modal-overlay" id="modalEditProfil">
+<div class="modal-overlay" id="modalEditProfil">
     <div class="modal">
       <div class="modal-header">
         <h3>Edit Profil</h3>
@@ -2983,9 +2747,7 @@
       </div>
     </div>
   </div>
-
-  <!-- ========== MODAL SISWA (Tambah / Edit) ========== -->
-  <div class="modal-overlay" id="modalSiswa">
+<div class="modal-overlay" id="modalSiswa">
     <div class="modal modal-lg">
       <div class="modal-header">
         <h3 id="modalSiswaTitle">Tambah Siswa</h3>
@@ -3082,9 +2844,7 @@
       </div>
     </div>
   </div>
-
-  <!-- ========== MODAL GURU (Tambah / Edit) ========== -->
-  <div class="modal-overlay" id="modalGuru">
+<div class="modal-overlay" id="modalGuru">
     <div class="modal">
       <div class="modal-header">
         <h3 id="modalGuruTitle">Tambah Guru</h3>
@@ -3161,9 +2921,7 @@
       </div>
     </div>
   </div>
-
-  <!-- ========== MODAL LULUSAN (Tambah / Edit) ========== -->
-  <div class="modal-overlay" id="modalLulusan">
+<div class="modal-overlay" id="modalLulusan">
     <div class="modal modal-lg">
       <div class="modal-header">
         <h3 id="modalLulusanTitle">Tambah Lulusan</h3>
@@ -3255,9 +3013,7 @@
       </div>
     </div>
   </div>
-
-  <!-- ========== MODAL MAPEL ========== -->
-  <div class="modal-overlay" id="modalMapel">
+<div class="modal-overlay" id="modalMapel">
     <div class="modal">
       <div class="modal-header">
         <h3 id="modalMapelTitle">Tambah Mapel</h3>
@@ -3280,9 +3036,7 @@
       </div>
     </div>
   </div>
-
-  <!-- ========== MODAL KELAS ========== -->
-  <div class="modal-overlay" id="modalKelas">
+<div class="modal-overlay" id="modalKelas">
     <div class="modal">
       <div class="modal-header">
         <h3 id="modalKelasTitle">Tambah Kelas</h3>
@@ -3301,9 +3055,7 @@
       </div>
     </div>
   </div>
-
-  <!-- ========== MODAL PERIODE ========== -->
-  <div class="modal-overlay" id="modalPeriode">
+<div class="modal-overlay" id="modalPeriode">
     <div class="modal modal-lg">
       <div class="modal-header">
         <h3 id="modalPeriodeTitle">Tambah Periode</h3>
@@ -3386,9 +3138,7 @@
       </div>
     </div>
   </div>
-
-  <!-- ========== MODAL SESI ========== -->
-  <div class="modal-overlay" id="modalSesi">
+<div class="modal-overlay" id="modalSesi">
     <div class="modal">
       <div class="modal-header">
         <h3 id="modalSesiTitle">Tambah Sesi</h3>
@@ -3425,7 +3175,6 @@
           <label>Waktu 3 – Akhir Sesi *</label>
           <input type="time" id="sesiJamAkhir">
         </div>
-        <p style="font-size:11px;color:#64748b;margin-top:-6px;">Contoh: 07:30 – 08:00 – 08:30 → TW sampai 08:00, TL sampai 08:30</p>
       </div>
       <div class="modal-footer">
         <button class="btn btn-outline" data-close="modalSesi">Batal</button>
@@ -3433,9 +3182,7 @@
       </div>
     </div>
   </div>
-
-  <!-- ========== MODAL HARI LIBUR ========== -->
-  <div class="modal-overlay" id="modalLibur">
+<div class="modal-overlay" id="modalLibur">
     <div class="modal">
       <div class="modal-header">
         <h3>Tambah Hari Libur</h3>
@@ -3457,11 +3204,7 @@
       </div>
     </div>
   </div>
-
-
-
-  <!-- ========== MODAL IZIN / SAKIT ========== -->
-  <div class="modal-overlay" id="modalIzin">
+<div class="modal-overlay" id="modalIzin">
     <div class="modal">
       <div class="modal-header">
         <h3>Tambah Izin / Sakit</h3>
@@ -3506,9 +3249,7 @@
       </div>
     </div>
   </div>
-
-  <!-- ========== MODAL EDIT STATUS REKAP ========== -->
-  <div class="modal-overlay" id="modalEditRekap">
+<div class="modal-overlay" id="modalEditRekap">
     <div class="modal">
       <div class="modal-header">
         <h3>Edit Status Absensi</h3>
@@ -3525,9 +3266,7 @@
       </div>
     </div>
   </div>
-
-  <!-- ========== MODAL BANK SOAL ========== -->
-  <div class="modal-overlay" id="modalBankSoal">
+<div class="modal-overlay" id="modalBankSoal">
     <div class="modal" style="max-width:420px;">
       <div class="modal-header">
         <h3 id="modalBsTitle">Tambah Bank Soal</h3>
@@ -3643,9 +3382,7 @@
       </div>
     </div>
   </div>
-
-  <!-- ========== MODAL ITEM SOAL ========== -->
-  <div class="modal-overlay" id="modalBsItem">
+<div class="modal-overlay" id="modalBsItem">
     <div class="modal" style="max-width:520px;max-height:92vh;overflow-y:auto;">
       <div class="modal-header">
         <h3 id="modalBsItemTitle">Tambah Soal</h3>
@@ -3683,8 +3420,7 @@
           <input type="file" id="bsItemImgFile" accept="image/*" style="display:none;">
         </div>
         <div id="bsOpsiBox">
-          <!-- diisi dinamis sesuai jenis -->
-        </div>
+</div>
         <div class="form-group">
           <label>Skor</label>
           <input type="number" id="bsItemSkor" min="1" value="1">
@@ -3696,11 +3432,7 @@
       </div>
     </div>
   </div>
-
-
-
-  <!-- ========== MODAL IMPORT WORD ========== -->
-  <div class="modal-overlay" id="modalImportWord">
+<div class="modal-overlay" id="modalImportWord">
     <div class="modal" style="max-width:560px;max-height:92vh;overflow-y:auto;">
       <div class="modal-header">
         <h3>Import Soal dari Word</h3>
@@ -3734,8 +3466,7 @@
       </div>
     </div>
   </div>
-  <!-- ========== MODAL PREVIEW SOAL ========== -->
-  <div class="modal-overlay" id="modalBsPreview">
+<div class="modal-overlay" id="modalBsPreview">
     <div class="modal" style="max-width:520px;max-height:90vh;overflow-y:auto;">
       <div class="modal-header">
         <h3 id="bsPreviewTitle">Preview Soal</h3>
@@ -3748,8 +3479,7 @@
       </div>
     </div>
   </div>
-  <!-- ========== MODAL EQUATION (visual seperti Word) ========== -->
-  <div class="modal-overlay" id="modalEquation">
+<div class="modal-overlay" id="modalEquation">
     <div class="modal" style="max-width:480px;max-height:90vh;overflow-y:auto;">
       <div class="modal-header">
         <h3>Insert Equation</h3>
@@ -3780,8 +3510,7 @@
       </div>
     </div>
   </div>
-  <!-- ========== MODAL DIALOG (alert / confirm) ========== -->
-  <div class="modal-overlay" id="modalDialog">
+<div class="modal-overlay" id="modalDialog">
     <div class="modal" style="max-width:320px;text-align:center;">
       <div class="modal-body" style="padding:22px 18px 10px;">
         <div id="dialogIcon" style="font-size:40px;line-height:1;"></div>
@@ -3794,9 +3523,7 @@
       </div>
     </div>
   </div>
-
-  <!-- ========== MODAL HASIL SCAN ========== -->
-  <div class="modal-overlay" id="modalScanHasil">
+<div class="modal-overlay" id="modalScanHasil">
     <div class="modal" style="max-width:320px;text-align:center;">
       <div class="modal-body" style="padding:24px 18px 8px;">
         <div id="scanHasilIcon" style="font-size:48px;"></div>
@@ -3809,9 +3536,7 @@
       </div>
     </div>
   </div>
-
-  <!-- ========== MODAL IMPORT ========== -->
-  <div class="modal-overlay" id="modalImport">
+<div class="modal-overlay" id="modalImport">
     <div class="modal">
       <div class="modal-header">
         <h3 id="modalImportTitle">Import Data</h3>
@@ -3832,14 +3557,8 @@
   </div>
 
   <script>
-    // ============================================================
-    // KONFIGURASI SUPABASE
-    // Ganti 2 baris di bawah dengan nilai dari:
-    // Supabase Dashboard → Project Settings → API
-    // ============================================================
     const SUPABASE_URL = 'https://yhivrwnumfzoncbcapgd.supabase.co';   // <-- ganti
-    const SUPABASE_ANON_KEY = 'sb_publishable_FjTrPaFEwR_tNfxH7puJ_w_KZHI4RuG';              // <-- ganti
-    // Google Drive — diisi dari Pengaturan → Integrasi GDrive (localStorage + opsional tabel app_settings)
+    const SUPABASE_ANON_KEY = 'sb_publishable_FjTrPaFEwR_tNfxH7puJ_w_KZHI4RuG';
     let GDRIVE_UPLOAD_ENDPOINT = '';
     let GDRIVE_DEFAULT_FOLDER_ID = '';
     const GD_SETTINGS_KEY = 'app_gdrive_settings';
@@ -3887,7 +3606,6 @@
       localStorage.setItem(GD_SETTINGS_KEY, JSON.stringify(payload));
       if (supabaseClient) {
         try {
-          // Upsert key=gdrive (butuh tabel app_settings: key text PK, value jsonb)
           const { data: existing } = await supabaseClient.from('app_settings')
             .select('key').eq('key', 'gdrive').maybeSingle();
           if (existing) {
@@ -3916,7 +3634,6 @@
       console.warn('Gagal init Supabase:', e);
     }
 
-    // ========== Realtime clock ==========
     function updateClock() {
       const now = new Date();
       const options = { weekday: 'short', day: '2-digit', month: 'short', year: 'numeric' };
@@ -3927,7 +3644,6 @@
     updateClock();
     setInterval(updateClock, 1000);
 
-    // ========== Sidebar toggle ==========
     const sidebar = document.getElementById('sidebar');
     const overlay = document.getElementById('sidebarOverlay');
     const btnToggle = document.getElementById('btnToggle');
@@ -3947,7 +3663,6 @@
     });
     overlay.addEventListener('click', closeSidebar);
 
-    // ========== Profile menu ==========
     const profileBtn = document.getElementById('profileBtn');
     const profileMenu = document.getElementById('profileMenu');
     profileBtn.addEventListener('click', (e) => {
@@ -3956,14 +3671,12 @@
     });
     document.addEventListener('click', () => profileMenu.classList.remove('show'));
 
-    // ========== ROLE & LOGIN ==========
-    // guest | siswa | guru | admin
     let currentRole = 'guest';
     let currentUserName = 'Tamu (Belum Login)';
-    let currentUserId = null; // id di tabel siswa/guru/admin (atau lulusan jika alumni)
-    let currentUserKode = null; // NISN atau PIN/NIP
+    let currentUserId = null;
+    let currentUserKode = null;
     let currentUserKelas = null;
-    let currentUserIsAlumni = false; // true jika login lewat tabel lulusan
+    let currentUserIsAlumni = false;
     const SESSION_KEY = 'smpn_session';
 
     const ROLE_DATA = {
@@ -3999,7 +3712,6 @@
       }
     }
 
-    // skipRedirect = true → jangan pindah ke dashboard (untuk restore saat refresh)
     function applyRole(role, skipRedirect) {
       currentRole = role;
       if (role === 'guest') {
@@ -4017,14 +3729,12 @@
       const btnLogin = document.getElementById('btnLogin');
       const btnLogout = document.getElementById('btnLogout');
 
-      // Toggle sidebar & pesan hanya muncul jika sudah login
       btnToggle.style.display = isLoggedIn ? 'flex' : 'none';
       btnPesan.style.display = isLoggedIn ? 'flex' : 'none';
       btnEdit.style.display = isLoggedIn ? 'block' : 'none';
       btnLogin.style.display = isLoggedIn ? 'none' : 'block';
       btnLogout.style.display = isLoggedIn ? 'block' : 'none';
 
-      // Update topbar & sidebar header
       if (isLoggedIn) {
         const d = ROLE_DATA[role];
         currentUserName = d.name;
@@ -4043,7 +3753,6 @@
         closeSidebar();
       }
 
-      // Tampilkan / sembunyikan grup menu sesuai role
       document.querySelectorAll('.menu-group').forEach(group => {
         const r = group.getAttribute('data-role');
         if (r === 'all') {
@@ -4059,22 +3768,17 @@
         }
       });
 
-      // Simpan / hapus sesi
       saveSession();
 
-      // Aturan menu alumni + validasi vs jadwal pengumuman
       try { refreshMenuVisibility(); } catch (e) { console.warn(e); }
 
-      // Hanya redirect ke dashboard saat login/logout manual, BUKAN saat restore refresh
       if (!skipRedirect) {
         showPage('dashboard', false);
       } else {
-        // Saat restore sesi: pastikan menu ter-refresh setelah periode termuat
         setTimeout(() => { try { refreshMenuVisibility(); } catch (e) {} }, 300);
       }
     }
 
-    // ========== MODAL helpers ==========
     function openModal(id) {
       document.getElementById(id).classList.add('show');
       profileMenu.classList.remove('show');
@@ -4088,8 +3792,6 @@
       document.getElementById(id).classList.remove('show');
     }
 
-
-    // ========== Custom Alert / Confirm (ganti bawaan browser) ==========
     let _dialogResolver = null;
 
     function showAlert(message, title, icon) {
@@ -4135,13 +3837,10 @@
       if (r) r(false);
     });
 
-    // Override alert bawaan browser (kecuali dialog sistem sidik jari WebAuthn)
     window.alert = function (message) {
       showAlert(message, 'Pemberitahuan', 'ℹ️');
     };
 
-
-    // Tombol buka modal
     document.getElementById('btnLogin').addEventListener('click', (e) => {
       e.preventDefault();
       openModal('modalLogin');
@@ -4153,20 +3852,17 @@
     document.getElementById('btnLogout').addEventListener('click', async (e) => {
       e.preventDefault();
       if (await showConfirm('Yakin ingin logout?', 'Logout', '🚪')) {
-        applyRole('guest'); // saveSession akan menghapus localStorage
+        applyRole('guest');
         alert('Anda telah logout.');
       }
     });
 
-    // Tutup modal (tombol X dan Batal)
     document.querySelectorAll('[data-close]').forEach(btn => {
       btn.addEventListener('click', () => closeModal(btn.getAttribute('data-close')));
     });
-    // Tutup modal jika klik di luar konten
     document.querySelectorAll('.modal-overlay').forEach(ov => {
       ov.addEventListener('click', (e) => {
         if (e.target !== ov) return;
-        // Jika dialog alert/confirm, treat as Batal agar Promise tidak menggantung
         if (ov.id === 'modalDialog' && _dialogResolver) {
           const r = _dialogResolver;
           _dialogResolver = null;
@@ -4178,7 +3874,6 @@
       });
     });
 
-    // Proses Login (Supabase + fallback demo)
     document.getElementById('btnDoLogin').addEventListener('click', async () => {
       const kode = document.getElementById('loginKode').value.trim();
       if (!kode) {
@@ -4200,7 +3895,6 @@
 
       try {
         if (supabaseClient) {
-          // --- Cek di tabel admin ---
           const { data: adminData } = await supabaseClient
             .from('admin').select('id, nama, pin').eq('pin', kode).maybeSingle();
           if (adminData) {
@@ -4209,7 +3903,6 @@
             userId = adminData.id;
           }
 
-          // --- Cek di tabel guru ---
           if (!role) {
             const { data: guruData } = await supabaseClient
               .from('guru').select('id, nama, pin').eq('pin', kode).maybeSingle();
@@ -4220,9 +3913,7 @@
             }
           }
 
-          // --- Cek di tabel siswa (NISN) ---
           if (!role) {
-            // Coba exact string, lalu fallback ilike (jaga-jaga format NISN)
             let siswaData = null;
             let siswaErr = null;
             {
@@ -4248,13 +3939,9 @@
             }
           }
 
-          // --- Cek di tabel lulusan (NISN) — tanpa dobel data di siswa ---
-          // PENTING: jangan select kolom yang mungkin belum ada (kelas_akhir, predikat)
-          // karena PostgREST akan error → login gagal.
           if (!role) {
             let lusData = null;
             let lusErr = null;
-            // 1) exact match
             {
               const r = await supabaseClient
                 .from('lulusan').select('id, nama, nisn, kelas, status_kelulusan')
@@ -4266,14 +3953,12 @@
                 lusData = r.data[0];
               }
             }
-            // 2) fallback: nisn sebagai number-string
             if (!lusData && !lusErr) {
               const r = await supabaseClient
                 .from('lulusan').select('id, nama, nisn, kelas, status_kelulusan')
                 .eq('nisn', String(Number(kode) || kode)).limit(1);
               if (r.data && r.data.length) lusData = r.data[0];
             }
-            // 3) fallback: ilike (jika disimpan dengan spasi/format lain)
             if (!lusData && !lusErr) {
               const r = await supabaseClient
                 .from('lulusan').select('id, nama, nisn, kelas, status_kelulusan')
@@ -4288,7 +3973,6 @@
               window._loginNisn = lusData.nisn || kode;
               window._loginIsAlumni = true;
             } else if (lusErr) {
-              // Jika error RLS / permission, beri petunjuk jelas
               const em = String(lusErr.message || lusErr);
               if (/permission|policy|RLS|row-level/i.test(em)) {
                 alert('Gagal membaca data lulusan (izin database).\n\nDi Supabase SQL Editor jalankan:\n\nALTER TABLE public.lulusan ENABLE ROW LEVEL SECURITY;\nCREATE POLICY "lulusan_select_public" ON public.lulusan FOR SELECT USING (true);\n\nDetail: ' + em);
@@ -4297,7 +3981,6 @@
             }
           }
         } else {
-          // --- Mode demo lokal (tanpa Supabase) ---
           if (kode === '0123456789' || kode === '012345678') {
             role = 'siswa'; userName = 'Siswa Demo'; userId = 1;
           } else if (kode === '123456') {
@@ -4316,12 +3999,10 @@
         currentUserKelas = window._loginKelas || null;
         currentUserIsAlumni = !!window._loginIsAlumni;
         if (window._loginNisn) currentUserKode = window._loginNisn;
-        // bersihkan flag sementara
         window._loginIsAlumni = false;
         window._loginKelas = null;
         window._loginNisn = null;
 
-        // Update nama di ROLE_DATA agar tampil nama asli dari database
         if (userName) ROLE_DATA[role].name = userName;
         if (currentUserIsAlumni && role === 'siswa') {
           ROLE_DATA[role].label = 'Alumni';
@@ -4329,7 +4010,7 @@
           ROLE_DATA[role].label = 'Siswa';
         }
 
-        applyRole(role); // simpan sesi + ke dashboard
+        applyRole(role);
         try { await loadGdriveSettingsFromDb(); } catch (e) {}
         closeModal('modalLogin');
         const extra = currentUserIsAlumni ? '\n(Alumni / Lulusan)' : '';
@@ -4343,7 +4024,6 @@
       }
     });
 
-    // Enter key di input login
     document.getElementById('loginKode').addEventListener('keydown', (e) => {
       if (e.key === 'Enter') document.getElementById('btnDoLogin').click();
     });
@@ -4360,7 +4040,6 @@
       alert('Profil berhasil disimpan (demo)');
     });
 
-    // ========== ROUTING ==========
     let currentPage = 'dashboard';
 
     function showPage(pageId, addToHistory) {
@@ -4385,7 +4064,6 @@
         history.replaceState({ page: pageId }, '', hash);
       }
 
-      // Load data saat buka halaman
       if (pageId === 'data-siswa') loadSiswa();
       if (pageId === 'data-guru') loadGuru();
       if (pageId === 'data-lulusan') loadLulusan();
@@ -4426,34 +4104,26 @@
       if (pageId === 'bank-soal-hasil') { /* stay */ }
     }
 
-    // Klik menu
     document.querySelectorAll('.menu-item').forEach(item => {
       item.addEventListener('click', () => {
         showPage(item.getAttribute('data-page'), true);
       });
     });
 
-    // Baca hash saat load/refresh
     function initFromHash() {
       let hash = (location.hash || '#dashboard').replace('#', '');
       if (!document.getElementById('page-' + hash)) hash = 'dashboard';
       showPage(hash, false);
     }
 
-    // ========== BACK BUTTON – selalu re-arm ==========
-    // Setiap kali popstate, kita segera pushState lagi.
-    // Sehingga konfirmasi bisa muncul berkali-kali tanpa "habis".
-
     function rearmTrap() {
       history.pushState({ page: currentPage, trap: Date.now() }, '', '#' + currentPage);
     }
 
     window.addEventListener('popstate', async function () {
-      // Tutup semua modal kalau terbuka
       document.querySelectorAll('.modal-overlay.show').forEach(m => m.classList.remove('show'));
 
       if (currentPage !== 'dashboard') {
-        // Sub-halaman → kembali ke Dashboard
         currentPage = 'dashboard';
         document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
         document.getElementById('page-dashboard').classList.add('active');
@@ -4465,29 +4135,21 @@
         return;
       }
 
-      // Sudah di Dashboard → tampilkan konfirmasi
       const yakin = await showConfirm('Yakin ingin keluar dari aplikasi?', 'Keluar', '🚪');
 
       if (yakin) {
-        // User setuju keluar
         window.close();
-        // Fallback: biarkan history mundur (jangan re-arm)
         setTimeout(function () {
           history.back();
         }, 100);
       } else {
-        // User batal → re-arm agar bisa ditekan lagi nanti
         rearmTrap();
       }
     });
 
-    // ============================================================
-    // CRUD SISWA & GURU
-    // ============================================================
     let dataSiswa = [];
     let dataGuru = [];
 
-    // Demo fallback data
     const DEMO_SISWA = [
       { id: 1, nama: 'Andi Pratama', lp: 'L', nisn: '0123456789', kelas: '7A', tmp_lahir: 'Bandung', tgl_lahir: '2012-05-15', status: 'Aktif', no_hp: '081111111111', alamat: 'Jl. Merdeka 10', nama_ayah: 'Joko Pratama', nama_ibu: 'Sari Dewi' },
       { id: 2, nama: 'Salsa Bilah', lp: 'P', nisn: '0123456780', kelas: '7B', tmp_lahir: 'Jakarta', tgl_lahir: '2012-08-20', status: 'Aktif', no_hp: '082222222222', alamat: 'Jl. Sudirman 5', nama_ayah: 'Budi Bilah', nama_ibu: 'Rina Sari' },
@@ -4508,7 +4170,6 @@
       });
     }
     function sortGuruList(arr) {
-      // Sama dashboard: urut id, lalu nama
       return (arr || []).slice().sort((a, b) => {
         const ia = Number(a.id) || 0;
         const ib = Number(b.id) || 0;
@@ -4517,18 +4178,15 @@
       });
     }
 
-    /** Gabungan guru dulu → siswa, urutan sama dashboard */
     function sortGuruSiswaUsers(arr) {
       const list = (arr || []).slice();
       const guru = sortGuruList(list.filter(u => u.tipe === 'guru'));
       const siswa = sortSiswaList(list.filter(u => u.tipe === 'siswa').map(u => ({
         ...u, kelas: u.kelas || ''
       })));
-      // sortSiswaList pakai .kelas; pertahankan field lain
       return guru.concat(siswa);
     }
 
-    // ----- LOAD SISWA -----
     async function loadSiswa() {
       const tbody = document.getElementById('tbodySiswa');
       tbody.innerHTML = '<tr><td colspan="10" style="text-align:center;padding:24px;color:#94a3b8;">Memuat data...</td></tr>';
@@ -4547,7 +4205,6 @@
       renderSiswa();
     }
 
-    /** Samakan label status awal: Baru / Siswa Baru → "Siswa Baru" */
     function normStatusAwal(v) {
       const s = String(v || '').trim();
       if (!s) return '';
@@ -4556,7 +4213,6 @@
       return s;
     }
 
-    /** Hitung lama belajar untuk lulusan */
     function hitungLamaBelajar(statusAwal, tglMulai, tglLulus) {
       const sa = normStatusAwal(statusAwal);
       if (sa === 'Siswa Baru') return '3 Tahun';
@@ -4619,14 +4275,12 @@
 
     document.getElementById('cariSiswa').addEventListener('input', renderSiswa);
 
-    // ----- LOAD GURU -----
     async function loadGuru() {
       const tbody = document.getElementById('tbodyGuru');
       tbody.innerHTML = '<tr><td colspan="10" style="text-align:center;padding:24px;color:#94a3b8;">Memuat data...</td></tr>';
       try {
         if (supabaseClient) {
           let data = null, error = null;
-          // coba urut DUK dulu
           ({ data, error } = await supabaseClient.from('guru').select('*').order('duk', { ascending: true }).order('nama'));
           if (error) {
             ({ data, error } = await supabaseClient.from('guru').select('*').order('nama'));
@@ -4675,7 +4329,6 @@
       return [...document.querySelectorAll('.' + cls + ':checked')].map(c => c.value);
     }
 
-    // Check all
     document.getElementById('checkAllSiswa').addEventListener('change', function () {
       document.querySelectorAll('.cb-siswa').forEach(c => c.checked = this.checked);
     });
@@ -4683,7 +4336,6 @@
       document.querySelectorAll('.cb-guru').forEach(c => c.checked = this.checked);
     });
 
-    // ----- SISWA: Tambah -----
     document.getElementById('btnTambahSiswa').addEventListener('click', () => {
       document.getElementById('modalSiswaTitle').textContent = 'Tambah Siswa';
       document.getElementById('siswaId').value = '';
@@ -4695,7 +4347,6 @@
       document.getElementById('siswaKelas').value = '';
       document.getElementById('siswaStatus').value = 'Aktif';
       document.getElementById('siswaStatusAwal').value = 'Siswa Baru';
-      // Default tgl mulai = tanggal_mulai periode aktif (jika ada)
       (async () => {
         try {
           if (!aktifPeriode) await loadAktifPeriode();
@@ -4706,7 +4357,6 @@
       openModal('modalSiswa');
     });
 
-    // ----- SISWA: Edit -----
     document.getElementById('btnEditSiswa').addEventListener('click', () => {
       const ids = getChecked('cb-siswa');
       if (ids.length === 0) { alert('Centang 1 data yang ingin diedit'); return; }
@@ -4732,7 +4382,6 @@
       openModal('modalSiswa');
     });
 
-    // ----- SISWA: Simpan -----
     document.getElementById('btnSaveSiswa').addEventListener('click', async () => {
       const id = document.getElementById('siswaId').value;
       const statusAwal = document.getElementById('siswaStatusAwal')?.value || 'Siswa Baru';
@@ -4758,7 +4407,6 @@
         return;
       }
       if (normStatusAwal(statusAwal) === 'Siswa Baru' && !payload.mulai_sekolah) {
-        // isi default dari periode aktif
         try {
           if (aktifPeriode && (aktifPeriode.tanggal_mulai || aktifPeriode.tgl_mulai)) {
             payload.mulai_sekolah = String(aktifPeriode.tanggal_mulai || aktifPeriode.tgl_mulai).slice(0, 10);
@@ -4792,7 +4440,6 @@
       }
     });
 
-    // ----- SISWA: Hapus -----
     document.getElementById('btnHapusSiswa').addEventListener('click', async () => {
       const ids = getChecked('cb-siswa');
       if (!ids.length) { alert('Centang data yang ingin dihapus'); return; }
@@ -4813,8 +4460,7 @@
       }
     });
 
-    // ----- IMPORT Excel (dialog + contoh format) -----
-    let importTarget = null; // 'siswa' | 'guru' | 'lulusan'
+    let importTarget = null;
 
     const IMPORT_CONTOH = {
       siswa: {
@@ -4852,7 +4498,6 @@
       }
       const cfg = IMPORT_CONTOH[importTarget];
       const ws = XLSX.utils.aoa_to_sheet([cfg.headers, cfg.sample]);
-      // Lebar kolom otomatis
       ws['!cols'] = cfg.headers.map(() => ({ wch: 16 }));
       const wb = XLSX.utils.book_new();
       XLSX.utils.book_append_sheet(wb, ws, 'Data');
@@ -4863,18 +4508,15 @@
       document.getElementById('fileImportHidden').click();
     });
 
-    // Baca file Excel/CSV → array of arrays (baris)
     async function bacaFileSpreadsheet(file) {
       if (typeof XLSX === 'undefined') throw new Error('Library Excel belum termuat');
       const data = await file.arrayBuffer();
       const wb = XLSX.read(data, { type: 'array', cellDates: true });
       const sheet = wb.Sheets[wb.SheetNames[0]];
-      // header:1 → array of arrays, raw:false → format string
       const rows = XLSX.utils.sheet_to_json(sheet, { header: 1, defval: '', raw: false });
       return rows;
     }
 
-    // Normalisasi nilai sel Excel (tanggal, angka, dll)
     function cellStr(v) {
       if (v === undefined || v === null) return '';
       if (v instanceof Date) {
@@ -4958,7 +4600,6 @@
       }
     }
 
-    // ----- Master Mapel & Kelas (untuk checkbox di form guru) -----
     let masterMapel = [];
     let masterKelas = [];
 
@@ -5037,7 +4678,6 @@
       const mapelIds = [...document.querySelectorAll('.cb-mapel:checked')].map(c => Number(c.value));
       const kelasIds = [...document.querySelectorAll('.cb-kelas:checked')].map(c => Number(c.value));
 
-      // Hapus relasi lama, lalu insert yang baru
       await supabaseClient.from('guru_mapel').delete().eq('guru_id', guruId);
       await supabaseClient.from('guru_kelas').delete().eq('guru_id', guruId);
 
@@ -5049,7 +4689,6 @@
       }
     }
 
-    // ----- GURU: Tambah -----
     document.getElementById('btnTambahGuru').addEventListener('click', async () => {
       document.getElementById('modalGuruTitle').textContent = 'Tambah Guru';
       document.getElementById('guruId').value = '';
@@ -5062,7 +4701,6 @@
       openModal('modalGuru');
     });
 
-    // ----- GURU: Edit -----
     document.getElementById('btnEditGuru').addEventListener('click', async () => {
       const ids = getChecked('cb-guru');
       if (ids.length === 0) { alert('Centang 1 data yang ingin diedit'); return; }
@@ -5088,7 +4726,6 @@
       openModal('modalGuru');
     });
 
-    // ----- GURU: Simpan -----
     document.getElementById('btnSaveGuru').addEventListener('click', async () => {
       const id = document.getElementById('guruId').value;
       const payload = {
@@ -5115,7 +4752,6 @@
             if (error) throw error;
             guruId = data.id;
           }
-          // Simpan relasi mapel & kelas
           await saveGuruRelasi(guruId);
         } else {
           if (id) {
@@ -5134,7 +4770,6 @@
       }
     });
 
-    // ----- GURU: Hapus -----
     document.getElementById('btnHapusGuru').addEventListener('click', async () => {
       const ids = getChecked('cb-guru');
       if (!ids.length) { alert('Centang data yang ingin dihapus'); return; }
@@ -5155,7 +4790,6 @@
       }
     });
 
-    // ----- GURU: Import CSV -----
     document.getElementById('btnImportGuru').addEventListener('click', () => openImportDialog('guru'));
     async function handleImportGuru(file) {
       const lines = await bacaFileSpreadsheet(file);
@@ -5198,9 +4832,6 @@
       }
     }
 
-    // ============================================================
-    // CRUD LULUSAN
-    // ============================================================
     let dataLulusan = [];
     const DEMO_LULUSAN = [
       { id: 1, nisn: '0012345678', nama: 'Ahmad Rizki', lp: 'L', tmp_lahir: 'Bandung', tgl_lahir: '2008-03-12', tgl_mulai_sekolah: '2021-07-15', tanggal_lulus: '2024-06-20', tahun_lulus: 2024, lama_belajar: '3 Tahun', status_awal: 'Baru', asal_sekolah: 'SDN 1 Bandung', status_kelulusan: 'Lulus', predikat: 'BAIK' },
@@ -5274,7 +4905,6 @@
       document.querySelectorAll('.cb-lulusan').forEach(c => c.checked = this.checked);
     });
 
-    // Tambah
     document.getElementById('btnTambahLulusan').addEventListener('click', () => {
       document.getElementById('modalLulusanTitle').textContent = 'Tambah Lulusan';
       document.getElementById('lulusanId').value = '';
@@ -5290,7 +4920,6 @@
       if (sa0) sa0.value = 'Siswa Baru';
       const lm0 = document.getElementById('lulusanLama');
       if (lm0) lm0.value = '3 Tahun';
-      // default tgl lulus dari periode aktif
       (async () => {
         try {
           if (!aktifPeriode) await loadAktifPeriode();
@@ -5315,7 +4944,6 @@
       openModal('modalLulusan');
     });
 
-    // Edit
     document.getElementById('btnEditLulusan').addEventListener('click', () => {
       const ids = getChecked('cb-lulusan');
       if (ids.length === 0) { alert('Centang 1 data yang ingin diedit'); return; }
@@ -5342,7 +4970,6 @@
       openModal('modalLulusan');
     });
 
-    // Simpan
     document.getElementById('btnSaveLulusan').addEventListener('click', async () => {
       const id = document.getElementById('lulusanId').value;
       const payload = {
@@ -5360,12 +4987,10 @@
         predikat: document.getElementById('lulusanPredikat')?.value || null,
         asal_sekolah: document.getElementById('lulusanAsal').value.trim() || null
       };
-      // Auto lama belajar jika kosong
       if (!payload.lama_belajar) {
         payload.lama_belajar = hitungLamaBelajar(payload.status_awal, payload.tgl_mulai_sekolah, payload.tanggal_lulus)
           || (normStatusAwal(payload.status_awal) === 'Siswa Baru' ? '3 Tahun' : null);
       }
-      // Tahun lulus dari tanggal lulus (relasi periode)
       if (!payload.tahun_lulus && payload.tanggal_lulus) {
         payload.tahun_lulus = Number(String(payload.tanggal_lulus).slice(0, 4)) || null;
       }
@@ -5401,7 +5026,6 @@
       }
     });
 
-    // Hapus
     
     function refreshLulusanLamaBelajar() {
       const sa = document.getElementById('lulusanStatusAwal')?.value;
@@ -5437,7 +5061,6 @@
       }
     });
 
-    // Import CSV
     document.getElementById('btnImportLulusan').addEventListener('click', () => openImportDialog('lulusan'));
     async function handleImportLulusan(file) {
       const lines = await bacaFileSpreadsheet(file);
@@ -5478,11 +5101,8 @@
       }
     }
 
-    // ============================================================
-    // PERIODE + INPUT NILAI + DAFTAR NILAI
-    // ============================================================
-    let aktifPeriode = null;   // { id, tahun_ajaran, semester }
-    let siswaNilaiList = [];   // siswa di kelas terpilih untuk input
+    let aktifPeriode = null;
+    let siswaNilaiList = [];
 
     async function loadAktifPeriode() {
       try {
@@ -5513,7 +5133,6 @@
       let mapelList = masterMapel.slice();
       let kelasList = masterKelas.slice();
 
-      // Guru hanya melihat mapel & kelas yang diampu
       if (currentRole === 'guru' && currentUserId && supabaseClient) {
         try {
           const [gm, gk] = await Promise.all([
@@ -5556,7 +5175,6 @@
       }
     }
 
-    // ----- Tampilkan siswa untuk input nilai -----
     document.getElementById('btnLoadSiswaNilai').addEventListener('click', async () => {
       const mapelId = document.getElementById('inMapel').value;
       const kelas = document.getElementById('inKelas').value;
@@ -5569,14 +5187,12 @@
       tbody.innerHTML = '<tr><td colspan="4" style="text-align:center;padding:24px;color:#94a3b8;">Memuat...</td></tr>';
 
       try {
-        // Ambil siswa di kelas tersebut
         if (supabaseClient) {
           const { data: siswa, error } = await supabaseClient
             .from('siswa').select('id, nisn, nama').eq('kelas', kelas).eq('status', 'Aktif').order('nama');
           if (error) throw error;
           siswaNilaiList = siswa || [];
 
-          // Ambil nilai yang sudah ada
           const { data: existing } = await supabaseClient
             .from('nilai')
             .select('siswa_id, nilai')
@@ -5588,7 +5204,6 @@
           (existing || []).forEach(n => { mapNilai[n.siswa_id] = n.nilai; });
           siswaNilaiList.forEach(s => { s._nilai = mapNilai[s.id] ?? ''; });
         } else {
-          // Demo: filter dari dataSiswa lokal
           if (!dataSiswa.length) await loadSiswa();
           siswaNilaiList = dataSiswa.filter(s => s.kelas === kelas).map(s => ({
             id: s.id, nisn: s.nisn, nama: s.nama, _nilai: ''
@@ -5617,7 +5232,6 @@
       }
     });
 
-    // ----- Simpan semua nilai -----
     document.getElementById('btnSimpanNilai').addEventListener('click', async () => {
       const mapelId = Number(document.getElementById('inMapel').value);
       const kelas = document.getElementById('inKelas').value;
@@ -5629,7 +5243,7 @@
       const rows = [];
       inputs.forEach(inp => {
         const val = inp.value.trim();
-        if (val === '') return; // skip kosong
+        if (val === '') return;
         const num = parseFloat(val);
         if (isNaN(num) || num < 0 || num > 100) return;
         rows.push({
@@ -5649,7 +5263,6 @@
 
       try {
         if (supabaseClient) {
-          // Upsert: hapus yang sama dulu lalu insert (atau gunakan upsert)
           for (const r of rows) {
             await supabaseClient.from('nilai')
               .delete()
@@ -5668,7 +5281,6 @@
       }
     });
 
-    // ----- DAFTAR NILAI (kolom dinamis + CRUD + Excel) -----
     let _dnState = {
       mapelId: null,
       kelas: '',
@@ -5676,7 +5288,7 @@
       cols: [],
       siswaList: [],
       mapNilai: {},
-      nilaiIdMap: {} // key "siswaId|jenis|ke" -> record id
+      nilaiIdMap: {}
     };
 
     async function loadDaftarNilaiData() {
@@ -5802,7 +5414,6 @@
       document.querySelectorAll('.cb-dn-row').forEach(c => { c.checked = this.checked; });
     });
 
-    // Hapus nilai siswa terpilih (semua jenis untuk mapel+kelas+periode ini)
     document.getElementById('btnHapusDn')?.addEventListener('click', async () => {
       if (currentRole !== 'admin' && currentRole !== 'guru') {
         alert('Hanya Admin/Guru yang dapat menghapus nilai');
@@ -5836,7 +5447,6 @@
       }
     });
 
-    // Edit nilai 1 siswa
     let _editDnSiswa = null;
     document.getElementById('btnEditDn')?.addEventListener('click', async () => {
       if (currentRole !== 'admin' && currentRole !== 'guru') {
@@ -5886,7 +5496,6 @@
           const recId = _dnState.nilaiIdMap[idKey];
 
           if (raw === '') {
-            // hapus jika ada
             if (recId) {
               const { error } = await supabaseClient.from('nilai').delete().eq('id', recId);
               if (error) throw error;
@@ -5926,7 +5535,6 @@
       }
     });
 
-    // Unduh Excel
     document.getElementById('btnExcelDn')?.addEventListener('click', () => {
       if (!_dnState.siswaList || !_dnState.siswaList.length) {
         alert('Tampilkan daftar nilai dulu');
@@ -5969,28 +5577,17 @@
       XLSX.writeFile(wb, fname.replace(/\s+/g, '_'));
     });
 
-    // ============================================================
-    // LIHAT NILAI SAYA + helper warna / agregasi
-    // ============================================================
-    // ============================================================
-    // LIHAT NILAI SAYA + helper warna / agregasi
-    // ============================================================
     function fmtNilaiWarna(v) {
       if (v == null || v === '' || isNaN(Number(v))) return '-';
       const n = Number(v);
       const t = (Math.round(n * 10) / 10).toFixed(n % 1 === 0 ? 0 : 1);
-      let color = '#dc2626'; // < 70 merah
+      let color = '#dc2626';
       if (n >= 90) color = '#2563eb';
       else if (n >= 80) color = '#16a34a';
       else if (n >= 70) color = '#ea580c';
       return '<span style="color:' + color + ';font-weight:700;">' + t + '</span>';
     }
 
-    /** Agregasi nilai satu mapel untuk 1 siswa.
-     *  RNH = rata-rata NH (untuk tampilan).
-     *  Kolom lain = 1 kolom per jenis non-NH.
-     *  NR = sum semua nilai individu (kosong=0) / jumlah penilaian yang guru laksanakan.
-     */
     function agregasiNilaiMapel(nilaiRowsSiswa, totalAssessKeys) {
       const byJenis = {};
       (nilaiRowsSiswa || []).forEach(n => {
@@ -6052,16 +5649,12 @@
       return { rnh, otherCols, nr };
     }
 
-    // ============================================================
-    // Live search saran siswa (admin) — tampil di bawah input
-    // ============================================================
     async function searchSiswaSuggest(q, limit) {
       q = String(q || '').trim();
       limit = limit || 12;
       if (q.length < 2) return [];
       try {
         if (supabaseClient) {
-          // Escape karakter khusus filter PostgREST sederhana
           const safe = q.replace(/[%_,]/g, '');
           const { data, error } = await supabaseClient.from('siswa')
             .select('id, nama, nisn, kelas')
@@ -6120,10 +5713,6 @@
       boxEl.innerHTML = '';
     }
 
-    /**
-     * Pasang live-search di input.
-     * onPick(siswa) dipanggil saat item diklik.
-     */
     function attachSiswaLiveSearch(inputId, suggestId, onPick) {
       const input = document.getElementById(inputId);
       const box = document.getElementById(suggestId);
@@ -6132,7 +5721,6 @@
       input.addEventListener('input', function () {
         clearTimeout(timer);
         const q = this.value.trim();
-        // Hapus pilihan id tersimpan jika user mengetik ulang
         input.dataset.selectedId = '';
         if (q.length < 2) {
           hideSiswaSuggest(box);
@@ -6140,10 +5728,8 @@
         }
         timer = setTimeout(async () => {
           const list = await searchSiswaSuggest(q, 12);
-          // Jika query sudah berubah, abaikan
           if (input.value.trim() !== q) return;
           renderSiswaSuggest(box, list, (s) => {
-            // Isi input dengan NISN (unik) + tampilkan nama di samping lewat value yang jelas
             input.value = s.nisn && s.nisn !== '-' ? s.nisn : s.nama;
             input.dataset.selectedId = String(s.id || '');
             hideSiswaSuggest(box);
@@ -6157,7 +5743,6 @@
           input.dispatchEvent(new Event('input'));
         }
       });
-      // Tutup saran saat klik di luar
       document.addEventListener('click', (e) => {
         if (e.target === input || box.contains(e.target)) return;
         hideSiswaSuggest(box);
@@ -6167,10 +5752,8 @@
       });
     }
 
-    // Pasang live search (admin) — Cek Syarat & Lihat Nilai Saya
     (function initSiswaLiveSearchWidgets() {
       attachSiswaLiveSearch('syaratQ', 'syaratSuggest', (s) => {
-        // Auto-jalankan cek setelah pilih
         if (typeof jalankanCekSyarat === 'function') jalankanCekSyarat();
       });
       attachSiswaLiveSearch('nsCariQ', 'nsSuggest', (s) => {
@@ -6181,7 +5764,6 @@
     async function resolveSiswaUntukNilai(q, opts) {
       opts = opts || {};
       q = String(q || '').trim();
-      // Prefer id yang dipilih dari saran
       const selId = opts.id || (document.getElementById('nsCariQ')?.dataset?.selectedId);
       if (selId) {
         if (supabaseClient) {
@@ -6192,7 +5774,6 @@
         const hit = (dataSiswa || []).find(s => Number(s.id) === Number(selId));
         if (hit) return hit;
       }
-      // Siswa login → data sendiri
       if (!q && currentRole === 'siswa' && currentUserId) {
         if (supabaseClient) {
           const { data } = await supabaseClient.from('siswa').select('id, nama, nisn, kelas').eq('id', currentUserId).maybeSingle();
@@ -6212,7 +5793,6 @@
           if (exactNisn) return exactNisn;
           const exactNama = data.find(s => String(s.nama || '').toLowerCase() === q.toLowerCase());
           if (exactNama) return exactNama;
-          // Banyak hasil: tampilkan saran, jangan ambil sembarang
           const box = document.getElementById('nsSuggest');
           if (box) renderSiswaSuggest(box, data, (s) => {
             const inp = document.getElementById('nsCariQ');
@@ -6264,7 +5844,6 @@
       const elP = document.getElementById('labelPeriodeNilaiSaya');
       if (elP) elP.textContent = label;
 
-      // Form cari: hanya admin
       const searchCard = document.getElementById('nsSearchCard');
       if (searchCard) {
         searchCard.style.display = (currentRole === 'admin') ? 'block' : 'none';
@@ -6428,14 +6007,10 @@
       }
     });
 
-    // ============================================================
-    // PENGATURAN: Mapel, Kelas, Periode (CRUD + Accordion)
-    // ============================================================
     let dataMapel = [];
     let dataKelas = [];
     let dataPeriode = [];
 
-    // Accordion toggle
     document.querySelectorAll('.accordion-header').forEach(btn => {
       btn.addEventListener('click', () => {
         const body = document.getElementById(btn.getAttribute('data-acc'));
@@ -6445,12 +6020,10 @@
         btn.classList.toggle('open', !isOpen);
       });
     });
-    // Pastikan semua accordion tertutup saat load
     document.querySelectorAll('.accordion-body').forEach(b => b.classList.remove('open'));
     document.querySelectorAll('.accordion-header').forEach(h => h.classList.remove('open'));
 
     async function loadPengaturan() {
-      // Kompatibilitas: muat semua data pengaturan (halaman sudah dipisah)
       await Promise.all([
         loadMapelTable(), loadKelasTable(), loadPeriodeTable(),
         loadSesiTable(), loadLiburTable(), loadIzinFpList()
@@ -6459,7 +6032,6 @@
       try { await loadNaikLulusTable(); } catch (e) {}
     }
 
-    // ----- MAPEL -----
     async function loadMapelTable() {
       try {
         if (supabaseClient) {
@@ -6556,7 +6128,6 @@
       } catch (e) { alert('Gagal: ' + (e.message || e)); }
     });
 
-    // ----- KELAS -----
     async function loadKelasTable() {
       try {
         if (supabaseClient) {
@@ -6647,10 +6218,7 @@
       } catch (e) { alert('Gagal: ' + (e.message || e)); }
     });
 
-    // ----- PERIODE -----
-
     function getRentangAbsenAktif() {
-      // dari periode aktif: tanggal_mulai_absen/akhir, fallback ke tanggal_mulai/akhir
       const p = aktifPeriode || null;
       if (!p) return { dari: null, sampai: null };
       const dari = (p.tanggal_mulai_absen || p.tgl_mulai_absen || p.tanggal_mulai || p.tgl_mulai || '').toString().slice(0, 10) || null;
@@ -6665,7 +6233,6 @@
       return true;
     }
 
-    // Data dummy default untuk field SK / Kepsek (boleh diganti lewat form)
     const PERIODE_DUMMY = {
       sk_kelulusan: '421.3/001/SMPN-PM/2027',
       sk_naik_kelas: '421.3/002/SMPN-PM/2026',
@@ -6750,7 +6317,6 @@
       const pgA = document.getElementById('periodePgAkhir');
       if (pgM) pgM.value = '';
       if (pgA) pgA.value = '';
-      // Prefill dummy — silakan diganti
       document.getElementById('periodeSkKelulusan').value = PERIODE_DUMMY.sk_kelulusan;
       document.getElementById('periodeSkNaikKelas').value = PERIODE_DUMMY.sk_naik_kelas;
       document.getElementById('periodeNamaKepsek').value = PERIODE_DUMMY.nama_kepsek;
@@ -6776,7 +6342,6 @@
         const jm = getJadwalPengumuman(p);
         if (pgM) pgM.value = p.pengumuman_mulai ? toDatetimeLocalValue(parseLocalDateTime(p.pengumuman_mulai)) : (jm.mulai ? toDatetimeLocalValue(jm.mulai) : '');
         if (pgA) pgA.value = p.pengumuman_akhir ? toDatetimeLocalValue(parseLocalDateTime(p.pengumuman_akhir)) : (jm.akhir ? toDatetimeLocalValue(jm.akhir) : '');
-        // Jika kolom DB kosong, tampilkan fallback agar admin melihat default
         if (pgM && !p.pengumuman_mulai && jm.mulai) pgM.value = toDatetimeLocalValue(jm.mulai);
         if (pgA && !p.pengumuman_akhir && jm.akhir) pgA.value = toDatetimeLocalValue(jm.akhir);
       }
@@ -6856,14 +6421,12 @@
         alert('Periode dihapus');
       } catch (e) { alert('Gagal: ' + (e.message || e)); }
     });
-    // Set Aktif (hanya 1)
     document.getElementById('btnAktifkanPeriode').addEventListener('click', async () => {
       const ids = getChecked('cb-periode-row');
       if (ids.length !== 1) { alert('Centang tepat 1 periode untuk diaktifkan'); return; }
       if (!(await showConfirm('Jadikan periode ini sebagai periode aktif?', 'Set Aktif', '✓'))) return;
       try {
         if (supabaseClient) {
-          // Nonaktifkan semua dulu
           await supabaseClient.from('periode').update({ aktif: false }).neq('id', 0);
           const { error } = await supabaseClient.from('periode').update({ aktif: true }).eq('id', Number(ids[0]));
           if (error) throw error;
@@ -6871,15 +6434,11 @@
           dataPeriode.forEach(p => { p.aktif = String(p.id) === ids[0]; });
         }
         await loadPeriodeTable();
-        await loadAktifPeriode(); // refresh label di Input/Daftar Nilai
+        await loadAktifPeriode();
         alert('Periode aktif diperbarui');
       } catch (e) { alert('Gagal: ' + (e.message || e)); }
     });
 
-
-    // ============================================================
-    // DASHBOARD – statistik & rekap real
-    // ============================================================
     function fmtJam(iso) {
       if (!iso) return '';
       try {
@@ -6898,22 +6457,10 @@
       if (s === 'IZIN') return '<span style="color:#92400e;' + base + '">Iz</span>';
       return '<span style="' + base + '">' + s + '</span>';
     }
-    function normStatusKey(st) {
-      const s = String(st || '').toUpperCase();
-      if (s === 'TW') return 'TW';
-      if (s === 'TL') return 'TL';
-      if (s === 'SAKIT') return 'Sakit';
-      if (s === 'IZIN') return 'Izin';
-      if (s === 'A' || s === 'ALPA' || s === 'ALPHA') return 'Alpa';
-      if (s === 'B' || s === 'BOLOS') return 'Bolos';
-      return s;
-    }
 
-    /** Tanggal lokal YYYY-MM-DD (hindari toISOString yang geser hari di WIB sebelum jam 07:00) */
     function localDateStr(d) {
       const x = d instanceof Date ? d : (d ? new Date(d) : new Date());
       if (typeof d === 'string' && /^\d{4}-\d{2}-\d{2}/.test(d)) {
-        // string tanggal murni: pakai apa adanya, jangan parse UTC
         return String(d).slice(0, 10);
       }
       const y = x.getFullYear();
@@ -6929,19 +6476,14 @@
       if (!ses) return false;
       const dayStr = localDateStr(refDate || new Date());
       const todayStr = todayLocal();
-      // Hari lampau: semua sesi dianggap sudah berakhir
       if (dayStr < todayStr) return true;
-      // Hari depan: belum
       if (dayStr > todayStr) return false;
-      // Hari ini: baru A/B setelah jam_akhir lewat
       const nowMin = new Date().getHours() * 60 + new Date().getMinutes();
       const akhir = timeToMinutes(ses.jam_akhir);
-      // Jika jam_akhir tidak valid, jangan anggap berakhir
       if (!ses.jam_akhir && akhir === 0) return false;
       return nowMin > akhir;
     }
 
-    // Cocokkan record absensi ↔ sesi (id / nama / urutan)
     function matchSesi(record, ses) {
       if (!record || !ses) return false;
       if (record.sesi_id != null && ses.id != null && Number(record.sesi_id) === Number(ses.id)) return true;
@@ -6955,7 +6497,6 @@
         r.tipe === tipe && Number(r.ref_id) === Number(refId) && matchSesi(r, ses)
       );
       if (!list.length) return null;
-      // Prioritas: yang ada jam_scan (scan nyata), lalu yang punya id
       list.sort((a, b) => {
         const sa = a.jam_scan ? 2 : 0;
         const sb = b.jam_scan ? 2 : 0;
@@ -6967,7 +6508,6 @@
     }
 
     function resolveAbsensi(tipe, refId, ses, absRows, sesiList, tanggal) {
-      // Hari libur: tidak ada absensi otomatis
       if (tanggal && isTanggalLibur(tanggal)) return null;
 
       const real = findAbsRecord(absRows, tipe, refId, ses);
@@ -7007,13 +6547,8 @@
       };
     }
 
-
-
-    // ============================================================
-    // Materialize A/B ke DB + track hapus admin
-    // ============================================================
     const _materializedDates = new Set();
-    const _rekapDeletedKeys = new Set(); // 'YYYY-MM-DD|tipe|ref_id'
+    const _rekapDeletedKeys = new Set();
 
     function rekapPersonKey(tanggal, tipe, refId) {
       return [tanggal, tipe, Number(refId)].join('|');
@@ -7029,7 +6564,6 @@
         .sort((a, b) => (a.urutan || 0) - (b.urutan || 0));
       const ended = sesiList.filter(s => sesiSudahBerakhir(s, tanggal));
       if (!ended.length) {
-        // Jangan cache: sesi belum ada yang berakhir, perlu dicek lagi nanti
         return;
       }
       if (!aktifPeriode) await loadAktifPeriode();
@@ -7049,7 +6583,7 @@
 
       function pushVirtual(tipe, person, kode) {
         const key = rekapPersonKey(tanggal, tipe, person.id);
-        if (_rekapDeletedKeys.has(key)) return; // admin sudah hapus — jangan isi lagi
+        if (_rekapDeletedKeys.has(key)) return;
 
         for (const ses of ended) {
           if (hasRecord(tipe, person.id, ses)) continue;
@@ -7086,7 +6620,6 @@
           if (error) console.warn('materialize insert', error.message || error);
         }
       }
-      // Cache hanya jika SEMUA sesi hari itu sudah berakhir (supaya sesi berikutnya tetap dimaterialize)
       const allEnded = sesiList.every(s => sesiSudahBerakhir(s, tanggal));
       if (allEnded) _materializedDates.add(tanggal);
     }
@@ -7095,14 +6628,12 @@
       const tbG = document.getElementById('tbodyDashGuru');
       const tbS = document.getElementById('tbodyDashSiswa');
       try {
-        // Pastikan dataSesi + hari libur terisi
         if (typeof loadSesi === 'function') {
           await loadSesi();
         }
         await loadLiburMap();
         const today = todayLocal();
         const liburHariIni = isTanggalLibur(today);
-        // Materialize A/B di background — jangan blokir UI dashboard
         if (!liburHariIni) {
           Promise.resolve()
             .then(() => materializeAbsensiForDate(today))
@@ -7113,7 +6644,6 @@
           .sort((a, b) => (a.urutan || 0) - (b.urutan || 0));
         const nSesi = Math.max(sesiList.length, 1);
 
-        // Info sesi: aktif / selesai + next / semua selesai / menunggu sesi 1
         const det = document.getElementById('dashSesiDetail');
         function fmt3(s) {
           if (!s) return '-';
@@ -7138,7 +6668,6 @@
           } else if (!list.length) {
             det.textContent = 'Belum ada sesi yang diatur';
           } else {
-            // Cari sesi berikutnya (belum mulai)
             let next = null;
             let lastEnded = null;
             for (const s of list) {
@@ -7151,16 +6680,13 @@
               det.textContent = (lastEnded.nama || 'Sesi') + ' selesai, ' +
                 (next.nama || 'sesi berikutnya') + ' akan berlangsung pada ' + fmt3(next);
             } else if (next && !lastEnded) {
-              // Sebelum sesi pertama hari ini
               det.textContent = (next.nama || 'Sesi 1') + ' akan berlangsung pada ' + fmt3(next);
             } else {
-              // Semua sesi hari ini sudah selesai (sampai 23:59)
               det.textContent = 'Sesi Absen Hari Ini Telah Berakhir';
             }
           }
         }
 
-        // Data absensi + master (dengan timeout agar tidak mentok "Memuat...")
         let absRows = [];
         let guruList = [];
         let siswaList = [];
@@ -7202,8 +6728,7 @@
         if (elTG) elTG.textContent = guruList.length;
         if (elTS) elTS.textContent = siswaList.length;
 
-        // Index absensi O(1) — hindari scan berulang (penyebab "mentok Memuat..." di HP)
-        const absIndex = new Map(); // key: tipe|refId|sesiKey → record
+        const absIndex = new Map();
         function sesiKeys(ses) {
           const keys = [];
           if (ses && ses.id != null) keys.push('id:' + ses.id);
@@ -7235,11 +6760,9 @@
             if (hit) { real = hit; break; }
           }
           if (real) return Object.assign({}, real, { _virtual: false });
-          // Fallback ke resolveAbsensi asli (virtual A/B)
           return resolveAbsensi(tipe, refId, ses, absRows, sesiList, today);
         }
 
-        // Statistik per sesi (pakai index cepat)
         function countStatusPerSesiHtml(tipe, people, statusKey) {
           if (!sesiList.length) return '0';
           return sesiList.map(ses => {
@@ -7306,7 +6829,6 @@
           if (!siswaList.length) {
             tbS.innerHTML = '<tr><td colspan="' + (3 + nSesi) + '" style="text-align:center;padding:16px;color:#94a3b8;">Belum ada data siswa</td></tr>';
           } else {
-            // Render bertahap agar UI tidak freeze di HP
             const CHUNK = 40;
             let idx = 0;
             const parts = [];
@@ -7342,11 +6864,8 @@
       }
     }
 
-    // ============================================================
-    // SCAN BARCODE ABSENSI
-    // ============================================================
     let dataSesi = [];
-    let sesiAktif = null; // sesi berdasarkan jam sekarang
+    let sesiAktif = null;
 
     async function loadSesi() {
       try {
@@ -7368,7 +6887,6 @@
     }
 
     function timeToMinutes(t) {
-      // "07:00" atau "07:00:00" → menit dari 00:00
       if (!t) return 0;
       const p = String(t).split(':');
       return parseInt(p[0]) * 60 + parseInt(p[1] || 0);
@@ -7377,8 +6895,6 @@
     function getSesiAktifSekarang() {
       const now = new Date();
       const nowMin = now.getHours() * 60 + now.getMinutes();
-      // Hanya sesi yang flag aktif=true DAN jam sekarang di antara jam_mulai – jam_akhir
-      // Di luar jendela jam → null (kamera/scan terkunci)
       for (const s of dataSesi) {
         if (s.aktif === false) continue;
         const mulai = timeToMinutes(s.jam_mulai);
@@ -7394,18 +6910,15 @@
       const now = new Date();
       const nowMin = now.getHours() * 60 + now.getMinutes();
       const mulai = timeToMinutes(sesi.jam_mulai);
-      // jam_batas = batas TW→TL; fallback tengah jika belum diisi
       let batas = timeToMinutes(sesi.jam_batas);
       const akhir = timeToMinutes(sesi.jam_akhir);
       if (!sesi.jam_batas || !batas) {
         batas = mulai + Math.floor((akhir - mulai) / 2);
       }
-      // TW: dari jam_mulai s/d jam_batas
-      // TL: setelah jam_batas s/d jam_akhir
       return nowMin <= batas ? 'TW' : 'TL';
     }
 
-    let scanTipe = 'siswa'; // siswa | guru (untuk admin switch)
+    let scanTipe = 'siswa';
 
     async function initScanPage() {
       await loadAktifPeriode();
@@ -7428,7 +6941,6 @@
         labelJam.textContent = ' — scanner terkunci';
       }
 
-      // Switch Siswa/Guru hanya untuk Admin
       const sw = document.getElementById('scanTipeSwitch');
       if (currentRole === 'admin') {
         sw.style.display = 'block';
@@ -7436,14 +6948,11 @@
         setScanTipeUI('siswa');
       } else {
         sw.style.display = 'none';
-        // Guru scan untuk siswa; siswa tidak akses halaman ini biasanya
         scanTipe = currentRole === 'guru' ? 'siswa' : 'siswa';
       }
 
-      // Label tombol sidik jari
       updateLabelSidikJari();
 
-      // Kunci kamera/sidik jari jika hari libur ATAU di luar jam sesi
       const libur = await isHariLiburHariIni();
       const btnKamera = document.getElementById('btnBukaKamera');
       const btnFp = document.getElementById('btnSidikJari');
@@ -7502,7 +7011,6 @@
     document.getElementById('btnScanSiswa').addEventListener('click', () => setScanTipeUI('siswa'));
     document.getElementById('btnScanGuru').addEventListener('click', () => setScanTipeUI('guru'));
 
-    // Sidik jari: cek apakah device + credential sudah terdaftar (localStorage + WebAuthn)
     function sidikJariKey() {
       return 'smpn_fp_' + (currentUserKode || 'guest');
     }
@@ -7511,7 +7019,6 @@
         const raw = localStorage.getItem(sidikJariKey());
         if (!raw) return false;
         const obj = JSON.parse(raw);
-        // Format baru wajib punya credId (hasil WebAuthn / sensor HP)
         return !!(obj && obj.credId);
       } catch (e) {
         return false;
@@ -7523,10 +7030,6 @@
       lab.textContent = isSidikJariTerdaftar() ? 'Absen Sidik Jari' : 'Daftar Sidik Jari';
     }
 
-    // ============================================================
-    // SIDIK JARI ASLI (WebAuthn platform authenticator / fingerprint HP)
-    // Dialog sistem HP akan muncul sebentar — itu wajib untuk sensor nyata.
-    // ============================================================
     function bufferToBase64url(buf) {
       const bytes = new Uint8Array(buf);
       let str = '';
@@ -7583,7 +7086,6 @@
           String(currentRole + ':' + (currentUserId || currentUserKode))
         ).slice(0, 64);
 
-        // Platform authenticator = sidik jari / face unlock HP (bukan USB key)
         const cred = await navigator.credentials.create({
           publicKey: {
             challenge: challenge,
@@ -7672,10 +7174,8 @@
         stored = JSON.parse(localStorage.getItem(sidikJariKey()) || 'null');
       } catch (e) { stored = null; }
 
-      // Kompatibel format lama (string saja)
       const credId = stored && stored.credId ? stored.credId : (typeof stored === 'string' ? null : null);
       if (!stored || !credId) {
-        // Belum daftar dengan format baru → minta daftar ulang
         localStorage.removeItem(sidikJariKey());
         updateLabelSidikJari();
         tampilHasil(false, '', 'Belum Terdaftar', 'Daftarkan sidik jari HP terlebih dahulu');
@@ -7698,7 +7198,6 @@
             }]
           }
         });
-        // Fingerprint verified → absen
         if (currentUserKode) {
           await prosesScan(currentUserKode, true);
         } else {
@@ -7713,7 +7212,6 @@
     }
 
     document.getElementById('btnSidikJari').addEventListener('click', async () => {
-      // Jika tombol disabled (luar jam / libur), jangan proses
       const btn = document.getElementById('btnSidikJari');
       if (btn && btn.disabled) return;
       if (isSidikJariTerdaftar()) {
@@ -7794,19 +7292,16 @@
 
       const today = todayLocal();
 
-      // 1. Cari identitas sesuai tipe scan (admin switch) atau auto
       let person = null;
       let tipe = null;
       const preferTipe = fromFingerprint ? null : (currentRole === 'admin' ? scanTipe : 'siswa');
 
       try {
         if (supabaseClient) {
-          // Cari siswa
           if (!preferTipe || preferTipe === 'siswa') {
             const { data: siswa } = await supabaseClient.from('siswa').select('id, nama, nisn, status').eq('nisn', kode).maybeSingle();
             if (siswa) { person = siswa; tipe = 'siswa'; }
           }
-          // Cari guru
           if (!person && (!preferTipe || preferTipe === 'guru')) {
             let { data: guru } = await supabaseClient.from('guru').select('id, nama, nip, pin, status').eq('nip', kode).maybeSingle();
             if (!guru) {
@@ -7834,7 +7329,6 @@
           return;
         }
 
-        // 2. Cek apakah sudah punya status A atau B hari ini → ditolak
         if (supabaseClient) {
           const { data: abRows } = await supabaseClient
             .from('absensi')
@@ -7849,7 +7343,6 @@
             return;
           }
 
-          // 3. Cek sudah scan sesi ini?
           const { data: dup } = await supabaseClient
             .from('absensi')
             .select('id, status, jam_scan')
@@ -7864,14 +7357,12 @@
           }
         }
 
-        // 4. Tentukan TW / TL
         const status = statusTWTL(sesiAktif);
         const now = new Date();
         const ket = status === 'TW'
           ? 'Tepat waktu – ' + sesiAktif.nama
           : 'Terlambat – ' + sesiAktif.nama;
 
-        // 5. Simpan
         const row = {
           periode_id: aktifPeriode ? aktifPeriode.id : null,
           tanggal: today,
@@ -7890,7 +7381,6 @@
         if (supabaseClient) {
           const { error } = await supabaseClient.from('absensi').insert([row]);
           if (error) {
-            // Unique violation = sudah scan
             if (error.code === '23505') {
               tampilHasil(false, person.nama, 'Scan Ditolak', 'Kamu sudah scan sesi ini');
               return;
@@ -7913,7 +7403,6 @@
       closeModal('modalScanHasil');
     });
 
-    // ========== KAMERA QR / BARCODE ==========
     let html5QrCode = null;
     let kameraAktif = false;
     let lastScanCode = '';
@@ -7921,7 +7410,6 @@
 
     async function bukaKamera() {
       if (kameraAktif) return;
-      // Refresh sesi aktif (jam bisa berubah saat halaman tetap terbuka)
       await loadSesi();
       sesiAktif = getSesiAktifSekarang();
       if (!sesiAktif) {
@@ -7945,7 +7433,6 @@
           return;
         }
         html5QrCode = new Html5Qrcode('qrReader');
-        // Area scan lebih lebar vertikal agar bagian hitam berkurang
         const boxW = Math.min(window.innerWidth - 48, 320);
         const boxH = Math.round(boxW * 0.55);
         await html5QrCode.start(
@@ -7987,7 +7474,6 @@
       document.getElementById('qrReaderWrap').style.display = 'none';
       document.getElementById('btnBukaKamera').style.display = 'block';
       document.getElementById('btnTutupKamera').style.display = 'none';
-      // kosongkan isi reader
       const reader = document.getElementById('qrReader');
       if (reader) reader.innerHTML = '';
     }
@@ -7995,10 +7481,7 @@
     document.getElementById('btnBukaKamera').addEventListener('click', bukaKamera);
     document.getElementById('btnTutupKamera').addEventListener('click', tutupKamera);
 
-    // Tutup kamera otomatis saat pindah halaman
     const _origShowPage = showPage;
-    // tidak override showPage; cukup di initScanPage / saat leave
-    // Hook: saat showPage ke selain scan-barcode, tutup kamera
     document.querySelectorAll('.menu-item').forEach(item => {
       item.addEventListener('click', () => {
         if (item.getAttribute('data-page') !== 'scan-barcode' && kameraAktif) {
@@ -8007,12 +7490,9 @@
       });
     });
 
-    // ============================================================
-    // SETTING SESI + HARI LIBUR + IZIN SIDIK JARI
-    // ============================================================
     let dataSesiTbl = [];
     let dataLibur = [];
-    let dataIzinFp = []; // { tipe, ref_id, kode, nama, aktif }
+    let dataIzinFp = [];
 
     async function loadSesiTable() {
       try {
@@ -8131,7 +7611,6 @@
       } catch (e) { alert('Gagal: ' + (e.message || e)); }
     });
 
-    // ----- HARI LIBUR -----
     async function loadLiburTable() {
       try {
         if (supabaseClient) {
@@ -8198,7 +7677,7 @@
       } catch (e) { alert('Gagal: ' + (e.message || e)); }
     });
 
-    let _cacheLiburMap = null; // tanggal -> { keterangan }
+    let _cacheLiburMap = null;
 
     async function loadLiburMap() {
       if (_cacheLiburMap) return _cacheLiburMap;
@@ -8226,21 +7705,17 @@
       return isTanggalLibur(today);
     }
 
-    // Setelah CRUD hari libur, clear cache
     function clearLiburCache() { _cacheLiburMap = null; }
 
-    // ========== DOWNLOAD ABSENSI (Guru / Siswa V1 / Siswa V2) ==========
     const DL_BULAN_NAMA = ['', 'Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni',
       'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'];
 
-    let _dlAbsLast = null; // { jenis, html, aoa, filename }
+    let _dlAbsLast = null;
 
     function dlAbsMm(mm) {
-      // hanya untuk fallback; lebar tabel memakai satuan mm via <col>
       return mm;
     }
 
-    /** colgroup sesuai spesifikasi: No/L/P/tgl=3mm, NISN/Pangkat=20mm, Nama=40mm, %Hadir=12mm */
     function dlColgroupGuru(nDays) {
       let h = '<colgroup>';
       h += '<col class="dl-c-no">';
@@ -8261,7 +7736,7 @@
       h += '<col class="dl-c-lp">';
       for (let i = 0; i < nDays; i++) h += '<col class="dl-c-day">';
       h += '<col class="dl-c-letter"><col class="dl-c-letter"><col class="dl-c-letter"><col class="dl-c-letter">';
-      h += '<col class="dl-c-letter">'; // Jml
+      h += '<col class="dl-c-letter">';
       h += '</colgroup>';
       return h;
     }
@@ -8284,7 +7759,6 @@
       return u || '';
     }
 
-    /** Prioritas status harian (terbaik dulu) */
     function dlBestStatus(list) {
       const rank = { TW: 1, TL: 2, S: 3, I: 4, A: 5, B: 6 };
       let best = '';
@@ -8325,7 +7799,6 @@
       }
       if (th && !th.value) th.value = String(now.getFullYear());
 
-      // isi kelas
       const selK = document.getElementById('dlAbsKelas');
       if (selK) {
         let kelasList = [];
@@ -8397,7 +7870,6 @@
           kode: null
         }));
       }
-      // siswa
       let list = [];
       if (supabaseClient) {
         let q = supabaseClient.from('siswa')
@@ -8420,7 +7892,6 @@
     }
 
     function dlBuildDayMap(absRows, people) {
-      // map: personKey -> date -> [statuses]
       const byPerson = {};
       people.forEach(p => { byPerson[String(p.id)] = {}; });
       absRows.forEach(r => {
@@ -8446,9 +7917,8 @@
         else if (st === 'S') c.S++;
         else if (st === 'I') c.I++;
         else if (st === 'B') c.B++;
-        else c.A++; // kosong / A
+        else c.A++;
       });
-      // % hadir: TW=1, TL=0.8, S=0.75, I=0.5 (sama bobot syarat)
       const skor = c.TW * 1 + c.TL * 0.8 + c.S * 0.75 + c.I * 0.5;
       const persen = efektif > 0 ? Math.round((skor / efektif) * 1000) / 10 : 0;
       const jml = c.TW + c.TL + c.S + c.I + c.A + c.B;
@@ -8483,12 +7953,10 @@
         dlFetchAbsensiMonth(tahun, bulan, tipeDb)
       ]);
 
-      // filter absensi siswa by kelas via people ids
       const idSet = new Set(people.map(p => String(p.id)));
       const absFiltered = absRows.filter(r => idSet.has(String(r.ref_id)));
       const byPerson = dlBuildDayMap(absFiltered, people);
 
-      // resolve daily best status
       const daily = {};
       people.forEach(p => {
         const key = String(p.id);
@@ -8615,7 +8083,6 @@
         html += '</tbody></table></div>';
 
       } else {
-        // siswa2 rekap
         filename = 'Daftar_Hadir_Siswa_V2_' + kelas + '_' + bulanLabel.replace(/\s+/g, '_') + '.xlsx';
         html += '<div class="dl-abs-sheet" id="dlAbsPrintArea">';
         html += '<div class="dl-title">DAFTAR HADIR SISWA</div>';
@@ -8672,7 +8139,6 @@
         if (btnEx) btnEx.disabled = false;
         if (btnPr) btnPr.disabled = false;
         if (!res.peopleCount) {
-          // tetap boleh unduh template kosong
         }
       } catch (e) {
         console.warn(e);
@@ -8695,9 +8161,8 @@
       window.print();
     });
 
-    // ----- IZIN SIDIK JARI -----
-    let _izinFpMode = 'siswa'; // 'siswa' | 'guru'
-    let _izinFpAllowed = new Set(); // 'tipe:ref_id'
+    let _izinFpMode = 'siswa';
+    let _izinFpAllowed = new Set();
 
     function setIzinFpMode(mode) {
       _izinFpMode = mode === 'guru' ? 'guru' : 'siswa';
@@ -8860,7 +8325,6 @@
     });
 
     document.getElementById('btnSimpanIzinFp')?.addEventListener('click', async () => {
-      // Ambil dari set global (Guru + Siswa), bukan hanya yang terlihat di tab
       const byKey = new Map();
       (dataIzinFp || []).forEach(u => {
         byKey.set(u.tipe + ':' + u.ref_id, u);
@@ -8893,10 +8357,6 @@
       } catch (e) { alert('Gagal: ' + (e.message || e)); }
     });
 
-
-    // ============================================================
-    // SIDIK JARI SISWA (menu khusus)
-    // ============================================================
     async function initSidikJariSiswaPage() {
       const nama = document.getElementById('fpSiswaNama');
       const nisn = document.getElementById('fpSiswaNisn');
@@ -8926,7 +8386,6 @@
       if (nisn) nisn.textContent = currentUserKode || '-';
       if (kelas) kelas.textContent = currentUserKelas || '-';
 
-      // Periode & sesi
       try {
         if (!aktifPeriode) await loadAktifPeriode();
         const lp = document.getElementById('fpSiswaLabelPeriode');
@@ -9007,7 +8466,6 @@
         alert('Login sebagai siswa terlebih dahulu');
         return;
       }
-      // Pakai handler yang sama dengan tombol scan page
       const terdaftar = isSidikJariTerdaftar();
       if (!terdaftar) {
         if (typeof daftarSidikJari === 'function') await daftarSidikJari();
@@ -9016,18 +8474,15 @@
         if (typeof absenSidikJari === 'function') await absenSidikJari();
         else document.getElementById('btnSidikJari')?.click();
       }
-      // refresh label
       try { await initSidikJariSiswaPage(); } catch (e) {}
       try { if (typeof updateLabelSidikJari === 'function') updateLabelSidikJari(); } catch (e) {}
     });
 
     async function cekIzinSidikJari() {
-      // Admin selalu boleh
       if (currentRole === 'admin') return true;
-      if (!supabaseClient) return true; // mode demo
+      if (!supabaseClient) return true;
       if (!currentUserId || (currentRole !== 'guru' && currentRole !== 'siswa')) return false;
       const tipe = currentRole === 'guru' ? 'guru' : 'siswa';
-      // Cek berdasarkan tipe + ref_id (lebih andal daripada kode PIN/NIP)
       const { data, error } = await supabaseClient.from('izin_sidik_jari')
         .select('id')
         .eq('tipe', tipe)
@@ -9041,18 +8496,10 @@
       return !!data;
     }
 
-
-
-
-
-
-    // --- Math render (global) ---
-    // Perbaiki LaTeX yang rusak (\f dari \frac jadi form-feed di JS/HTML)
     function fixBrokenLatex(s) {
       if (!s) return '';
       let t = String(s);
       t = t.replace(/\u000c/g, 'f').replace(/\u0008/g, '').replace(/\u000b/g, '');
-      // "\rac" sisa form-feed → "\frac"
       t = t.replace(/\\rac\{/g, '\\frac{');
       t = t.replace(/(^|[^a-zA-Z\\])rac\{/g, '$1\\frac{');
       t = t.replace(/(^|[^a-zA-Z\\])frac\{/g, '$1\\frac{');
@@ -9070,23 +8517,18 @@
       let h = fixBrokenLatex(html || '');
       h = h.replace(/<script[\s\S]*?<\/script>/gi, '');
 
-      // Sudah ada output katex → biarkan
       if (h.indexOf('class="katex') >= 0) return h;
 
-      // $...$ / $$...$$
       h = h.replace(/\$\$([\s\S]+?)\$\$/g, (_, tex) => katexOr(tex.trim(), true));
       h = h.replace(/\$([^\$]+?)\$/g, (_, tex) => katexOr(tex.trim(), false));
 
-      // \frac{a}{b}, \dfrac, \tfrac
       h = h.replace(/\\(?:d|t)?frac\{([^{}]+)\}\{([^{}]+)\}/g, (_, a, b) =>
         katexOr('\\frac{' + a + '}{' + b + '}', false));
 
-      // \sqrt{x}, \sqrt[n]{x}
       h = h.replace(/\\sqrt\[([^\]]+)\]\{([^{}]+)\}/g, (_, n, x) =>
         katexOr('\\sqrt[' + n + ']{' + x + '}', false));
       h = h.replace(/\\sqrt\{([^{}]+)\}/g, (_, x) => katexOr('\\sqrt{' + x + '}', false));
 
-      // x^{2}, x_{i} sederhana di teks polos (hindari dalam tag)
       h = h.replace(/(^|>)([^<]*?)([A-Za-z0-9])\^(\{[^}]+\}|\w)/g, (m, a, pre, base, exp) => {
         const tex = base + '^' + exp;
         return a + pre + katexOr(tex, false);
@@ -9100,16 +8542,12 @@
       return k.split(/[,;\s]+/).map(x => x.trim()).includes(letter);
     }
 
-
-    // ============================================================
-    // SISWA: KERJAKAN TUGAS / UJIAN
-    // ============================================================
     let _tuBanks = [];
-    let _tuExam = null; // bank meta
+    let _tuExam = null;
     let _tuSoals = [];
-    let _tuAnswers = {}; // { soalId: value }
+    let _tuAnswers = {};
     let _tuBankId = null;
-    let _tuFlags = {}; // { soalId: true } ragu
+    let _tuFlags = {};
     let _tuIdx = 0;
     let _tuTimerIv = null;
     let _tuDeadline = null;
@@ -9137,7 +8575,6 @@
     async function initTugasSiswaPage() {
       const list = document.getElementById('tuList');
       if (!list) return;
-      // Siswa + Admin (preview/tes fitur, mirip Lihat Nilai Saya)
       if (currentRole !== 'siswa' && currentRole !== 'admin') {
         list.innerHTML = '<div style="text-align:center;padding:20px;color:#f59e0b;">Login sebagai <b>siswa</b> atau <b>admin</b> untuk mengerjakan tugas/ujian.</div>';
         return;
@@ -9166,7 +8603,6 @@
         } else {
           banks = JSON.parse(localStorage.getItem('bank_soal') || '[]').filter(b => b.status === 'Aktif');
         }
-        // Filter kelas: siswa by kelas sendiri; admin lihat semua
         if (!isAdminTu) {
           const kelas = String(currentUserKelas || '').trim().toLowerCase();
           if (kelas) {
@@ -9177,7 +8613,6 @@
             });
           }
         }
-        // Cek attempt (admin tidak dihitung limit)
         let hasil = [];
         if (!isAdminTu && supabaseClient && currentUserId) {
           const { data } = await supabaseClient.from('bank_soal_hasil')
@@ -9196,7 +8631,6 @@
           const last = hasil.filter(h => Number(h.bank_id) === Number(b.id)).sort((a,c) =>
             String(c.submitted_at).localeCompare(String(a.submitted_at)))[0];
           const disabled = currentRole === 'admin' ? false : (sisa <= 0);
-          // waktu
           let waktuInfo = '';
           if (b.waktu_mulai || b.waktu_selesai) {
             waktuInfo = '<div style="font-size:11px;color:#64748b;margin-top:4px;">';
@@ -9232,7 +8666,6 @@
       const bank = _tuBanks.find(b => Number(b.id) === bankId);
       if (!bank) { alert('Bank soal tidak ditemukan'); return; }
 
-      // Cek jendela waktu (admin boleh preview di luar jadwal)
       const now = Date.now();
       if (currentRole !== 'admin') {
         if (bank.waktu_mulai && now < new Date(bank.waktu_mulai).getTime()) {
@@ -9245,7 +8678,6 @@
         }
       }
 
-      // Loading UI segera (hindari kesan hang)
       try {
         const areaWait = document.getElementById('tuSoalArea');
         if (areaWait) areaWait.innerHTML = '<div style="text-align:center;padding:28px;color:#94a3b8;">Memuat daftar soal...</div>';
@@ -9257,14 +8689,10 @@
       let soals = [];
       try {
         if (supabaseClient) {
-          // Tahap 1: metadata ringan saja (tanpa HTML gambar base64 yang besar)
-          // Gambar soal diunggah ke Google Drive; di DB hanya URL (ringan). Soal lama mungkin masih base64,
-          // BUKAN di Supabase Storage — makanya select * lambat.
           let { data, error } = await supabaseClient.from('bank_soal_item')
             .select('id, bank_id, nomor, jenis, skor')
             .eq('bank_id', bankId).order('nomor');
           if (error) {
-            // fallback: full (DB lama / kolom beda)
             const retry = await supabaseClient.from('bank_soal_item')
               .select('*').eq('bank_id', bankId).order('nomor');
             data = retry.data; error = retry.error;
@@ -9293,7 +8721,6 @@
         return;
       }
 
-      // Mode acak
       const mode = bank.mode_soal || 'Normal';
       if (/acak soal/i.test(mode)) {
         soals = soals.slice().sort(() => Math.random() - 0.5);
@@ -9304,7 +8731,6 @@
           pairs.sort(() => Math.random() - 0.5);
           const copy = Object.assign({}, s);
           ['a','b','c','d'].forEach((L, i) => { copy['opsi_' + L] = pairs[i] ? pairs[i].v : null; });
-          // kunci mapping complicates — keep original keys by letter content match later
           copy._optOrder = pairs.map(p => p.L);
           return copy;
         });
@@ -9318,7 +8744,6 @@
       _tuIdx = 0;
       try { Object.keys(_tuSoalFullCache).forEach(k => delete _tuSoalFullCache[k]); } catch (e) {}
 
-      // Timer
       if (_tuTimerIv) clearInterval(_tuTimerIv);
       const durMin = Number(bank.durasi) || 60;
       let end = Date.now() + durMin * 60 * 1000;
@@ -9338,7 +8763,6 @@
       } else {
         disableTuAntiCurang();
       }
-      // Catat sesi monitoring "sedang"
       try {
         await createTuSession(bank, end);
       } catch (e) { console.warn('session', e); }
@@ -9365,12 +8789,10 @@
         cheat_count: 0
       };
       if (supabaseClient) {
-        // hapus sesi sedang lama untuk bank+siswa yang sama
         if (!isAdminTu && currentUserId) {
           await supabaseClient.from('bank_soal_hasil')
             .delete().eq('bank_id', payload.bank_id).eq('siswa_id', currentUserId).eq('status', 'sedang');
         }
-        // insert resilient (strip kolom tak dikenal)
         let p = Object.assign({}, payload);
         let lastErr = null;
         for (let i = 0; i < 10; i++) {
@@ -9387,7 +8809,6 @@
             delete p[m[1]];
             continue;
           }
-          // jika select setelah insert gagal karena RLS, anggap OK tanpa session id
           if (/select|permission|policy/i.test(msg)) {
             lastErr = null;
             break;
@@ -9420,8 +8841,6 @@
       }
     }
 
-
-    // ========== UPLOAD FILE JAWABAN → Google Drive / Supabase Storage ==========
     function fileToBase64(file) {
       return new Promise((resolve, reject) => {
         const reader = new FileReader();
@@ -9435,7 +8854,6 @@
       });
     }
 
-    /** Hapus file di GDrive (best-effort; gagal tidak menghentikan upload baru) */
     async function deleteGdriveFile(fileId) {
       fileId = String(fileId || '').trim();
       if (!fileId) return false;
@@ -9460,17 +8878,14 @@
       }
     }
 
-    /** Ambil id file GDrive dari objek jawaban lama */
     function extractGdriveFileId(ans) {
       if (!ans || typeof ans !== 'object') return null;
       if (ans.provider === 'gdrive' && ans.id) return String(ans.id);
       if (ans.id && /^[a-zA-Z0-9_-]{20,}$/.test(String(ans.id)) && !String(ans.id).includes('/')) {
-        // kemungkinan id Drive
         if (ans.provider === 'gdrive' || (ans.url && String(ans.url).includes('drive.google.com'))) {
           return String(ans.id);
         }
       }
-      // parse dari url
       const m = String(ans.url || '').match(/\/d\/([a-zA-Z0-9_-]+)/);
       if (m) return m[1];
       return null;
@@ -9479,7 +8894,6 @@
     async function uploadJawabanFile(file, meta) {
 
       meta = meta || {};
-      // Settings: local dulu; DB hanya jika endpoint masih kosong
       try { loadGdriveSettingsSync(); } catch (e) {}
       if (!GDRIVE_UPLOAD_ENDPOINT) {
         try { await loadGdriveSettingsFromDb(); } catch (e) {}
@@ -9492,24 +8906,18 @@
       let gdriveTried = false;
       let gdriveErr = null;
 
-      // 1) Google Drive via Apps Script endpoint
-      // Script user memakai: data/name/mime (atau JSON postData: base64/filename/mimeType)
       if (GDRIVE_UPLOAD_ENDPOINT && String(GDRIVE_UPLOAD_ENDPOINT).trim()) {
         gdriveTried = true;
         const folderId = meta.folderId || GDRIVE_DEFAULT_FOLDER_ID || '';
         const mime = file.type || 'application/octet-stream';
-        // Kirim SEMUA alias field agar cocok dengan script lama & baru
         const body = {
-          // format sample app
           filename: safeName,
           mimeType: mime,
           base64: base64,
           folderId: folderId,
-          // format script user (gscript.js)
           name: safeName,
           mime: mime,
           data: base64,
-          // meta
           bankId: meta.bankId || null,
           soalId: meta.soalId || null,
           siswaId: meta.siswaId || null,
@@ -9526,7 +8934,6 @@
         try { json = JSON.parse(textResp); } catch (e) {
           throw new Error('Respons GDrive tidak valid: ' + textResp.slice(0, 160));
         }
-        // Terima error dari kedua format: {error} atau {ok:false, message}
         if (!json) throw new Error('Respons GDrive kosong');
         if (json.ok === false || json.error) {
           throw new Error(json.message || json.error || 'Upload GDrive gagal');
@@ -9551,7 +8958,6 @@
         };
       }
 
-      // 2) Supabase Storage
       if (supabaseClient && supabaseClient.storage) {
         try {
           const { error } = await supabaseClient.storage.from('jawaban-file').upload(storagePath, file, {
@@ -9573,7 +8979,6 @@
         }
       }
 
-      // 3) Fallback lokal — HANYA jika GDrive belum dikonfigurasi
       if (gdriveTried) {
         throw new Error(
           (gdriveErr ? (gdriveErr + ' — ') : '') +
@@ -9595,7 +9000,6 @@
       };
     }
 
-    /** Upload media soal (gambar) ke GDrive — hasil URL, bukan base64 di DB */
     async function uploadSoalImageFile(file, nameHint) {
       try { loadGdriveSettingsSync(); } catch (e) {}
       if (!GDRIVE_UPLOAD_ENDPOINT) {
@@ -9638,7 +9042,6 @@
       return result.url || dataUrl;
     }
 
-    /** Ganti semua data:image (raster) di HTML → URL GDrive */
     async function replaceDataImagesWithGdrive(html, progressCb) {
       html = String(html || '');
       const re2 = /src\s*=\s*(["'])(data:image\/[^;]+;base64,[^"']+)\1/gi;
@@ -9664,7 +9067,6 @@
       return out;
     }
 
-    /** Muat konten penuh 1 soal (pertanyaan+opsi berisi base64) on-demand + prefetch */
     const _tuSoalFullCache = {};
     async function ensureTuSoalFull(idx) {
       if (idx < 0 || idx >= _tuSoals.length) return null;
@@ -9703,14 +9105,12 @@
       const prog = document.getElementById('tuProgress');
       if (!area || !_tuSoals.length) return;
       const idxNow = _tuIdx;
-      // Pastikan konten soal saat ini sudah lengkap
       if (!_tuSoals[idxNow]._full) {
         area.innerHTML = '<div style="text-align:center;padding:24px;color:#94a3b8;">Memuat soal ' + (idxNow + 1) + '...</div>';
         await ensureTuSoalFull(idxNow);
-        if (_tuIdx !== idxNow) return; // user sudah pindah
+        if (_tuIdx !== idxNow) return;
       }
       const s = _tuSoals[_tuIdx];
-      // Prefetch soal berikutnya di background
       if (_tuIdx + 1 < _tuSoals.length && !_tuSoals[_tuIdx + 1]._full) {
         ensureTuSoalFull(_tuIdx + 1).catch(() => {});
       }
@@ -9725,7 +9125,6 @@
         esc(s.jenis || 'Pilihan Ganda') + '</span>';
       html += '<span style="margin-left:auto;">Skor: ' + (s.skor || 1) + '</span></div>';
       let _qHtml = (typeof renderMathInHtml === 'function' ? renderMathInHtml(s.pertanyaan) : (s.pertanyaan || ''));
-      // Lazy-load gambar agar pindah soal tidak lemot
       _qHtml = String(_qHtml).replace(/<img(?![^>]*loading=)/gi, '<img loading="lazy" decoding="async"');
       html += '<div class="bs-soal-card-body">' + _qHtml + '</div>';
 
@@ -9790,7 +9189,6 @@
       html += '</div>';
       area.innerHTML = html;
 
-      // bind save answer
       function refreshTuSubmitBtn() {
         const allDone = _tuSoals.every(isTuAnswered);
         const btnSub = document.getElementById('btnTuSubmit');
@@ -9835,7 +9233,6 @@
           }
           if (st) st.textContent = 'Mengunggah ' + f.name + '...';
           try {
-            // Hapus file lama di GDrive jika siswa mengganti unggahan
             const prevAns = _tuAnswers[s.id];
             const oldId = extractGdriveFileId(prevAns);
             if (oldId) {
@@ -9864,7 +9261,6 @@
         });
       }
 
-      // Tombol ragu
       const flagged = !!_tuFlags[s.id];
       const flagHtml = document.createElement('div');
       area.insertAdjacentHTML('beforeend',
@@ -9878,7 +9274,6 @@
 
       document.getElementById('btnTuPrev').disabled = _tuIdx <= 0;
       document.getElementById('btnTuNext').disabled = _tuIdx >= _tuSoals.length - 1;
-      // Tombol Kirim hanya jika SEMUA soal sudah dijawab
       const allDone = _tuSoals.every(isTuAnswered);
       const btnSub = document.getElementById('btnTuSubmit');
       if (btnSub) {
@@ -10005,16 +9400,13 @@
         const ok = k && a && (k === a || k.split(',').sort().join() === a.split(',').sort().join());
         return { benar: ok, skor: ok ? skor : 0 };
       }
-      // Esai / Unggah File: penilaian manual
       if (jenis === 'Unggah File') return { benar: null, skor: 0 };
       return { benar: null, skor: 0 };
     }
 
-
-    // ----- Anti Curang -----
     let _tuAntiOn = false;
     let _tuCheatCount = 0;
-    let _tuCheatMax = 3; // setelah 3x pindah tab → auto submit
+    let _tuCheatMax = 3;
     let _tuAntiHandlers = [];
 
     function tuRequestFullscreen() {
@@ -10044,12 +9436,11 @@
       }
       alert('⚠️ Anti-curang: terdeteksi ' + reason + '.\nPeringatan ' + _tuCheatCount + '/' + _tuCheatMax +
         (sisa ? ' (sisa ' + sisa + ')' : '') + '\nJangan pindah tab/aplikasi saat ujian.');
-      // coba fullscreen lagi
       setTimeout(tuRequestFullscreen, 300);
     }
 
     function enableTuAntiCurang() {
-      disableTuAntiCurang(); // clear dulu
+      disableTuAntiCurang();
       _tuAntiOn = true;
       _tuCheatCount = 0;
       tuRequestFullscreen();
@@ -10058,9 +9449,8 @@
         if (document.hidden) onTuCheatViolation('pindah tab / minimize');
       };
       const onBlur = () => {
-        // delay: fokus focus ke alert sendiri
         setTimeout(() => {
-          if (_tuAntiOn && document.hidden) return; // sudah di-handle visibility
+          if (_tuAntiOn && document.hidden) return;
           if (_tuAntiOn && !document.hasFocus()) onTuCheatViolation('keluar fokus jendela ujian');
         }, 200);
       };
@@ -10073,7 +9463,6 @@
       const onCtx = (e) => { e.preventDefault(); };
       const onCopy = (e) => { e.preventDefault(); };
       const onKey = (e) => {
-        // blokir beberapa shortcut umum
         if (e.ctrlKey || e.metaKey) {
           const k = e.key.toLowerCase();
           if (['c','v','x','u','s','p','a'].includes(k)) e.preventDefault();
@@ -10103,7 +9492,6 @@
         ['keydown', document, onKey]
       ];
 
-      // badge
       let badge = document.getElementById('tuAntiBadge');
       if (!badge) {
         badge = document.createElement('div');
@@ -10153,8 +9541,6 @@
 
       const isTimeout = !!auto && _tuDeadline && Date.now() >= _tuDeadline;
       const isAdminTu = currentRole === 'admin';
-      // Jangan kirim kolom yang tidak ada di DB (total_skor dsb.)
-      // max skor disimpan di dalam detail meta agar monitoring tetap bisa hitung
       if (detail.length) {
         detail[0] = Object.assign({}, detail[0], { _max_skor: maxSkor });
       }
@@ -10186,7 +9572,6 @@
           }
           if (!error) return;
           const msg = String(error.message || error);
-          // PostgREST unknown column
           const m = msg.match(/'([a-zA-Z0-9_]+)' column/i) || msg.match(/column\s+[\"']?([a-zA-Z0-9_]+)/i);
           if (m && m[1] && Object.prototype.hasOwnProperty.call(p, m[1])) {
             delete p[m[1]];
@@ -10199,7 +9584,6 @@
 
       try {
         if (supabaseClient) {
-          // Hindari data ganda: update sesi sedang, atau hapus sedang lalu insert 1 baris
           let done = false;
           if (window._tuSessionId) {
             try {
@@ -10210,7 +9594,6 @@
             }
           }
           if (!done && currentUserId && !isAdminTu) {
-            // cari sesi sedang milik siswa ini
             const { data: existing } = await supabaseClient.from('bank_soal_hasil')
               .select('id').eq('bank_id', payload.bank_id).eq('siswa_id', currentUserId).eq('status', 'sedang');
             if (existing && existing.length) {
@@ -10226,7 +9609,6 @@
             }
           }
           if (!done) {
-            // bersihkan sedang lalu insert sekali
             if (currentUserId && !isAdminTu) {
               await supabaseClient.from('bank_soal_hasil')
                 .delete().eq('bank_id', payload.bank_id).eq('siswa_id', currentUserId).eq('status', 'sedang');
@@ -10239,7 +9621,6 @@
           if (window._tuSessionId) {
             list = list.map(x => String(x.id) === String(window._tuSessionId) ? Object.assign({}, x, payload) : x);
           } else {
-            // update sedang existing
             let found = false;
             list = list.map(x => {
               if (Number(x.bank_id) === Number(payload.bank_id) && x.siswa_id === currentUserId && x.status === 'sedang') {
@@ -10266,128 +9647,35 @@
       }
     }
 
-    // ============================================================
-    // IMPORT SOAL DARI MS WORD (.docx)
-    // ============================================================
     let _importWordSoals = [];
-
-
-    document.getElementById('btnBsTogglePanduan')?.addEventListener('click', () => {
-      const el = document.getElementById('bsPanduanFormat');
-      if (!el) return;
-      el.style.display = el.style.display === 'none' ? 'block' : 'none';
-    });
-
-    document.getElementById('btnBsContohFormat')?.addEventListener('click', () => {
+document.getElementById('btnBsContohFormat')?.addEventListener('click', () => {
       const contoh = [
-        'CONTOH FORMAT SOAL — Bank Soal (Import Word)',
-        '============================================',
-        'Simpan file ini sebagai .docx di Microsoft Word sebelum di-import.',
-        'Gunakan nomor 1. 2. 3. atau No.1 — opsi A. B. C. D. — baris Kunci:',
+        'CONTOH FORMAT SOAL (simpan sebagai .docx)',
         '',
-        '---------- PILIHAN GANDA ----------',
-        '1. Ibu kota negara Indonesia adalah…',
+        '1. Ibu kota Indonesia adalah…',
         '   A. Bandung',
         '   B. Jakarta',
         '   C. Surabaya',
         '   D. Medan',
         '   Kunci: B',
         '',
-        '---------- BENAR / SALAH ----------',
         '2. Bumi berputar mengelilingi matahari.',
         '   A. Benar',
         '   B. Salah',
         '   Kunci: Benar',
         '',
-        '---------- CHECKBOX (multi jawaban) ----------',
-        '3. Yang termasuk bilangan prima adalah…',
-        '   A. 2',
-        '   B. 4',
-        '   C. 5',
-        '   D. 9',
-        '   Kunci: A,C',
-        '',
-        '---------- ISIAN SINGKAT ----------',
-        '4. Hasil dari 12 × 12 adalah ____.',
+        '3. Hasil 12 × 12 =',
         '   Kunci: 144',
         '',
-        '   (Beberapa jawaban benar, pisahkan dengan | )',
-        '   Kunci: Jakarta|DKI Jakarta',
-        '',
-        '---------- ESAI ----------',
-        '5. Jelaskan perbedaan energi kinetik dan energi potensial.',
-        '   Kunci: Energi kinetik berhubungan dengan gerak benda;',
-        '   energi potensial berhubungan dengan posisi atau ketinggian.',
-        '',
-        '---------- MENJODOHKAN ----------',
-        '6. Jodohkan istilah berikut dengan artinya.',
-        '   Kunci:',
-        '   Fotosintesis = proses tumbuhan membuat makanan',
-        '   Respirasi = proses pelepasan energi dari makanan',
-        '   Osmosis = perpindahan air melalui membran semipermeabel',
-        '',
-        '---------- TIPS ----------',
-        '- Gambar, tabel, grafik, equation Word: sisipkan di badan soal; ikut ter-import.',
-        '- Satu file boleh campur berbagai jenis soal.',
-        '- Selalu tulis "Kunci:" di akhir setiap soal.',
-        '- Simpan sebagai .docx (Word 2007+), lalu Import Word di aplikasi.',
-        ''
+        '4. Jelaskan pengertian fotosintesis.',
+        '   Kunci: Proses tumbuhan mengubah cahaya menjadi energi.'
       ].join('\n');
-
-      // File teks
-      const blobTxt = new Blob([contoh], { type: 'text/plain;charset=utf-8' });
-      const a1 = document.createElement('a');
-      a1.href = URL.createObjectURL(blobTxt);
-      a1.download = 'Contoh_Format_Soal_Bank_Soal.txt';
-      a1.click();
-      URL.revokeObjectURL(a1.href);
-
-      // HTML yang mudah dibuka di Word lalu "Save as docx"
-      const html = '<!DOCTYPE html><html><head><meta charset="utf-8"><title>Contoh Format Soal</title>' +
-        '<style>body{font-family:Calibri,Arial,sans-serif;font-size:12pt;line-height:1.5;max-width:700px;margin:24px auto;}' +
-        'h1{font-size:16pt;}h2{font-size:13pt;color:#1e40af;margin-top:20px;}' +
-        'pre,code{font-family:Consolas,monospace;} .tip{background:#f0f9ff;padding:10px;border-radius:8px;}</style></head><body>' +
-        '<h1>Contoh Format Soal — Bank Soal</h1>' +
-        '<p class="tip">Buka file ini di <b>Microsoft Word</b> → File → Save As → format <b>Word Document (.docx)</b>, ' +
-        'lalu gunakan tombol <b>Import Word</b> di aplikasi. Gambar/tabel/equation boleh ditambahkan di bawah teks soal.</p>' +
-        '<h2>1. Pilihan Ganda</h2>' +
-        '<p>1. Ibu kota negara Indonesia adalah…</p>' +
-        '<p>A. Bandung</p><p>B. Jakarta</p><p>C. Surabaya</p><p>D. Medan</p>' +
-        '<p>Kunci: B</p>' +
-        '<h2>2. Benar / Salah</h2>' +
-        '<p>2. Bumi berputar mengelilingi matahari.</p>' +
-        '<p>A. Benar</p><p>B. Salah</p>' +
-        '<p>Kunci: Benar</p>' +
-        '<h2>3. Checkbox (multi jawaban)</h2>' +
-        '<p>3. Yang termasuk bilangan prima adalah…</p>' +
-        '<p>A. 2</p><p>B. 4</p><p>C. 5</p><p>D. 9</p>' +
-        '<p>Kunci: A,C</p>' +
-        '<h2>4. Isian Singkat</h2>' +
-        '<p>4. Hasil dari 12 × 12 adalah ____.</p>' +
-        '<p>Kunci: 144</p>' +
-        '<h2>5. Esai</h2>' +
-        '<p>5. Jelaskan perbedaan energi kinetik dan energi potensial.</p>' +
-        '<p>Kunci: Energi kinetik berhubungan dengan gerak benda; energi potensial berhubungan dengan posisi atau ketinggian.</p>' +
-        '<h2>6. Menjodohkan</h2>' +
-        '<p>6. Jodohkan istilah berikut dengan artinya.</p>' +
-        '<p>Kunci:</p>' +
-        '<p>Fotosintesis = proses tumbuhan membuat makanan</p>' +
-        '<p>Respirasi = proses pelepasan energi dari makanan</p>' +
-        '<p>Osmosis = perpindahan air melalui membran semipermeabel</p>' +
-        '<h2>Tips</h2>' +
-        '<ul><li>Nomor soal: 1. 2. atau No.1</li>' +
-        '<li>Gambar, tabel, grafik, equation Word: sisipkan di badan soal</li>' +
-        '<li>Satu file boleh campur jenis soal</li>' +
-        '<li>Selalu tulis baris Kunci: di akhir setiap soal</li></ul>' +
-        '</body></html>';
-      const blobHtml = new Blob([html], { type: 'application/msword' });
-      const a2 = document.createElement('a');
-      a2.href = URL.createObjectURL(blobHtml);
-      a2.download = 'Contoh_Format_Soal_Bank_Soal.doc';
-      setTimeout(() => {
-        a2.click();
-        URL.revokeObjectURL(a2.href);
-      }, 300);
+      const blob = new Blob([contoh], { type: 'text/plain;charset=utf-8' });
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = 'Contoh_Format_Soal.txt';
+      a.click();
+      URL.revokeObjectURL(a.href);
     });
 
     document.getElementById('btnBsImportWord')?.addEventListener('click', () => {
@@ -10492,7 +9780,6 @@
           '$1'
         );
       }
-      // juga di teks polos tanpa tag
       s = s.replace(new RegExp('^\\s*(?:' + L + ')\\s*[.\\)．、:：]\\s*', 'i'), '');
       return s;
     }
@@ -10501,24 +9788,21 @@
       const jenisDefault = document.getElementById('iwJenisDefault')?.value || 'Pilihan Ganda';
       let h = String(html || '');
 
-      // 1) Amankan tabel — jangan dipecah jadi soal
       const tables = [];
       h = h.replace(/<table[\s\S]*?<\/table>/gi, (m) => {
         tables.push(m);
-        return '<p><!--TABLE_' + (tables.length - 1) + '--></p>';
+        return '<p> </p>';
       });
 
-      // 2) Pecah ke blok paragraf-ish
       const rawBlocks = h.split(/(?=<p[\s>])|(?=<h[1-6][\s>])|(?=<li[\s>])/i).filter(b => b.trim());
 
       function blockText(b) {
         return b.replace(/<[^>]+>/g, ' ').replace(/&nbsp;/g, ' ').replace(/\s+/g, ' ').trim();
       }
       function restoreTables(s) {
-        return s.replace(/<!--TABLE_(\d+)-->/g, (_, i) => tables[Number(i)] || '');
+        return s.replace(/ /g, (_, i) => tables[Number(i)] || '');
       }
       function stripKunci(s) {
-        // hapus dari label Kunci sampai akhir
         return s
           .replace(/<(?:p|div|li|h[1-6])[^>]*>\s*Kunci\s*[:.][\s\S]*$/i, '')
           .replace(/Kunci\s*[:.]\s*[^<]*/gi, '')
@@ -10529,11 +9813,9 @@
       let cur = null;
 
       function stripOpsiLetterPrefix(html, letter) {
-        // Buang prefix A. / A) / A： di awal opsi agar tidak dobel saat ditampil "A. ..."
         if (!html) return html;
         const L = String(letter || '').toUpperCase();
         let s = String(html);
-        // Teks murni di awal setelah tag pembuka
         s = s.replace(
           new RegExp(
             '^(\s*(?:<(?:p|div|span|li)[^>]*>\s*)*)' +
@@ -10543,7 +9825,6 @@
           ),
           '$1'
         );
-        // Ulangi sekali lagi jika masih ada (A. A. teks)
         s = s.replace(
           new RegExp(
             '^(\s*(?:<(?:p|div|span|li)[^>]*>\s*)*)' +
@@ -10565,7 +9846,6 @@
         });
         const plain = blockText(cur.pertanyaan);
         if (plain.length >= 3 || /<img|<table|<svg/i.test(cur.pertanyaan)) {
-          // deteksi jenis
           const allPlain = plain + ' ' + blockText(cur.opsi_a || '') + ' ' + (cur.kunci || '');
           const hasOpts = !!(cur.opsi_a && cur.opsi_b);
           const kunciLetters = cur.kunci ? (cur.kunci.toUpperCase().match(/\b[A-E]\b/g) || []) : [];
@@ -10596,7 +9876,6 @@
           if (cur.jenis === 'Pilihan Ganda' && kunciLetters.length === 1) {
             cur.kunci = kunciLetters[0];
           }
-          // opsi E tempel di pertanyaan
           if (cur.opsi_e) {
             cur.pertanyaan += '<p><b>E.</b> ' + cur.opsi_e + '</p>';
           }
@@ -10608,8 +9887,6 @@
       for (const block of rawBlocks) {
         const t = blockText(block);
 
-        // Soal baru: nomor di AWAL + teks cukup panjang (hindari "1. Persegi" di tabel)
-        // min 12 karakter setelah nomor, atau ada gambar/table placeholder
         const qm = t.match(/^(?:No\.?\s*)?(\d{1,3})[\.\)]\s+(.+)$/i);
         const optm = t.match(/^([A-Ea-e])[\.\)]\s+(.+)$/);
         const isKunci = /^Kunci\s*[:.]/i.test(t);
@@ -10617,8 +9894,6 @@
         if (qm) {
           const after = qm[2] || '';
           const afterLen = after.replace(/\s+/g, ' ').trim().length;
-          // Item tabel menjodohkan biasanya pendek (< 40) dan hanya 1-2 kata
-          // Soal sungguhan biasanya kalimat lebih panjang ATAU ada media
           const hasMedia = /<!--TABLE_|<img/i.test(block);
           const looksLikeQuestion = afterLen >= 25 || hasMedia ||
             /berikut|adalah|perhatikan|hasil|jika|dari|tentukan|jelaskan|hitung|yang|pada/i.test(after);
@@ -10638,7 +9913,6 @@
         }
 
         if (!cur) {
-          // preamble / orphan — skip or start implicit
           continue;
         }
 
@@ -10650,18 +9924,15 @@
         if (optm) {
           const L = optm[1].toLowerCase();
           if ('abcde'.includes(L)) {
-            // Simpan tanpa huruf opsi di depan (huruf ditambah saat tampil)
             cur['opsi_' + L] = stripOpsiLetterPrefix(block, L);
             continue;
           }
         }
 
-        // Lanjutan pertanyaan / tabel / gambar
         cur.pertanyaan += block;
       }
       flush();
 
-      // Rapikan pertanyaan: buang prefix nomor murni di teks (opsional biarkan)
       soals.forEach(s => {
         s.pertanyaan = restoreTables(stripKunci(s.pertanyaan));
       });
@@ -10718,9 +9989,6 @@
       }
     });
 
-    // ============================================================
-    // BANK SOAL (Kelola Tugas / Ujian)
-    // ============================================================
     let dataBankSoal = [];
     let dataPeriodeAll = [];
     let currentBankId = null;
@@ -10796,7 +10064,6 @@
 
       try {
         if (supabaseClient) {
-          // Coba dengan join periode; jika gagal, select sederhana
           let { data, error } = await supabaseClient.from('bank_soal').select('*, periode:periode_id(tahun_ajaran, semester)').order('id', { ascending: false });
           if (error) {
             const retry = await supabaseClient.from('bank_soal').select('*').order('id', { ascending: false });
@@ -10822,12 +10089,10 @@
 
       let rows = dataBankSoal.slice();
 
-      // Guru: bank miliknya (guru_id) ATAU mapel/kelas yang diampu
-      // Tabel guru (id, nama, nip, pin, ...) — relasi mapel/kelas lewat guru_mapel & guru_kelas
       if (currentRole === 'guru' && currentUserId) {
         try {
           let allowedMapelNames = new Set();
-          let allowedKelas = new Set(); // lowercase
+          let allowedKelas = new Set();
           let hasAmpuan = false;
           if (supabaseClient) {
             const [gm, gk, mp, kl] = await Promise.all([
@@ -10851,15 +10116,11 @@
           }
           const uid = Number(currentUserId);
           rows = rows.filter(r => {
-            // Bank milik guru ini selalu tampil
             if (r.guru_id != null && Number(r.guru_id) === uid) return true;
-            // Tanpa data ampuan → jangan tampilkan bank orang lain
             if (!hasAmpuan) return false;
-            // Cocok mapel diampu
             const nm = String(r.mapel || '').trim().toLowerCase();
             if (allowedMapelNames.size && nm && !allowedMapelNames.has(nm)) return false;
             if (allowedMapelNames.size && !nm) return false;
-            // Cocok minimal 1 kelas diampu
             if (allowedKelas.size) {
               const kls = String(r.kelas || '').split(/[,;|]/).map(x => x.trim().toLowerCase()).filter(Boolean);
               if (kls.length && !kls.some(k => allowedKelas.has(k))) return false;
@@ -10954,7 +10215,6 @@
       const boxK = document.getElementById('bsKelasBox');
       if (!selM || !boxK) return;
 
-      // ---- Mapel ----
       let mapelList = [];
       try {
         if (supabaseClient) {
@@ -10970,7 +10230,6 @@
         mapelList = dataMapel;
       }
 
-      // ---- Kelas ----
       let kelasList = [];
       let kelasRows = [];
       try {
@@ -10989,7 +10248,6 @@
         kelasList = ['7A','7B','7C','7D','8A','8B','8C','8D','9A','9B','9C','9D'];
       }
 
-      // Guru: HANYA mapel & kelas yang diampu (guru_mapel / guru_kelas)
       if (currentRole === 'guru' && currentUserId && supabaseClient) {
         try {
           const [gm, gk] = await Promise.all([
@@ -11033,7 +10291,6 @@
           }).join('');
       }
 
-      // unique sort
       kelasList = [...new Set(kelasList)].sort((a, b) => String(a).localeCompare(String(b), 'id', { numeric: true }));
 
       boxK.innerHTML = kelasList.length
@@ -11177,7 +10434,6 @@
         keterangan: document.getElementById('bsKet').value.trim() || null
       };
       if (!id) payload.jml_soal = 0;
-      // Tandai pemilik bank (agar filter guru selalu menampilkan bank sendiri)
       if (currentRole === 'guru' && currentUserId) {
         payload.guru_id = Number(currentUserId);
       } else if (currentRole === 'admin' && currentUserId) {
@@ -11208,7 +10464,6 @@
             delete p[m[1]];
             continue;
           }
-          // insert OK tapi select gagal (RLS) — anggap sukses
           if (mode === 'insert' && /permission|policy|RLS|select/i.test(msg)) {
             return { id: null };
           }
@@ -11223,7 +10478,6 @@
             await saveBankResilient('update', id, payload);
           } else {
             const data = await saveBankResilient('insert', null, payload);
-            // Jika kolom banyak yang tidak ada, pastikan minimal tersimpan
             if (!data) {
               const minimal = {
                 judul: payload.judul,
@@ -11251,7 +10505,6 @@
           localStorage.setItem('bank_soal', JSON.stringify(list));
         }
         closeModal('modalBankSoal');
-        // Reset filter tahun/semester agar bank baru tidak tersembunyi
         try {
           const t = document.getElementById('bsTahun');
           const s = document.getElementById('bsSemester');
@@ -11291,7 +10544,6 @@
       }
     });
 
-    // ----- SOAL (detail) -----
     document.getElementById('btnBsSoal')?.addEventListener('click', async () => {
       const ids = getCheckedBs();
       if (ids.length !== 1) { alert('Centang tepat 1 bank soal untuk kelola soal'); return; }
@@ -11300,7 +10552,6 @@
         alert('ID bank soal tidak valid. Simpan ulang bank soal di Supabase.');
         return;
       }
-      // Pastikan bank ada di database
       if (supabaseClient) {
         const { data, error } = await supabaseClient.from('bank_soal').select('id, judul').eq('id', bid).maybeSingle();
         if (error) { alert('Gagal cek bank soal: ' + error.message); return; }
@@ -11329,7 +10580,6 @@
     function resetEditorMount(mountId) {
       const mount = document.getElementById(mountId);
       if (!mount) return null;
-      // Hapus semua toolbar/sisa Quill di dalam mount
       mount.innerHTML = '';
       const editor = document.createElement('div');
       editor.className = 'bs-quill-target';
@@ -11338,7 +10588,6 @@
     }
 
     function initBsQuill() {
-      // destroy instance lama
       bsQuill = null;
       const target = resetEditorMount('bsItemEditorMount');
       if (!target) return;
@@ -11400,7 +10649,6 @@
       }
     }
 
-    // Mini Quill editors untuk opsi/jawaban
     const bsOpsiQuills = {};
 
     function destroyBsOpsiQuills() {
@@ -11416,7 +10664,6 @@
         } catch (e) {}
         delete bsOpsiQuills[k];
       });
-      // bersihkan toolbar yatim di kotak opsi
       const box = document.getElementById('bsOpsiBox');
       if (box) box.querySelectorAll('.ql-toolbar').forEach(t => t.remove());
     }
@@ -11424,14 +10671,12 @@
     function makeMiniQuill(containerId, placeholder) {
       const el = document.getElementById(containerId);
       if (!el) return null;
-      // Reset total: hapus toolbar sibling sisa Quill
       const parent = el.parentElement;
       if (parent) {
         parent.querySelectorAll('.ql-toolbar').forEach(t => t.remove());
       }
       el.className = 'bs-mini-editor';
       el.innerHTML = '';
-      // mount bersih di dalam el
       const target = document.createElement('div');
       el.appendChild(target);
 
@@ -11440,7 +10685,6 @@
           (placeholder || '') + '"></textarea>';
         return null;
       }
-      // Toolbar RINGKAS — hindari tumpukan
       const q = new Quill(target, {
         theme: 'snow',
         placeholder: placeholder || '',
@@ -11569,12 +10813,9 @@
       setTimeout(attachEqButtonsToOpsi, 80);
     });
 
-    const _origRenderBsOpsiBox = null; // marker
+    const _origRenderBsOpsiBox = null;
 
-
-    // Equation / media helpers
-    // ========== EQUATION PANEL (seperti Word) ==========
-    let _eqTarget = 'main'; // 'main' | mini editor id
+    let _eqTarget = 'main';
 
     const EQ_TEMPLATES = {
       fraction: [
@@ -11736,12 +10977,9 @@
 
     document.getElementById('btnBsEq')?.addEventListener('click', () => openEquationPanel('main'));
 
-    // Tombol equation juga di area opsi (event delegation)
     document.getElementById('bsOpsiBox')?.addEventListener('click', (e) => {
-      // tidak perlu — equation dari toolbar utama / tombol ∑
     });
 
-    // Equation → gambar murni (MathJax SVG / canvas) — tanpa angka residu
     function waitMathJax(timeoutMs) {
       return new Promise((resolve) => {
         if (window.MathJax && MathJax.tex2svgPromise) return resolve(true);
@@ -11757,7 +10995,6 @@
     }
 
     async function latexToImageDataUrl(latex) {
-      // 1) MathJax → pure SVG paths (paling bersih)
       const ok = await waitMathJax(3000);
       if (ok) {
         try {
@@ -11765,10 +11002,8 @@
           const svg = node.querySelector('svg');
           if (svg) {
             svg.setAttribute('xmlns', 'http://www.w3.org/2000/svg');
-            // ukuran wajar di editor
             const w = parseFloat(svg.getAttribute('width') || '0') || 40;
             const h = parseFloat(svg.getAttribute('height') || '0') || 20;
-            // MathJax width often in ex
             if (String(svg.getAttribute('width') || '').includes('ex')) {
               svg.style.height = '1.4em';
               svg.style.width = 'auto';
@@ -11779,24 +11014,19 @@
         } catch (e) { console.warn('MathJax svg', e); }
       }
 
-      // 2) Fallback: KaTeX di canvas via SVG foreignObject digambar... skip
-      // 3) Fallback terakhir: KaTeX HTML → temp → try draw (tidak ideal)
       if (typeof katex !== 'undefined') {
         try {
           const holder = document.createElement('div');
           holder.style.cssText = 'position:fixed;left:-9999px;top:0;font-size:22px;padding:4px 6px;background:#fff;display:inline-block;';
           document.body.appendChild(holder);
           katex.render(latex, holder, { throwOnError: false, displayMode: false });
-          // rasterize with SVG foreignObject still may fail in Quill — gunakan unicode approximation
           const plain = holder.textContent || latex;
           document.body.removeChild(holder);
-          // Buat SVG teks sederhana tanpa digit ganda
           const escTex = String(latex).replace(/&/g,'&amp;').replace(/</g,'&lt;');
           const svg =
             '<svg xmlns="http://www.w3.org/2000/svg" height="28" width="' + Math.max(40, latex.length * 10) + '">' +
             '<text x="2" y="20" font-size="16" font-family="serif">' + escTex + '</text></svg>';
-          // Better: return katex as pure image using html-to-nothing
-          return null; // force text insert with markers only if both fail
+          return null;
         } catch (e) {}
       }
       return null;
@@ -11826,7 +11056,6 @@
           targetQuill.insertText(range.index + 1, ' ', 'user');
           targetQuill.setSelection(range.index + 2, 0, 'user');
         } else {
-          // Jangan sisipkan LaTeX mentah (bisa rusak \frac). Gunakan placeholder aman.
           const safe = '⟦' + latex.replace(/\\\\/g, '\\') + '⟧';
           targetQuill.insertText(range.index, safe + ' ', 'user');
           targetQuill.setSelection(range.index + safe.length + 1, 0, 'user');
@@ -11840,7 +11069,6 @@
       closeModal('modalEquation');
     });
 
-    // Tambah tombol ∑ kecil di setiap mini editor via renderBsOpsiBox - handled after render
     function attachEqButtonsToOpsi() {
       document.querySelectorAll('#bsOpsiBox .form-group').forEach(g => {
         if (g.querySelector('.btn-eq-mini')) return;
@@ -11876,7 +11104,6 @@
       const url = prompt('URL video (YouTube / link langsung)');
       if (!url || !bsQuill) return;
       const range = bsQuill.getSelection(true) || { index: bsQuill.getLength() };
-      // embed as link + iframe if youtube
       let embed = url;
       const yt = url.match(/(?:youtu\.be\/|v=)([A-Za-z0-9_-]{6,})/);
       if (yt) {
@@ -11903,7 +11130,6 @@
       const range = bsQuill.getSelection(true) || { index: bsQuill.getLength() };
       bsQuill.clipboard.dangerouslyPasteHTML(range.index, html);
     });
-
 
     let _previewSoalId = null;
     function showBsSoalPreview(r) {
@@ -11945,7 +11171,6 @@
     document.getElementById('btnBsPreviewEdit')?.addEventListener('click', () => {
       closeModal('modalBsPreview');
       if (!_previewSoalId) return;
-      // centang item lalu trigger edit
       document.querySelectorAll('.cb-bs-item').forEach(c => {
         c.checked = String(c.value) === String(_previewSoalId);
       });
@@ -12028,7 +11253,6 @@
             ' · Maks ' + esc(String(r.opsi_b || '10')) + ' MB' +
             (r.opsi_c ? ' · Folder: ' + esc(r.opsi_c) : '') + '</div>';
         }
-        // Kunci admin: ringkas di footer, bukan menumpuk di isi
         if (r.kunci) {
           body += '<div class="bs-kunci-admin"><span>Kunci</span> ' +
             renderMathInHtml(String(r.kunci).replace(/</g, '&lt;')) + '</div>';
@@ -12048,7 +11272,6 @@
           if (e.target.closest('input[type=checkbox]')) return;
           const cb = card.querySelector('.cb-bs-item');
           if (cb) {
-            // toggle
             cb.checked = !cb.checked;
           }
           tbody.querySelectorAll('.bs-soal-card').forEach(c => {
@@ -12064,7 +11287,6 @@
         }
       } catch (e) {}
     }
-
 
     document.getElementById('checkAllBsItem')?.addEventListener('change', function () {
       document.querySelectorAll('#tbodyBsItem .cb-bs-item').forEach(c => { c.checked = this.checked; });
@@ -12150,7 +11372,6 @@
         opsiD = null;
       }
 
-      // Otomatis: gambar base64 → Google Drive (DB hanya simpan URL)
       try {
         const blob = pertanyaan + (opsiA||'') + (opsiB||'') + (opsiC||'') + (opsiD||'') + (kunciVal||'');
         if (/data:image\/(?!svg)/i.test(blob)) {
@@ -12184,7 +11405,6 @@
           throw new Error('bank_id tidak valid (nilai: ' + payload.bank_id + '). Kembali ke daftar → centang bank → klik Soal.');
         }
         if (supabaseClient) {
-          // Pastikan parent ada
           const { data: parent } = await supabaseClient.from('bank_soal').select('id').eq('id', payload.bank_id).maybeSingle();
           if (!parent) {
             throw new Error('Bank soal (id=' + payload.bank_id + ') tidak ditemukan di database. Simpan bank soal dulu, lalu coba lagi.');
@@ -12235,7 +11455,6 @@
       }
     });
 
-    // ----- MONITORING HASIL UJIAN -----
     let dataMonHasil = [];
 
     document.getElementById('btnBsHasil')?.addEventListener('click', async () => {
@@ -12278,9 +11497,7 @@
       const st = String(r.status || 'selesai').toLowerCase();
       if (st === 'timeout') return '0:00';
       if (st === 'selesai') {
-        // tampilkan durasi pengerjaan jika ada start/deadline
         if (r.submitted_at && r.deadline_at) {
-          // sisa saat submit = deadline - submitted (bisa negatif → 0)
           const sisa = Math.floor((new Date(r.deadline_at).getTime() - new Date(r.submitted_at).getTime()) / 1000);
           return monFormatDurasi(sisa) + ' sisa';
         }
@@ -12289,7 +11506,6 @@
         }
         return '-';
       }
-      // sedang ujian
       if (!r.deadline_at) return '-';
       const sisa = Math.floor((new Date(r.deadline_at).getTime() - Date.now()) / 1000);
       if (sisa <= 0) return '0:00';
@@ -12303,7 +11519,6 @@
       const bankId = getCurrentBankId();
       if (!tbody || !bankId) return;
 
-      // Max skor dari item soal
       _monMaxSkor = null;
       try {
         if (supabaseClient) {
@@ -12334,7 +11549,6 @@
         rows = [];
       }
 
-      // Lengkapi kelas kosong dari tabel siswa
       const needKelas = rows.filter(r => !r.kelas && (r.nisn || r.siswa_id));
       if (needKelas.length && supabaseClient) {
         try {
@@ -12366,7 +11580,6 @@
         } catch (e) { console.warn('kelas enrich', e); }
       }
 
-      // Dedup per siswa: prioritaskan selesai > timeout > sedang, lalu terbaru
       const byKey = new Map();
       rows.forEach(r => {
         const key = String(r.siswa_id || r.nisn || r.id);
@@ -12387,7 +11600,6 @@
       });
       rows = [...byKey.values()];
 
-      // Isi filter kelas (jangan reset status)
       const kelasSet = new Set();
       rows.forEach(r => { if (r.kelas) kelasSet.add(String(r.kelas)); });
       const selKelas = document.getElementById('monKelas');
@@ -12468,8 +11680,6 @@
       }
     }
 
-    // Buka Kembali = izinkan ulang (status selesai/timeout → boleh kerjakan lagi: hapus record ATAU set flag)
-    // Sesuai keterangan: jawaban tetap ada dan dapat diubah → set status sedang + buka kembali attempt
     document.getElementById('btnMonBuka')?.addEventListener('click', async () => {
       const ids = getCheckedMon();
       if (!ids.length) { alert('Centang siswa dulu'); return; }
@@ -12481,7 +11691,6 @@
       } catch (e) { alert('Gagal: ' + (e.message || e)); }
     });
 
-    // Selesaikan = paksa selesai
     document.getElementById('btnMonSelesai')?.addEventListener('click', async () => {
       const ids = getCheckedMon();
       if (!ids.length) { alert('Centang siswa dulu'); return; }
@@ -12493,7 +11702,6 @@
       } catch (e) { alert('Gagal: ' + (e.message || e)); }
     });
 
-    // Perpanjang waktu
     document.getElementById('btnMonPerpanjang')?.addEventListener('click', async () => {
       const ids = getCheckedMon();
       if (!ids.length) { alert('Centang siswa dulu'); return; }
@@ -12514,7 +11722,6 @@
       } catch (e) { alert('Gagal: ' + (e.message || e)); }
     });
 
-    // Reset = hapus jawaban, kembali ke awal
     document.getElementById('btnMonReset')?.addEventListener('click', async () => {
       const ids = getCheckedMon();
       if (!ids.length) { alert('Centang siswa dulu'); return; }
@@ -12526,7 +11733,6 @@
       } catch (e) { alert('Gagal: ' + (e.message || e)); }
     });
 
-    // Detail
     document.getElementById('btnMonDetail')?.addEventListener('click', async () => {
       const ids = getCheckedMon();
       if (ids.length !== 1) { alert('Centang tepat 1 siswa untuk Detail'); return; }
@@ -12545,23 +11751,19 @@
           html += '<b>No. ' + (d.nomor || (i + 1)) + '</b> · ' + esc(d.jenis || '') +
             (d.benar === true ? ' · <span style="color:#16a34a;">✓</span>' :
              d.benar === false ? ' · <span style="color:#ef4444;">✗</span>' : ' · <span style="color:#f59e0b;">Esai</span>');
-          // ---- Tampilkan jawaban (teks / file) ----
           let jawHtml = '<span style="color:#94a3b8;">-</span>';
           const jw = d.jawaban;
           if (Array.isArray(jw)) {
             jawHtml = esc(jw.join(', '));
           } else if (jw && typeof jw === 'object') {
-            // Normalisasi URL file (GDrive sering hanya kirim id)
             let fileUrl = jw.url || jw.link || '';
             let fileId = jw.id || jw.fileId || '';
-            // Jika name berupa id Drive (angka/huruf panjang) tanpa url
             if (!fileId && jw.name && /^[a-zA-Z0-9_-]{20,}$/.test(String(jw.name).replace(/\.[a-z0-9]+$/i, ''))) {
               fileId = String(jw.name).replace(/\.[a-z0-9]+$/i, '');
             }
             if (!fileUrl && fileId) {
               fileUrl = 'https://drive.google.com/file/d/' + fileId + '/view';
             }
-            // Preview link (gambar) via Google usercontent
             let previewUrl = '';
             if (fileId) {
               previewUrl = 'https://drive.google.com/uc?export=view&id=' + fileId;
@@ -12587,7 +11789,6 @@
             if (fileUrl) {
               jawHtml += '<div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:8px;">';
               if (isDataUrl) {
-                // data: URL besar membuat tab crash — unduh via blob
                 jawHtml += '<button type="button" class="btn btn-primary mon-dl-local" style="padding:6px 12px;font-size:12px;" data-fname="' +
                   esc(fname) + '">Download file</button>';
               } else {
@@ -12604,14 +11805,12 @@
             }
             if (isImg && (previewUrl || fileUrl)) {
               const src = previewUrl || fileUrl;
-              // simpan data-url di data-attr terpisah agar tombol download bisa ambil
               jawHtml += '<div style="margin-top:4px;"><img src="' + (isDataUrl ? '' : esc(src)) + '" ' +
                 (isDataUrl ? ('data-local-src="1"') : '') +
                 ' alt="preview" class="mon-img-preview" style="max-width:100%;max-height:280px;border-radius:8px;border:1px solid #e2e8f0;background:#fff;" ' +
                 'onerror="this.style.display=\'none\';this.nextElementSibling&&(this.nextElementSibling.style.display=\'block\');">' +
                 '<div style="display:none;font-size:11px;color:#94a3b8;">Preview gambar tidak bisa dimuat. Gunakan Download file.</div></div>';
             }
-            // simpan data url di hidden untuk download (hindari href data: di <a>)
             if (isDataUrl) {
               jawHtml += '<textarea class="mon-local-data" style="display:none;">' +
                 String(fileUrl).replace(/</g, '&lt;') + '</textarea>';
@@ -12622,7 +11821,6 @@
           }
           html += '<div style="margin-top:4px;"><b>Jawaban:</b> ' + jawHtml + '</div>';
           if (d.kunci) {
-            // kunci bisa HTML dari editor — tampilkan aman
             const kRaw = String(d.kunci);
             const kPlain = kRaw.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
             if (kPlain) html += '<div style="margin-top:4px;"><b>Kunci:</b> ' + esc(kPlain) + '</div>';
@@ -12637,7 +11835,6 @@
       }
       document.getElementById('monDetailBody').innerHTML = html;
       document.getElementById('btnMonSaveEsai').dataset.id = r.id;
-      // Local file: set img dari textarea + bind download (aman, tidak crash)
       try {
         const body = document.getElementById('monDetailBody');
         body.querySelectorAll('.mon-img-preview[data-local-src]').forEach((img, idx) => {
@@ -12683,7 +11880,6 @@
       } catch (e) { alert('Gagal: ' + (e.message || e)); }
     });
 
-    // Sinkronisasi ke nilai (best-effort)
     document.getElementById('btnMonSync')?.addEventListener('click', async () => {
       const ids = getCheckedMon();
       if (!ids.length) { alert('Centang siswa yang akan disinkronkan'); return; }
@@ -12695,7 +11891,6 @@
         if (!r || r.skor == null) { fail++; continue; }
         try {
           if (supabaseClient) {
-            // Coba insert ke tabel nilai bila ada
             const payload = {
               nisn: r.nisn,
               nama: r.nama,
@@ -12709,7 +11904,6 @@
             };
             const { error } = await supabaseClient.from('nilai').upsert([payload], { onConflict: 'nisn,mapel,jenis,ke' });
             if (error) {
-              // fallback insert biasa
               const { error: e2 } = await supabaseClient.from('nilai').insert([payload]);
               if (e2) throw e2;
             }
@@ -12723,12 +11917,6 @@
       alert('Sinkronisasi: ' + ok + ' berhasil' + (fail ? ', ' + fail + ' gagal (cek tabel nilai di Supabase)' : ''));
     });
 
-
-
-
-    // ============================================================
-    // NAIK KELAS & KELULUSAN (Pengaturan)
-    // ============================================================
     function nextKelasNama(kelas) {
       const s = String(kelas || '').trim();
       const m = s.match(/^(\d+)(.*)$/);
@@ -12739,14 +11927,13 @@
     }
     function tingkatDariKelas(kelas) {
       const s = String(kelas || '').trim();
-      // 9A, 09B, 9 A, Kelas 9A, IX (abaikan romawi)
       let m = s.match(/(?:^|\s|-)(0?[789])(?![0-9])/);
-      if (m) return String(Number(m[1])); // "09" → "9"
+      if (m) return String(Number(m[1]));
       m = s.match(/^(\d+)/);
       return m ? String(Number(m[1])) : '';
     }
 
-    let _nlMode = 'naik'; // 'naik' | 'lulus'
+    let _nlMode = 'naik';
     let dataNlRows = [];
 
     function setNlMode(mode) {
@@ -12848,7 +12035,6 @@
               '</tr>';
           }).join('');
         } else {
-          // Mode Kelulusan: status per siswa
           if (thead) {
             thead.innerHTML = '<tr>' +
               '<th style="width:36px;"><input type="checkbox" id="checkAllNl"></th>' +
@@ -12900,7 +12086,6 @@
       }));
     }
 
-    // Naikkan kelas
     document.getElementById('btnNlNaik')?.addEventListener('click', async () => {
       if (_nlMode !== 'naik') { alert('Buka mode Naik Kelas terlebih dahulu'); return; }
       const sel = getCheckedNl().filter(x => x.src === 'siswa');
@@ -12949,12 +12134,6 @@
       try { await loadSiswa(); } catch (e) {}
     });
 
-    // ----- Helper: simpan ke tabel lulusan (skema nyata) -----
-    // Kolom lulusan yang ADA di DB:
-    // id, nisn, nama, lp, tmp_lahir, tgl_lahir, tgl_mulai_sekolah, tanggal_lulus,
-    // tahun_lulus, lama_belajar, status_awal, asal_sekolah, created_at,
-    // status_kelulusan, kelas, nama_ayah, nama_ibu, alamat, no_hp, predikat
-    // Siswa: mulai_sekolah (bukan tgl_mulai_sekolah)
     function nlCleanDate(v) {
       if (v == null || v === '') return null;
       const s = String(v).slice(0, 10);
@@ -12975,7 +12154,6 @@
       const lama = hitungLamaBelajar(statusAwal, tglMulai, tl)
         || (statusAwal === 'Siswa Baru' ? '3 Tahun' : null);
       const tahunLulusNum = tl ? Number(String(tl).slice(0, 4)) : null;
-      // HANYA kolom yang ada di tabel lulusan (lihat lulusan_rows.sql)
       return {
         nama: s.nama || null,
         nisn: s.nisn ? String(s.nisn) : null,
@@ -13012,7 +12190,6 @@
         return payload;
       }
 
-      // Duplikat NISN → update
       if (payload.nisn) {
         const { data: existing, error: findErr } = await supabaseClient.from('lulusan')
           .select('id').eq('nisn', String(payload.nisn)).limit(1);
@@ -13023,11 +12200,9 @@
         }
       }
 
-      // Insert tanpa .select() agar tidak gagal jika policy SELECT ketat
       const { error } = await supabaseClient.from('lulusan').insert([payload]);
       if (error) {
         const msg = String(error.message || error);
-        // unique → update
         if (/duplicate|unique|already exists/i.test(msg) && payload.nisn) {
           const { data: ex2 } = await supabaseClient.from('lulusan')
             .select('id').eq('nisn', String(payload.nisn)).limit(1);
@@ -13047,12 +12222,10 @@
         dataSiswa = (dataSiswa || []).filter(x => String(x.id) !== String(siswaId));
         return { mode: 'local-delete' };
       }
-      // 1) Hard delete (gagal jika masih ada nilai/absensi/FK)
       const { error: delErr } = await supabaseClient.from('siswa').delete().eq('id', siswaId);
       if (!delErr) return { mode: 'delete' };
 
       const msg = String(delErr.message || delErr);
-      // 2) Soft: status Alumni — siswa tidak muncul di filter Aktif
       const statusTries = ['Alumni', 'Lulus', 'Tidak Aktif'];
       for (const st of statusTries) {
         const { error: uErr } = await supabaseClient.from('siswa').update({ status: st }).eq('id', siswaId);
@@ -13061,7 +12234,6 @@
       throw delErr;
     }
 
-    // Luluskan — status per siswa dari dropdown baris
     document.getElementById('btnNlLulus')?.addEventListener('click', async () => {
       if (_nlMode !== 'lulus') { alert('Buka mode Kelulusan terlebih dahulu'); return; }
       const sel = getCheckedNl().filter(x => x.src === 'siswa');
@@ -13095,7 +12267,6 @@
       if (!aktifPeriode) {
         try { await loadAktifPeriode(); } catch (e) {}
       }
-      // Pakai tanggal_kelulusan periode; jika kosong → hari ini
       const tglLulus = nlCleanDate(
         aktifPeriode && (aktifPeriode.tanggal_kelulusan || aktifPeriode.tgl_kelulusan)
       ) || todayLocal();
@@ -13149,9 +12320,6 @@
       try { await loadLulusan(); } catch (e) {}
     });
 
-    // ============================================================
-    // ABSENSI + HISTORIS
-    // ============================================================
     async function fetchAbsensiRange(dari, sampai, extraFilter) {
       const f = extraFilter || {};
       async function oneTable(table) {
@@ -13293,13 +12461,6 @@
       }
     });
 
-    // ============================================================
-    // CARI DATA SISWA (Orang Tua) — tabel seperti Rekap
-    // ============================================================
-    // ============================================================
-    // PENGATURAN ABSENSI (syarat naik/lulus) + CEK SYARAT
-    // Tabel DB: pengaturan_absensi (id=1, mulai, akhir, min_hadir)
-    // ============================================================
     const ABSEN_SET_KEY = 'smpn_absensi_syarat';
     const BOBOT_STATUS = { TW: 1, TL: 0.8, Sakit: 0.75, Izin: 0.5, Alpa: 0, Bolos: 0 };
     let _absenSettingsCache = null;
@@ -13329,20 +12490,17 @@
     }
 
     async function loadAbsenSettings() {
-      // 1) DB
       const fromDb = await fetchAbsenSettingsFromDb();
       if (fromDb && fromDb.mulai && fromDb.akhir) {
         _absenSettingsCache = fromDb;
         try { localStorage.setItem(ABSEN_SET_KEY, JSON.stringify(fromDb)); } catch (e) {}
         return fromDb;
       }
-      // 2) localStorage cache
       let s = { mulai: '', akhir: '', minHadir: 80 };
       try {
         const raw = localStorage.getItem(ABSEN_SET_KEY);
         if (raw) s = Object.assign(s, JSON.parse(raw));
       } catch (e) {}
-      // 3) periode aktif
       if (!s.mulai || !s.akhir) {
         try {
           const r = getRentangAbsenAktif();
@@ -13426,13 +12584,11 @@
       return 'Alpa';
     }
 
-    /** Hitung dari baris real absensi+historis dalam rentang seting (unik tanggal+sesi) */
     function hitungSyaratDariRows(rows, mulai, akhir) {
       const map = new Map();
       (rows || []).forEach(r => {
         const tgl = String(r.tanggal || '').slice(0, 10);
         if (!tgl) return;
-        // Ketat: di luar rentang seting → tidak dihitung
         if (mulai && tgl < mulai) return;
         if (akhir && tgl > akhir) return;
         const sesiKey =
@@ -13444,7 +12600,6 @@
           map.set(key, r);
         } else {
           const prev = map.get(key);
-          // prioritaskan record yang ada jam_scan / status hadir
           const score = (x) => (x.jam_scan ? 2 : 0) + (['TW', 'TL'].includes(String(x.status || '').toUpperCase()) ? 1 : 0);
           if (score(r) > score(prev)) map.set(key, r);
         }
@@ -13457,7 +12612,6 @@
         else counts.Alpa++;
       });
       const totalSesi = uniq.length;
-      // verifikasi: jumlah rincian = total sesi
       const sumStatus = Object.values(counts).reduce((a, b) => a + b, 0);
       const hariSet = new Set(uniq.map(r => String(r.tanggal || '').slice(0, 10)));
       let nilaiHadir = 0;
@@ -13507,7 +12661,6 @@
           if (exactNisn) return exactNisn;
           const exactNama = data.find(s => String(s.nama || '').toLowerCase() === q.toLowerCase());
           if (exactNama) return exactNama;
-          // Banyak hasil → tampilkan daftar agar admin memilih
           const box = document.getElementById('syaratSuggest');
           if (box) renderSiswaSuggest(box, data, (s) => {
             const inp = document.getElementById('syaratQ');
@@ -13545,7 +12698,6 @@
       }
       return null;
     }
-
 
     function renderSyaratCard(siswa, hitung, settings) {
       const box = document.getElementById('syaratResult');
@@ -13623,8 +12775,6 @@
           if (empty) empty.textContent = 'Pengaturan absensi belum diisi. Admin: Pengaturan → Arsip Absensi.';
           return;
         }
-        // Sesi dihitung real: dari mulai berlaku s/d HARI INI (bukan sampai akhir seting jika masih di masa depan)
-        // Jumlah sesi = baris unik tanggal+sesi yang benar-benar ada di absensi/historis (fleksibel 1–n per hari)
         const today = todayLocal();
         const dari = settings.mulai;
         let sampai = settings.akhir;
@@ -13652,7 +12802,6 @@
           return;
         }
 
-        // Data real saja: absensi + historis, rentang mulai → min(akhir, hari ini)
         let rows = await fetchAbsensiRange(dari, sampai, {
           tipe: 'siswa',
           ref_id: siswa.id
@@ -13673,7 +12822,6 @@
         });
 
         const hitung = hitungSyaratDariRows(filtered, dari, sampai);
-        // Tampilkan rentang efektif yang dipakai hitung
         const settingsView = Object.assign({}, settings, {
           mulai: dari,
           akhir: sampai,
@@ -13689,7 +12837,6 @@
     }
 
     async function initSyaratNaikPage() {
-      // Guru tidak punya akses menu; tetap amankan
       if (currentRole === 'guru') {
         document.getElementById('syaratSearchCard').style.display = 'none';
         document.getElementById('syaratResult').style.display = 'none';
@@ -13700,11 +12847,9 @@
       if (!aktifPeriode) await loadAktifPeriode();
       const sc = document.getElementById('syaratSearchCard');
       if (currentRole === 'siswa') {
-        // Siswa: tanpa form, langsung hasil
         if (sc) sc.style.display = 'none';
         await jalankanCekSyarat();
       } else {
-        // Admin (dan peran lain yang punya menu): form pencarian
         if (sc) sc.style.display = 'block';
         document.getElementById('syaratResult').style.display = 'none';
         const s = await loadAbsenSettings();
@@ -13752,7 +12897,6 @@
     document.getElementById('cariSiswaQ')?.addEventListener('keydown', (e) => {
       if (e.key === 'Enter') loadCariSiswaRekap();
     });
-    // Fallback delegation (jika elemen diganti)
     document.addEventListener('click', (e) => {
       if (e.target && (e.target.id === 'btnCariSiswaOrtu' || e.target.closest?.('#btnCariSiswaOrtu'))) {
         loadCariSiswaRekap();
@@ -13782,7 +12926,6 @@
           .sort((a, b) => (a.urutan || 0) - (b.urutan || 0));
 
         let rows = await fetchAbsensiRange(dari, sampai, { tipe: 'siswa', namaIlike: q });
-        // Filter lebih ketat: nama mengandung q ATAU kode/nisn exact/contains
         const ql = q.toLowerCase();
         rows = rows.filter(r => {
           const n = String(r.nama || '').toLowerCase();
@@ -13790,7 +12933,6 @@
           return n.includes(ql) || k.includes(ql) || k === ql;
         });
 
-        // Lengkapi kelas dari tabel siswa (absensi sering tanpa kolom kelas)
         const kelasByKode = {};
         try {
           const nisns = [...new Set(rows.map(r => r.kode).filter(Boolean))];
@@ -13828,8 +12970,6 @@
           return;
         }
 
-        // Kelompokkan per tanggal + orang (nama/kode)
-        // Sama seperti rekap: pivot sesi
         const byDayPerson = {};
         rows.forEach(r => {
           const tgl = String(r.tanggal).slice(0, 10);
@@ -13848,7 +12988,6 @@
           }
           const sid = r.sesi_id != null ? String(r.sesi_id) : String(r.sesi_urutan || r.sesi_nama || '');
           byDayPerson[key].sesi[sid] = r;
-          // also by urutan
           if (r.sesi_urutan != null) byDayPerson[key].sesi['u' + r.sesi_urutan] = r;
         });
 
@@ -13856,7 +12995,6 @@
           b.tanggal.localeCompare(a.tanggal) || String(a.nama).localeCompare(String(b.nama))
         );
 
-        // Header seperti rekap
         let head = '<tr><th>No</th><th>Tanggal</th><th>NISN</th><th>Nama</th><th>Kelas</th>';
         sesiList.forEach((s, i) => {
           head += '<th>S' + (s.urutan || (i + 1)) + '</th>';
@@ -13895,12 +13033,8 @@
       }
     }
 
-    // ============================================================
-    // REKAP DATA ABSENSI
-    // ============================================================
     let dataRekap = [];
     let rekapSesiList = [];
-
 
     window._rekapMode = 'edit';
 
@@ -13944,7 +13078,6 @@
       if (!isAdmin) window._rekapMode = 'summary';
       else if (!window._rekapMode) window._rekapMode = 'edit';
       updateRekapModeUI();
-      // Default tanggal = pengaturan absensi (mulai → hari ini), fallback periode
       await loadAktifPeriode();
       const dari = document.getElementById('rekapDari');
       const sampai = document.getElementById('rekapSampai');
@@ -13965,7 +13098,6 @@
       if (sampai && !sampai.value) {
         sampai.value = todayLocal();
       }
-      // isi kelas (+ filter ampua untuk guru)
       const sel = document.getElementById('rekapKelas');
       if (sel) {
         try {
@@ -13979,7 +13111,6 @@
             kelasRows = masterKelas.slice();
             kelas = masterKelas.map(k => k.kelas || k).filter(Boolean);
           }
-          // Guru: hanya kelas diampu
           if (currentRole === 'guru' && currentUserId && supabaseClient) {
             try {
               const { data: gk } = await supabaseClient.from('guru_kelas').select('kelas_id').eq('guru_id', currentUserId);
@@ -13996,7 +13127,6 @@
           if (cur && kelas.includes(cur)) sel.value = cur;
         } catch (e) { console.warn(e); }
       }
-      // Guru: kunci tipe = siswa saja (tidak bisa lihat rekap guru)
       const selTipe = document.getElementById('rekapTipe');
       if (selTipe) {
         if (currentRole === 'guru') {
@@ -14010,7 +13140,6 @@
           if (curT) selTipe.value = curT;
         }
       }
-      // Tabel default kosong — tampil setelah klik Cari
       const tbody = document.getElementById('tbodyRekap');
       if (tbody) {
         tbody.innerHTML = '<tr><td colspan="10" style="text-align:center;padding:16px;color:#94a3b8;">Atur filter lalu klik Cari</td></tr>';
@@ -14019,7 +13148,6 @@
       document.getElementById('infoRekapView') && (document.getElementById('infoRekapView').textContent = '0 data');
       dataRekap = [];
     }
-
 
     function normStatusKey(st) {
       const s = String(st || '').toUpperCase().trim();
@@ -14031,7 +13159,6 @@
       if (s === 'B' || s === 'BOLOS') return 'Bolos';
       if (s === 'IZIN') return 'Izin';
       if (s === 'SAKIT') return 'Sakit';
-      // title case originals
       const t = String(st || '');
       if (/izin/i.test(t)) return 'Izin';
       if (/sakit/i.test(t)) return 'Sakit';
@@ -14041,8 +13168,7 @@
     }
 
     async function renderRekapSummary(tbody, thead, rows, dari, sampai) {
-      // Unik per orang + tanggal + sesi (sama logika Cek Syarat)
-      const seenSesi = new Map(); // personKey|tgl|sesiKey → status record
+      const seenSesi = new Map();
       (rows || []).forEach(r => {
         const tgl = String(r.tanggal || '').slice(0, 10);
         if (dari && tgl < dari) return;
@@ -14089,7 +13215,6 @@
         p.total++;
       });
 
-      // kelas & duk
       try {
         if (supabaseClient) {
           const list = [...byPerson.values()];
@@ -14168,7 +13293,6 @@
       const qNama = (document.getElementById('rekapNama')?.value || '').trim().toLowerCase();
       let kelas = document.getElementById('rekapKelas')?.value || '';
       let tipe = document.getElementById('rekapTipe')?.value || '';
-      // Guru: selalu hanya siswa + kelas diampu
       if (currentRole === 'guru') {
         tipe = 'siswa';
       }
@@ -14185,7 +13309,6 @@
       }
       if (!dari) dari = todayLocal();
       if (!sampai) sampai = dari;
-      // Tulis balik ke input agar jelas rentang yang dipakai
       const elDari = document.getElementById('rekapDari');
       const elSampai = document.getElementById('rekapSampai');
       if (elDari) elDari.value = dari;
@@ -14232,33 +13355,25 @@
           }
         }
 
-        // JANGAN materialize massal seluruh rentang (itu yang bikin ratusan Alpa palsu).
-        // Materialize hanya hari ini jika hari ini ada di rentang filter.
         if (!skipMaterialize) {
           const today = todayLocal();
           if (today >= dari && today <= sampai && !isTanggalLibur(today)) {
-            // Background — jangan blokir rekap
             Promise.resolve()
               .then(() => materializeAbsensiForDate(today))
               .catch(e => console.warn('mat today', e));
           }
         }
 
-        // Data dari absensi aktif + historis (filter tanggal ketat)
-        // Guru: paksa tipe siswa
         let rows = await fetchAbsensiRange(dari, sampai, { tipe: tipe || undefined });
-        // Pastikan filter tanggal di sisi klien juga (jaga-jaga tipe data)
         rows = (rows || []).filter(r => {
           const t = String(r.tanggal || '').slice(0, 10);
           return (!dari || t >= dari) && (!sampai || t <= sampai);
         });
 
-        // Guru: tidak boleh lihat absensi guru
         if (currentRole === 'guru') {
           rows = rows.filter(r => r.tipe === 'siswa');
         }
 
-        // Kelas yang diizinkan (guru = hanya diampu)
         let allowedKelasNames = null;
         if (currentRole === 'guru' && currentUserId && supabaseClient) {
           try {
@@ -14276,10 +13391,8 @@
           }
         }
 
-        // Filter kelas via daftar siswa
         let kelasIds = null;
         if (kelas && supabaseClient) {
-          // Jika guru pilih kelas di luar ampua — kosongkan
           if (allowedKelasNames && !allowedKelasNames.has(kelas)) {
             kelasIds = new Set();
           } else {
@@ -14287,7 +13400,6 @@
             kelasIds = new Set((sk || []).map(s => Number(s.id)));
           }
         } else if (allowedKelasNames && supabaseClient) {
-          // Semua kelas diampu
           const list = [...allowedKelasNames];
           if (list.length) {
             const { data: sk } = await supabaseClient.from('siswa').select('id, kelas').in('kelas', list);
@@ -14310,7 +13422,6 @@
           rows = rows.filter(r => r.tipe === tipe);
         }
 
-        // Pivot satu baris = satu orang + satu tanggal (tanpa dobel)
         const map = new Map();
         rows.forEach(r => {
           const rid = Number(r.ref_id);
@@ -14329,7 +13440,6 @@
           }
           const item = map.get(key);
           if (r.id && !item.ids.includes(r.id)) item.ids.push(r.id);
-          // match sesi (id / nama / urutan) — sama dengan dashboard
           rekapSesiList.forEach(s => {
             if (!matchSesi(r, s)) return;
             const prev = item.sesi[s.id];
@@ -14339,7 +13449,6 @@
           });
         });
 
-        // Lengkapi kelas (siswa) + duk (guru) untuk urutan
         try {
           if (supabaseClient) {
             const siswaRefs = [...new Set(Array.from(map.values()).filter(x => x.tipe === 'siswa').map(x => x.ref_id).filter(Boolean))];
@@ -14363,7 +13472,6 @@
         } catch (e) { console.warn('enrich kelas/duk', e); }
 
         dataRekap = Array.from(map.values()).sort((a, b) => {
-          // urut: guru dulu (id), lalu siswa (kelas), lalu tanggal desc, nama
           if (a.tipe !== b.tipe) return a.tipe === 'guru' ? -1 : 1;
           if (a.tipe === 'guru') {
             const ia = Number(a.ref_id) || 0, ib = Number(b.ref_id) || 0;
@@ -14376,7 +13484,6 @@
           return String(a.nama || '').localeCompare(String(b.nama || ''), 'id');
         });
 
-        // Mode summary (Rekap Absensi) atau edit
         const mode = (currentRole !== 'admin') ? 'summary' : (window._rekapMode || 'edit');
         if (mode === 'summary') {
           renderRekapSummary(tbody, thead, rows, dari, sampai);
@@ -14569,19 +13676,16 @@
           const refId = Number(b.dataset.ref);
           const ids = String(b.value || '').split(',').map(Number).filter(n => !isNaN(n) && n);
 
-          // Catat agar materialize tidak mengisi ulang
           if (tgl && tipe && refId) {
             _rekapDeletedKeys.add(rekapPersonKey(tgl, tipe, refId));
           }
 
-          // Prefer hapus by id
           if (ids.length) {
             const { data, error } = await supabaseClient.from('absensi').delete().in('id', ids).select('id');
             if (error) errors.push(error.message);
             else deleted += (data || []).length;
           }
 
-          // Pastikan semua sesi hari itu ikut terhapus
           if (tgl && tipe && refId) {
             const { data, error } = await supabaseClient.from('absensi').delete()
               .eq('tanggal', tgl).eq('tipe', tipe).eq('ref_id', refId).select('id');
@@ -14604,9 +13708,6 @@
       }
     });
 
-    // ============================================================
-    // INPUT IZIN / SAKIT
-    // ============================================================
     let dataIzinHariIni = [];
     let izinFilterQ = '';
     let izinFilterStatus = '';
@@ -14621,7 +13722,6 @@
       if (lp) lp.textContent = aktifPeriode
         ? (aktifPeriode.tahun_ajaran + ' || ' + aktifPeriode.semester) : 'Belum ada periode aktif';
       if (lt) lt.textContent = today;
-      // isi dropdown sesi
       const sel = document.getElementById('izinSesi');
       if (sel) {
         const list = (dataSesi || []).filter(s => s.aktif !== false).sort((a,b)=>(a.urutan||0)-(b.urutan||0));
@@ -14630,7 +13730,6 @@
               esc(s.nama) + ' (' + String(s.jam_mulai||'').slice(0,5) + '–' + String(s.jam_akhir||'').slice(0,5) + ')</option>').join('')
           : '<option value="">Tidak ada sesi</option>';
       }
-      // Guru: hanya siswa (form + filter)
       const selTipe = document.getElementById('izinTipe');
       const filterTipe = document.getElementById('filterIzinTipe');
       if (currentRole === 'guru') {
@@ -14766,7 +13865,6 @@
       openModal('modalIzin');
     });
 
-    // Live search user
     let _izinSearchTimer = null;
     document.getElementById('izinCariUser')?.addEventListener('input', function () {
       clearTimeout(_izinSearchTimer);
@@ -14871,7 +13969,6 @@
       };
       try {
         if (supabaseClient) {
-          // Cegah duplikat sesi yang sama
           const { data: dup } = await supabaseClient.from('absensi').select('id, status')
             .eq('tanggal', today).eq('sesi_id', Number(sesiId)).eq('kode', kode).maybeSingle();
           if (dup) {
@@ -14909,11 +14006,7 @@
       }
     });
 
-
     
-    // ============================================================
-    // PENGUMUMAN KELULUSAN (Siswa / Orang Tua — hanya kelas 9)
-    // ============================================================
     function predikatColor(p) {
       const u = String(p || '').toUpperCase();
       if (u === 'MEMUASKAN') return '#2563eb';
@@ -14927,7 +14020,6 @@
       if (currentRole !== 'siswa') return '';
       try {
         if (supabaseClient) {
-          // Siswa aktif
           if (currentUserId && !currentUserIsAlumni) {
             const { data } = await supabaseClient.from('siswa').select('kelas, nisn, nama').eq('id', currentUserId).maybeSingle();
             if (data) {
@@ -14936,7 +14028,6 @@
               return String(data.kelas || '');
             }
           }
-          // Alumni: cari di lulusan by NISN atau id
           if (currentUserKode || currentUserId) {
             let q = supabaseClient.from('lulusan').select('kelas, nisn, nama');
             if (currentUserKode) q = q.eq('nisn', String(currentUserKode));
@@ -14954,8 +14045,6 @@
       return String(currentUserKelas || '');
     }
 
-
-    /** Format Date → value datetime-local (YYYY-MM-DDTHH:MM) lokal */
     function toDatetimeLocalValue(d) {
       if (!d || isNaN(d.getTime())) return '';
       const pad = n => String(n).padStart(2, '0');
@@ -14963,16 +14052,13 @@
         'T' + pad(d.getHours()) + ':' + pad(d.getMinutes());
     }
 
-    /** Parse ISO / datetime-local / date string → Date lokal */
     function parseLocalDateTime(v) {
       if (!v) return null;
       const s = String(v).trim();
-      // datetime-local: 2027-07-05T09:00
       let m = s.match(/^(\d{4})-(\d{2})-(\d{2})[T ](\d{2}):(\d{2})(?::(\d{2}))?/);
       if (m) {
         return new Date(+m[1], +m[2] - 1, +m[3], +m[4], +m[5], +(m[6] || 0));
       }
-      // date only
       m = s.match(/^(\d{4})-(\d{2})-(\d{2})$/);
       if (m) return new Date(+m[1], +m[2] - 1, +m[3], 0, 0, 0);
       const d = new Date(s);
@@ -14987,11 +14073,6 @@
         ' pukul ' + pad(d.getHours()) + ':' + pad(d.getMinutes());
     }
 
-    /**
-     * Ambil rentang pengumuman dari periode aktif.
-     * Kolom DB: pengumuman_mulai, pengumuman_akhir (timestamptz/text)
-     * Fallback: tanggal_kelulusan 09:00 → +2 hari 23:59
-     */
     function getJadwalPengumuman(periode) {
       const p = periode || {};
       let mulai = parseLocalDateTime(p.pengumuman_mulai || p.pg_mulai || p.pengumuman_buka);
@@ -15023,11 +14104,6 @@
       return { ok: true, reason: 'buka', mulai, akhir };
     }
 
-    /**
-     * Aturan menu terkait jadwal pengumuman:
-     * - Validasi Data Lulusan disembunyikan (non-admin) dari H-2 mulai s/d H+1 setelah berakhir
-     * - Alumni: hanya Dashboard + Pengumuman Kelulusan (+ Validasi jika di luar jendela hide)
-     */
     function getMenuJadwalFlags(periode, now) {
       const n = now || new Date();
       const { mulai, akhir } = getJadwalPengumuman(periode || aktifPeriode || {});
@@ -15065,7 +14141,6 @@
       const isAdmin = currentRole === 'admin';
       const isAlumni = !!currentUserIsAlumni && currentRole === 'siswa';
 
-      // Alumni: sembunyikan semua menu siswa kecuali pengumuman + validasi
       const alumniAllowed = new Set(['kelulusan', 'validasi-lulusan']);
       document.querySelectorAll('.menu-group[data-role="siswa"] .menu-item').forEach(btn => {
         const page = btn.getAttribute('data-page') || '';
@@ -15076,7 +14151,6 @@
         }
       });
 
-      // Validasi: sembunyi non-admin di jendela H-2 s/d H+1
       document.querySelectorAll('.menu-item[data-page="validasi-lulusan"]').forEach(btn => {
         if (isAdmin) {
           btn.style.display = '';
@@ -15087,22 +14161,18 @@
         } else if (isAlumni) {
           btn.style.display = '';
         } else if (currentRole === 'siswa') {
-          // Siswa aktif (bukan alumni): validasi tetap tersedia di luar jendela hide
           btn.style.display = '';
         } else {
-          // Guru dll: biarkan mengikuti grup menu (biasanya tidak punya item ini)
           btn.style.display = '';
         }
       });
 
-      // Jika user sedang di halaman yang disembunyikan, arahkan aman
       try {
         const hash = (location.hash || '').replace('#', '') || 'dashboard';
         if (hash === 'validasi-lulusan' && !isAdmin && flags.hideValidasi) {
           if (typeof showPage === 'function') showPage(isAlumni ? 'kelulusan' : 'dashboard', false);
         }
         if (isAlumni && hash && !alumniAllowed.has(hash) && hash !== 'dashboard' && hash !== 'kelulusan' && hash !== 'validasi-lulusan') {
-          // Jangan paksa keluar dari halaman profil internal; hanya menu siswa umum
           const blockedAlumniPages = ['cari-siswa','sidik-jari','syarat-naik','tugas-ujian','nilai-saya','kerjakan-ujian'];
           if (blockedAlumniPages.includes(hash) && typeof showPage === 'function') {
             showPage('kelulusan', false);
@@ -15125,14 +14195,12 @@
       if (result) result.style.display = 'none';
       if (loading) loading.style.display = 'none';
 
-      // Form cari: admin (seperti Lihat Nilai Saya / Cek Syarat)
       if (searchCard) {
         searchCard.style.display = (currentRole === 'admin') ? 'block' : 'none';
       }
 
       try {
         if (currentRole === 'admin') {
-          // Admin: tampilkan form, tunggu pencarian (atau jalankan jika sudah ada query)
           const q = (document.getElementById('pgCariQ')?.value || '').trim();
           if (!q) {
             if (empty) {
@@ -15154,7 +14222,6 @@
           return;
         }
 
-        // Siswa: proses otomatis data sendiri
         if (loading) loading.style.display = 'block';
         await jalankanPengumumanKelulusan({ isAdmin: false });
       } catch (e) {
@@ -15181,7 +14248,6 @@
       if (loading) loading.style.display = 'block';
 
       try {
-        // Siswa aktif: batasi kelas 7 & 8 (admin & alumni bebas)
         if (!isAdmin && currentRole === 'siswa' && !currentUserIsAlumni) {
           const kelas = await resolveKelasSiswaLogin();
           const tingkat = tingkatDariKelas(kelas);
@@ -15201,7 +14267,6 @@
         const skNo = (aktifPeriode && (aktifPeriode.sk_kelulusan || PERIODE_DUMMY?.sk_kelulusan)) || '-';
         const ta = (aktifPeriode && aktifPeriode.tahun_ajaran) || '-';
 
-        // Jadwal buka/tutup: siswa wajib; admin boleh preview kapan saja
         if (!isAdmin) {
           const akses = cekAksesPengumuman(aktifPeriode);
           if (!akses.ok) {
@@ -15225,12 +14290,10 @@
           }
         }
 
-        // Cari data lulusan
         let found = null;
         const qSearch = String(opts.q || '').trim();
 
         if (isAdmin && qSearch) {
-          // Admin: cari by NISN / nama
           if (supabaseClient) {
             const isNisn = /^\d{5,}$/.test(qSearch);
             let query = supabaseClient.from('lulusan').select('*');
@@ -15262,7 +14325,6 @@
             }
           }
         } else {
-          // Siswa: by NISN / nama login
           const nisn = currentUserKode || '';
           if (supabaseClient) {
             if (nisn) {
@@ -15304,7 +14366,6 @@
           return;
         }
 
-        // Render pengumuman
         const st = found.status_kelulusan || found.status_lulus || 'Lulus';
         const pred = String(found.predikat || '').toUpperCase() || 'BAIK';
         const predCol = predikatColor(pred);
@@ -15337,7 +14398,6 @@
           predLine.innerHTML = '';
         }
 
-        // Info rentang jadwal
         const aksesOk = cekAksesPengumuman(aktifPeriode);
         let infoJadwal = document.getElementById('pgJadwalInfo');
         if (!infoJadwal && result) {
@@ -15388,9 +14448,6 @@
       }
     });
 
-
-
-    // ========== VALIDASI DATA LULUSAN ==========
     function fmtTglId(v) {
       if (!v) return '-';
       const s = String(v).slice(0, 10);
@@ -15428,7 +14485,6 @@
         let rows = [];
         if (supabaseClient) {
           let query = supabaseClient.from('lulusan').select('*');
-          // Cari by NISN exact atau nama ilike
           const isNisn = /^\d{5,}$/.test(q);
           if (isNisn) {
             query = query.or('nisn.eq.' + q + ',nama.ilike.%' + q + '%');
@@ -15456,7 +14512,6 @@
           });
         }
 
-        // Prefer exact NISN match
         let found = null;
         if (rows.length === 1) found = rows[0];
         else if (rows.length > 1) {
@@ -15510,11 +14565,8 @@
       if (e.key === 'Enter') jalankanValidasiLulusan();
     });
 
-    // ========== RESET PIN (Admin) ==========
     let _dataRpGuru = [];
 
-
-    // ========== INTEGRASI GDRIVE (Pengaturan) ==========
     function initGdriveSettingsPage() {
       const ep = document.getElementById('gdEndpoint');
       const fd = document.getElementById('gdFolderId');
@@ -15528,7 +14580,6 @@
           st.innerHTML = '<span style="color:#a16207;">Endpoint masih kosong — file memakai Supabase Storage / fallback lokal</span>';
         }
       }
-      // refresh from DB in background
       loadGdriveSettingsFromDb().then(() => {
         if (ep) ep.value = GDRIVE_UPLOAD_ENDPOINT || '';
         if (fd) fd.value = GDRIVE_DEFAULT_FOLDER_ID || '';
@@ -15569,10 +14620,8 @@
       }
       if (st) st.textContent = 'Menguji upload ke Google Drive...';
       try {
-        // tiny test file
         const blob = new Blob(['tes-integrasi-gdrive-smpn'], { type: 'text/plain' });
         const file = new File([blob], 'tes-gdrive-smpn.txt', { type: 'text/plain' });
-        // temporarily use form values
         const prevE = GDRIVE_UPLOAD_ENDPOINT;
         const prevF = GDRIVE_DEFAULT_FOLDER_ID;
         GDRIVE_UPLOAD_ENDPOINT = endpoint;
@@ -15594,32 +14643,12 @@
         alert('Tes gagal: ' + (e.message || e));
       }
     });
-
-    document.getElementById('btnGdCopyScript')?.addEventListener('click', async () => {
-      const pre = document.getElementById('gdScriptSample');
-      const t = pre ? pre.textContent : '';
-      try {
-        await navigator.clipboard.writeText(t);
-        alert('Script disalin ke clipboard. Tempel di script.google.com');
-      } catch (e) {
-        // fallback
-        const ta = document.createElement('textarea');
-        ta.value = t;
-        document.body.appendChild(ta);
-        ta.select();
-        try { document.execCommand('copy'); alert('Script disalin.'); }
-        catch (e2) { alert('Salin manual dari kotak kode.'); }
-        ta.remove();
-      }
-    });
-
-    async function initResetPinPage() {
+async function initResetPinPage() {
       if (currentRole !== 'admin') {
         const tbody = document.getElementById('tbodyRpGuru');
         if (tbody) tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;padding:16px;color:#ef4444;">Hanya Admin</td></tr>';
         return;
       }
-      // Info admin login
       const elNama = document.getElementById('rpAdminNama');
       const elUser = document.getElementById('rpAdminUser');
       if (elNama) elNama.textContent = currentUserName || 'Admin';
@@ -15700,7 +14729,6 @@
       const ulang = prompt('Ulangi PIN baru:', '');
       if (ulang == null) return;
       if (String(ulang).trim() !== p) { alert('PIN tidak cocok'); return; }
-      // Cek unik
       try {
         if (supabaseClient) {
           const { data: clash } = await supabaseClient.from('guru').select('id').eq('pin', p).neq('id', id).maybeSingle();
@@ -15743,10 +14771,6 @@
       }
     });
 
-
-
-        // Inisialisasi
-    // 1. Restore sesi login dari localStorage (agar refresh tidak logout)
     (function restoreSession() {
       const ses = loadSession();
       if (ses && ses.role && ses.role !== 'guest' && ROLE_DATA[ses.role]) {
@@ -15759,18 +14783,14 @@
         if (currentUserIsAlumni && ses.role === 'siswa') {
           ROLE_DATA.siswa.label = 'Alumni';
         }
-        applyRole(ses.role, true); // skipRedirect → tetap di halaman hash saat ini
+        applyRole(ses.role, true);
       }
     })();
 
-    // 2. Buka halaman sesuai hash URL
     initFromHash();
-    // Muat dashboard jika di halaman utama
     if (currentPage === 'dashboard') loadDashboard();
-    // Refresh aturan menu (alumni / validasi vs jadwal pengumuman)
     setTimeout(() => { try { refreshMenuVisibility(); } catch (e) {} }, 500);
 
-    // 3. Pasang trap tombol back
     rearmTrap();
   </script>
 </body>
