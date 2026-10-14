@@ -8959,11 +8959,26 @@
         }
       }
 
+      // Loading UI segera (hindari kesan hang)
+      try {
+        const areaWait = document.getElementById('tuSoalArea');
+        if (areaWait) areaWait.innerHTML = '<div style="text-align:center;padding:28px;color:#94a3b8;">Memuat soal...</div>';
+        const jt = document.getElementById('tuJudulKerjakan');
+        if (jt) jt.textContent = bank.judul || 'Ujian';
+        showPage('kerjakan-ujian', true);
+      } catch (e0) {}
+
       let soals = [];
       try {
         if (supabaseClient) {
-          const { data, error } = await supabaseClient.from('bank_soal_item')
-            .select('*').eq('bank_id', bankId).order('nomor');
+          let { data, error } = await supabaseClient.from('bank_soal_item')
+            .select('id, bank_id, nomor, jenis, pertanyaan, opsi_a, opsi_b, opsi_c, opsi_d, kunci, skor')
+            .eq('bank_id', bankId).order('nomor');
+          if (error) {
+            const retry = await supabaseClient.from('bank_soal_item')
+              .select('*').eq('bank_id', bankId).order('nomor');
+            data = retry.data; error = retry.error;
+          }
           if (error) throw error;
           soals = data || [];
         } else {
@@ -9165,9 +9180,11 @@
     async function uploadJawabanFile(file, meta) {
 
       meta = meta || {};
-      // Pastikan settings terbaru (siswa butuh dari DB, bukan hanya localStorage admin)
-      try { await loadGdriveSettingsFromDb(); } catch (e) {}
+      // Settings: local dulu; DB hanya jika endpoint masih kosong
       try { loadGdriveSettingsSync(); } catch (e) {}
+      if (!GDRIVE_UPLOAD_ENDPOINT) {
+        try { await loadGdriveSettingsFromDb(); } catch (e) {}
+      }
       const { dataUrl, base64 } = await fileToBase64(file);
       const safeName = String(file.name || 'file').replace(/[^\w.\-()+ ]+/g, '_');
       const pathPrefix = ['jawaban', meta.bankId || 'x', meta.soalId || 'x', meta.nisn || meta.siswaId || 'anon', Date.now()].join('_');
@@ -9294,7 +9311,10 @@
       html += '<span style="background:#f1f5f9;padding:2px 8px;border-radius:6px;">' +
         esc(s.jenis || 'Pilihan Ganda') + '</span>';
       html += '<span style="margin-left:auto;">Skor: ' + (s.skor || 1) + '</span></div>';
-      html += '<div class="bs-soal-card-body">' + (typeof renderMathInHtml === 'function' ? renderMathInHtml(s.pertanyaan) : s.pertanyaan) + '</div>';
+      let _qHtml = (typeof renderMathInHtml === 'function' ? renderMathInHtml(s.pertanyaan) : (s.pertanyaan || ''));
+      // Lazy-load gambar agar pindah soal tidak lemot
+      _qHtml = String(_qHtml).replace(/<img(?![^>]*loading=)/gi, '<img loading="lazy" decoding="async"');
+      html += '<div class="bs-soal-card-body">' + _qHtml + '</div>';
 
       const jenis = s.jenis || 'Pilihan Ganda';
       const ans = _tuAnswers[s.id];
@@ -10406,28 +10426,22 @@
             );
           }
           const uid = Number(currentUserId);
-          const before = rows.length;
           rows = rows.filter(r => {
-            // 1) Bank yang dibuat guru ini (kolom guru_id)
+            // Bank milik guru ini selalu tampil
             if (r.guru_id != null && Number(r.guru_id) === uid) return true;
-            // 2) Tanpa data ampuan: tampilkan semua agar tidak "hilang"
-            //    (admin perlu set Mapel/Kelas diampu di Data Guru)
-            if (!hasAmpuan) return true;
-            // 3) Cocok mapel diampu
+            // Tanpa data ampuan → jangan tampilkan bank orang lain
+            if (!hasAmpuan) return false;
+            // Cocok mapel diampu
             const nm = String(r.mapel || '').trim().toLowerCase();
-            if (allowedMapelNames.size && !allowedMapelNames.has(nm)) return false;
-            // 4) Cocok salah satu kelas diampu (case-insensitive)
+            if (allowedMapelNames.size && nm && !allowedMapelNames.has(nm)) return false;
+            if (allowedMapelNames.size && !nm) return false;
+            // Cocok minimal 1 kelas diampu
             if (allowedKelas.size) {
-              const kls = String(r.kelas || '').split(/[,;]/).map(x => x.trim().toLowerCase()).filter(Boolean);
-              if (!kls.length) return true;
-              return kls.some(k => allowedKelas.has(k));
+              const kls = String(r.kelas || '').split(/[,;|]/).map(x => x.trim().toLowerCase()).filter(Boolean);
+              if (kls.length && !kls.some(k => allowedKelas.has(k))) return false;
             }
             return true;
           });
-          // Info di console jika ampuan kosong
-          if (!hasAmpuan && before) {
-            console.info('Guru belum punya mapel/kelas diampu (guru_mapel/guru_kelas). Menampilkan semua bank. Atur di Admin → Data Guru.');
-          }
         } catch (e) {
           console.warn('filter bank guru', e);
         }
@@ -10551,8 +10565,7 @@
         kelasList = ['7A','7B','7C','7D','8A','8B','8C','8D','9A','9B','9C','9D'];
       }
 
-      // Guru: batasi ke mapel & kelas yang diampu (jika sudah di-set di guru_mapel/guru_kelas)
-      // Jika belum di-set → tampilkan semua agar guru tetap bisa membuat bank
+      // Guru: HANYA mapel & kelas yang diampu (guru_mapel / guru_kelas)
       if (currentRole === 'guru' && currentUserId && supabaseClient) {
         try {
           const [gm, gk] = await Promise.all([
@@ -10563,31 +10576,38 @@
           const kelasIds = (gk.data || []).map(r => Number(r.kelas_id));
           if (mapelIds.length) {
             mapelList = mapelList.filter(m => mapelIds.includes(Number(m.id)));
+          } else {
+            mapelList = [];
           }
-          // mapelIds kosong → biarkan mapelList penuh (semua mapel)
           if (kelasIds.length && kelasRows.length) {
             const allowed = new Set(
               kelasRows.filter(k => kelasIds.includes(Number(k.id)))
                 .map(k => String(k.kelas || k.nama || '').trim())
                 .filter(Boolean)
             );
-            // juga izinkan match case-insensitive
             const allowedLow = new Set([...allowed].map(x => x.toLowerCase()));
             kelasList = kelasList.filter(k =>
               allowed.has(k) || allowedLow.has(String(k).toLowerCase())
             );
+          } else {
+            kelasList = [];
           }
-          // kelasIds kosong → biarkan kelasList penuh
         } catch (e) {
           console.warn('Filter ampua guru bank soal', e);
+          mapelList = [];
+          kelasList = [];
         }
       }
 
-      selM.innerHTML = '<option value="">- Pilih Mapel -</option>' +
-        mapelList.map(m => {
-          const nama = m.mapel || m.nama || m.kode || '';
-          return '<option value="' + esc(nama) + '">' + esc(nama) + (m.kode ? ' (' + esc(m.kode) + ')' : '') + '</option>';
-        }).join('');
+      if (!mapelList.length && currentRole === 'guru') {
+        selM.innerHTML = '<option value="">- Belum ada mapel diampu -</option>';
+      } else {
+        selM.innerHTML = '<option value="">- Pilih Mapel -</option>' +
+          mapelList.map(m => {
+            const nama = m.mapel || m.nama || m.kode || '';
+            return '<option value="' + esc(nama) + '">' + esc(nama) + (m.kode ? ' (' + esc(m.kode) + ')' : '') + '</option>';
+          }).join('');
+      }
 
       // unique sort
       kelasList = [...new Set(kelasList)].sort((a, b) => String(a).localeCompare(String(b), 'id', { numeric: true }));
@@ -10597,7 +10617,7 @@
           '<label style="display:flex;align-items:center;gap:4px;font-size:12px;cursor:pointer;">' +
           '<input type="checkbox" class="cb-bs-kelas" value="' + esc(k) + '"> ' + esc(k) + '</label>'
         ).join('')
-        : '<span style="font-size:12px;color:#94a3b8;">Tidak ada kelas diampu</span>';
+        : '<span style="font-size:12px;color:#b45309;">Belum ada kelas diampu. Minta admin atur di Data Guru.</span>';
     }
 
     function getBsKelasChecked() {
