@@ -2698,7 +2698,7 @@
 
   </main>
 <footer class="footer">
-    © 2026 SMPN PANTANG MUNDUR * <span style="opacity:.7">· v2026.10.08d</span>
+    © 2026 SMPN PANTANG MUNDUR * <span style="opacity:.7">· v2026.10.15a</span>
   </footer>
 <div class="modal-overlay" id="modalLogin">
     <div class="modal">
@@ -6498,9 +6498,13 @@
 
     function matchSesi(record, ses) {
       if (!record || !ses) return false;
-      if (record.sesi_id != null && ses.id != null && Number(record.sesi_id) === Number(ses.id)) return true;
-      if (record.sesi_nama && ses.nama && String(record.sesi_nama).trim() === String(ses.nama).trim()) return true;
+      if (record.sesi_id != null && ses.id != null && String(ses.id).indexOf('x') !== 0 && Number(record.sesi_id) === Number(ses.id)) return true;
       if (record.sesi_urutan != null && ses.urutan != null && Number(record.sesi_urutan) === Number(ses.urutan)) return true;
+      if (record.sesi_nama && ses.nama) {
+        const a = String(record.sesi_nama).trim().toLowerCase().replace(/\s+/g, '');
+        const b = String(ses.nama).trim().toLowerCase().replace(/\s+/g, '');
+        if (a && b && a === b) return true;
+      }
       return false;
     }
 
@@ -13450,7 +13454,9 @@ document.getElementById('btnBsContohFormat')?.addEventListener('click', () => {
           fetchFilter.ref_id = Number(selId);
           if (!fetchFilter.tipe) fetchFilter.tipe = 'siswa';
         } else if (qRaw) {
-          fetchFilter.namaIlike = qRaw;
+          // NISN/NIP murni angka → exact kode (lebih akurat & lengkap)
+          if (/^\d{5,}$/.test(qRaw)) fetchFilter.kode = qRaw;
+          else fetchFilter.namaIlike = qRaw;
         }
         let rows = await fetchAbsensiRange(dari, sampai, fetchFilter);
         rows = (rows || []).filter(r => {
@@ -13509,6 +13515,49 @@ document.getElementById('btnBsContohFormat')?.addEventListener('click', () => {
         if (tipe) {
           rows = rows.filter(r => r.tipe === tipe);
         }
+
+        // Kolom sesi = master aktif + semua sesi yang muncul di data (mis. Sesi 3 historis)
+        // agar jumlah sesi sinkron dengan Cek Syarat
+        {
+          const byKey = new Map();
+          (rekapSesiList || []).forEach(s => {
+            const k = 'u:' + (s.urutan != null ? s.urutan : '') + '|id:' + (s.id != null ? s.id : '');
+            byKey.set(k, s);
+          });
+          (rows || []).forEach(r => {
+            const ur = r.sesi_urutan != null ? Number(r.sesi_urutan) : null;
+            const sid = r.sesi_id != null ? Number(r.sesi_id) : null;
+            const nm = String(r.sesi_nama || '').trim() || ('Sesi ' + (ur || '?'));
+            // skip if already matched existing
+            let found = false;
+            for (const s of byKey.values()) {
+              if (matchSesi(r, s)) { found = true; break; }
+            }
+            if (found) return;
+            const k = 'u:' + (ur != null ? ur : '') + '|id:' + (sid != null ? sid : '') + '|n:' + nm;
+            if (byKey.has(k)) return;
+            byKey.set(k, {
+              id: sid != null ? sid : ('x' + (ur != null ? ur : nm)),
+              nama: nm,
+              urutan: ur != null ? ur : (byKey.size + 1),
+              _fromData: true
+            });
+          });
+          rekapSesiList = [...byKey.values()].sort((a, b) => (a.urutan || 0) - (b.urutan || 0));
+          // rebuild header dengan kolom sesi lengkap
+          let h2 = '<tr>';
+          h2 += '<th><input type="checkbox" id="checkAllRekap"></th>';
+          h2 += '<th>No</th><th>NISN/NIP</th><th>Nama</th>';
+          rekapSesiList.forEach((s, i) => {
+            h2 += '<th style="text-align:center;">S' + (s.urutan != null ? s.urutan : (i + 1)) + '</th>';
+          });
+          h2 += '<th>Tanggal</th></tr>';
+          if (thead) thead.innerHTML = h2;
+          document.getElementById('checkAllRekap')?.addEventListener('change', function () {
+            document.querySelectorAll('.cb-rekap-row').forEach(c => { c.checked = this.checked; });
+          });
+        }
+        const nSesiLive = rekapSesiList.length;
 
         const map = new Map();
         rows.forEach(r => {
