@@ -3006,7 +3006,7 @@
 
   </main>
 <footer class="footer">
-    © 2026 SMPN PANTANG MUNDUR * <span style="opacity:.7">· v2026.10.15p</span>
+    © 2026 SMPN PANTANG MUNDUR * <span style="opacity:.7">· v2026.10.15q</span>
   </footer>
 <div class="modal-overlay" id="modalLogin">
     <div class="modal">
@@ -8077,6 +8077,10 @@
 
     document.getElementById('btnScanHasilOk').addEventListener('click', () => {
       closeModal('modalScanHasil');
+      // izinkan scan berikutnya segera setelah popup ditutup
+      lastScanCode = '';
+      lastScanTime = 0;
+      resumeScanCamera();
     });
 
     let html5QrCode = null;
@@ -8084,27 +8088,49 @@
     let lastScanCode = '';
     let lastScanTime = 0;
     let _scanBusy = false;
-    const _scanPersonCache = new Map(); // kode -> { person, tipe, ts }
+    const _scanPersonCache = new Map();
+
+    function resumeScanCamera() {
+      _scanBusy = false;
+      try {
+        if (html5QrCode && kameraAktif && typeof html5QrCode.resume === 'function') {
+          html5QrCode.resume();
+        }
+      } catch (e) { console.warn('resume scan', e); }
+    }
 
     function onScanSuccessFast(decodedText) {
-      const now = Date.now();
-      const code = String(decodedText || '').trim();
-      if (!code) return;
-      // debounce kode sama (2 dtk) — beda kode boleh segera
-      if (code === lastScanCode && now - lastScanTime < 2000) return;
-      if (_scanBusy) return;
-      lastScanCode = code;
-      lastScanTime = now;
-      try { if (navigator.vibrate) navigator.vibrate(80); } catch (e) {}
-      // jangan await — biar detector tetap jalan
-      _scanBusy = true;
-      Promise.resolve()
-        .then(() => prosesScan(code))
-        .catch(e => console.error('prosesScan', e))
-        .finally(() => {
-          // jeda singkat agar UI sempat tampil sebelum scan berikutnya
-          setTimeout(() => { _scanBusy = false; }, 400);
-        });
+      try {
+        const now = Date.now();
+        const code = String(decodedText || '').trim();
+        if (!code) return;
+        // debounce hanya untuk kode yang sama dalam 1.5 dtk
+        if (code === lastScanCode && (now - lastScanTime) < 1500) return;
+        if (_scanBusy) return;
+
+        lastScanCode = code;
+        lastScanTime = now;
+        _scanBusy = true;
+        try { if (navigator.vibrate) navigator.vibrate(60); } catch (e) {}
+
+        // jeda deteksi sebentar agar tidak flood, kamera tetap hidup
+        try {
+          if (html5QrCode && typeof html5QrCode.pause === 'function') {
+            html5QrCode.pause(true);
+          }
+        } catch (e) {}
+
+        prosesScan(code)
+          .catch(e => console.error('prosesScan', e))
+          .finally(() => {
+            // aktifkan lagi deteksi setelah proses selesai
+            setTimeout(resumeScanCamera, 700);
+          });
+      } catch (e) {
+        console.error('onScanSuccessFast', e);
+        _scanBusy = false;
+        resumeScanCamera();
+      }
     }
 
     async function bukaKamera() {
@@ -8126,54 +8152,68 @@
       document.getElementById('btnBukaKamera').style.display = 'none';
       document.getElementById('btnTutupKamera').style.display = 'block';
 
+      _scanBusy = false;
+      lastScanCode = '';
+      lastScanTime = 0;
+
       try {
         if (typeof Html5Qrcode === 'undefined') {
           alert('Library scanner belum termuat. Cek koneksi internet.');
           tutupKamera();
           return;
         }
+        // clear sisa DOM jika ada instance lama
+        try {
+          if (html5QrCode) {
+            try { await html5QrCode.stop(); } catch (e) {}
+            try { html5QrCode.clear(); } catch (e) {}
+          }
+        } catch (e) {}
+        const readerEl = document.getElementById('qrReader');
+        if (readerEl) readerEl.innerHTML = '';
+
         html5QrCode = new Html5Qrcode('qrReader');
-        // area deteksi mengikuti bingkai fokus (cukup besar untuk barcode)
         const shell = document.getElementById('qrReaderShell');
         const shellW = (shell && shell.clientWidth) ? shell.clientWidth : Math.min(window.innerWidth - 32, 360);
         const shellH = (shell && shell.clientHeight) ? shell.clientHeight : 280;
-        const boxW = Math.max(200, Math.floor(shellW * 0.76));
+        const boxW = Math.max(200, Math.floor(shellW * 0.78));
         const boxH = Math.max(160, Math.floor(shellH * 0.72));
-        // fps & resolusi lebih tinggi = deteksi lebih cepat di HP modern
-        const camConfig = {
-          fps: 20,
+
+        // config stabil (tanpa advanced yang sering bikin freeze di HP)
+        const config = {
+          fps: 15,
           qrbox: { width: boxW, height: boxH },
-          aspectRatio: 1.777,
-          disableFlip: false,
-          experimentalFeatures: { useBarCodeDetectorIfSupported: true },
-          videoConstraints: {
-            facingMode: { ideal: 'environment' },
-            width: { ideal: 1280 },
-            height: { ideal: 720 },
-            advanced: [{ focusMode: 'continuous' }]
-          }
+          aspectRatio: 1.333,
+          disableFlip: false
         };
-        try {
-          await html5QrCode.start(
-            { facingMode: 'environment' },
-            camConfig,
-            onScanSuccessFast,
-            () => {}
-          );
-        } catch (e1) {
-          // fallback jika videoConstraints / advanced tidak didukung
-          await html5QrCode.start(
-            { facingMode: 'environment' },
-            { fps: 15, qrbox: { width: boxW, height: boxH } },
-            onScanSuccessFast,
-            () => {}
-          );
-        }
+
+        await html5QrCode.start(
+          { facingMode: 'environment' },
+          config,
+          onScanSuccessFast,
+          () => {}
+        );
         kameraAktif = true;
       } catch (err) {
         console.error(err);
-        alert('Gagal membuka kamera.\n\nPastikan:\n• Izin kamera diizinkan di browser\n• Situs memakai HTTPS\n\nError: ' + (err.message || err));
-        tutupKamera();
+        // fallback kamera depan / tanpa facingMode object
+        try {
+          html5QrCode = new Html5Qrcode('qrReader');
+          const shell = document.getElementById('qrReaderShell');
+          const shellW = (shell && shell.clientWidth) ? shell.clientWidth : 320;
+          const shellH = (shell && shell.clientHeight) ? shell.clientHeight : 260;
+          await html5QrCode.start(
+            { facingMode: 'environment' },
+            { fps: 12, qrbox: { width: Math.floor(shellW * 0.8), height: Math.floor(shellH * 0.7) } },
+            onScanSuccessFast,
+            () => {}
+          );
+          kameraAktif = true;
+        } catch (err2) {
+          console.error(err2);
+          alert('Gagal membuka kamera.\n\nPastikan:\n• Izin kamera diizinkan di browser\n• Situs memakai HTTPS\n\nError: ' + (err2.message || err.message || err2));
+          tutupKamera();
+        }
       }
     }
 
