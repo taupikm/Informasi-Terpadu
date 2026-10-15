@@ -2830,7 +2830,7 @@
 
   </main>
 <footer class="footer">
-    © 2026 SMPN PANTANG MUNDUR * <span style="opacity:.7">· v2026.10.15h</span>
+    © 2026 SMPN PANTANG MUNDUR * <span style="opacity:.7">· v2026.10.15i</span>
   </footer>
 <div class="modal-overlay" id="modalLogin">
     <div class="modal">
@@ -13249,6 +13249,46 @@ document.getElementById('btnBsContohFormat')?.addEventListener('click', () => {
       return /\.(jpe?g|png)$/i.test(String(row.file_name || '')) || /^image\//i.test(String(row.mime || ''));
     }
 
+    /** Zoom preview jadwal (+ / − / reset). Dipakai tombol di kartu. */
+    window.jmZoom = function (btn, delta) {
+      try {
+        const wrap = btn && btn.closest ? btn.closest('.jm-zoom-wrap') : null;
+        if (!wrap) return;
+        let z = parseFloat(wrap.getAttribute('data-zoom') || '1') || 1;
+        if (delta === 0 || delta === '0') z = 1;
+        else z = Math.round((z + Number(delta)) * 100) / 100;
+        if (z < 0.5) z = 0.5;
+        if (z > 4) z = 4;
+        wrap.setAttribute('data-zoom', String(z));
+        const label = wrap.querySelector('.jm-zoom-label');
+        if (label) label.textContent = Math.round(z * 100) + '%';
+        const img = wrap.querySelector('img.jm-zoom-target');
+        const frame = wrap.querySelector('iframe.jm-zoom-target');
+        if (img) {
+          img.style.width = (z * 100) + '%';
+          img.style.maxWidth = 'none';
+          img.style.height = 'auto';
+        }
+        if (frame) {
+          frame.style.width = (z * 100) + '%';
+          frame.style.minHeight = (240 * z) + 'px';
+          // jaga rasio kira-kira 4:3 terhadap lebar kontainer
+          const vp = wrap.querySelector('.jm-zoom-viewport');
+          const baseW = (vp && vp.clientWidth) ? vp.clientWidth : 320;
+          frame.style.height = Math.max(200, (baseW * z * 0.75)) + 'px';
+        }
+      } catch (e) { console.warn('jmZoom', e); }
+    };
+
+    function jmZoomToolbarHtml() {
+      return '<div style="display:flex;align-items:center;justify-content:center;gap:8px;flex-wrap:wrap;margin:10px 0 6px;padding:8px;background:#f1f5f9;border-radius:10px;">' +
+        '<button type="button" class="btn btn-outline" onclick="jmZoom(this,-0.25)" style="padding:6px 12px;font-size:16px;font-weight:700;min-width:40px;" title="Perkecil">−</button>' +
+        '<span class="jm-zoom-label" style="font-size:13px;font-weight:700;color:#334155;min-width:48px;text-align:center;">100%</span>' +
+        '<button type="button" class="btn btn-outline" onclick="jmZoom(this,0.25)" style="padding:6px 12px;font-size:16px;font-weight:700;min-width:40px;" title="Perbesar">+</button>' +
+        '<button type="button" class="btn btn-outline" onclick="jmZoom(this,0)" style="padding:6px 10px;font-size:12px;" title="Reset">Reset</button>' +
+        '</div>';
+    }
+
     function jmRenderFileCard(r, opts) {
       opts = opts || {};
       const openUrl = jmDriveOpenUrl(r);
@@ -13259,8 +13299,8 @@ document.getElementById('btnBsContohFormat')?.addEventListener('click', () => {
         : '';
       let media = '';
       if (preview || jmIsImage(r)) {
+        const toolbar = jmZoomToolbarHtml();
         if (jmIsImage(r)) {
-          // Gambar: ukuran mengikuti proporsi file (tanpa kotak hitam kosong)
           const imgUrl = jmDriveImageUrl(r) || preview;
           const id = jmDriveFileId(r);
           const fallbacks = [];
@@ -13272,16 +13312,18 @@ document.getElementById('btnBsContohFormat')?.addEventListener('click', () => {
           if (r.file_url) fallbacks.push(r.file_url);
           const src0 = imgUrl || (fallbacks[0] || '');
           const dataFb = fallbacks.filter(u => u && u !== src0).join('|');
-          media = '<div style="margin-top:10px;text-align:center;line-height:0;border-radius:12px;overflow:hidden;border:1px solid #e2e8f0;background:#fff;">' +
-            '<img src="' + esc(src0) + '" alt="Jadwal" data-fb="' + esc(dataFb) + '" ' +
-            'style="width:100%;height:auto;display:block;vertical-align:top;" loading="lazy" ' +
+          media = '<div class="jm-zoom-wrap" data-zoom="1">' + toolbar +
+            '<div class="jm-zoom-viewport" style="overflow:auto;max-height:85vh;-webkit-overflow-scrolling:touch;border-radius:12px;border:1px solid #e2e8f0;background:#fff;text-align:center;line-height:0;">' +
+            '<img class="jm-zoom-target" src="' + esc(src0) + '" alt="Jadwal" data-fb="' + esc(dataFb) + '" ' +
+            'style="width:100%;height:auto;display:block;margin:0 auto;vertical-align:top;touch-action:manipulation;" loading="lazy" ' +
             'onerror="(function(el){var a=(el.getAttribute(\'data-fb\')||\'\').split(\'|\').filter(Boolean);if(!a.length){el.style.display=\'none\';return;}el.src=a.shift();el.setAttribute(\'data-fb\',a.join(\'|\'));})(this)">' +
-            '</div>';
+            '</div></div>';
         } else {
-          // PDF: tinggi menyesuaikan lebar (rasio landscape jadwal ~ 4:3), bukan 80vh
-          media = '<div style="margin-top:10px;border:1px solid #e2e8f0;border-radius:12px;overflow:hidden;background:#fff;line-height:0;">' +
-            '<iframe src="' + esc(preview) + '" title="Jadwal Mapel" ' +
-            'style="width:100%;aspect-ratio:4/3;height:auto;min-height:240px;max-height:85vh;border:0;display:block;"></iframe></div>';
+          media = '<div class="jm-zoom-wrap" data-zoom="1">' + toolbar +
+            '<div class="jm-zoom-viewport" style="overflow:auto;max-height:85vh;-webkit-overflow-scrolling:touch;border-radius:12px;border:1px solid #e2e8f0;background:#fff;line-height:0;">' +
+            '<iframe class="jm-zoom-target" src="' + esc(preview) + '" title="Jadwal Mapel" ' +
+            'style="width:100%;min-height:240px;height:60vw;max-height:70vh;border:0;display:block;"></iframe>' +
+            '</div></div>';
         }
       }
       return '<div class="card" style="padding:12px;">' +
