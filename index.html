@@ -7895,21 +7895,39 @@
       document.getElementById('scanHasilStatus').style.color = ok ? '#166534' : '#991b1b';
       document.getElementById('scanHasilKet').textContent = ket || '';
       openModal('modalScanHasil');
-      // auto-tutup cepat agar antrian scan tidak macet
+      // auto-tutup lebih cepat agar antrian scan lancar
       if (_scanHasilTimer) clearTimeout(_scanHasilTimer);
       _scanHasilTimer = setTimeout(() => {
         try { closeModal('modalScanHasil'); } catch (e) {}
         lastScanCode = '';
         lastScanTime = 0;
         resumeScanCamera();
-      }, ok ? 900 : 1400);
+      }, ok ? 550 : 900);
+    }
+
+    // Toast ringan di atas kamera (tanpa blokir scan berikutnya)
+    function tampilToastScan(ok, nama, status) {
+      let el = document.getElementById('scanToast');
+      if (!el) {
+        el = document.createElement('div');
+        el.id = 'scanToast';
+        el.style.cssText = 'position:fixed;left:50%;transform:translateX(-50%);bottom:56px;z-index:3200;max-width:92vw;padding:10px 14px;border-radius:12px;font-size:13px;font-weight:700;box-shadow:0 8px 24px rgba(0,0,0,.18);pointer-events:none;transition:opacity .2s;';
+        document.body.appendChild(el);
+      }
+      el.style.background = ok ? '#dcfce7' : '#fee2e2';
+      el.style.color = ok ? '#166534' : '#991b1b';
+      el.style.border = '1px solid ' + (ok ? '#86efac' : '#fca5a5');
+      el.textContent = (ok ? '✓ ' : '✕ ') + (nama || '') + (status ? ' · ' + status : '');
+      el.style.opacity = '1';
+      if (el._t) clearTimeout(el._t);
+      el._t = setTimeout(() => { el.style.opacity = '0'; }, 1200);
     }
 
     function scheduleLoadScanLog() {
       if (_scanLogTimer) clearTimeout(_scanLogTimer);
       _scanLogTimer = setTimeout(() => {
         loadScanLog().catch(() => {});
-      }, 1200);
+      }, 2500);
     }
 
     function prependScanLogRow(r) {
@@ -7966,8 +7984,17 @@
       }
     }
 
+    // cache cek libur agar tidak query tiap scan
+    let _liburScanCache = { ts: 0, val: null };
+    async function getLiburScanCached() {
+      if (Date.now() - _liburScanCache.ts < 60000) return _liburScanCache.val;
+      const v = await isHariLiburHariIni();
+      _liburScanCache = { ts: Date.now(), val: v };
+      return v;
+    }
+
     async function prosesScan(kode, fromFingerprint) {
-      const _liburScan = await isHariLiburHariIni();
+      const _liburScan = await getLiburScanCached();
       if (_liburScan) {
         tampilHasil(false, '', 'Hari Libur', (_liburScan.keterangan || 'Hari ini libur') + ' — absensi tidak dicatat');
         return;
@@ -7979,8 +8006,12 @@
         return;
       }
       if (!sesiAktif) {
-        tampilHasil(false, '', 'Gagal', 'Tidak ada sesi aktif saat ini');
-        return;
+        // refresh sesi sekali jika null
+        try { sesiAktif = getSesiAktifSekarang(); } catch (e) {}
+        if (!sesiAktif) {
+          tampilHasil(false, '', 'Gagal', 'Tidak ada sesi aktif saat ini');
+          return;
+        }
       }
       if (!aktifPeriode) {
         await loadAktifPeriode();
@@ -7993,10 +8024,10 @@
       const preferTipe = fromFingerprint ? null : (currentRole === 'admin' ? scanTipe : 'siswa');
 
       try {
-        // cache lookup lokal (2 menit) — scan beruntun lebih cepat
+        // cache lookup lokal (5 menit)
         const cacheKey = (preferTipe || 'all') + ':' + kode;
         const cached = _scanPersonCache.get(cacheKey);
-        if (cached && (Date.now() - cached.ts) < 120000) {
+        if (cached && (Date.now() - cached.ts) < 300000) {
           person = cached.person;
           tipe = cached.tipe;
         }
@@ -8007,7 +8038,6 @@
             if (siswa) { person = siswa; tipe = 'siswa'; }
           }
           if (!person && (!preferTipe || preferTipe === 'guru')) {
-            // nip + pin paralel
             const [rNip, rPin] = await Promise.all([
               supabaseClient.from('guru').select('id, nama, nip, pin, status').eq('nip', kode).maybeSingle(),
               supabaseClient.from('guru').select('id, nama, nip, pin, status').eq('pin', kode).maybeSingle()
@@ -8037,20 +8067,25 @@
           return;
         }
 
+        // cek duplikat/blok — 1 query saja (lebih cepat dari 2 query paralel)
         if (supabaseClient) {
-          const [rBlok, rDup] = await Promise.all([
-            supabaseClient.from('absensi').select('status').eq('tanggal', today).eq('kode', kode)
-              .in('status', ['A', 'B', 'Izin', 'Sakit', 'IZIN', 'SAKIT', 'Alpa', 'Bolos']).limit(5),
-            supabaseClient.from('absensi').select('id').eq('tanggal', today).eq('sesi_id', sesiAktif.id).eq('kode', kode).maybeSingle()
-          ]);
-          const abRows = (rBlok && rBlok.data) || [];
-          if (abRows.length) {
-            const st = abRows.map(r => r.status).join(',');
+          const { data: existing } = await supabaseClient.from('absensi')
+            .select('id, status, sesi_id')
+            .eq('tanggal', today)
+            .eq('kode', kode)
+            .limit(20);
+          const rows = existing || [];
+          const blocked = rows.filter(r => {
+            const st = String(r.status || '');
+            return ['A', 'B', 'Izin', 'Sakit', 'IZIN', 'SAKIT', 'Alpa', 'Bolos'].includes(st);
+          });
+          if (blocked.length) {
+            const st = blocked.map(r => r.status).join(',');
             tampilHasil(false, person.nama, 'Scan Ditolak',
               'Sudah berstatus ' + st + ' hari ini. Tidak dapat scan di sesi manapun.');
             return;
           }
-          if (rDup && rDup.data) {
+          if (rows.some(r => Number(r.sesi_id) === Number(sesiAktif.id))) {
             tampilHasil(false, person.nama, 'Scan Ditolak',
               'Kamu sudah scan sesi ini (' + sesiAktif.nama + ')');
             return;
@@ -8078,6 +8113,12 @@
           keterangan: ket
         };
 
+        // feedback UI dulu (optimistic) — antrian tidak menunggu network
+        const statusLabel = status === 'TW' ? 'TW – Tepat Waktu' : 'TL – Terlambat';
+        tampilToastScan(true, person.nama, statusLabel);
+        try { prependScanLogRow(row); } catch (e) {}
+        tampilHasil(true, person.nama, statusLabel, ket + ' · ' + now.toLocaleTimeString('id-ID'));
+
         if (supabaseClient) {
           const { error } = await supabaseClient.from('absensi').insert([row]);
           if (error) {
@@ -8089,16 +8130,12 @@
           }
         }
 
-        tampilHasil(true, person.nama,
-          status === 'TW' ? 'TW – Tepat Waktu' : 'TL – Terlambat',
-          ket + ' · ' + now.toLocaleTimeString('id-ID'));
-        try { prependScanLogRow(row); } catch (e) {}
         scheduleLoadScanLog();
-        // refresh kamera tiap 5 scan sukses agar tidak ngelag
+        // soft-restart lebih jarang (setiap 12 scan) agar tidak memutus antrian
         _scanSuccessCount = (_scanSuccessCount || 0) + 1;
-        if (_scanSuccessCount >= 5) {
+        if (_scanSuccessCount >= 12) {
           _scanSuccessCount = 0;
-          setTimeout(() => { softRestartKamera(); }, 1000);
+          setTimeout(() => { softRestartKamera(); }, 1500);
         }
       } catch (e) {
         console.error(e);
@@ -8150,7 +8187,7 @@
         const boxH = Math.max(160, Math.floor(shellH * 0.72));
         await html5QrCode.start(
           { facingMode: 'environment' },
-          { fps: 12, qrbox: { width: boxW, height: boxH }, aspectRatio: 1.333 },
+          { fps: 18, qrbox: { width: boxW, height: boxH }, aspectRatio: 1.333 },
           onScanSuccessFast,
           () => {}
         );
@@ -8170,19 +8207,20 @@
         const now = Date.now();
         const code = String(decodedText || '').trim();
         if (!code) return;
-        if (code === lastScanCode && (now - lastScanTime) < 1200) return;
+        // debounce lebih pendek: beda orang bisa scan cepat; kode sama 800ms
+        if (code === lastScanCode && (now - lastScanTime) < 800) return;
         if (_scanBusy) return;
 
         lastScanCode = code;
         lastScanTime = now;
         _scanBusy = true;
-        try { if (navigator.vibrate) navigator.vibrate(40); } catch (e) {}
+        try { if (navigator.vibrate) navigator.vibrate(30); } catch (e) {}
 
-        // tanpa pause video — lebih stabil untuk antrian panjang
+        // tanpa pause video — antrian lebih lancar
         prosesScan(code)
           .catch(e => console.error('prosesScan', e))
           .finally(() => {
-            setTimeout(() => { _scanBusy = false; }, 450);
+            setTimeout(() => { _scanBusy = false; }, 280);
           });
       } catch (e) {
         console.error('onScanSuccessFast', e);
@@ -8238,9 +8276,9 @@
         const boxW = Math.max(200, Math.floor(shellW * 0.78));
         const boxH = Math.max(160, Math.floor(shellH * 0.72));
 
-        // config stabil (tanpa advanced yang sering bikin freeze di HP)
+        // fps lebih tinggi + qrbox proporsional agar deteksi lebih cepat
         const config = {
-          fps: 15,
+          fps: 20,
           qrbox: { width: boxW, height: boxH },
           aspectRatio: 1.333,
           disableFlip: false
@@ -15278,84 +15316,126 @@ document.getElementById('btnBsContohFormat')?.addEventListener('click', () => {
       try {
         let deleted = 0;
         const errors = [];
-
-        async function delTable(table, builderFn) {
-          try {
-            let q = supabaseClient.from(table).delete();
-            q = builderFn(q);
-            const { data, error } = await q.select('id');
-            if (error) {
-              // coba tanpa select (beberapa policy RLS)
-              let q2 = supabaseClient.from(table).delete();
-              q2 = builderFn(q2);
-              const r2 = await q2;
-              if (r2.error) throw r2.error;
-              return 1; // unknown count
-            }
-            return (data || []).length;
-          } catch (e) {
-            if (table === 'absensi_historis') return 0;
-            throw e;
-          }
-        }
+        const allIds = new Set();
+        const personKeys = []; // {tgl, tipe, refId, kode}
+        const BATCH = 150;
 
         for (const b of boxes) {
           const tgl = String(b.dataset.tgl || '').slice(0, 10);
           const tipe = String(b.dataset.tipe || '').trim();
           const refId = Number(b.dataset.ref);
           const kode = String(b.dataset.kode || '').trim();
-          const ids = String(b.value || '').split(',').map(Number).filter(n => !isNaN(n) && n > 0);
-
+          String(b.value || '').split(',').map(Number).filter(n => !isNaN(n) && n > 0)
+            .forEach(id => allIds.add(id));
           if (tgl && tipe && refId) {
             try { _rekapDeletedKeys.add(rekapPersonKey(tgl, tipe, refId)); } catch (e) {}
-          }
-
-          // 1) hapus by id di absensi + historis
-          if (ids.length) {
-            for (const table of ['absensi', 'absensi_historis']) {
-              try {
-                const n = await delTable(table, q => q.in('id', ids));
-                deleted += n;
-              } catch (e) {
-                if (table === 'absensi') errors.push(e.message || String(e));
-              }
-            }
-          }
-
-          // 2) hapus by tanggal + tipe + ref_id
-          if (tgl && tipe && refId) {
-            for (const table of ['absensi', 'absensi_historis']) {
-              try {
-                const n = await delTable(table, q => q.eq('tanggal', tgl).eq('tipe', tipe).eq('ref_id', refId));
-                deleted += n;
-              } catch (e) {
-                if (table === 'absensi') errors.push(e.message || String(e));
-              }
-            }
-          }
-
-          // 3) fallback by tanggal + tipe + kode (jika ref_id kosong)
-          if (tgl && tipe && kode && (!refId || ids.length === 0)) {
-            for (const table of ['absensi', 'absensi_historis']) {
-              try {
-                const n = await delTable(table, q => q.eq('tanggal', tgl).eq('tipe', tipe).eq('kode', kode));
-                deleted += n;
-              } catch (e) {
-                if (table === 'absensi') errors.push(e.message || String(e));
-              }
-            }
+            personKeys.push({ tgl, tipe, refId, kode });
+          } else if (tgl && tipe && kode) {
+            personKeys.push({ tgl, tipe, refId: 0, kode });
           }
         }
 
-        await loadRekapData(true);
+        async function delByIds(table, ids) {
+          if (!ids.length) return 0;
+          let total = 0;
+          for (let i = 0; i < ids.length; i += BATCH) {
+            const chunk = ids.slice(i, i + BATCH);
+            try {
+              const { data, error } = await supabaseClient.from(table).delete().in('id', chunk).select('id');
+              if (error) {
+                const r2 = await supabaseClient.from(table).delete().in('id', chunk);
+                if (r2.error) throw r2.error;
+                total += chunk.length;
+              } else {
+                total += (data || []).length;
+              }
+            } catch (e) {
+              if (table === 'absensi_historis') continue;
+              throw e;
+            }
+          }
+          return total;
+        }
+
+        // 1) Hapus massal by id (paling cepat)
+        const idArr = [...allIds];
+        if (idArr.length) {
+          try {
+            deleted += await delByIds('absensi', idArr);
+          } catch (e) {
+            errors.push(e.message || String(e));
+          }
+          try {
+            await delByIds('absensi_historis', idArr);
+          } catch (e) {}
+        }
+
+        // 2) Hapus sisa by (tanggal, tipe, ref_id) — batch paralel per chunk
+        //    Hanya jika masih ada baris tanpa id ter-collect
+        if (personKeys.length) {
+          const CHUNK_P = 25;
+          for (let i = 0; i < personKeys.length; i += CHUNK_P) {
+            const slice = personKeys.slice(i, i + CHUNK_P);
+            const tasks = slice.map(async (pk) => {
+              let n = 0;
+              try {
+                if (pk.refId) {
+                  const { data, error } = await supabaseClient.from('absensi').delete()
+                    .eq('tanggal', pk.tgl).eq('tipe', pk.tipe).eq('ref_id', pk.refId).select('id');
+                  if (!error) n += (data || []).length;
+                  else {
+                    const r2 = await supabaseClient.from('absensi').delete()
+                      .eq('tanggal', pk.tgl).eq('tipe', pk.tipe).eq('ref_id', pk.refId);
+                    if (!r2.error) n += 1;
+                    else throw r2.error;
+                  }
+                  try {
+                    await supabaseClient.from('absensi_historis').delete()
+                      .eq('tanggal', pk.tgl).eq('tipe', pk.tipe).eq('ref_id', pk.refId);
+                  } catch (e) {}
+                } else if (pk.kode) {
+                  const { data, error } = await supabaseClient.from('absensi').delete()
+                    .eq('tanggal', pk.tgl).eq('tipe', pk.tipe).eq('kode', pk.kode).select('id');
+                  if (!error) n += (data || []).length;
+                  try {
+                    await supabaseClient.from('absensi_historis').delete()
+                      .eq('tanggal', pk.tgl).eq('tipe', pk.tipe).eq('kode', pk.kode);
+                  } catch (e) {}
+                }
+              } catch (e) {
+                errors.push(e.message || String(e));
+              }
+              return n;
+            });
+            const nums = await Promise.all(tasks);
+            deleted += nums.reduce((a, b) => a + b, 0);
+            if (btn) btn.textContent = 'Menghapus... ' + Math.min(i + CHUNK_P, personKeys.length) + '/' + personKeys.length;
+          }
+        }
+
+        // UI: hapus baris tercentang dulu agar terasa cepat
+        try {
+          boxes.forEach(b => {
+            const tr = b.closest('tr');
+            if (tr) tr.remove();
+          });
+          const left = document.querySelectorAll('#tbodyRekap tr').length;
+          document.getElementById('infoRekap') && (document.getElementById('infoRekap').textContent = left + ' baris');
+          document.getElementById('infoRekapView') && (document.getElementById('infoRekapView').textContent = left + ' baris');
+        } catch (e) {}
+
+        // refresh data di background (jangan blokir alert)
+        const refreshP = loadRekapData(true).catch(e => console.warn(e));
 
         if (deleted === 0 && errors.length) {
           alert('Gagal hapus: ' + errors[0] + '\n\nPastikan policy DELETE pada tabel absensi (dan absensi_historis) diaktifkan di Supabase.');
         } else if (deleted === 0) {
+          await refreshP;
           alert('Tidak ada baris yang terhapus di database.\nCoba centang ulang setelah Cari, atau periksa RLS policy DELETE.');
         } else {
-          alert('Berhasil menghapus data absensi (estimasi ' + deleted + ' record).');
+          alert('Berhasil menghapus data absensi (estimasi ' + deleted + ' record dari ' + boxes.length + ' baris).');
         }
+        await refreshP;
       } catch (e) {
         console.error(e);
         alert('Gagal hapus: ' + (e.message || e));
