@@ -1389,6 +1389,7 @@
 
       <div class="menu-group" data-role="admin" style="display:none;">
         <div class="menu-group-title">Admin</div>
+        <button class="menu-item" data-page="jadwal-mapel"><span class="icon">📅</span> Jadwal Mapel</button>
         <button class="menu-item" data-page="data-siswa"><span class="icon">👨‍🎓</span> Data Siswa</button>
         <button class="menu-item" data-page="data-guru"><span class="icon">👨‍🏫</span> Data Guru</button>
         <button class="menu-item" data-page="data-lulusan"><span class="icon">🎓</span> Data Lulusan</button>
@@ -1925,7 +1926,43 @@
       </div>
     </section>
     <section class="page" id="page-jadwal-mapel">
-      <div class="placeholder"><div class="icon">📅</div><h2>Jadwal Mapel</h2><p>Halaman jadwal mata pelajaran</p></div>
+      <div class="page-title">📅 Jadwal Mapel</div>
+      <div id="jmAdminPanel" style="display:none;">
+        <div class="card" style="padding:14px;margin-bottom:12px;">
+          <div style="font-size:14px;font-weight:700;margin-bottom:10px;color:#0f172a;">⬆ Upload Jadwal (PDF)</div>
+          <p style="font-size:12px;color:#64748b;margin-bottom:10px;line-height:1.45;">
+            File PDF disimpan ke <b>Google Drive</b> (pengaturan Integrasi GDrive). Pilih mapel &amp; kelas yang sesuai.
+          </p>
+          <div class="rekap-filter-row">
+            <label>Mapel *</label>
+            <select id="jmMapel"><option value="">- Pilih Mapel -</option></select>
+          </div>
+          <div class="rekap-filter-row">
+            <label>Kelas *</label>
+            <select id="jmKelas"><option value="">- Pilih Kelas -</option></select>
+          </div>
+          <div class="rekap-filter-row">
+            <label>Judul</label>
+            <input type="text" id="jmJudul" placeholder="Contoh: Jadwal MTK 9B Genap 2026">
+          </div>
+          <div class="rekap-filter-row" style="align-items:flex-start;">
+            <label style="padding-top:10px;">File PDF *</label>
+            <div style="flex:1;min-width:0;">
+              <input type="file" id="jmFile" accept="application/pdf,.pdf" style="width:100%;font-size:12px;">
+            </div>
+          </div>
+          <div id="jmUploadStatus" style="font-size:12px;color:#64748b;margin:6px 0;"></div>
+          <button type="button" class="btn btn-primary" id="btnJmUpload" style="width:100%;margin-top:4px;">☁ Upload ke Google Drive</button>
+        </div>
+      </div>
+      <div class="card" style="padding:12px;margin-bottom:10px;">
+        <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;">
+          <div style="font-size:13px;font-weight:700;color:#0f172a;" id="jmListTitle">Daftar Jadwal</div>
+          <button type="button" class="btn btn-outline" id="btnJmRefresh" style="padding:6px 10px;font-size:12px;">↻ Refresh</button>
+        </div>
+        <p id="jmListHint" style="font-size:12px;color:#64748b;margin-top:6px;line-height:1.4;"></p>
+      </div>
+      <div id="jmList" style="display:flex;flex-direction:column;gap:10px;"></div>
     </section>
 <section class="page" id="page-input-nilai">
       <div class="page-title">Input Nilai</div>
@@ -2716,7 +2753,7 @@
 
   </main>
 <footer class="footer">
-    © 2026 SMPN PANTANG MUNDUR * <span style="opacity:.7">· v2026.10.15c</span>
+    © 2026 SMPN PANTANG MUNDUR * <span style="opacity:.7">· v2026.10.15d</span>
   </footer>
 <div class="modal-overlay" id="modalLogin">
     <div class="modal">
@@ -4111,6 +4148,7 @@
       if (pageId === 'rekap-data') initRekapPage();
       if (pageId === 'download-absensi') initDownloadAbsensiPage();
       if (pageId === 'cari-siswa') initCariSiswaPage();
+      if (pageId === 'jadwal-mapel') initJadwalMapelPage();
       if (pageId === 'syarat-naik') initSyaratNaikPage();
       if (pageId === 'sidik-jari') initSidikJariSiswaPage();
       if (pageId === 'kelola-tugas') initBankSoalPage();
@@ -12988,6 +13026,297 @@ document.getElementById('btnBsContohFormat')?.addEventListener('click', () => {
       w.document.write('</body></html>');
       w.document.close();
       setTimeout(() => { try { w.print(); } catch (e) {} }, 400);
+    });
+
+
+    /* ===== Jadwal Mapel (PDF di Google Drive) ===== */
+    const JM_LS_KEY = 'jadwal_mapel_local';
+
+    function jmLocalLoad() {
+      try { return JSON.parse(localStorage.getItem(JM_LS_KEY) || '[]'); } catch (e) { return []; }
+    }
+    function jmLocalSave(rows) {
+      try { localStorage.setItem(JM_LS_KEY, JSON.stringify(rows || [])); } catch (e) {}
+    }
+
+    async function fetchJadwalMapelAll() {
+      if (supabaseClient) {
+        try {
+          const { data, error } = await supabaseClient
+            .from('jadwal_mapel')
+            .select('*')
+            .order('created_at', { ascending: false });
+          if (error) throw error;
+          return data || [];
+        } catch (e) {
+          console.warn('jadwal_mapel DB', e);
+        }
+      }
+      return jmLocalLoad();
+    }
+
+    async function insertJadwalMapel(row) {
+      if (supabaseClient) {
+        try {
+          const { data, error } = await supabaseClient.from('jadwal_mapel').insert([row]).select('*').maybeSingle();
+          if (error) throw error;
+          if (data) return data;
+        } catch (e) {
+          console.warn('insert jadwal_mapel', e);
+          // fallback local
+        }
+      }
+      const list = jmLocalLoad();
+      const rec = Object.assign({ id: 'L' + Date.now() }, row);
+      list.unshift(rec);
+      jmLocalSave(list);
+      return rec;
+    }
+
+    async function deleteJadwalMapel(id, fileId) {
+      if (fileId && typeof deleteGdriveFile === 'function') {
+        try { await deleteGdriveFile(fileId); } catch (e) { console.warn(e); }
+      }
+      if (supabaseClient && id != null && String(id).indexOf('L') !== 0) {
+        try {
+          const { error } = await supabaseClient.from('jadwal_mapel').delete().eq('id', id);
+          if (error) throw error;
+          return true;
+        } catch (e) {
+          console.warn('delete jadwal_mapel', e);
+        }
+      }
+      const list = jmLocalLoad().filter(r => String(r.id) !== String(id));
+      jmLocalSave(list);
+      return true;
+    }
+
+    function jmDrivePreviewUrl(row) {
+      const id = row.file_id || '';
+      if (id) return 'https://drive.google.com/file/d/' + encodeURIComponent(id) + '/preview';
+      const url = row.file_url || '';
+      if (url && url.indexOf('drive.google.com') >= 0) {
+        const m = String(url).match(/\/d\/([a-zA-Z0-9_-]+)/);
+        if (m) return 'https://drive.google.com/file/d/' + m[1] + '/preview';
+      }
+      return url || '#';
+    }
+
+    function jmDriveOpenUrl(row) {
+      const id = row.file_id || '';
+      if (id) return 'https://drive.google.com/file/d/' + encodeURIComponent(id) + '/view';
+      return row.file_url || '#';
+    }
+
+    async function getGuruAmpuMapelKelas() {
+      await loadMasterMapelKelas();
+      let mapelIds = [];
+      let kelasIds = [];
+      let kelasNames = [];
+      if (supabaseClient && currentUserId) {
+        try {
+          const [gm, gk] = await Promise.all([
+            supabaseClient.from('guru_mapel').select('mapel_id').eq('guru_id', currentUserId),
+            supabaseClient.from('guru_kelas').select('kelas_id').eq('guru_id', currentUserId)
+          ]);
+          mapelIds = (gm.data || []).map(r => Number(r.mapel_id));
+          kelasIds = (gk.data || []).map(r => Number(r.kelas_id));
+          const kelasRows = masterKelas.filter(k => typeof k === 'object' && kelasIds.includes(Number(k.id)));
+          kelasNames = kelasRows.map(k => String(k.kelas || '').trim()).filter(Boolean);
+          // masterKelas might be string array in offline mode
+          if (!kelasNames.length && Array.isArray(masterKelas) && masterKelas.length && typeof masterKelas[0] === 'string') {
+            // cannot map ids offline
+          }
+        } catch (e) {
+          console.warn('getGuruAmpu', e);
+        }
+      }
+      return { mapelIds, kelasIds, kelasNames };
+    }
+
+    async function initJadwalMapelPage() {
+      await loadMasterMapelKelas();
+      try { await loadGdriveSettingsFromDb(); } catch (e) {}
+      try { loadGdriveSettingsSync(); } catch (e) {}
+
+      const isAdmin = currentRole === 'admin';
+      const adminPanel = document.getElementById('jmAdminPanel');
+      if (adminPanel) adminPanel.style.display = isAdmin ? 'block' : 'none';
+
+      const hint = document.getElementById('jmListHint');
+      if (hint) {
+        hint.textContent = isAdmin
+          ? 'Semua jadwal yang diunggah. Guru hanya melihat mapel & kelas yang diampunya.'
+          : 'Menampilkan jadwal sesuai mapel dan kelas yang Anda ampu.';
+      }
+      const title = document.getElementById('jmListTitle');
+      if (title) title.textContent = isAdmin ? 'Semua Jadwal Terunggah' : 'Jadwal Mapel Saya';
+
+      // fill selects
+      const selM = document.getElementById('jmMapel');
+      const selK = document.getElementById('jmKelas');
+      if (selM) {
+        const opts = (masterMapel || []).map(m => {
+          const id = m.id != null ? m.id : m;
+          const label = m.kode ? (m.kode + ' – ' + (m.mapel || '')) : String(m.mapel || m);
+          return '<option value="' + id + '">' + esc(label) + '</option>';
+        }).join('');
+        selM.innerHTML = '<option value="">- Pilih Mapel -</option>' + opts;
+      }
+      if (selK) {
+        const opts = (masterKelas || []).map(k => {
+          const name = typeof k === 'object' ? (k.kelas || '') : String(k);
+          const id = typeof k === 'object' ? (k.id != null ? k.id : name) : name;
+          return '<option value="' + esc(String(name)) + '" data-id="' + esc(String(id)) + '">' + esc(name) + '</option>';
+        }).join('');
+        selK.innerHTML = '<option value="">- Pilih Kelas -</option>' + opts;
+      }
+
+      await renderJadwalMapelList();
+    }
+
+    async function renderJadwalMapelList() {
+      const box = document.getElementById('jmList');
+      if (!box) return;
+      box.innerHTML = '<div style="text-align:center;padding:20px;color:#94a3b8;font-size:13px;">Memuat jadwal...</div>';
+      try {
+        let rows = await fetchJadwalMapelAll();
+        const isAdmin = currentRole === 'admin';
+        if (!isAdmin && currentRole === 'guru') {
+          const ampu = await getGuruAmpuMapelKelas();
+          rows = (rows || []).filter(r => {
+            const mid = Number(r.mapel_id);
+            const kelas = String(r.kelas || '').trim();
+            const okMapel = !ampu.mapelIds.length || ampu.mapelIds.includes(mid);
+            const okKelas = !ampu.kelasNames.length || ampu.kelasNames.includes(kelas);
+            // jika guru belum punya assignment, jangan tampilkan semua
+            if (!ampu.mapelIds.length && !ampu.kelasNames.length) return false;
+            return okMapel && okKelas;
+          });
+        }
+
+        if (!rows.length) {
+          box.innerHTML = '<div class="card" style="padding:24px;text-align:center;color:#94a3b8;font-size:13px;">' +
+            (isAdmin ? 'Belum ada jadwal diunggah.' : 'Belum ada jadwal untuk mapel/kelas yang Anda ampu.') +
+            '</div>';
+          return;
+        }
+
+        box.innerHTML = rows.map(r => {
+          const mapelLabel = r.mapel_nama || r.mapel || ('Mapel #' + (r.mapel_id || '-'));
+          const preview = jmDrivePreviewUrl(r);
+          const openUrl = jmDriveOpenUrl(r);
+          const tgl = r.created_at ? String(r.created_at).slice(0, 10) : '';
+          const delBtn = isAdmin
+            ? ('<button type="button" class="btn btn-outline btn-jm-del" data-id="' + esc(String(r.id)) + '" data-fid="' + esc(String(r.file_id || '')) + '" style="color:#ef4444;border-color:#fca5a5;padding:6px 10px;font-size:12px;">🗑️ Hapus</button>')
+            : '';
+          return '<div class="card" style="padding:12px;">' +
+            '<div style="display:flex;justify-content:space-between;gap:8px;align-items:flex-start;flex-wrap:wrap;">' +
+              '<div style="min-width:0;flex:1;">' +
+                '<div style="font-size:14px;font-weight:700;color:#1e40af;">' + esc(r.judul || (mapelLabel + ' · ' + (r.kelas || ''))) + '</div>' +
+                '<div style="font-size:12px;color:#64748b;margin-top:4px;">' +
+                  esc(mapelLabel) + ' · Kelas <b>' + esc(r.kelas || '-') + '</b>' +
+                  (tgl ? (' · ' + esc(tgl)) : '') +
+                  (r.file_name ? (' · ' + esc(r.file_name)) : '') +
+                '</div>' +
+              '</div>' +
+              '<div style="display:flex;gap:6px;flex-wrap:wrap;">' +
+                '<a class="btn btn-primary" href="' + esc(openUrl) + '" target="_blank" rel="noopener" style="padding:6px 10px;font-size:12px;text-decoration:none;">📄 Buka PDF</a>' +
+                delBtn +
+              '</div>' +
+            '</div>' +
+            (preview && preview !== '#'
+              ? ('<div style="margin-top:10px;border:1px solid #e2e8f0;border-radius:10px;overflow:hidden;background:#f8fafc;">' +
+                 '<iframe src="' + esc(preview) + '" style="width:100%;height:280px;border:0;" title="Preview jadwal"></iframe></div>')
+              : '') +
+          '</div>';
+        }).join('');
+
+        box.querySelectorAll('.btn-jm-del').forEach(btn => {
+          btn.addEventListener('click', async () => {
+            if (!confirm('Hapus jadwal ini? File di Google Drive juga akan dihapus jika memungkinkan.')) return;
+            btn.disabled = true;
+            try {
+              await deleteJadwalMapel(btn.dataset.id, btn.dataset.fid);
+              await renderJadwalMapelList();
+            } catch (e) {
+              alert('Gagal hapus: ' + (e.message || e));
+              btn.disabled = false;
+            }
+          });
+        });
+      } catch (e) {
+        console.error(e);
+        box.innerHTML = '<div style="color:#ef4444;padding:16px;text-align:center;">Gagal memuat: ' + esc(String(e.message || e)) + '</div>';
+      }
+    }
+
+    document.getElementById('btnJmRefresh')?.addEventListener('click', () => renderJadwalMapelList());
+
+    document.getElementById('btnJmUpload')?.addEventListener('click', async () => {
+      if (currentRole !== 'admin') { alert('Hanya admin yang dapat mengunggah jadwal.'); return; }
+      const mapelId = document.getElementById('jmMapel')?.value || '';
+      const kelas = document.getElementById('jmKelas')?.value || '';
+      const judul = (document.getElementById('jmJudul')?.value || '').trim();
+      const fileInput = document.getElementById('jmFile');
+      const file = fileInput?.files?.[0];
+      const st = document.getElementById('jmUploadStatus');
+      if (!mapelId) { alert('Pilih mapel'); return; }
+      if (!kelas) { alert('Pilih kelas'); return; }
+      if (!file) { alert('Pilih file PDF'); return; }
+      const isPdf = (file.type === 'application/pdf') || /\.pdf$/i.test(file.name || '');
+      if (!isPdf) { alert('File harus berformat PDF'); return; }
+
+      try { await loadGdriveSettingsFromDb(); } catch (e) {}
+      try { loadGdriveSettingsSync(); } catch (e) {}
+      if (!GDRIVE_UPLOAD_ENDPOINT) {
+        alert('Endpoint Google Drive belum diatur. Buka Pengaturan → Integrasi GDrive.');
+        return;
+      }
+
+      const mapelObj = (masterMapel || []).find(m => String(m.id) === String(mapelId));
+      const mapelNama = mapelObj ? ((mapelObj.kode ? mapelObj.kode + ' – ' : '') + (mapelObj.mapel || '')) : mapelId;
+      const finalJudul = judul || ('Jadwal ' + mapelNama + ' · ' + kelas);
+
+      if (st) st.innerHTML = '<span style="color:#0369a1;">Mengunggah ke Google Drive...</span>';
+      const btn = document.getElementById('btnJmUpload');
+      if (btn) btn.disabled = true;
+      try {
+        const up = await uploadJawabanFile(file, {
+          folderId: GDRIVE_DEFAULT_FOLDER_ID || '',
+          bankId: 'jadwal',
+          soalId: String(mapelId),
+          nisn: String(kelas).replace(/\s+/g, '')
+        });
+        if (!up || (!up.url && !up.id)) throw new Error('Upload gagal (tidak ada URL/ID)');
+        if (up.provider && up.provider !== 'gdrive') {
+          console.warn('Jadwal tidak tersimpan di GDrive, provider:', up.provider);
+        }
+        const row = {
+          mapel_id: Number(mapelId) || null,
+          mapel_nama: mapelNama,
+          kelas: kelas,
+          judul: finalJudul,
+          file_name: up.name || file.name,
+          file_url: up.url || '',
+          file_id: up.id || null,
+          provider: up.provider || 'gdrive',
+          uploaded_by: currentUserName || 'admin',
+          created_at: new Date().toISOString()
+        };
+        await insertJadwalMapel(row);
+        if (st) st.innerHTML = '<span style="color:#16a34a;">✓ Berhasil diunggah ke Drive dan disimpan.</span>';
+        if (fileInput) fileInput.value = '';
+        const jEl = document.getElementById('jmJudul');
+        if (jEl) jEl.value = '';
+        await renderJadwalMapelList();
+      } catch (e) {
+        console.error(e);
+        if (st) st.innerHTML = '<span style="color:#ef4444;">Gagal: ' + esc(String(e.message || e)) + '</span>';
+        alert('Gagal upload: ' + (e.message || e));
+      } finally {
+        if (btn) btn.disabled = false;
+      }
     });
 
     async function initCariSiswaPage() {
