@@ -2779,7 +2779,7 @@
 
   </main>
 <footer class="footer">
-    © 2026 SMPN PANTANG MUNDUR * <span style="opacity:.7">· v2026.10.15f</span>
+    © 2026 SMPN PANTANG MUNDUR * <span style="opacity:.7">· v2026.10.15g</span>
   </footer>
 <div class="modal-overlay" id="modalLogin">
     <div class="modal">
@@ -13155,7 +13155,6 @@ document.getElementById('btnBsContohFormat')?.addEventListener('click', () => {
     function jmDriveImageUrl(row) {
       const id = jmDriveFileId(row);
       if (!id) return row.file_url || '';
-      // beberapa format fallback untuk gambar
       return 'https://drive.google.com/thumbnail?id=' + encodeURIComponent(id) + '&sz=w2000';
     }
 
@@ -13178,17 +13177,30 @@ document.getElementById('btnBsContohFormat')?.addEventListener('click', () => {
         ? ('<button type="button" class="btn btn-outline btn-jm-del" data-id="' + esc(String(r.id)) + '" data-fid="' + esc(String(r.file_id || '')) + '" data-gid="' + esc(String(r.guru_id || '')) + '" style="color:#ef4444;border-color:#fca5a5;padding:6px 10px;font-size:12px;">🗑️ Hapus</button>')
         : '';
       let media = '';
-      if (preview) {
-        // iframe Drive preview: PDF & gambar langsung tampil besar
-        const h = opts.fullHeight ? 'min(80vh, 720px)' : '420px';
-        media = '<div style="margin-top:10px;border:1px solid #e2e8f0;border-radius:12px;overflow:hidden;background:#f8fafc;">' +
-          '<iframe src="' + esc(preview) + '" style="width:100%;height:' + h + ';border:0;display:block;" title="Jadwal Mapel" allow="autoplay"></iframe></div>';
+      if (preview || jmIsImage(r)) {
         if (jmIsImage(r)) {
-          const imgUrl = jmDriveImageUrl(r);
-          media += '<div style="margin-top:8px;text-align:center;">' +
-            '<img src="' + esc(imgUrl) + '" alt="Jadwal" style="max-width:100%;border-radius:10px;border:1px solid #e2e8f0;" loading="lazy" ' +
-            'onerror="this.style.display=\'none\'">' +
+          // Gambar: ukuran mengikuti proporsi file (tanpa kotak hitam kosong)
+          const imgUrl = jmDriveImageUrl(r) || preview;
+          const id = jmDriveFileId(r);
+          const fallbacks = [];
+          if (id) {
+            fallbacks.push('https://drive.google.com/thumbnail?id=' + encodeURIComponent(id) + '&sz=w2000');
+            fallbacks.push('https://lh3.googleusercontent.com/d/' + encodeURIComponent(id) + '=w2000');
+            fallbacks.push('https://drive.google.com/uc?export=view&id=' + encodeURIComponent(id));
+          }
+          if (r.file_url) fallbacks.push(r.file_url);
+          const src0 = imgUrl || (fallbacks[0] || '');
+          const dataFb = fallbacks.filter(u => u && u !== src0).join('|');
+          media = '<div style="margin-top:10px;text-align:center;line-height:0;border-radius:12px;overflow:hidden;border:1px solid #e2e8f0;background:#fff;">' +
+            '<img src="' + esc(src0) + '" alt="Jadwal" data-fb="' + esc(dataFb) + '" ' +
+            'style="width:100%;height:auto;display:block;vertical-align:top;" loading="lazy" ' +
+            'onerror="(function(el){var a=(el.getAttribute(\'data-fb\')||\'\').split(\'|\').filter(Boolean);if(!a.length){el.style.display=\'none\';return;}el.src=a.shift();el.setAttribute(\'data-fb\',a.join(\'|\'));})(this)">' +
             '</div>';
+        } else {
+          // PDF: tinggi menyesuaikan lebar (rasio landscape jadwal ~ 4:3), bukan 80vh
+          media = '<div style="margin-top:10px;border:1px solid #e2e8f0;border-radius:12px;overflow:hidden;background:#fff;line-height:0;">' +
+            '<iframe src="' + esc(preview) + '" title="Jadwal Mapel" ' +
+            'style="width:100%;aspect-ratio:4/3;height:auto;min-height:240px;max-height:85vh;border:0;display:block;"></iframe></div>';
         }
       }
       return '<div class="card" style="padding:12px;">' +
