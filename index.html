@@ -1479,7 +1479,8 @@
         <div style="font-size:12px;font-weight:600;color:#0e7490;">Informasi Sesi</div>
         <div id="dashSesiDetail" style="font-size:13px;font-weight:700;color:#155e75;margin-top:4px;">Memuat...</div>
       </div>
-<div class="section-title">Rekap Kehadiran Guru</div>
+<div id="dashRekapWrap">
+      <div class="section-title">Rekap Kehadiran Guru</div>
       <div class="table-wrap">
         <table>
           <thead id="theadDashGuru">
@@ -1490,7 +1491,7 @@
           </tbody>
         </table>
       </div>
-<div class="section-title">Rekap Kehadiran Siswa</div>
+      <div class="section-title">Rekap Kehadiran Siswa</div>
       <div class="table-wrap">
         <table>
           <thead id="theadDashSiswa">
@@ -1501,6 +1502,8 @@
           </tbody>
         </table>
       </div>
+    </div>
+    <div id="dashRekapHiddenMsg" style="display:none;text-align:center;padding:20px 12px;color:#64748b;font-size:13px;line-height:1.5;"></div>
     </section>
 <section class="page" id="page-cari-siswa">
       <div class="page-title">Cari Data Siswa (Orang Tua)</div>
@@ -2830,7 +2833,7 @@
 
   </main>
 <footer class="footer">
-    © 2026 SMPN PANTANG MUNDUR * <span style="opacity:.7">· v2026.10.15i</span>
+    © 2026 SMPN PANTANG MUNDUR * <span style="opacity:.7">· v2026.10.15j</span>
   </footer>
 <div class="modal-overlay" id="modalLogin">
     <div class="modal">
@@ -6849,38 +6852,73 @@
           const t3 = String(s.jam_akhir || '').slice(0, 5);
           return t1 + ' – ' + t2 + ' – ' + t3;
         }
+        // true = sembunyikan tabel rekap (sebelum Sesi 1 dibuka)
+        let hideDashRekap = false;
         if (det) {
           const list = (sesiList || []).slice().sort((a, b) => (a.urutan || 0) - (b.urutan || 0));
           let aktif = null;
           try { aktif = getSesiAktifSekarang(); } catch (e) { aktif = null; }
           const now = new Date();
-          const nowMin = now.getHours() * 60 + now.getMinutes();
+          const nowMin = now.getHours() * 60 + now.getMinutes() + (now.getSeconds() / 60);
 
           if (liburHariIni) {
             const ket = liburHariIni.keterangan || 'Hari Libur';
             const tglStr = now.toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' });
             det.innerHTML = '<span style="color:#dc2626;">' + ket + '</span><br><span style="font-weight:600;font-size:12px;">' + tglStr + '</span>';
+            hideDashRekap = true;
           } else if (aktif) {
             det.textContent = (aktif.nama || 'Sesi') + ' berlangsung (' + fmt3(aktif) + ')';
+            hideDashRekap = false;
           } else if (!list.length) {
             det.textContent = 'Belum ada sesi yang diatur';
+            hideDashRekap = false;
           } else {
-            let next = null;
-            let lastEnded = null;
-            for (const s of list) {
-              const mulai = timeToMinutes(s.jam_mulai);
-              const akhir = timeToMinutes(s.jam_akhir);
-              if (nowMin > akhir) lastEnded = s;
-              else if (nowMin < mulai) { next = s; break; }
-            }
-            if (next && lastEnded) {
-              det.textContent = (lastEnded.nama || 'Sesi') + ' selesai, ' +
-                (next.nama || 'sesi berikutnya') + ' Akan Berlangsung Dari Jam ' + fmt3(next);
-            } else if (next && !lastEnded) {
-              det.textContent = (next.nama || 'Sesi 1') + ' Akan Berlangsung Dari Jam ' + fmt3(next);
+            const first = list[0];
+            const firstMulai = timeToMinutes(first.jam_mulai);
+            const last = list[list.length - 1];
+            const lastAkhir = timeToMinutes(last.jam_akhir);
+
+            // Semua sesi hari ini sudah berakhir → sampai 23:59
+            if (nowMin > lastAkhir) {
+              det.textContent = 'Sesi scan absensi hari ini telah berakhir';
+              hideDashRekap = false;
+            } else if (nowMin < firstMulai) {
+              // Belum ada sesi dibuka (sebelum Sesi 1)
+              det.textContent = (first.nama || 'Sesi 1') + ' Akan Berlangsung Dari Jam ' + fmt3(first);
+              hideDashRekap = true;
             } else {
-              det.textContent = 'Sesi Absen Hari Ini Telah Berakhir';
+              // Antar sesi: ada yang selesai, sesi berikutnya belum mulai
+              let next = null;
+              let lastEnded = null;
+              for (const s of list) {
+                const mulai = timeToMinutes(s.jam_mulai);
+                const akhir = timeToMinutes(s.jam_akhir);
+                if (nowMin > akhir) lastEnded = s;
+                else if (nowMin < mulai) { next = s; break; }
+              }
+              if (next && lastEnded) {
+                det.textContent = (lastEnded.nama || 'Sesi') + ' selesai, ' +
+                  (next.nama || 'sesi berikutnya') + ' Akan Berlangsung Dari Jam ' + fmt3(next);
+              } else if (next) {
+                det.textContent = (next.nama || 'Sesi') + ' Akan Berlangsung Dari Jam ' + fmt3(next);
+              } else {
+                det.textContent = 'Sesi scan absensi hari ini telah berakhir';
+              }
+              hideDashRekap = false;
             }
+          }
+        }
+
+        const rekapWrap = document.getElementById('dashRekapWrap');
+        const rekapMsg = document.getElementById('dashRekapHiddenMsg');
+        if (rekapWrap) rekapWrap.style.display = hideDashRekap ? 'none' : '';
+        if (rekapMsg) {
+          if (hideDashRekap) {
+            rekapMsg.style.display = 'block';
+            rekapMsg.textContent = 'Tabel rekap kehadiran akan ditampilkan setelah Sesi 1 dibuka.';
+          } else {
+            rekapMsg.style.display = 'none';
+            rekapMsg.textContent = '';
           }
         }
 
