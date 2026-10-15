@@ -2698,7 +2698,7 @@
 
   </main>
 <footer class="footer">
-    © 2026 SMPN PANTANG MUNDUR * <span style="opacity:.7">· v2026.10.15a</span>
+    © 2026 SMPN PANTANG MUNDUR * <span style="opacity:.7">· v2026.10.15b</span>
   </footer>
 <div class="modal-overlay" id="modalLogin">
     <div class="modal">
@@ -13516,40 +13516,65 @@ document.getElementById('btnBsContohFormat')?.addEventListener('click', () => {
           rows = rows.filter(r => r.tipe === tipe);
         }
 
-        // Kolom sesi = master aktif + semua sesi yang muncul di data (mis. Sesi 3 historis)
-        // agar jumlah sesi sinkron dengan Cek Syarat
+        // Kolom sesi DINAMIS: urutan 1,2,3,4... dari master + data aktual
+        // (tidak terbatas hanya sesi aktif di tabel master)
         {
-          const byKey = new Map();
+          const byUrutan = new Map(); // key = urutan number atau nama normalisasi
+          function colKeyFrom(ur, nm, sid) {
+            if (ur != null && !isNaN(ur)) return 'u' + Number(ur);
+            const n = String(nm || '').trim().toLowerCase().replace(/\s+/g, '');
+            if (n) return 'n' + n;
+            if (sid != null && sid !== '') return 'id' + sid;
+            return 'x' + Math.random().toString(36).slice(2, 8);
+          }
           (rekapSesiList || []).forEach(s => {
-            const k = 'u:' + (s.urutan != null ? s.urutan : '') + '|id:' + (s.id != null ? s.id : '');
-            byKey.set(k, s);
+            const ur = s.urutan != null ? Number(s.urutan) : null;
+            const ck = colKeyFrom(ur, s.nama, s.id);
+            byUrutan.set(ck, {
+              colKey: ck,
+              id: s.id,
+              nama: s.nama || ('Sesi ' + (ur || '')),
+              urutan: ur != null ? ur : 999,
+              _fromData: false
+            });
           });
           (rows || []).forEach(r => {
-            const ur = r.sesi_urutan != null ? Number(r.sesi_urutan) : null;
-            const sid = r.sesi_id != null ? Number(r.sesi_id) : null;
-            const nm = String(r.sesi_nama || '').trim() || ('Sesi ' + (ur || '?'));
-            // skip if already matched existing
-            let found = false;
-            for (const s of byKey.values()) {
-              if (matchSesi(r, s)) { found = true; break; }
+            const ur = r.sesi_urutan != null && r.sesi_urutan !== '' ? Number(r.sesi_urutan) : null;
+            const sid = r.sesi_id != null && r.sesi_id !== '' ? r.sesi_id : null;
+            const nm = String(r.sesi_nama || '').trim() || (ur != null ? ('Sesi ' + ur) : 'Sesi');
+            const ck = colKeyFrom(ur, nm, sid);
+            if (byUrutan.has(ck)) {
+              const ex = byUrutan.get(ck);
+              if (!ex.nama && nm) ex.nama = nm;
+              if (ex.id == null && sid != null) ex.id = sid;
+              return;
             }
-            if (found) return;
-            const k = 'u:' + (ur != null ? ur : '') + '|id:' + (sid != null ? sid : '') + '|n:' + nm;
-            if (byKey.has(k)) return;
-            byKey.set(k, {
-              id: sid != null ? sid : ('x' + (ur != null ? ur : nm)),
+            // juga cek apakah sudah ada yang matchSesi (hindari duplikat Sesi2 vs Sesi 2 beda key)
+            let dup = null;
+            for (const s of byUrutan.values()) {
+              if (matchSesi(r, s)) { dup = s; break; }
+            }
+            if (dup) return;
+            byUrutan.set(ck, {
+              colKey: ck,
+              id: sid != null ? sid : ck,
               nama: nm,
-              urutan: ur != null ? ur : (byKey.size + 1),
+              urutan: ur != null && !isNaN(ur) ? ur : (byUrutan.size + 1),
               _fromData: true
             });
           });
-          rekapSesiList = [...byKey.values()].sort((a, b) => (a.urutan || 0) - (b.urutan || 0));
-          // rebuild header dengan kolom sesi lengkap
+          rekapSesiList = [...byUrutan.values()].sort((a, b) => {
+            const ua = a.urutan != null ? a.urutan : 999;
+            const ub = b.urutan != null ? b.urutan : 999;
+            if (ua !== ub) return ua - ub;
+            return String(a.nama || '').localeCompare(String(b.nama || ''), 'id');
+          });
           let h2 = '<tr>';
           h2 += '<th><input type="checkbox" id="checkAllRekap"></th>';
           h2 += '<th>No</th><th>NISN/NIP</th><th>Nama</th>';
           rekapSesiList.forEach((s, i) => {
-            h2 += '<th style="text-align:center;">S' + (s.urutan != null ? s.urutan : (i + 1)) + '</th>';
+            const label = s.urutan != null && s.urutan < 900 ? ('S' + s.urutan) : (s.nama || ('S' + (i + 1)));
+            h2 += '<th style="text-align:center;" title="' + esc(s.nama || '') + '">' + esc(label) + '</th>';
           });
           h2 += '<th>Tanggal</th></tr>';
           if (thead) thead.innerHTML = h2;
@@ -13557,7 +13582,6 @@ document.getElementById('btnBsContohFormat')?.addEventListener('click', () => {
             document.querySelectorAll('.cb-rekap-row').forEach(c => { c.checked = this.checked; });
           });
         }
-        const nSesiLive = rekapSesiList.length;
 
         const map = new Map();
         rows.forEach(r => {
@@ -13577,11 +13601,13 @@ document.getElementById('btnBsContohFormat')?.addEventListener('click', () => {
           }
           const item = map.get(key);
           if (r.id && !item.ids.includes(r.id)) item.ids.push(r.id);
+          // isi ke kolom sesi dinamis via colKey
           rekapSesiList.forEach(s => {
             if (!matchSesi(r, s)) return;
-            const prev = item.sesi[s.id];
+            const ck = s.colKey || String(s.id);
+            const prev = item.sesi[ck];
             if (!prev || (r.jam_scan && !prev.jam_scan) || (r.id && !prev.id)) {
-              item.sesi[s.id] = r;
+              item.sesi[ck] = r;
             }
           });
         });
@@ -13632,13 +13658,13 @@ document.getElementById('btnBsContohFormat')?.addEventListener('click', () => {
         if (iv) iv.textContent = dataRekap.length + ' baris';
 
         if (!dataRekap.length) {
-          tbody.innerHTML = '<tr><td colspan="' + (5 + nSesi) + '" style="text-align:center;padding:16px;color:#94a3b8;">Tidak ada data untuk filter ini</td></tr>';
+          tbody.innerHTML = '<tr><td colspan="' + (5 + rekapSesiList.length) + '" style="text-align:center;padding:16px;color:#94a3b8;">Tidak ada data untuk filter ini</td></tr>';
           return;
         }
 
         tbody.innerHTML = dataRekap.map((row, i) => {
           const cells = rekapSesiList.map(s => {
-            const ab = row.sesi[s.id];
+            const ab = row.sesi[s.colKey || String(s.id)];
             if (!ab) return '<td style="text-align:center;color:#cbd5e1;">–</td>';
             const jam = fmtJam(ab.jam_scan);
             const jamShort = jam ? jam.slice(0, 5) : '';
