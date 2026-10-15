@@ -12334,6 +12334,8 @@ document.getElementById('btnBsContohFormat')?.addEventListener('click', () => {
 
     async function fetchAbsensiRange(dari, sampai, extraFilter) {
       const f = extraFilter || {};
+      const PAGE = 1000;
+
       async function oneTable(table) {
         if (!supabaseClient) {
           const key = table === 'absensi_historis' ? 'absensi_historis' : 'absensi';
@@ -12344,7 +12346,7 @@ document.getElementById('btnBsContohFormat')?.addEventListener('click', () => {
             if (sampai && t > sampai) return false;
             if (f.tipe && r.tipe !== f.tipe) return false;
             if (f.kode && String(r.kode) !== String(f.kode)) return false;
-            if (f.ref_id && String(r.ref_id) !== String(f.ref_id)) return false;
+            if (f.ref_id != null && f.ref_id !== '' && String(r.ref_id) !== String(f.ref_id)) return false;
             if (f.namaIlike) {
               const n = String(r.nama || '').toLowerCase();
               const k = String(r.kode || '').toLowerCase();
@@ -12354,31 +12356,58 @@ document.getElementById('btnBsContohFormat')?.addEventListener('click', () => {
             return true;
           });
         }
-        let q = supabaseClient.from(table).select('*')
-          .gte('tanggal', dari).lte('tanggal', sampai)
-          .order('tanggal', { ascending: false }).order('nama');
-        if (f.tipe) q = q.eq('tipe', f.tipe);
-        if (f.kode) q = q.eq('kode', f.kode);
-        if (f.ref_id) q = q.eq('ref_id', f.ref_id);
-        if (f.namaIlike) {
-          const s = f.namaIlike.replace(/%/g, '');
-          q = q.or('nama.ilike.%' + s + '%,kode.ilike.%' + s + '%');
+
+        const all = [];
+        let from = 0;
+        for (let guard = 0; guard < 50; guard++) {
+          let q = supabaseClient.from(table).select('*')
+            .gte('tanggal', dari).lte('tanggal', sampai)
+            .order('tanggal', { ascending: true })
+            .order('id', { ascending: true })
+            .range(from, from + PAGE - 1);
+          if (f.tipe) q = q.eq('tipe', f.tipe);
+          if (f.kode) q = q.eq('kode', f.kode);
+          if (f.ref_id != null && f.ref_id !== '') q = q.eq('ref_id', Number(f.ref_id));
+          if (f.namaIlike) {
+            const s = String(f.namaIlike).replace(/[%_,]/g, '');
+            q = q.or('nama.ilike.%' + s + '%,kode.ilike.%' + s + '%');
+          }
+          const { data, error } = await q;
+          if (error) {
+            if (table === 'absensi_historis') return all;
+            throw error;
+          }
+          const batch = data || [];
+          all.push(...batch);
+          if (batch.length < PAGE) break;
+          from += PAGE;
         }
-        const { data, error } = await q.limit(20000);
-        if (error) {
-          if (table === 'absensi_historis') return [];
-          throw error;
-        }
-        return data || [];
+        return all;
       }
+
       const [a, h] = await Promise.all([oneTable('absensi'), oneTable('absensi_historis')]);
+      // Dedup logika sama Cek Syarat: unik tanggal + orang + sesi (bukan id tabel)
       const map = new Map();
+      function rowKey(r) {
+        const tgl = String(r.tanggal || '').slice(0, 10);
+        const person = (r.tipe || '') + ':' + (r.ref_id || r.kode || r.nama || '');
+        const sesiKey =
+          (r.sesi_id != null && r.sesi_id !== '' ? 'id:' + r.sesi_id : '') +
+          '|' + (r.sesi_urutan != null && r.sesi_urutan !== '' ? 'u:' + r.sesi_urutan : '') +
+          '|' + String(r.sesi_nama || '').trim();
+        return tgl + '||' + person + '||' + sesiKey;
+      }
+      function score(x) {
+        return (x.jam_scan ? 2 : 0) + (['TW', 'TL'].includes(String(x.status || '').toUpperCase()) ? 1 : 0);
+      }
       [...a, ...h].forEach(r => {
-        const key = [r.id, r.tanggal, r.kode, r.sesi_id, r.status].join('|');
+        const key = rowKey(r);
         if (!map.has(key)) map.set(key, r);
+        else if (score(r) > score(map.get(key))) map.set(key, r);
       });
       return [...map.values()];
     }
+
 
     async function refreshArsipInfo() {
       const el = document.getElementById('arsipInfo');
@@ -13290,8 +13319,15 @@ document.getElementById('btnBsContohFormat')?.addEventListener('click', () => {
       }
 
       tbody.innerHTML = list.map((p, i) => {
-        const hadir = p.TW + p.TL;
-        const pct = p.total ? Math.round((hadir / p.total) * 1000) / 10 : 0;
+        // Nilai hadir & % sama rumus Cek Syarat (bobot TW/TL/Sakit/Izin)
+        const bobot = (typeof BOBOT_STATUS !== 'undefined') ? BOBOT_STATUS : { TW: 1, TL: 0.8, Sakit: 0.75, Izin: 0.5, Alpa: 0, Bolos: 0 };
+        const nilaiHadir = Math.round((
+          (p.TW || 0) * (bobot.TW != null ? bobot.TW : 1) +
+          (p.TL || 0) * (bobot.TL != null ? bobot.TL : 0.8) +
+          (p.Sakit || 0) * (bobot.Sakit != null ? bobot.Sakit : 0.75) +
+          (p.Izin || 0) * (bobot.Izin != null ? bobot.Izin : 0.5)
+        ) * 10) / 10;
+        const pct = p.total ? Math.round((nilaiHadir / p.total) * 10000) / 100 : 0;
         return '<tr>' +
           '<td>' + (i + 1) + '</td>' +
           '<td>' + esc(p.kode || p.ref_id || '–') + '</td>' +
@@ -13304,7 +13340,7 @@ document.getElementById('btnBsContohFormat')?.addEventListener('click', () => {
           '<td style="text-align:center;color:#dc2626;font-weight:700;">' + p.Alpa + '</td>' +
           '<td style="text-align:center;color:#991b1b;font-weight:700;">' + p.Bolos + '</td>' +
           '<td style="text-align:center;">' + p.total + '</td>' +
-          '<td style="text-align:center;font-weight:700;">' + hadir + '</td>' +
+          '<td style="text-align:center;font-weight:700;">' + nilaiHadir + '</td>' +
           '<td style="text-align:center;font-weight:700;">' + pct + '%</td></tr>';
       }).join('');
 
@@ -13406,7 +13442,17 @@ document.getElementById('btnBsContohFormat')?.addEventListener('click', () => {
           }
         }
 
-        let rows = await fetchAbsensiRange(dari, sampai, { tipe: tipe || undefined });
+        // Filter di server agar tidak terpotong limit (sinkron dengan Cek Syarat)
+        const fetchFilter = { tipe: tipe || undefined };
+        const selId = document.getElementById('rekapNama')?.dataset?.selectedId;
+        const qRaw = (document.getElementById('rekapNama')?.value || '').trim();
+        if (selId) {
+          fetchFilter.ref_id = Number(selId);
+          if (!fetchFilter.tipe) fetchFilter.tipe = 'siswa';
+        } else if (qRaw) {
+          fetchFilter.namaIlike = qRaw;
+        }
+        let rows = await fetchAbsensiRange(dari, sampai, fetchFilter);
         rows = (rows || []).filter(r => {
           const t = String(r.tanggal || '').slice(0, 10);
           return (!dari || t >= dari) && (!sampai || t <= sampai);
