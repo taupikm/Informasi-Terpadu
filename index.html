@@ -1699,9 +1699,12 @@
     <section class="page" id="page-kelulusan">
       <div class="page-title">Pengumuman Kelulusan</div>
       <div class="card" id="pgSearchCard" style="padding:12px;margin-bottom:12px;display:none;">
-        <div class="rekap-filter-row">
-          <label>Nama / NISN</label>
-          <input type="text" id="pgCariQ" placeholder="Masukkan NISN atau nama siswa">
+        <div class="rekap-filter-row" style="align-items:flex-start;">
+          <label style="padding-top:10px;">Nama / NISN</label>
+          <div style="flex:1;min-width:0;position:relative;">
+            <input type="text" id="pgCariQ" placeholder="Ketik nama atau NISN..." autocomplete="off" style="width:100%;">
+            <div id="pgSuggest" class="siswa-suggest-box" style="display:none;"></div>
+          </div>
         </div>
         <button type="button" class="btn btn-primary" id="btnPgCari" style="width:100%;margin-top:8px;">🔍 Cek Pengumuman</button>
       </div>
@@ -1729,9 +1732,12 @@
     <section class="page" id="page-validasi-lulusan">
       <div class="page-title">Validasi Data Lulusan</div>
       <div class="card" style="padding:14px;margin-bottom:14px;">
-        <div class="rekap-filter-row">
-          <label>NISN / Nama</label>
-          <input type="text" id="vlCari" placeholder="Masukkan NISN atau Nama">
+        <div class="rekap-filter-row" style="align-items:flex-start;">
+          <label style="padding-top:10px;">NISN / Nama</label>
+          <div style="flex:1;min-width:0;position:relative;">
+            <input type="text" id="vlCari" placeholder="Ketik nama atau NISN..." autocomplete="off" style="width:100%;">
+            <div id="vlSuggest" class="siswa-suggest-box" style="display:none;"></div>
+          </div>
         </div>
         <div class="rekap-filter-row">
           <label>Tahun Lulus</label>
@@ -1818,7 +1824,10 @@
       <div class="toolbar">
         <button class="btn btn-primary" id="btnTambahIzin">+ Tambah</button>
         <button class="btn btn-outline" id="btnHapusIzin" style="color:#ef4444;border-color:#fca5a5;">🗑️</button>
-        <input type="search" class="search-input" id="searchIzin" placeholder="Cari Nama / NISN...">
+        <div style="position:relative;flex:1;min-width:140px;">
+          <input type="search" class="search-input" id="searchIzin" placeholder="Cari Nama / NISN..." autocomplete="off" style="width:100%;">
+          <div id="searchIzinSuggest" class="siswa-suggest-box" style="display:none;position:absolute;left:0;right:0;z-index:40;background:#fff;border:1px solid #e2e8f0;border-radius:12px;padding:6px;box-shadow:0 8px 24px rgba(0,0,0,.1);"></div>
+        </div>
         <select id="filterIzinStatus" style="padding:6px 8px;font-size:11px;border-radius:8px;border:1px solid var(--border);">
           <option value="">Semua</option>
           <option value="Izin">Izin</option>
@@ -2266,7 +2275,10 @@
         <button class="btn btn-outline" id="btnHapusSiswa" style="color:#ef4444;border-color:#fca5a5;">🗑️ Hapus</button>
         <button class="btn btn-outline" id="btnImportSiswa">📥 Import</button>
         <input type="file" id="fileImportSiswa" accept=".csv,.txt" style="display:none;">
-        <input type="search" id="cariSiswa" class="search-input" placeholder="Cari Nama / NISN..." autocomplete="off">
+        <div style="position:relative;flex:1;min-width:140px;">
+          <input type="search" id="cariSiswa" class="search-input" placeholder="Cari Nama / NISN..." autocomplete="off" style="width:100%;">
+          <div id="cariSiswaMasterSuggest" class="siswa-suggest-box" style="display:none;position:absolute;left:0;right:0;z-index:40;background:#fff;border:1px solid #e2e8f0;border-radius:12px;padding:6px;box-shadow:0 8px 24px rgba(0,0,0,.1);"></div>
+        </div>
         <span class="toolbar-info" id="infoSiswa">0 data</span>
       </div>
       <div class="table-wrap">
@@ -2334,7 +2346,10 @@
         <button class="btn btn-outline" id="btnHapusLulusan" style="color:#ef4444;border-color:#fca5a5;">🗑️ Hapus</button>
         <button class="btn btn-outline" id="btnImportLulusan">📥 Import</button>
         <input type="file" id="fileImportLulusan" accept=".csv,.txt" style="display:none;">
-        <input type="search" id="cariLulusan" class="search-input" placeholder="Cari Nama / NISN..." autocomplete="off">
+        <div style="position:relative;flex:1;min-width:140px;">
+          <input type="search" id="cariLulusan" class="search-input" placeholder="Cari Nama / NISN..." autocomplete="off" style="width:100%;">
+          <div id="cariLulusanSuggest" class="siswa-suggest-box" style="display:none;position:absolute;left:0;right:0;z-index:40;background:#fff;border:1px solid #e2e8f0;border-radius:12px;padding:6px;box-shadow:0 8px 24px rgba(0,0,0,.1);"></div>
+        </div>
         <span class="toolbar-info" id="infoLulusan">0 data</span>
       </div>
       <div class="table-wrap">
@@ -2590,9 +2605,12 @@
           <p id="nlModeHint" style="font-size:12px;color:#64748b;line-height:1.45;margin-bottom:10px;">
             Naikkan siswa kelas 7→8 dan 8→9 (huruf rombel tetap, mis. 7A→8A).
           </p>
-          <div class="rekap-filter-row">
-            <label>Cari</label>
-            <input type="text" id="nlCari" placeholder="Nama / NISN">
+          <div class="rekap-filter-row" style="align-items:flex-start;">
+            <label style="padding-top:10px;">Cari</label>
+            <div style="flex:1;min-width:0;position:relative;">
+              <input type="text" id="nlCari" placeholder="Ketik nama atau NISN..." autocomplete="off" style="width:100%;">
+              <div id="nlSuggest" class="siswa-suggest-box" style="display:none;"></div>
+            </div>
           </div>
           <div class="toolbar" style="flex-wrap:wrap;gap:6px;" id="toolbarNlNaik">
             <button class="btn btn-primary" id="btnNlNaik" style="background:#2563eb;border:none;">⬆️ Naikkan</button>
@@ -2698,7 +2716,7 @@
 
   </main>
 <footer class="footer">
-    © 2026 SMPN PANTANG MUNDUR * <span style="opacity:.7">· v2026.10.15b</span>
+    © 2026 SMPN PANTANG MUNDUR * <span style="opacity:.7">· v2026.10.15c</span>
   </footer>
 <div class="modal-overlay" id="modalLogin">
     <div class="modal">
@@ -5682,6 +5700,31 @@
       }
     }
 
+    async function searchLulusanSuggest(q, limit) {
+      limit = limit || 12;
+      q = String(q || '').trim();
+      if (q.length < 2) return [];
+      const ql = q.toLowerCase();
+      try {
+        if (supabaseClient) {
+          const { data, error } = await supabaseClient.from('lulusan')
+            .select('id, nama, nisn, kelas, tahun_lulus')
+            .or('nama.ilike.%' + q.replace(/[%_,]/g, '') + '%,nisn.ilike.%' + q.replace(/[%_,]/g, '') + '%')
+            .limit(limit);
+          if (!error && data && data.length) {
+            return data.map(r => ({
+              id: r.id,
+              nama: r.nama || '',
+              nisn: r.nisn || '-',
+              kelas: (r.kelas || '') + (r.tahun_lulus ? (' · ' + r.tahun_lulus) : '')
+            }));
+          }
+        }
+      } catch (e) { console.warn('searchLulusanSuggest', e); }
+      return [];
+    }
+
+
     function renderSiswaSuggest(boxEl, list, onPick) {
       if (!boxEl) return;
       if (!list || !list.length) {
@@ -5719,11 +5762,12 @@
       boxEl.innerHTML = '';
     }
 
-    function attachSiswaLiveSearch(inputId, suggestId, onPick) {
+    function attachSiswaLiveSearch(inputId, suggestId, onPick, searchFn) {
       const input = document.getElementById(inputId);
       const box = document.getElementById(suggestId);
       if (!input || !box) return;
       let timer = null;
+      const doSearch = typeof searchFn === 'function' ? searchFn : searchSiswaSuggest;
       input.addEventListener('input', function () {
         clearTimeout(timer);
         const q = this.value.trim();
@@ -5733,7 +5777,7 @@
           return;
         }
         timer = setTimeout(async () => {
-          const list = await searchSiswaSuggest(q, 12);
+          const list = await doSearch(q, 12);
           if (input.value.trim() !== q) return;
           renderSiswaSuggest(box, list, (s) => {
             input.value = s.nisn && s.nisn !== '-' ? s.nisn : s.nama;
@@ -5771,6 +5815,27 @@
       attachSiswaLiveSearch('rekapNama', 'rekapSuggest', (s) => {
         if (typeof loadRekapData === 'function') loadRekapData();
       });
+      attachSiswaLiveSearch('pgCariQ', 'pgSuggest', (s) => {
+        if (typeof jalankanPengumumanKelulusan === 'function') {
+          jalankanPengumumanKelulusan({ q: s.nisn || s.nama, isAdmin: true });
+        }
+      });
+      attachSiswaLiveSearch('vlCari', 'vlSuggest', (s) => {
+        if (typeof jalankanValidasiLulusan === 'function') jalankanValidasiLulusan();
+      }, searchLulusanSuggest);
+      attachSiswaLiveSearch('nlCari', 'nlSuggest', (s) => {
+        if (typeof loadNaikLulusTable === 'function') loadNaikLulusTable();
+      });
+      attachSiswaLiveSearch('searchIzin', 'searchIzinSuggest', (s) => {
+        const el = document.getElementById('searchIzin');
+        if (el) el.dispatchEvent(new Event('input'));
+      });
+      attachSiswaLiveSearch('cariSiswa', 'cariSiswaMasterSuggest', (s) => {
+        if (typeof renderSiswa === 'function') renderSiswa();
+      });
+      attachSiswaLiveSearch('cariLulusan', 'cariLulusanSuggest', (s) => {
+        if (typeof renderLulusan === 'function') renderLulusan();
+      }, searchLulusanSuggest);
     })();
 
     async function resolveSiswaUntukNilai(q, opts) {
