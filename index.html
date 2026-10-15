@@ -984,6 +984,94 @@
       font-size: 13px;
       color: var(--text-muted);
     }
+
+    /* Panel log login — ~1/3 layar HP, ringkas di desktop */
+    #loginLogPanel {
+      position: fixed;
+      z-index: 2800;
+      display: none;
+      flex-direction: column;
+      background: #fff;
+      border: 1px solid #e2e8f0;
+      box-shadow: 0 12px 40px rgba(15,23,42,.18);
+      border-radius: 14px;
+      overflow: hidden;
+      /* mobile: full width margin, ~33vh */
+      top: 56px;
+      left: 8px;
+      right: 8px;
+      max-height: 34vh;
+    }
+    #loginLogPanel.show { display: flex; }
+    @media (min-width: 768px) {
+      #loginLogPanel {
+        left: auto;
+        right: 16px;
+        width: min(400px, 42vw);
+        max-height: 42vh;
+        top: 60px;
+      }
+    }
+    #loginLogPanel .ll-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      padding: 10px 12px;
+      background: #1e40af;
+      color: #fff;
+      flex-shrink: 0;
+    }
+    #loginLogPanel .ll-body {
+      overflow-y: auto;
+      -webkit-overflow-scrolling: touch;
+      flex: 1;
+      padding: 8px 10px;
+      min-height: 0;
+    }
+    #loginLogPanel .ll-filters {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      padding: 8px 10px;
+      border-bottom: 1px solid #e2e8f0;
+      background: #f8fafc;
+      flex-shrink: 0;
+    }
+    #loginLogPanel .ll-filters input {
+      font-size: 12px;
+      padding: 6px 8px;
+      border: 1px solid #e2e8f0;
+      border-radius: 8px;
+      flex: 1;
+      min-width: 90px;
+    }
+    #loginLogPanel .ll-toolbar {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      padding: 6px 10px;
+      border-top: 1px solid #e2e8f0;
+      background: #f8fafc;
+      flex-shrink: 0;
+    }
+    #loginLogPanel .ll-row {
+      display: flex;
+      align-items: flex-start;
+      gap: 8px;
+      padding: 8px 6px;
+      border-bottom: 1px solid #f1f5f9;
+      font-size: 12px;
+    }
+    #loginLogPanel .ll-row:last-child { border-bottom: none; }
+    #loginLogBackdrop {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(15,23,42,.25);
+      z-index: 2790;
+    }
+    #loginLogBackdrop.show { display: block; }
     .modal-overlay {
       position: fixed;
       inset: 0;
@@ -1333,9 +1421,9 @@
     </div>
 
     <div class="topbar-right">
-      <button class="btn-icon" id="btnPesan" aria-label="Pesan" style="display:none;">
+      <button class="btn-icon" id="btnPesan" aria-label="Log Login" style="display:none;" title="Log Login">
         ✉️
-        <span class="badge">3</span>
+        <span class="badge" id="loginLogBadge" style="display:none;">0</span>
       </button>
       <div class="profile-wrap">
         <div class="profile-photo" id="profileBtn">?</div>
@@ -1347,6 +1435,30 @@
       </div>
     </div>
   </header>
+
+<div id="loginLogBackdrop"></div>
+<div id="loginLogPanel" aria-hidden="true">
+  <div class="ll-head">
+    <div style="font-size:13px;font-weight:700;">📋 Log Login</div>
+    <button type="button" id="btnLlClose" style="background:transparent;border:none;color:#fff;font-size:20px;line-height:1;cursor:pointer;padding:0 4px;">&times;</button>
+  </div>
+  <div class="ll-filters">
+    <input type="search" id="llCari" placeholder="Nama / NISN / PIN" autocomplete="off">
+    <input type="date" id="llDari" title="Dari tanggal">
+    <input type="date" id="llSampai" title="Sampai tanggal">
+    <button type="button" class="btn btn-primary" id="btnLlCari" style="padding:6px 10px;font-size:12px;">Cari</button>
+  </div>
+  <div class="ll-body" id="llList">
+    <div style="text-align:center;padding:16px;color:#94a3b8;font-size:12px;">Memuat...</div>
+  </div>
+  <div class="ll-toolbar">
+    <label style="font-size:11px;display:flex;align-items:center;gap:4px;"><input type="checkbox" id="llCheckAll"> Semua</label>
+    <button type="button" class="btn btn-outline" id="btnLlEdit" style="padding:4px 8px;font-size:11px;">✏️ Edit</button>
+    <button type="button" class="btn btn-outline" id="btnLlHapus" style="padding:4px 8px;font-size:11px;color:#ef4444;border-color:#fca5a5;">🗑️ Hapus</button>
+    <button type="button" class="btn btn-outline" id="btnLlHapusMasal" style="padding:4px 8px;font-size:11px;color:#ef4444;border-color:#fca5a5;">Hapus filter</button>
+    <span id="llInfo" style="font-size:11px;color:#64748b;margin-left:auto;">0 data</span>
+  </div>
+</div>
 <div class="sidebar-overlay" id="sidebarOverlay"></div>
   <aside class="sidebar" id="sidebar">
     <div class="sidebar-header">
@@ -2833,7 +2945,7 @@
 
   </main>
 <footer class="footer">
-    © 2026 SMPN PANTANG MUNDUR * <span style="opacity:.7">· v2026.10.15j</span>
+    © 2026 SMPN PANTANG MUNDUR * <span style="opacity:.7">· v2026.10.15k</span>
   </footer>
 <div class="modal-overlay" id="modalLogin">
     <div class="modal">
@@ -3871,7 +3983,12 @@
       const btnLogout = document.getElementById('btnLogout');
 
       btnToggle.style.display = isLoggedIn ? 'flex' : 'none';
-      btnPesan.style.display = isLoggedIn ? 'flex' : 'none';
+      // Log login hanya admin
+      if (btnPesan) {
+        btnPesan.style.display = (role === 'admin') ? 'flex' : 'none';
+        if (role !== 'admin') closeLoginLogPanel();
+        else { try { refreshLoginLogBadge(); } catch (e) {} }
+      }
       btnEdit.style.display = isLoggedIn ? 'block' : 'none';
       btnLogin.style.display = isLoggedIn ? 'none' : 'block';
       btnLogout.style.display = isLoggedIn ? 'block' : 'none';
@@ -4152,10 +4269,20 @@
         }
 
         applyRole(role);
+        try {
+          await recordLoginLog({
+            user_id: userId,
+            role: role,
+            nama: userName || ROLE_DATA[role]?.name || '',
+            kode: currentUserKode || kode,
+            kelas: currentUserKelas || null
+          });
+        } catch (e) { console.warn('login log', e); }
         try { await loadGdriveSettingsFromDb(); } catch (e) {}
         closeModal('modalLogin');
         const extra = currentUserIsAlumni ? '\n(Alumni / Lulusan)' : '';
         alert('Login berhasil sebagai ' + ROLE_DATA[role].label + (userName ? '\n' + userName : '') + extra);
+        if (role === 'admin') { try { refreshLoginLogBadge(); } catch (e) {} }
       } catch (err) {
         console.error(err);
         alert('Gagal terhubung ke server. Coba lagi atau periksa konfigurasi Supabase.');
@@ -6823,6 +6950,244 @@
       const allEnded = sesiList.every(s => sesiSudahBerakhir(s, tanggal));
       if (allEnded) _materializedDates.add(tanggal);
     }
+
+
+    /* ===== Log Login (admin only) ===== */
+    const LOGIN_LOG_KEY = 'login_log_local';
+    let _loginLogCache = [];
+
+    function loginLogLocalLoad() {
+      try { return JSON.parse(localStorage.getItem(LOGIN_LOG_KEY) || '[]'); } catch (e) { return []; }
+    }
+    function loginLogLocalSave(rows) {
+      try { localStorage.setItem(LOGIN_LOG_KEY, JSON.stringify(rows || [])); } catch (e) {}
+    }
+
+    async function recordLoginLog(info) {
+      const row = {
+        user_id: info.user_id != null ? Number(info.user_id) : null,
+        role: info.role || '',
+        nama: info.nama || '',
+        kode: info.kode || '',
+        kelas: info.kelas || null,
+        keterangan: info.keterangan || '',
+        login_at: new Date().toISOString(),
+        user_agent: (typeof navigator !== 'undefined' ? String(navigator.userAgent || '').slice(0, 180) : '')
+      };
+      if (supabaseClient) {
+        try {
+          const { error } = await supabaseClient.from('login_log').insert([row]);
+          if (!error) return;
+          console.warn('login_log insert', error);
+        } catch (e) { console.warn(e); }
+      }
+      const list = loginLogLocalLoad();
+      list.unshift(Object.assign({ id: 'L' + Date.now() }, row));
+      if (list.length > 2000) list.length = 2000;
+      loginLogLocalSave(list);
+    }
+
+    async function fetchLoginLogs(filters) {
+      filters = filters || {};
+      const dari = filters.dari || '';
+      const sampai = filters.sampai || '';
+      const q = String(filters.q || '').trim().toLowerCase();
+      let rows = [];
+      if (supabaseClient) {
+        try {
+          let query = supabaseClient.from('login_log').select('*').order('login_at', { ascending: false }).limit(500);
+          if (dari) query = query.gte('login_at', dari + 'T00:00:00');
+          if (sampai) query = query.lte('login_at', sampai + 'T23:59:59.999');
+          const { data, error } = await query;
+          if (error) throw error;
+          rows = data || [];
+        } catch (e) {
+          console.warn('fetchLoginLogs', e);
+          rows = loginLogLocalLoad();
+        }
+      } else {
+        rows = loginLogLocalLoad();
+      }
+      if (dari || sampai) {
+        rows = rows.filter(r => {
+          const t = String(r.login_at || '').slice(0, 10);
+          if (dari && t < dari) return false;
+          if (sampai && t > sampai) return false;
+          return true;
+        });
+      }
+      if (q) {
+        rows = rows.filter(r =>
+          String(r.nama || '').toLowerCase().includes(q) ||
+          String(r.kode || '').toLowerCase().includes(q) ||
+          String(r.role || '').toLowerCase().includes(q) ||
+          String(r.kelas || '').toLowerCase().includes(q)
+        );
+      }
+      _loginLogCache = rows;
+      return rows;
+    }
+
+    async function deleteLoginLogs(ids) {
+      ids = (ids || []).map(String);
+      if (!ids.length) return;
+      const dbIds = ids.filter(id => id.indexOf('L') !== 0).map(id => Number(id)).filter(n => !isNaN(n));
+      if (supabaseClient && dbIds.length) {
+        try {
+          await supabaseClient.from('login_log').delete().in('id', dbIds);
+        } catch (e) { console.warn(e); }
+      }
+      const set = new Set(ids);
+      loginLogLocalSave(loginLogLocalLoad().filter(r => !set.has(String(r.id))));
+    }
+
+    async function updateLoginLog(id, patch) {
+      if (supabaseClient && String(id).indexOf('L') !== 0) {
+        try {
+          await supabaseClient.from('login_log').update(patch).eq('id', Number(id));
+        } catch (e) { console.warn(e); }
+      }
+      const list = loginLogLocalLoad().map(r => String(r.id) === String(id) ? Object.assign({}, r, patch) : r);
+      loginLogLocalSave(list);
+    }
+
+    function fmtLoginAt(iso) {
+      if (!iso) return '-';
+      try {
+        const d = new Date(iso);
+        if (isNaN(d.getTime())) return String(iso).replace('T', ' ').slice(0, 19);
+        return d.toLocaleString('id-ID', {
+          day: '2-digit', month: '2-digit', year: 'numeric',
+          hour: '2-digit', minute: '2-digit', second: '2-digit'
+        });
+      } catch (e) { return String(iso); }
+    }
+
+    function openLoginLogPanel() {
+      if (currentRole !== 'admin') return;
+      const p = document.getElementById('loginLogPanel');
+      const b = document.getElementById('loginLogBackdrop');
+      if (p) { p.classList.add('show'); p.setAttribute('aria-hidden', 'false'); }
+      if (b) b.classList.add('show');
+      const today = typeof todayLocal === 'function' ? todayLocal() : new Date().toISOString().slice(0, 10);
+      const dari = document.getElementById('llDari');
+      const sampai = document.getElementById('llSampai');
+      if (dari && !dari.value) dari.value = today;
+      if (sampai && !sampai.value) sampai.value = today;
+      renderLoginLogList();
+    }
+
+    function closeLoginLogPanel() {
+      const p = document.getElementById('loginLogPanel');
+      const b = document.getElementById('loginLogBackdrop');
+      if (p) { p.classList.remove('show'); p.setAttribute('aria-hidden', 'true'); }
+      if (b) b.classList.remove('show');
+    }
+
+    async function refreshLoginLogBadge() {
+      const badge = document.getElementById('loginLogBadge');
+      if (!badge || currentRole !== 'admin') {
+        if (badge) badge.style.display = 'none';
+        return;
+      }
+      try {
+        const today = typeof todayLocal === 'function' ? todayLocal() : new Date().toISOString().slice(0, 10);
+        const rows = await fetchLoginLogs({ dari: today, sampai: today });
+        const n = (rows || []).length;
+        if (n > 0) {
+          badge.textContent = n > 99 ? '99+' : String(n);
+          badge.style.display = '';
+        } else {
+          badge.style.display = 'none';
+        }
+      } catch (e) {
+        badge.style.display = 'none';
+      }
+    }
+
+    async function renderLoginLogList() {
+      const box = document.getElementById('llList');
+      const info = document.getElementById('llInfo');
+      if (!box) return;
+      box.innerHTML = '<div style="text-align:center;padding:12px;color:#94a3b8;font-size:12px;">Memuat...</div>';
+      const q = document.getElementById('llCari')?.value || '';
+      const dari = document.getElementById('llDari')?.value || '';
+      const sampai = document.getElementById('llSampai')?.value || '';
+      try {
+        const rows = await fetchLoginLogs({ q, dari, sampai });
+        if (info) info.textContent = rows.length + ' data';
+        if (!rows.length) {
+          box.innerHTML = '<div style="text-align:center;padding:16px;color:#94a3b8;font-size:12px;">Tidak ada log</div>';
+          return;
+        }
+        box.innerHTML = rows.map(r => {
+          const roleColor = r.role === 'admin' ? '#7c3aed' : (r.role === 'guru' ? '#2563eb' : '#059669');
+          return '<div class="ll-row">' +
+            '<input type="checkbox" class="ll-cb" value="' + esc(String(r.id)) + '">' +
+            '<div style="flex:1;min-width:0;">' +
+              '<div style="font-weight:700;color:#0f172a;">' + esc(r.nama || '-') +
+                ' <span style="font-weight:600;color:' + roleColor + ';font-size:10px;">' + esc(String(r.role || '').toUpperCase()) + '</span></div>' +
+              '<div style="color:#64748b;margin-top:2px;">' +
+                esc(r.kode || '-') +
+                (r.kelas ? (' · ' + esc(r.kelas)) : '') +
+                (r.keterangan ? (' · ' + esc(r.keterangan)) : '') +
+              '</div>' +
+              '<div style="color:#94a3b8;margin-top:2px;font-size:11px;">' + esc(fmtLoginAt(r.login_at)) + '</div>' +
+            '</div></div>';
+        }).join('');
+      } catch (e) {
+        box.innerHTML = '<div style="color:#ef4444;padding:12px;text-align:center;font-size:12px;">Gagal: ' + esc(String(e.message || e)) + '</div>';
+      }
+    }
+
+    function getCheckedLoginLogIds() {
+      return [...document.querySelectorAll('#llList .ll-cb:checked')].map(c => c.value);
+    }
+
+    document.getElementById('btnPesan')?.addEventListener('click', (e) => {
+      e.stopPropagation();
+      if (currentRole !== 'admin') return;
+      const p = document.getElementById('loginLogPanel');
+      if (p && p.classList.contains('show')) closeLoginLogPanel();
+      else openLoginLogPanel();
+    });
+    document.getElementById('btnLlClose')?.addEventListener('click', () => closeLoginLogPanel());
+    document.getElementById('loginLogBackdrop')?.addEventListener('click', () => closeLoginLogPanel());
+    document.getElementById('btnLlCari')?.addEventListener('click', () => renderLoginLogList());
+    document.getElementById('llCari')?.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') renderLoginLogList();
+    });
+    document.getElementById('llCheckAll')?.addEventListener('change', function () {
+      document.querySelectorAll('#llList .ll-cb').forEach(c => { c.checked = this.checked; });
+    });
+    document.getElementById('btnLlHapus')?.addEventListener('click', async () => {
+      if (currentRole !== 'admin') return;
+      const ids = getCheckedLoginLogIds();
+      if (!ids.length) { alert('Centang log yang akan dihapus'); return; }
+      if (!confirm('Hapus ' + ids.length + ' log terpilih?')) return;
+      await deleteLoginLogs(ids);
+      await renderLoginLogList();
+      refreshLoginLogBadge();
+    });
+    document.getElementById('btnLlHapusMasal')?.addEventListener('click', async () => {
+      if (currentRole !== 'admin') return;
+      const rows = _loginLogCache || [];
+      if (!rows.length) { alert('Tidak ada data pada filter ini'); return; }
+      if (!confirm('Hapus SEMUA ' + rows.length + ' log sesuai filter saat ini?')) return;
+      await deleteLoginLogs(rows.map(r => r.id));
+      await renderLoginLogList();
+      refreshLoginLogBadge();
+    });
+    document.getElementById('btnLlEdit')?.addEventListener('click', async () => {
+      if (currentRole !== 'admin') return;
+      const ids = getCheckedLoginLogIds();
+      if (ids.length !== 1) { alert('Pilih tepat 1 log untuk diedit (keterangan)'); return; }
+      const row = (_loginLogCache || []).find(r => String(r.id) === String(ids[0]));
+      const ket = prompt('Keterangan log:', row ? (row.keterangan || '') : '');
+      if (ket === null) return;
+      await updateLoginLog(ids[0], { keterangan: String(ket).trim() });
+      await renderLoginLogList();
+    });
 
     async function loadDashboard() {
       const tbG = document.getElementById('tbodyDashGuru');
