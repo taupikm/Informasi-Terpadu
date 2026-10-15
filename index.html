@@ -996,11 +996,11 @@
       box-shadow: 0 12px 40px rgba(15,23,42,.18);
       border-radius: 14px;
       overflow: hidden;
-      /* mobile: full width margin, ~33vh */
+      /* mobile: sedikit lebih panjang (~+1cm) */
       top: 56px;
       left: 8px;
       right: 8px;
-      max-height: 34vh;
+      max-height: calc(34vh + 38px);
     }
     #loginLogPanel.show { display: flex; }
     @media (min-width: 768px) {
@@ -1008,7 +1008,7 @@
         left: auto;
         right: 16px;
         width: min(400px, 42vw);
-        max-height: 42vh;
+        max-height: calc(42vh + 38px);
         top: 60px;
       }
     }
@@ -2945,7 +2945,7 @@
 
   </main>
 <footer class="footer">
-    © 2026 SMPN PANTANG MUNDUR * <span style="opacity:.7">· v2026.10.15k</span>
+    © 2026 SMPN PANTANG MUNDUR * <span style="opacity:.7">· v2026.10.15l</span>
   </footer>
 <div class="modal-overlay" id="modalLogin">
     <div class="modal">
@@ -4270,13 +4270,16 @@
 
         applyRole(role);
         try {
-          await recordLoginLog({
-            user_id: userId,
-            role: role,
-            nama: userName || ROLE_DATA[role]?.name || '',
-            kode: currentUserKode || kode,
-            kelas: currentUserKelas || null
-          });
+          // Admin tidak dicatat di log login
+          if (role !== 'admin') {
+            await recordLoginLog({
+              user_id: userId,
+              role: role,
+              nama: userName || ROLE_DATA[role]?.name || '',
+              kode: currentUserKode || kode,
+              kelas: currentUserKelas || null
+            });
+          }
         } catch (e) { console.warn('login log', e); }
         try { await loadGdriveSettingsFromDb(); } catch (e) {}
         closeModal('modalLogin');
