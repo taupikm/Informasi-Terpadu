@@ -998,8 +998,8 @@
     #qrReaderShell {
       position: relative;
       width: 100%;
-      height: min(52vh, 400px);
-      min-height: 260px;
+      height: min(42vh, 300px);
+      min-height: 240px;
       border-radius: 14px;
       overflow: hidden;
       background: #0f172a;
@@ -1024,14 +1024,14 @@
     #qrFocusFrame {
       pointer-events: none;
       position: absolute;
-      left: 3%;
-      right: 3%;
-      top: 28%;
-      bottom: 28%;
+      left: 12%;
+      right: 12%;
+      top: 14%;
+      bottom: 14%;
       z-index: 5;
       border: 2.5px solid #ffffff;
       border-radius: 10px;
-      box-shadow: 0 0 0 9999px rgba(0,0,0,0.22);
+      box-shadow: 0 0 0 9999px rgba(0,0,0,0.32);
     }
     #qrFocusFrame::before,
     #qrFocusFrame::after,
@@ -1951,13 +1951,12 @@
           </button>
         </div>
 <div id="scanTipeSwitch" style="display:none;margin-top:12px;">
-          <div style="display:flex;border-radius:10px;overflow:hidden;border:1px solid #cbd5e1;">
+          <div style="display:flex;border-radius:10px;overflow:hidden;border:1px solid #1e40af;">
             <button type="button" class="scan-tipe-btn active" data-tipe="siswa" id="btnScanSiswa"
-              style="flex:1;padding:10px;border:none;font-weight:700;font-size:13px;cursor:pointer;background:#ef4444;color:#fff;">Siswa</button>
+              style="flex:1;padding:10px;border:none;font-weight:700;font-size:13px;cursor:pointer;background:#38bdf8;color:#0f172a;">Siswa</button>
             <button type="button" class="scan-tipe-btn" data-tipe="guru" id="btnScanGuru"
-              style="flex:1;padding:10px;border:none;font-weight:700;font-size:13px;cursor:pointer;background:#e2e8f0;color:#64748b;">Guru</button>
+              style="flex:1;padding:10px;border:none;font-weight:700;font-size:13px;cursor:pointer;background:#1e40af;color:white;">Guru</button>
           </div>
-          <div id="scanTipeHint" style="font-size:11px;color:#64748b;text-align:center;margin-top:6px;">Mode aktif: <b style="color:#ef4444;">Siswa</b></div>
         </div>
 <div style="display:flex;gap:8px;margin-top:12px;">
           <button class="btn btn-primary" id="btnBukaKamera" style="flex:1;">📷 Buka Kamera</button>
@@ -1971,7 +1970,7 @@
               <span class="qr-corner-br"></span>
             </div>
           </div>
-          <p style="font-size:11px;color:#64748b;text-align:center;margin-top:6px;">Arahkan barcode ke strip putih (boleh sedikit bergerak) · jarak ±15–25 cm</p>
+          <p style="font-size:11px;color:#64748b;text-align:center;margin-top:6px;">Arahkan barcode / QR code ke dalam bingkai putih</p>
         </div>
       </div>
 
@@ -7660,31 +7659,17 @@
       scanTipe = tipe;
       const btnS = document.getElementById('btnScanSiswa');
       const btnG = document.getElementById('btnScanGuru');
-      const hint = document.getElementById('scanTipeHint');
-      // Aktif = merah, nonaktif = abu — kontras jelas
       if (tipe === 'siswa') {
-        btnS.style.background = '#ef4444';
-        btnS.style.color = '#fff';
-        btnS.classList.add('active');
-        btnG.style.background = '#e2e8f0';
-        btnG.style.color = '#64748b';
-        btnG.classList.remove('active');
-        if (hint) hint.innerHTML = 'Mode aktif: <b style="color:#ef4444;">Siswa</b> — scan NISN kartu siswa';
+        btnS.style.background = '#38bdf8';
+        btnS.style.color = '#0f172a';
+        btnG.style.background = '#1e40af';
+        btnG.style.color = 'white';
       } else {
-        btnG.style.background = '#ef4444';
-        btnG.style.color = '#fff';
-        btnG.classList.add('active');
-        btnS.style.background = '#e2e8f0';
-        btnS.style.color = '#64748b';
-        btnS.classList.remove('active');
-        if (hint) hint.innerHTML = 'Mode aktif: <b style="color:#ef4444;">Guru</b> — scan NIP/PIN guru';
+        btnG.style.background = '#38bdf8';
+        btnG.style.color = '#0f172a';
+        btnS.style.background = '#1e40af';
+        btnS.style.color = 'white';
       }
-      // refresh roster sesuai mode (agar lookup cepat)
-      try {
-        _scanRosterMap = null;
-        _scanRosterTs = 0;
-        if (typeof warmScanRoster === 'function') warmScanRoster().catch(() => {});
-      } catch (e) {}
     }
 
     document.getElementById('btnScanSiswa').addEventListener('click', () => setScanTipeUI('siswa'));
@@ -7910,39 +7895,21 @@
       document.getElementById('scanHasilStatus').style.color = ok ? '#166534' : '#991b1b';
       document.getElementById('scanHasilKet').textContent = ket || '';
       openModal('modalScanHasil');
-      // auto-tutup lebih cepat agar antrian scan lancar
+      // auto-tutup sangat cepat agar antrian scan tidak macet
       if (_scanHasilTimer) clearTimeout(_scanHasilTimer);
       _scanHasilTimer = setTimeout(() => {
         try { closeModal('modalScanHasil'); } catch (e) {}
         lastScanCode = '';
         lastScanTime = 0;
         resumeScanCamera();
-      }, ok ? 550 : 900);
-    }
-
-    // Toast ringan di atas kamera (tanpa blokir scan berikutnya)
-    function tampilToastScan(ok, nama, status) {
-      let el = document.getElementById('scanToast');
-      if (!el) {
-        el = document.createElement('div');
-        el.id = 'scanToast';
-        el.style.cssText = 'position:fixed;left:50%;transform:translateX(-50%);top:72px;z-index:3200;max-width:92vw;padding:10px 14px;border-radius:12px;font-size:13px;font-weight:700;box-shadow:0 8px 24px rgba(0,0,0,.18);pointer-events:none;transition:opacity .2s;';
-        document.body.appendChild(el);
-      }
-      el.style.background = ok ? '#dcfce7' : '#fee2e2';
-      el.style.color = ok ? '#166534' : '#991b1b';
-      el.style.border = '1px solid ' + (ok ? '#86efac' : '#fca5a5');
-      el.textContent = (ok ? '✓ ' : '✕ ') + (nama || '') + (status ? ' · ' + status : '');
-      el.style.opacity = '1';
-      if (el._t) clearTimeout(el._t);
-      el._t = setTimeout(() => { el.style.opacity = '0'; }, 1200);
+      }, ok ? 400 : 600);
     }
 
     function scheduleLoadScanLog() {
       if (_scanLogTimer) clearTimeout(_scanLogTimer);
       _scanLogTimer = setTimeout(() => {
         loadScanLog().catch(() => {});
-      }, 2500);
+      }, 1200);
     }
 
     function prependScanLogRow(r) {
@@ -7999,69 +7966,19 @@
       }
     }
 
-    // dedup lokal sesi hari ini (hindari query DB berulang untuk kode yang sama)
-    const _scanDedupLocal = new Set();
-    // map NISN/NIP/PIN -> person (diisi saat buka kamera)
-    let _scanRosterMap = null; // Map kode -> {person, tipe}
-    let _scanRosterTs = 0;
-
-    function playScanBeep(ok) {
-      try {
-        const Ctx = window.AudioContext || window.webkitAudioContext;
-        if (!Ctx) return;
-        if (!window._scanAudioCtx) window._scanAudioCtx = new Ctx();
-        const ctx = window._scanAudioCtx;
-        if (ctx.state === 'suspended') ctx.resume().catch(() => {});
-        const o = ctx.createOscillator();
-        const g = ctx.createGain();
-        o.connect(g); g.connect(ctx.destination);
-        o.type = 'sine';
-        o.frequency.value = ok ? 880 : 220;
-        g.gain.value = 0.08;
-        o.start();
-        g.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + (ok ? 0.12 : 0.25));
-        o.stop(ctx.currentTime + (ok ? 0.13 : 0.26));
-      } catch (e) {}
-    }
-
-    async function warmScanRoster() {
-      if (!supabaseClient) return;
-      if (_scanRosterMap && (Date.now() - _scanRosterTs) < 300000) return;
-      try {
-        const prefer = (typeof scanTipe !== 'undefined' && currentRole === 'admin') ? scanTipe : 'siswa';
-        const map = new Map();
-        if (prefer === 'siswa' || currentRole !== 'admin') {
-          const { data } = await supabaseClient.from('siswa').select('id, nama, nisn, status').limit(5000);
-          (data || []).forEach(s => {
-            if (s.nisn) map.set(String(s.nisn).trim(), { person: s, tipe: 'siswa' });
-          });
-        }
-        if (prefer === 'guru' || currentRole === 'admin') {
-          const { data } = await supabaseClient.from('guru').select('id, nama, nip, pin, status').limit(2000);
-          (data || []).forEach(g => {
-            if (g.nip) map.set(String(g.nip).trim(), { person: g, tipe: 'guru' });
-            if (g.pin) map.set(String(g.pin).trim(), { person: g, tipe: 'guru' });
-          });
-        }
-        _scanRosterMap = map;
-        _scanRosterTs = Date.now();
-        console.log('[scan] roster warm', map.size);
-      } catch (e) {
-        console.warn('warmScanRoster', e);
-      }
-    }
-
-    // cache cek libur agar tidak query tiap scan
     let _liburScanCache = { ts: 0, val: null };
-    async function getLiburScanCached() {
-      if (Date.now() - _liburScanCache.ts < 60000) return _liburScanCache.val;
+    const _scanDupCache = new Map(); // key: tanggal|sesi|kode -> ts sukses/ditolak
+
+    async function isHariLiburHariIniCached() {
+      const now = Date.now();
+      if (_liburScanCache.ts && (now - _liburScanCache.ts) < 90000) return _liburScanCache.val;
       const v = await isHariLiburHariIni();
-      _liburScanCache = { ts: Date.now(), val: v };
+      _liburScanCache = { ts: now, val: v };
       return v;
     }
 
     async function prosesScan(kode, fromFingerprint) {
-      const _liburScan = await getLiburScanCached();
+      const _liburScan = await isHariLiburHariIniCached();
       if (_liburScan) {
         tampilHasil(false, '', 'Hari Libur', (_liburScan.keterangan || 'Hari ini libur') + ' — absensi tidak dicatat');
         return;
@@ -8073,7 +7990,6 @@
         return;
       }
       if (!sesiAktif) {
-        // refresh sesi sekali jika null
         try { sesiAktif = getSesiAktifSekarang(); } catch (e) {}
         if (!sesiAktif) {
           tampilHasil(false, '', 'Gagal', 'Tidak ada sesi aktif saat ini');
@@ -8085,55 +8001,52 @@
       }
 
       const today = todayLocal();
+      const dupKey = today + '|' + (sesiAktif && sesiAktif.id) + '|' + kode;
+      const dupHit = _scanDupCache.get(dupKey);
+      if (dupHit && (Date.now() - dupHit) < 120000) {
+        tampilHasil(false, '', 'Scan Ditolak', 'Kamu sudah scan sesi ini');
+        return;
+      }
 
       let person = null;
       let tipe = null;
       const preferTipe = fromFingerprint ? null : (currentRole === 'admin' ? scanTipe : 'siswa');
 
       try {
-        // dedup lokal dulu (0 ms)
-        const dedupKey = today + '|' + (sesiAktif && sesiAktif.id) + '|' + kode;
-        if (_scanDedupLocal.has(dedupKey)) {
-          playScanBeep(false);
-          tampilToastScan(false, kode, 'Sudah scan sesi ini');
-          return;
-        }
-
-        // roster in-memory (hasil warmScanRoster)
-        if (_scanRosterMap && _scanRosterMap.has(kode)) {
-          const hit = _scanRosterMap.get(kode);
-          if (!preferTipe || hit.tipe === preferTipe || preferTipe === 'all') {
-            person = hit.person;
-            tipe = hit.tipe;
-          }
-        }
-
-        // cache lookup per-kode
+        // cache lookup lokal (10 menit)
         const cacheKey = (preferTipe || 'all') + ':' + kode;
-        if (!person) {
-          const cached = _scanPersonCache.get(cacheKey);
-          if (cached && (Date.now() - cached.ts) < 300000) {
-            person = cached.person;
-            tipe = cached.tipe;
-          }
+        const cached = _scanPersonCache.get(cacheKey);
+        if (cached && (Date.now() - cached.ts) < 600000) {
+          person = cached.person;
+          tipe = cached.tipe;
         }
 
         if (!person && supabaseClient) {
-          if (!preferTipe || preferTipe === 'siswa') {
+          // parallel: siswa + guru nip + guru pin sekaligus bila perlu
+          if (preferTipe === 'siswa') {
             const { data: siswa } = await supabaseClient.from('siswa').select('id, nama, nisn, status').eq('nisn', kode).maybeSingle();
             if (siswa) { person = siswa; tipe = 'siswa'; }
-          }
-          if (!person && (!preferTipe || preferTipe === 'guru')) {
+          } else if (preferTipe === 'guru') {
             const [rNip, rPin] = await Promise.all([
               supabaseClient.from('guru').select('id, nama, nip, pin, status').eq('nip', kode).maybeSingle(),
               supabaseClient.from('guru').select('id, nama, nip, pin, status').eq('pin', kode).maybeSingle()
             ]);
             const guru = (rNip && rNip.data) || (rPin && rPin.data) || null;
             if (guru) { person = guru; tipe = 'guru'; }
+          } else {
+            const [rSiswa, rNip, rPin] = await Promise.all([
+              supabaseClient.from('siswa').select('id, nama, nisn, status').eq('nisn', kode).maybeSingle(),
+              supabaseClient.from('guru').select('id, nama, nip, pin, status').eq('nip', kode).maybeSingle(),
+              supabaseClient.from('guru').select('id, nama, nip, pin, status').eq('pin', kode).maybeSingle()
+            ]);
+            if (rSiswa && rSiswa.data) { person = rSiswa.data; tipe = 'siswa'; }
+            else {
+              const guru = (rNip && rNip.data) || (rPin && rPin.data) || null;
+              if (guru) { person = guru; tipe = 'guru'; }
+            }
           }
           if (person && tipe) {
             _scanPersonCache.set(cacheKey, { person, tipe, ts: Date.now() });
-            if (_scanRosterMap) _scanRosterMap.set(kode, { person, tipe });
           }
         } else if (!person) {
           if (!dataSiswa.length) await loadSiswa();
@@ -8150,37 +8063,38 @@
 
         if (!person) {
           const label = preferTipe === 'guru' ? 'NIP/PIN Guru' : (preferTipe === 'siswa' ? 'NISN Siswa' : 'NISN / NIP');
-          playScanBeep(false);
-          tampilToastScan(false, kode, 'Tidak terdaftar');
-          // modal hanya untuk error yang perlu dibaca
           tampilHasil(false, kode, 'Tidak ditemukan', label + ' tidak terdaftar');
           return;
         }
 
-        // cek duplikat/blok — skip DB jika sudah ada di cache dedup; query ringan hanya jika perlu
+        // Cek blok (izin/sakit/alpa) + dup hanya 1 query status+sesi bila memungkinkan:
+        // Fast path: langsung insert, biarkan unique constraint (23505) menangani duplikat.
+        // Cek blok (A/B/Izin/Sakit) tetap perlu agar tidak menimpa status khusus.
         if (supabaseClient) {
-          const { data: existing } = await supabaseClient.from('absensi')
-            .select('id, status, sesi_id')
+          const { data: abRows } = await supabaseClient.from('absensi')
+            .select('status, sesi_id')
             .eq('tanggal', today)
             .eq('kode', kode)
-            .limit(20);
-          const rows = existing || [];
+            .in('status', ['A', 'B', 'Izin', 'Sakit', 'IZIN', 'SAKIT', 'Alpa', 'Bolos', 'TW', 'TL', 'H'])
+            .limit(12);
+          const rows = abRows || [];
           const blocked = rows.filter(r => {
-            const st = String(r.status || '');
-            return ['A', 'B', 'Izin', 'Sakit', 'IZIN', 'SAKIT', 'Alpa', 'Bolos'].includes(st);
+            const s = String(r.status || '').toUpperCase();
+            return s === 'A' || s === 'B' || s === 'IZIN' || s === 'SAKIT' || s === 'ALPA' || s === 'BOLOS' ||
+              r.status === 'Izin' || r.status === 'Sakit';
           });
           if (blocked.length) {
             const st = blocked.map(r => r.status).join(',');
-            playScanBeep(false);
-            tampilToastScan(false, person.nama, 'Ditolak: ' + st);
             tampilHasil(false, person.nama, 'Scan Ditolak',
               'Sudah berstatus ' + st + ' hari ini. Tidak dapat scan di sesi manapun.');
             return;
           }
-          if (rows.some(r => Number(r.sesi_id) === Number(sesiAktif.id))) {
-            _scanDedupLocal.add(dedupKey);
-            playScanBeep(false);
-            tampilToastScan(false, person.nama, 'Sudah scan sesi ini');
+          const already = rows.find(r => String(r.sesi_id) === String(sesiAktif.id) &&
+            (r.status === 'TW' || r.status === 'TL' || r.status === 'H'));
+          if (already) {
+            _scanDupCache.set(dupKey, Date.now());
+            tampilHasil(false, person.nama, 'Scan Ditolak',
+              'Kamu sudah scan sesi ini (' + sesiAktif.nama + ')');
             return;
           }
         }
@@ -8206,39 +8120,26 @@
           keterangan: ket
         };
 
-        // feedback UI dulu — toast saja (tanpa modal) agar antrian tidak terhenti
-        const statusLabel = status === 'TW' ? 'TW – Tepat Waktu' : 'TL – Terlambat';
-        try { if (navigator.vibrate) navigator.vibrate([30, 40, 30]); } catch (e) {}
-        playScanBeep(true);
-        tampilToastScan(true, person.nama, statusLabel);
-        try { prependScanLogRow(row); } catch (e) {}
-
-        // dedup lokal agar scan berikutnya tidak query DB lagi
-        try {
-          _scanDedupLocal.add(today + '|' + sesiAktif.id + '|' + kode);
-        } catch (e) {}
-
-        // kirim DB di background — scanner langsung siap orang berikutnya
         if (supabaseClient) {
-          supabaseClient.from('absensi').insert([row]).then(({ error }) => {
-            if (error) {
-              if (error.code === '23505') {
-                tampilToastScan(false, person.nama, 'Sudah scan sesi ini');
-              } else {
-                console.error('insert absensi', error);
-                tampilToastScan(false, person.nama, 'Gagal simpan DB');
-              }
+          const { error } = await supabaseClient.from('absensi').insert([row]);
+          if (error) {
+            if (error.code === '23505') {
+              _scanDupCache.set(dupKey, Date.now());
+              tampilHasil(false, person.nama, 'Scan Ditolak', 'Kamu sudah scan sesi ini');
+              return;
             }
-          }).catch(e => console.error(e));
+            throw error;
+          }
         }
 
+        _scanDupCache.set(dupKey, Date.now());
+        tampilHasil(true, person.nama,
+          status === 'TW' ? 'TW – Tepat Waktu' : 'TL – Terlambat',
+          ket + ' · ' + now.toLocaleTimeString('id-ID'));
+        try { prependScanLogRow(row); } catch (e) {}
         scheduleLoadScanLog();
-        // soft-restart sangat jarang (hanya jika kamera mulai lag)
         _scanSuccessCount = (_scanSuccessCount || 0) + 1;
-        if (_scanSuccessCount >= 40) {
-          _scanSuccessCount = 0;
-          setTimeout(() => { softRestartKamera(); }, 2000);
-        }
+        // soft-restart kamera dihapus — penyebab utama blank & miss scan
       } catch (e) {
         console.error(e);
         tampilHasil(false, '', 'Error', e.message || String(e));
@@ -8271,152 +8172,43 @@
       } catch (e) {}
     }
 
-    let _preferredCameraId = null;
-
     function buildScanConfig(shellW, shellH) {
-      // Area scan hampir full-width + strip horizontal (barcode 1D toleran goyang)
-      // Tidak pakai qrbox ketat agar frame blur/geser sedikit tetap bisa terbaca
+      const boxW = Math.max(240, Math.floor(shellW * 0.9));
+      const boxH = Math.max(200, Math.floor(shellH * 0.82));
       const formats = [];
       try {
-        const F = Html5QrcodeSupportedFormats;
-        if (F) {
-          // prioritaskan format kartu sekolah (lebih sedikit = decode lebih cepat per frame)
-          [F.CODE_128, F.CODE_39, F.QR_CODE, F.CODE_93, F.EAN_13, F.ITF]
+        if (typeof Html5QrcodeSupportedFormats !== 'undefined') {
+          const F = Html5QrcodeSupportedFormats;
+          [F.QR_CODE, F.CODE_128, F.CODE_39, F.EAN_13, F.EAN_8, F.UPC_A, F.UPC_E, F.ITF, F.CODABAR]
             .forEach(f => { if (f != null) formats.push(f); });
         }
       } catch (e) {}
       const cfg = {
-        // fps tinggi: lebih banyak frame = peluang tangkap momen tajam saat tangan goyang
-        fps: 30,
-        // tanpa qrbox = scan full frame (lebih toleran posisi & goyangan)
-        // aspectRatio longgar
-        aspectRatio: 1.777,
+        fps: 28,
+        qrbox: { width: boxW, height: boxH },
+        aspectRatio: 1.333,
         disableFlip: false,
-        experimentalFeatures: { useBarCodeDetectorIfSupported: true },
-        // resolusi lebih tinggi membantu decode barcode yang sedikit buram
-        videoConstraints: {
-          facingMode: 'environment',
-          width: { ideal: 1920 },
-          height: { ideal: 1080 },
-          advanced: [{ focusMode: 'continuous' }]
-        }
+        rememberLastUsedCamera: true,
+        experimentalFeatures: { useBarCodeDetectorIfSupported: true }
       };
       if (formats.length) cfg.formatsToSupport = formats;
       return cfg;
     }
 
-    async function pickBackCameraId() {
-      if (_preferredCameraId) return _preferredCameraId;
-      try {
-        const cams = await Html5Qrcode.getCameras();
-        if (!cams || !cams.length) return null;
-        // prioritaskan kamera belakang
-        const back = cams.find(c => /back|rear|environment|belakang|world/i.test(c.label || ''))
-          || cams.find(c => !/front|user|face|depan/i.test(c.label || ''))
-          || cams[cams.length - 1];
-        _preferredCameraId = back && back.id ? back.id : null;
-        return _preferredCameraId;
-      } catch (e) {
-        return null;
-      }
-    }
-
-    async function applyBestFocus() {
-      try {
-        const video = document.querySelector('#qrReader video');
-        if (!video) return;
-        video.setAttribute('playsinline', 'true');
-        video.setAttribute('muted', 'true');
-        video.style.objectFit = 'cover';
-        const stream = video.srcObject;
-        const track = stream && stream.getVideoTracks && stream.getVideoTracks()[0];
-        if (!track) return;
-        const caps = (track.getCapabilities && track.getCapabilities()) || {};
-        const advanced = [];
-        if (caps.focusMode) {
-          if (caps.focusMode.includes('continuous')) advanced.push({ focusMode: 'continuous' });
-          else if (caps.focusMode.includes('auto')) advanced.push({ focusMode: 'auto' });
-        }
-        // beberapa HP mendukung pointsOfInterest di tengah
-        if (caps.pointsOfInterest) {
-          advanced.push({ pointsOfInterest: [{ x: 0.5, y: 0.5 }] });
-        }
-        const c = {};
-        if (advanced.length) c.advanced = advanced;
-        // resolusi tinggi jika device sanggup (bantu decode saat sedikit blur)
-        if (caps.width) c.width = { ideal: Math.min(1920, caps.width.max || 1920) };
-        if (caps.height) c.height = { ideal: Math.min(1080, caps.height.max || 1080) };
-        if (caps.frameRate) c.frameRate = { ideal: Math.min(30, caps.frameRate.max || 30) };
-        if (Object.keys(c).length) {
-          await track.applyConstraints(c);
-        }
-      } catch (e) {
-        console.warn('applyBestFocus', e);
-      }
-    }
-
-    async function startScannerEngine() {
-      const shell = document.getElementById('qrReaderShell');
-      const shellW = (shell && shell.clientWidth) ? shell.clientWidth : Math.min(window.innerWidth - 32, 360);
-      const shellH = (shell && shell.clientHeight) ? shell.clientHeight : 280;
-      const config = buildScanConfig(shellW, shellH);
-
-      const camId = await pickBackCameraId();
-      // deviceId exact sering lebih stabil di Android
-      let cameraConfig;
-      if (camId) {
-        cameraConfig = { deviceId: { exact: camId } };
-      } else {
-        cameraConfig = { facingMode: { ideal: 'environment' } };
-      }
-
-      html5QrCode = new Html5Qrcode('qrReader', { verbose: false });
-      try {
-        await html5QrCode.start(cameraConfig, config, onScanSuccessFast, () => {});
-      } catch (e1) {
-        // fallback string deviceId / facingMode sederhana
-        console.warn('start exact failed, fallback', e1);
-        try { await html5QrCode.stop(); } catch (e) {}
-        try { html5QrCode.clear(); } catch (e) {}
-        const readerEl = document.getElementById('qrReader');
-        if (readerEl) readerEl.innerHTML = '';
-        html5QrCode = new Html5Qrcode('qrReader', { verbose: false });
-        const fbConfig = Object.assign({}, config);
-        // videoConstraints kadang bentrok di fallback
-        delete fbConfig.videoConstraints;
-        await html5QrCode.start(
-          camId || { facingMode: 'environment' },
-          fbConfig,
-          onScanSuccessFast,
-          () => {}
-        );
-      }
-
-      await applyBestFocus();
-      // re-focus 2x setelah stream stabil (banyak HP baru lock fokus setelah ~0.5–1s)
-      setTimeout(() => { applyBestFocus(); }, 600);
-      setTimeout(() => { applyBestFocus(); }, 1600);
+    function buildCameraConstraints() {
+      return {
+        facingMode: { ideal: 'environment' },
+        width: { ideal: 1280 },
+        height: { ideal: 720 }
+      };
     }
 
     async function softRestartKamera() {
-      if (_softRestarting || !kameraAktif) return;
-      _softRestarting = true;
-      try {
-        if (html5QrCode) {
-          try { await html5QrCode.stop(); } catch (e) {}
-          try { html5QrCode.clear(); } catch (e) {}
-        }
-        const readerEl = document.getElementById('qrReader');
-        if (readerEl) readerEl.innerHTML = '';
-        await startScannerEngine();
-        lastScanCode = '';
-        lastScanTime = 0;
-        _scanBusy = false;
-      } catch (e) {
-        console.warn('softRestartKamera', e);
-      } finally {
-        _softRestarting = false;
-      }
+      // no-op: full restart menyebabkan blank & miss scan
+      _softRestarting = false;
+      _scanBusy = false;
+      lastScanCode = '';
+      lastScanTime = 0;
     }
 
     function onScanSuccessFast(decodedText) {
@@ -8425,17 +8217,15 @@
         const now = Date.now();
         const code = String(decodedText || '').trim();
         if (!code) return;
-        // kode sama: cooldown 700ms; kode berbeda: langsung (asalkan tidak busy)
-        if (code === lastScanCode && (now - lastScanTime) < 700) return;
+        if (code === lastScanCode && (now - lastScanTime) < 500) return;
         if (_scanBusy) return;
 
         lastScanCode = code;
         lastScanTime = now;
         _scanBusy = true;
+        try { if (navigator.vibrate) navigator.vibrate(25); } catch (e) {}
 
-        // proses non-blocking; unlock cepat agar orang berikutnya bisa scan
-        Promise.resolve()
-          .then(() => prosesScan(code))
+        prosesScan(code)
           .catch(e => console.error('prosesScan', e))
           .finally(() => {
             setTimeout(() => { _scanBusy = false; }, 180);
@@ -8471,15 +8261,13 @@
       _scanSuccessCount = 0;
       _softRestarting = false;
 
-      // preload roster siswa/guru ke memori agar lookup scan hampir instan
-      warmScanRoster().catch(() => {});
-
       try {
         if (typeof Html5Qrcode === 'undefined') {
           alert('Library scanner belum termuat. Cek koneksi internet.');
           tutupKamera();
           return;
         }
+        // clear sisa DOM jika ada instance lama
         try {
           if (html5QrCode) {
             try { await html5QrCode.stop(); } catch (e) {}
@@ -8489,22 +8277,48 @@
         const readerEl = document.getElementById('qrReader');
         if (readerEl) readerEl.innerHTML = '';
 
-        await startScannerEngine();
+        html5QrCode = new Html5Qrcode('qrReader', { verbose: false });
+        const shell = document.getElementById('qrReaderShell');
+        const shellW = (shell && shell.clientWidth) ? shell.clientWidth : Math.min(window.innerWidth - 32, 360);
+        const shellH = (shell && shell.clientHeight) ? shell.clientHeight : 280;
+        const config = buildScanConfig(shellW, shellH);
+
+        try {
+          await html5QrCode.start(buildCameraConstraints(), config, onScanSuccessFast, () => {});
+        } catch (e1) {
+          await html5QrCode.start(
+            { facingMode: 'environment' },
+            config,
+            onScanSuccessFast,
+            () => {}
+          );
+        }
         kameraAktif = true;
-        // unlock audio di gesture user
-        try { playScanBeep(true); } catch (e) {}
+        try {
+          setTimeout(() => {
+            const v = document.querySelector('#qrReader video');
+            if (v && v.srcObject) {
+              const track = v.srcObject.getVideoTracks && v.srcObject.getVideoTracks()[0];
+              if (track && track.getCapabilities) {
+                const caps = track.getCapabilities();
+                const adv = {};
+                if (caps.focusMode && caps.focusMode.includes('continuous')) adv.focusMode = 'continuous';
+                if (Object.keys(adv).length) track.applyConstraints({ advanced: [adv] }).catch(() => {});
+              }
+            }
+          }, 350);
+        } catch (e) {}
       } catch (err) {
         console.error(err);
         try {
-          const readerEl = document.getElementById('qrReader');
-          if (readerEl) readerEl.innerHTML = '';
           html5QrCode = new Html5Qrcode('qrReader', { verbose: false });
           const shell = document.getElementById('qrReaderShell');
           const shellW = (shell && shell.clientWidth) ? shell.clientWidth : 320;
           const shellH = (shell && shell.clientHeight) ? shell.clientHeight : 260;
+          const config2 = buildScanConfig(shellW, shellH);
           await html5QrCode.start(
             { facingMode: 'environment' },
-            buildScanConfig(shellW, shellH),
+            config2,
             onScanSuccessFast,
             () => {}
           );
@@ -15517,126 +15331,132 @@ document.getElementById('btnBsContohFormat')?.addEventListener('click', () => {
       if (btn) { btn.disabled = true; btn.textContent = 'Menghapus...'; }
 
       try {
-        let deleted = 0;
-        const errors = [];
-        const allIds = new Set();
-        const personKeys = []; // {tgl, tipe, refId, kode}
-        const BATCH = 150;
+        // Kumpulkan semua id + kunci (tgl,tipe,ref) SEKALI — lalu hapus batch
+        const allIds = [];
+        const keysByTglTipe = new Map(); // key -> { tgl, tipe, refs:Set, kodes:Set }
 
         for (const b of boxes) {
           const tgl = String(b.dataset.tgl || '').slice(0, 10);
           const tipe = String(b.dataset.tipe || '').trim();
           const refId = Number(b.dataset.ref);
           const kode = String(b.dataset.kode || '').trim();
-          String(b.value || '').split(',').map(Number).filter(n => !isNaN(n) && n > 0)
-            .forEach(id => allIds.add(id));
+          const ids = String(b.value || '').split(',').map(Number).filter(n => !isNaN(n) && n > 0);
+          ids.forEach(id => allIds.push(id));
+
           if (tgl && tipe && refId) {
             try { _rekapDeletedKeys.add(rekapPersonKey(tgl, tipe, refId)); } catch (e) {}
-            personKeys.push({ tgl, tipe, refId, kode });
-          } else if (tgl && tipe && kode) {
-            personKeys.push({ tgl, tipe, refId: 0, kode });
           }
+
+          const gk = tgl + '|' + tipe;
+          if (!keysByTglTipe.has(gk)) {
+            keysByTglTipe.set(gk, { tgl, tipe, refs: new Set(), kodes: new Set() });
+          }
+          const g = keysByTglTipe.get(gk);
+          if (refId) g.refs.add(refId);
+          if (kode) g.kodes.add(kode);
         }
 
-        async function delByIds(table, ids) {
+        const uniqueIds = [...new Set(allIds)];
+        let deleted = 0;
+        const errors = [];
+
+        async function deleteIdsChunked(table, ids) {
           if (!ids.length) return 0;
-          let total = 0;
-          for (let i = 0; i < ids.length; i += BATCH) {
-            const chunk = ids.slice(i, i + BATCH);
+          let n = 0;
+          const CHUNK = 150;
+          for (let i = 0; i < ids.length; i += CHUNK) {
+            const chunk = ids.slice(i, i + CHUNK);
             try {
               const { data, error } = await supabaseClient.from(table).delete().in('id', chunk).select('id');
               if (error) {
                 const r2 = await supabaseClient.from(table).delete().in('id', chunk);
-                if (r2.error) throw r2.error;
-                total += chunk.length;
+                if (r2.error) {
+                  if (table === 'absensi_historis') continue;
+                  throw r2.error;
+                }
+                n += chunk.length;
               } else {
-                total += (data || []).length;
+                n += (data || []).length;
               }
             } catch (e) {
               if (table === 'absensi_historis') continue;
-              throw e;
+              errors.push(e.message || String(e));
+            }
+            if (btn) btn.textContent = 'Menghapus... ' + Math.min(i + CHUNK, ids.length) + '/' + ids.length;
+          }
+          return n;
+        }
+
+        // 1) Hapus massal by ID (paling cepat & akurat)
+        deleted += await deleteIdsChunked('absensi', uniqueIds);
+        await deleteIdsChunked('absensi_historis', uniqueIds);
+
+        // 2) Fallback: hapus by (tanggal + tipe + ref_id) dalam batch paralel per grup tanggal
+        //    Hanya jika masih ada baris tanpa id, atau untuk memastikan semua sesi ikut terhapus
+        const groups = [...keysByTglTipe.values()];
+        const CONCURRENCY = 6;
+        async function runPool(tasks, limit) {
+          let idx = 0;
+          async function worker() {
+            while (idx < tasks.length) {
+              const i = idx++;
+              await tasks[i]();
             }
           }
-          return total;
+          await Promise.all(Array.from({ length: Math.min(limit, tasks.length) }, () => worker()));
         }
 
-        // 1) Hapus massal by id (paling cepat)
-        const idArr = [...allIds];
-        if (idArr.length) {
-          try {
-            deleted += await delByIds('absensi', idArr);
-          } catch (e) {
-            errors.push(e.message || String(e));
-          }
-          try {
-            await delByIds('absensi_historis', idArr);
-          } catch (e) {}
-        }
-
-        // 2) Hapus sisa by (tanggal, tipe, ref_id) — batch paralel per chunk
-        //    Hanya jika masih ada baris tanpa id ter-collect
-        if (personKeys.length) {
-          const CHUNK_P = 25;
-          for (let i = 0; i < personKeys.length; i += CHUNK_P) {
-            const slice = personKeys.slice(i, i + CHUNK_P);
-            const tasks = slice.map(async (pk) => {
-              let n = 0;
+        const fallbackTasks = [];
+        for (const g of groups) {
+          const refList = [...g.refs];
+          if (!g.tgl || !g.tipe || !refList.length) continue;
+          // chunk refs 80 per request
+          for (let i = 0; i < refList.length; i += 80) {
+            const refs = refList.slice(i, i + 80);
+            fallbackTasks.push(async () => {
               try {
-                if (pk.refId) {
-                  const { data, error } = await supabaseClient.from('absensi').delete()
-                    .eq('tanggal', pk.tgl).eq('tipe', pk.tipe).eq('ref_id', pk.refId).select('id');
-                  if (!error) n += (data || []).length;
-                  else {
-                    const r2 = await supabaseClient.from('absensi').delete()
-                      .eq('tanggal', pk.tgl).eq('tipe', pk.tipe).eq('ref_id', pk.refId);
-                    if (!r2.error) n += 1;
-                    else throw r2.error;
-                  }
-                  try {
-                    await supabaseClient.from('absensi_historis').delete()
-                      .eq('tanggal', pk.tgl).eq('tipe', pk.tipe).eq('ref_id', pk.refId);
-                  } catch (e) {}
-                } else if (pk.kode) {
-                  const { data, error } = await supabaseClient.from('absensi').delete()
-                    .eq('tanggal', pk.tgl).eq('tipe', pk.tipe).eq('kode', pk.kode).select('id');
-                  if (!error) n += (data || []).length;
-                  try {
-                    await supabaseClient.from('absensi_historis').delete()
-                      .eq('tanggal', pk.tgl).eq('tipe', pk.tipe).eq('kode', pk.kode);
-                  } catch (e) {}
+                const { data, error } = await supabaseClient.from('absensi').delete()
+                  .eq('tanggal', g.tgl).eq('tipe', g.tipe).in('ref_id', refs).select('id');
+                if (error) {
+                  const r2 = await supabaseClient.from('absensi').delete()
+                    .eq('tanggal', g.tgl).eq('tipe', g.tipe).in('ref_id', refs);
+                  if (r2.error) throw r2.error;
+                  deleted += refs.length;
+                } else {
+                  deleted += (data || []).length;
                 }
               } catch (e) {
                 errors.push(e.message || String(e));
               }
-              return n;
+              try {
+                await supabaseClient.from('absensi_historis').delete()
+                  .eq('tanggal', g.tgl).eq('tipe', g.tipe).in('ref_id', refs);
+              } catch (e) {}
             });
-            const nums = await Promise.all(tasks);
-            deleted += nums.reduce((a, b) => a + b, 0);
-            if (btn) btn.textContent = 'Menghapus... ' + Math.min(i + CHUNK_P, personKeys.length) + '/' + personKeys.length;
           }
         }
+        if (fallbackTasks.length) {
+          if (btn) btn.textContent = 'Menghapus (batch)...';
+          await runPool(fallbackTasks, CONCURRENCY);
+        }
 
-        // UI: hapus baris tercentang dulu agar terasa cepat
+        // UI: buang baris tercentang dari tabel tanpa reload penuh dulu
         try {
           boxes.forEach(b => {
             const tr = b.closest('tr');
             if (tr) tr.remove();
           });
-          const left = document.querySelectorAll('#tbodyRekap tr').length;
-          document.getElementById('infoRekap') && (document.getElementById('infoRekap').textContent = left + ' baris');
-          document.getElementById('infoRekapView') && (document.getElementById('infoRekapView').textContent = left + ' baris');
         } catch (e) {}
 
-        // refresh data di background (jangan blokir alert)
+        // refresh data di background (tidak menahan pesan sukses)
         const refreshP = loadRekapData(true).catch(e => console.warn(e));
 
         if (deleted === 0 && errors.length) {
           alert('Gagal hapus: ' + errors[0] + '\n\nPastikan policy DELETE pada tabel absensi (dan absensi_historis) diaktifkan di Supabase.');
         } else if (deleted === 0) {
-          await refreshP;
           alert('Tidak ada baris yang terhapus di database.\nCoba centang ulang setelah Cari, atau periksa RLS policy DELETE.');
         } else {
-          alert('Berhasil menghapus data absensi (estimasi ' + deleted + ' record dari ' + boxes.length + ' baris).');
+          alert('Berhasil menghapus data absensi (~' + deleted + ' record, ' + boxes.length + ' baris).');
         }
         await refreshP;
       } catch (e) {
