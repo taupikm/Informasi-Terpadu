@@ -13138,13 +13138,11 @@ document.getElementById('btnBsContohFormat')?.addEventListener('click', () => {
     });
 
     function normalizeSesiKey(r) {
-      // Utamakan urutan sesi agar "Sesi 2" / "Sesi2" / id beda tidak dobel
       const ur = r.sesi_urutan != null && r.sesi_urutan !== '' ? Number(r.sesi_urutan) : null;
       if (ur != null && !isNaN(ur) && ur > 0) return 'u:' + ur;
       const sid = r.sesi_id != null && r.sesi_id !== '' ? String(r.sesi_id) : '';
       if (sid) return 'id:' + sid;
       const nm = String(r.sesi_nama || '').trim().toLowerCase().replace(/\s+/g, '');
-      // baris sampah: sesi_nama = "Sakit"/"Izin" tanpa sesi nyata
       if (!nm || nm === 'sakit' || nm === 'izin' || nm === 'alpa' || nm === 'bolos') return null;
       const m = nm.match(/sesi?(\d+)/);
       if (m) return 'u:' + Number(m[1]);
@@ -13158,7 +13156,6 @@ document.getElementById('btnBsContohFormat')?.addEventListener('click', () => {
       if (st === 'TW' || st === 'H') s += 3;
       else if (st === 'TL') s += 2;
       else if (st === 'SAKIT' || st === 'S' || st === 'IZIN' || st === 'I') s += 1;
-      // Alpa/A/B skor rendah — kalah dari historis TW
       return s;
     }
 
@@ -13166,41 +13163,45 @@ document.getElementById('btnBsContohFormat')?.addEventListener('click', () => {
       const f = extraFilter || {};
       const PAGE = 1000;
 
+      function matchPerson(r) {
+        if (f.tipe && r.tipe && r.tipe !== f.tipe) return false;
+        const byRef = f.ref_id != null && f.ref_id !== '' && r.ref_id != null && String(r.ref_id) === String(f.ref_id);
+        const byKode = f.kode && String(r.kode || '') === String(f.kode);
+        if (f.ref_id != null && f.ref_id !== '' && f.kode) return byRef || byKode;
+        if (f.ref_id != null && f.ref_id !== '') return byRef;
+        if (f.kode) return byKode;
+        if (f.namaIlike) {
+          const n = String(r.nama || '').toLowerCase();
+          const k = String(r.kode || '').toLowerCase();
+          const q = String(f.namaIlike).toLowerCase();
+          return n.includes(q) || k.includes(q);
+        }
+        return true;
+      }
+
       async function oneTable(table) {
         if (!supabaseClient) {
           const key = table === 'absensi_historis' ? 'absensi_historis' : 'absensi';
-          let rows = JSON.parse(localStorage.getItem(key) || '[]');
+          let rows = [];
+          try { rows = JSON.parse(localStorage.getItem(key) || '[]'); } catch (e) { rows = []; }
           return rows.filter(r => {
             const t = String(r.tanggal || '').slice(0, 10);
             if (dari && t < dari) return false;
             if (sampai && t > sampai) return false;
-            if (f.tipe && r.tipe !== f.tipe) return false;
-            const matchKode = f.kode && String(r.kode) === String(f.kode);
-            const matchRef = f.ref_id != null && f.ref_id !== '' && String(r.ref_id) === String(f.ref_id);
-            if (f.kode && f.ref_id != null && f.ref_id !== '') {
-              if (!matchKode && !matchRef) return false;
-            } else {
-              if (f.kode && !matchKode) return false;
-              if (f.ref_id != null && f.ref_id !== '' && !matchRef) return false;
-            }
-            if (f.namaIlike) {
-              const n = String(r.nama || '').toLowerCase();
-              const k = String(r.kode || '').toLowerCase();
-              const q = String(f.namaIlike).toLowerCase();
-              if (!n.includes(q) && !k.includes(q)) return false;
-            }
-            return true;
+            return matchPerson(r);
           });
         }
 
-        async function pageQuery(build) {
+        async function runPaged(applyFilters) {
           const all = [];
           let from = 0;
-          for (let guard = 0; guard < 80; guard++) {
-            let q = build(supabaseClient.from(table).select('*')
-              .gte('tanggal', dari).lte('tanggal', sampai)
+          for (let guard = 0; guard < 100; guard++) {
+            let q = supabaseClient.from(table).select('*')
+              .gte('tanggal', dari)
+              .lte('tanggal', sampai)
               .order('tanggal', { ascending: true })
-              .range(from, from + PAGE - 1));
+              .range(from, from + PAGE - 1);
+            q = applyFilters(q);
             const { data, error } = await q;
             if (error) throw error;
             const batch = data || [];
@@ -13211,66 +13212,94 @@ document.getElementById('btnBsContohFormat')?.addEventListener('click', () => {
           return all;
         }
 
-        function applyPersonFilter(q) {
-          if (f.tipe) q = q.eq('tipe', f.tipe);
-          // ref_id ATAU kode — historis kadang ref_id null
-          if (f.ref_id != null && f.ref_id !== '' && f.kode) {
-            q = q.or('ref_id.eq.' + Number(f.ref_id) + ',kode.eq.' + String(f.kode));
-          } else if (f.ref_id != null && f.ref_id !== '') {
-            q = q.eq('ref_id', Number(f.ref_id));
-          } else if (f.kode) {
-            q = q.eq('kode', String(f.kode));
-          }
-          if (f.namaIlike) {
-            const s = String(f.namaIlike).replace(/[%_,]/g, '');
-            q = q.or('nama.ilike.%' + s + '%,kode.ilike.%' + s + '%');
-          }
-          return q;
+        // Strategi 1: filter server (ref OR kode)
+        try {
+          const rows = await runPaged(q => {
+            if (f.tipe) q = q.eq('tipe', f.tipe);
+            if (f.ref_id != null && f.ref_id !== '' && f.kode) {
+              // kode harus di-quote di filter or (NISN berawalan 0)
+              q = q.or('ref_id.eq.' + Number(f.ref_id) + ',kode.eq."' + String(f.kode).replace(/"/g, '') + '"');
+            } else if (f.ref_id != null && f.ref_id !== '') {
+              q = q.eq('ref_id', Number(f.ref_id));
+            } else if (f.kode) {
+              q = q.eq('kode', String(f.kode));
+            }
+            if (f.namaIlike) {
+              const s = String(f.namaIlike).replace(/[%_,]/g, '');
+              q = q.or('nama.ilike.%' + s + '%,kode.ilike.%' + s + '%');
+            }
+            return q;
+          });
+          return rows;
+        } catch (e1) {
+          console.warn('[fetchAbsensiRange]', table, 'filter server gagal:', e1 && e1.message ? e1.message : e1);
         }
 
+        // Strategi 2: query terpisah ref_id + kode lalu gabung
         try {
-          return await pageQuery(applyPersonFilter);
-        } catch (e1) {
-          console.warn(table + ' query gagal, coba fallback', e1);
-          // Fallback: tanpa filter orang di server, filter di client (lebih lambat tapi lengkap)
-          try {
-            const all = await pageQuery(q => {
-              if (f.tipe) q = q.eq('tipe', f.tipe);
-              return q;
-            });
-            return all.filter(r => {
-              if (f.ref_id != null && f.ref_id !== '' && f.kode) {
-                return String(r.ref_id) === String(f.ref_id) || String(r.kode) === String(f.kode);
-              }
-              if (f.ref_id != null && f.ref_id !== '') return String(r.ref_id) === String(f.ref_id);
-              if (f.kode) return String(r.kode) === String(f.kode);
-              if (f.namaIlike) {
-                const n = String(r.nama || '').toLowerCase();
-                const k = String(r.kode || '').toLowerCase();
-                const q = String(f.namaIlike).toLowerCase();
-                return n.includes(q) || k.includes(q);
-              }
+          const parts = [];
+          if (f.ref_id != null && f.ref_id !== '') {
+            try {
+              const r1 = await runPaged(q => {
+                if (f.tipe) q = q.eq('tipe', f.tipe);
+                return q.eq('ref_id', Number(f.ref_id));
+              });
+              parts.push(...r1);
+            } catch (e) { console.warn(table, 'by ref_id', e); }
+          }
+          if (f.kode) {
+            try {
+              const r2 = await runPaged(q => {
+                if (f.tipe) q = q.eq('tipe', f.tipe);
+                return q.eq('kode', String(f.kode));
+              });
+              parts.push(...r2);
+            } catch (e) { console.warn(table, 'by kode', e); }
+          }
+          if (parts.length) {
+            const seen = new Set();
+            return parts.filter(r => {
+              const id = r.id != null ? 'i' + r.id : JSON.stringify(r);
+              if (seen.has(id)) return false;
+              seen.add(id);
               return true;
             });
-          } catch (e2) {
-            console.warn(table + ' fallback gagal', e2);
-            if (table === 'absensi_historis') return [];
-            throw e2;
           }
+        } catch (e2) {
+          console.warn('[fetchAbsensiRange]', table, 'split gagal:', e2);
+        }
+
+        // Strategi 3: ambil semua di rentang tanggal + filter client (paling andal)
+        try {
+          const all = await runPaged(q => {
+            if (f.tipe) q = q.eq('tipe', f.tipe);
+            return q;
+          });
+          return all.filter(matchPerson);
+        } catch (e3) {
+          console.warn('[fetchAbsensiRange]', table, 'full-range gagal:', e3);
+          if (table === 'absensi_historis') return [];
+          throw e3;
         }
       }
 
-      const [a, h] = await Promise.all([oneTable('absensi'), oneTable('absensi_historis')]);
-      // Dedup: unik tanggal + orang + sesi (urutan dinormalisasi)
+      const [a, h] = await Promise.all([
+        oneTable('absensi'),
+        oneTable('absensi_historis')
+      ]);
+      console.log('[fetchAbsensiRange]', dari, '→', sampai,
+        '| absensi:', (a || []).length, '| historis:', (h || []).length,
+        '| filter:', JSON.stringify({ tipe: f.tipe, ref_id: f.ref_id, kode: f.kode || null }));
+
       const map = new Map();
       function rowKey(r) {
         const tgl = String(r.tanggal || '').slice(0, 10);
-        const person = (r.tipe || '') + ':' + (r.ref_id || r.kode || r.nama || '');
+        const person = (r.tipe || '') + ':' + (r.ref_id != null && r.ref_id !== '' ? r.ref_id : (r.kode || r.nama || ''));
         const sk = normalizeSesiKey(r);
-        if (sk == null) return null; // buang baris sampah
+        if (sk == null) return null;
         return tgl + '||' + person + '||' + sk;
       }
-      [...a, ...h].forEach(r => {
+      [...(a || []), ...(h || [])].forEach(r => {
         const key = rowKey(r);
         if (!key) return;
         if (!map.has(key)) map.set(key, r);
@@ -13278,7 +13307,6 @@ document.getElementById('btnBsContohFormat')?.addEventListener('click', () => {
       });
       return [...map.values()];
     }
-
 
     async function refreshArsipInfo() {
       const el = document.getElementById('arsipInfo');
@@ -13503,26 +13531,13 @@ document.getElementById('btnBsContohFormat')?.addEventListener('click', () => {
         if (!tgl) return;
         if (mulai && tgl < mulai) return;
         if (akhir && tgl > akhir) return;
-        const sk = (typeof normalizeSesiKey === 'function') ? normalizeSesiKey(r) : null;
-        if (sk == null) {
-          // fallback: abaikan baris tanpa sesi valid (nama Sakit/Izin palsu)
-          const nm = String(r.sesi_nama || '').trim().toLowerCase();
-          if (!nm || nm === 'sakit' || nm === 'izin') return;
-        }
-        const sesiKey = sk || (
-          (r.sesi_id != null && r.sesi_id !== '' ? 'id:' + r.sesi_id : '') +
-          '|' + (r.sesi_urutan != null && r.sesi_urutan !== '' ? 'u:' + r.sesi_urutan : '') +
-          '|' + String(r.sesi_nama || '').trim()
-        );
-        const key = tgl + '||' + sesiKey;
+        const sk = normalizeSesiKey(r);
+        if (sk == null) return;
+        const key = tgl + '||' + sk;
         if (!map.has(key)) {
           map.set(key, r);
-        } else {
-          const prev = map.get(key);
-          const score = (typeof absensiRowScore === 'function')
-            ? absensiRowScore
-            : (x) => (x.jam_scan ? 2 : 0) + (['TW', 'TL'].includes(String(x.status || '').toUpperCase()) ? 1 : 0);
-          if (score(r) > score(prev)) map.set(key, r);
+        } else if (absensiRowScore(r) > absensiRowScore(map.get(key))) {
+          map.set(key, r);
         }
       });
       const uniq = [...map.values()];
@@ -13723,17 +13738,18 @@ document.getElementById('btnBsContohFormat')?.addEventListener('click', () => {
           return;
         }
 
-        // Ambil absensi + historis sekaligus (ref_id ATAU nisn) agar data lengkap
+        // Selalu ambil absensi + historis dengan ref_id ATAU nisn
         let rows = await fetchAbsensiRange(dari, sampai, {
           tipe: 'siswa',
           ref_id: siswa.id,
-          kode: siswa.nisn || undefined
+          kode: siswa.nisn ? String(siswa.nisn) : undefined
         });
+        // Jika masih kosong, coba hanya nisn / hanya ref
         if ((!rows || !rows.length) && siswa.nisn) {
-          rows = await fetchAbsensiRange(dari, sampai, {
-            tipe: 'siswa',
-            kode: siswa.nisn
-          });
+          rows = await fetchAbsensiRange(dari, sampai, { tipe: 'siswa', kode: String(siswa.nisn) });
+        }
+        if ((!rows || !rows.length) && siswa.id) {
+          rows = await fetchAbsensiRange(dari, sampai, { tipe: 'siswa', ref_id: siswa.id });
         }
         const filtered = (rows || []).filter(r => {
           const tgl = String(r.tanggal || '').slice(0, 10);
@@ -13744,6 +13760,9 @@ document.getElementById('btnBsContohFormat')?.addEventListener('click', () => {
           const byKode = siswa.nisn && String(r.kode || '') === String(siswa.nisn);
           return byRef || byKode;
         });
+
+        console.log('[CekSyarat]', siswa.nama, siswa.nisn, 'rows:', filtered.length,
+          'dari', dari, 'sampai', sampai);
 
         const hitung = hitungSyaratDariRows(filtered, dari, sampai);
         const settingsView = Object.assign({}, settings, {
