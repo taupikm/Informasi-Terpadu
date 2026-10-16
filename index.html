@@ -998,7 +998,7 @@
     #qrReaderShell {
       position: relative;
       width: 100%;
-      height: min(48vh, 360px);
+      height: min(52vh, 400px);
       min-height: 260px;
       border-radius: 14px;
       overflow: hidden;
@@ -1024,14 +1024,14 @@
     #qrFocusFrame {
       pointer-events: none;
       position: absolute;
-      left: 4%;
-      right: 4%;
-      top: 22%;
-      bottom: 22%;
+      left: 3%;
+      right: 3%;
+      top: 28%;
+      bottom: 28%;
       z-index: 5;
       border: 2.5px solid #ffffff;
       border-radius: 10px;
-      box-shadow: 0 0 0 9999px rgba(0,0,0,0.28);
+      box-shadow: 0 0 0 9999px rgba(0,0,0,0.22);
     }
     #qrFocusFrame::before,
     #qrFocusFrame::after,
@@ -1951,12 +1951,13 @@
           </button>
         </div>
 <div id="scanTipeSwitch" style="display:none;margin-top:12px;">
-          <div style="display:flex;border-radius:10px;overflow:hidden;border:1px solid #1e40af;">
+          <div style="display:flex;border-radius:10px;overflow:hidden;border:1px solid #cbd5e1;">
             <button type="button" class="scan-tipe-btn active" data-tipe="siswa" id="btnScanSiswa"
-              style="flex:1;padding:10px;border:none;font-weight:700;font-size:13px;cursor:pointer;background:#38bdf8;color:#0f172a;">Siswa</button>
+              style="flex:1;padding:10px;border:none;font-weight:700;font-size:13px;cursor:pointer;background:#ef4444;color:#fff;">Siswa</button>
             <button type="button" class="scan-tipe-btn" data-tipe="guru" id="btnScanGuru"
-              style="flex:1;padding:10px;border:none;font-weight:700;font-size:13px;cursor:pointer;background:#1e40af;color:white;">Guru</button>
+              style="flex:1;padding:10px;border:none;font-weight:700;font-size:13px;cursor:pointer;background:#e2e8f0;color:#64748b;">Guru</button>
           </div>
+          <div id="scanTipeHint" style="font-size:11px;color:#64748b;text-align:center;margin-top:6px;">Mode aktif: <b style="color:#ef4444;">Siswa</b></div>
         </div>
 <div style="display:flex;gap:8px;margin-top:12px;">
           <button class="btn btn-primary" id="btnBukaKamera" style="flex:1;">📷 Buka Kamera</button>
@@ -1970,7 +1971,7 @@
               <span class="qr-corner-br"></span>
             </div>
           </div>
-          <p style="font-size:11px;color:#64748b;text-align:center;margin-top:6px;">Arahkan barcode / QR ke bingkai putih · tahan stabil ±0,5 detik</p>
+          <p style="font-size:11px;color:#64748b;text-align:center;margin-top:6px;">Arahkan barcode ke strip putih (boleh sedikit bergerak) · jarak ±15–25 cm</p>
         </div>
       </div>
 
@@ -7659,17 +7660,31 @@
       scanTipe = tipe;
       const btnS = document.getElementById('btnScanSiswa');
       const btnG = document.getElementById('btnScanGuru');
+      const hint = document.getElementById('scanTipeHint');
+      // Aktif = merah, nonaktif = abu — kontras jelas
       if (tipe === 'siswa') {
-        btnS.style.background = '#38bdf8';
-        btnS.style.color = '#0f172a';
-        btnG.style.background = '#1e40af';
-        btnG.style.color = 'white';
+        btnS.style.background = '#ef4444';
+        btnS.style.color = '#fff';
+        btnS.classList.add('active');
+        btnG.style.background = '#e2e8f0';
+        btnG.style.color = '#64748b';
+        btnG.classList.remove('active');
+        if (hint) hint.innerHTML = 'Mode aktif: <b style="color:#ef4444;">Siswa</b> — scan NISN kartu siswa';
       } else {
-        btnG.style.background = '#38bdf8';
-        btnG.style.color = '#0f172a';
-        btnS.style.background = '#1e40af';
-        btnS.style.color = 'white';
+        btnG.style.background = '#ef4444';
+        btnG.style.color = '#fff';
+        btnG.classList.add('active');
+        btnS.style.background = '#e2e8f0';
+        btnS.style.color = '#64748b';
+        btnS.classList.remove('active');
+        if (hint) hint.innerHTML = 'Mode aktif: <b style="color:#ef4444;">Guru</b> — scan NIP/PIN guru';
       }
+      // refresh roster sesuai mode (agar lookup cepat)
+      try {
+        _scanRosterMap = null;
+        _scanRosterTs = 0;
+        if (typeof warmScanRoster === 'function') warmScanRoster().catch(() => {});
+      } catch (e) {}
     }
 
     document.getElementById('btnScanSiswa').addEventListener('click', () => setScanTipeUI('siswa'));
@@ -8259,23 +8274,32 @@
     let _preferredCameraId = null;
 
     function buildScanConfig(shellW, shellH) {
-      // Area scan lebar (barcode 1D) + tinggi cukup untuk QR
-      const boxW = Math.max(220, Math.floor(shellW * 0.92));
-      const boxH = Math.max(140, Math.floor(shellH * 0.55));
+      // Area scan hampir full-width + strip horizontal (barcode 1D toleran goyang)
+      // Tidak pakai qrbox ketat agar frame blur/geser sedikit tetap bisa terbaca
       const formats = [];
       try {
         const F = Html5QrcodeSupportedFormats;
         if (F) {
-          [F.QR_CODE, F.CODE_128, F.CODE_39, F.CODE_93, F.EAN_13, F.EAN_8, F.UPC_A, F.UPC_E, F.ITF]
+          // prioritaskan format kartu sekolah (lebih sedikit = decode lebih cepat per frame)
+          [F.CODE_128, F.CODE_39, F.QR_CODE, F.CODE_93, F.EAN_13, F.ITF]
             .forEach(f => { if (f != null) formats.push(f); });
         }
       } catch (e) {}
       const cfg = {
-        fps: 24,
-        qrbox: { width: boxW, height: boxH },
-        aspectRatio: 1.333,
+        // fps tinggi: lebih banyak frame = peluang tangkap momen tajam saat tangan goyang
+        fps: 30,
+        // tanpa qrbox = scan full frame (lebih toleran posisi & goyangan)
+        // aspectRatio longgar
+        aspectRatio: 1.777,
         disableFlip: false,
-        experimentalFeatures: { useBarCodeDetectorIfSupported: true }
+        experimentalFeatures: { useBarCodeDetectorIfSupported: true },
+        // resolusi lebih tinggi membantu decode barcode yang sedikit buram
+        videoConstraints: {
+          facingMode: 'environment',
+          width: { ideal: 1920 },
+          height: { ideal: 1080 },
+          advanced: [{ focusMode: 'continuous' }]
+        }
       };
       if (formats.length) cfg.formatsToSupport = formats;
       return cfg;
@@ -8297,6 +8321,40 @@
       }
     }
 
+    async function applyBestFocus() {
+      try {
+        const video = document.querySelector('#qrReader video');
+        if (!video) return;
+        video.setAttribute('playsinline', 'true');
+        video.setAttribute('muted', 'true');
+        video.style.objectFit = 'cover';
+        const stream = video.srcObject;
+        const track = stream && stream.getVideoTracks && stream.getVideoTracks()[0];
+        if (!track) return;
+        const caps = (track.getCapabilities && track.getCapabilities()) || {};
+        const advanced = [];
+        if (caps.focusMode) {
+          if (caps.focusMode.includes('continuous')) advanced.push({ focusMode: 'continuous' });
+          else if (caps.focusMode.includes('auto')) advanced.push({ focusMode: 'auto' });
+        }
+        // beberapa HP mendukung pointsOfInterest di tengah
+        if (caps.pointsOfInterest) {
+          advanced.push({ pointsOfInterest: [{ x: 0.5, y: 0.5 }] });
+        }
+        const c = {};
+        if (advanced.length) c.advanced = advanced;
+        // resolusi tinggi jika device sanggup (bantu decode saat sedikit blur)
+        if (caps.width) c.width = { ideal: Math.min(1920, caps.width.max || 1920) };
+        if (caps.height) c.height = { ideal: Math.min(1080, caps.height.max || 1080) };
+        if (caps.frameRate) c.frameRate = { ideal: Math.min(30, caps.frameRate.max || 30) };
+        if (Object.keys(c).length) {
+          await track.applyConstraints(c);
+        }
+      } catch (e) {
+        console.warn('applyBestFocus', e);
+      }
+    }
+
     async function startScannerEngine() {
       const shell = document.getElementById('qrReaderShell');
       const shellW = (shell && shell.clientWidth) ? shell.clientWidth : Math.min(window.innerWidth - 32, 360);
@@ -8304,44 +8362,40 @@
       const config = buildScanConfig(shellW, shellH);
 
       const camId = await pickBackCameraId();
-      // coba deviceId dulu (lebih stabil + fokus), fallback facingMode
-      const cameraConfig = camId
-        ? camId
-        : { facingMode: 'environment' };
+      // deviceId exact sering lebih stabil di Android
+      let cameraConfig;
+      if (camId) {
+        cameraConfig = { deviceId: { exact: camId } };
+      } else {
+        cameraConfig = { facingMode: { ideal: 'environment' } };
+      }
 
       html5QrCode = new Html5Qrcode('qrReader', { verbose: false });
-      await html5QrCode.start(cameraConfig, config, onScanSuccessFast, () => {});
-
-      // coba set continuous focus & resolution via track (best-effort)
       try {
-        const video = document.querySelector('#qrReader video');
-        const stream = video && video.srcObject;
-        const track = stream && stream.getVideoTracks && stream.getVideoTracks()[0];
-        if (track && track.getCapabilities) {
-          const caps = track.getCapabilities() || {};
-          const advanced = [];
-          if (caps.focusMode && caps.focusMode.includes('continuous')) {
-            advanced.push({ focusMode: 'continuous' });
-          }
-          if (caps.zoom && typeof caps.zoom.min === 'number') {
-            // sedikit zoom-out sering membantu barcode dekat
-          }
-          const constraints = { advanced };
-          if (caps.width && caps.height) {
-            constraints.width = { ideal: Math.min(1280, caps.width.max || 1280) };
-            constraints.height = { ideal: Math.min(720, caps.height.max || 720) };
-          }
-          if (advanced.length || constraints.width) {
-            await track.applyConstraints(constraints);
-          }
-        }
-        if (video) {
-          video.setAttribute('playsinline', 'true');
-          video.style.objectFit = 'cover';
-        }
-      } catch (e) {
-        console.warn('focus constraints', e);
+        await html5QrCode.start(cameraConfig, config, onScanSuccessFast, () => {});
+      } catch (e1) {
+        // fallback string deviceId / facingMode sederhana
+        console.warn('start exact failed, fallback', e1);
+        try { await html5QrCode.stop(); } catch (e) {}
+        try { html5QrCode.clear(); } catch (e) {}
+        const readerEl = document.getElementById('qrReader');
+        if (readerEl) readerEl.innerHTML = '';
+        html5QrCode = new Html5Qrcode('qrReader', { verbose: false });
+        const fbConfig = Object.assign({}, config);
+        // videoConstraints kadang bentrok di fallback
+        delete fbConfig.videoConstraints;
+        await html5QrCode.start(
+          camId || { facingMode: 'environment' },
+          fbConfig,
+          onScanSuccessFast,
+          () => {}
+        );
       }
+
+      await applyBestFocus();
+      // re-focus 2x setelah stream stabil (banyak HP baru lock fokus setelah ~0.5–1s)
+      setTimeout(() => { applyBestFocus(); }, 600);
+      setTimeout(() => { applyBestFocus(); }, 1600);
     }
 
     async function softRestartKamera() {
