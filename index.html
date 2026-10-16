@@ -2634,7 +2634,7 @@
         <button class="btn btn-primary" id="btnTambahLulusan">+ Tambah</button>
         <button class="btn btn-secondary" id="btnEditLulusan">✏️ Edit</button>
         <button class="btn btn-outline" id="btnHapusLulusan" style="color:#ef4444;border-color:#fca5a5;">🗑️ Hapus</button>
-        <button class="btn btn-secondary" id="btnBatalkanLulusan" title="Kembalikan ke Data Siswa (batalkan kelulusan)">↩️ Batalkan</button>
+        <button class="btn btn-secondary" id="btnBatalkanLulusan" title="Kembalikan ke Data Siswa">↩️ Batalkan</button>
         <button class="btn btn-outline" id="btnImportLulusan">📥 Import</button>
         <input type="file" id="fileImportLulusan" accept=".csv,.txt" style="display:none;">
         <div style="position:relative;flex:1;min-width:140px;">
@@ -5396,7 +5396,6 @@
       }
     });
 
-    /** Kembalikan lulusan → siswa aktif (batalkan kelulusan) */
     function buildSiswaPayloadFromLulusan(L) {
       const kelas = (L.kelas && String(L.kelas).trim()) ? String(L.kelas).trim() : '9A';
       const mulai = L.tgl_mulai_sekolah || L.mulai_sekolah || null;
@@ -5406,7 +5405,7 @@
         nisn: L.nisn ? String(L.nisn) : null,
         kelas: kelas,
         status: 'Aktif',
-        status_awal: normStatusAwal(L.status_awal) || 'Siswa Baru',
+        status_awal: (typeof normStatusAwal === 'function' ? normStatusAwal(L.status_awal) : L.status_awal) || 'Siswa Baru',
         mulai_sekolah: mulai ? String(mulai).slice(0, 10) : null,
         asal_sekolah: L.asal_sekolah || null,
         tmp_lahir: L.tmp_lahir || null,
@@ -5420,9 +5419,7 @@
 
     async function restoreSiswaFromLulusan(L) {
       const payload = buildSiswaPayloadFromLulusan(L);
-      if (!payload.nama || !payload.nisn) {
-        throw new Error('Nama/NISN kosong pada data lulusan');
-      }
+      if (!payload.nama || !payload.nisn) throw new Error('Nama/NISN kosong');
       if (!supabaseClient) {
         const exist = (dataSiswa || []).find(s => String(s.nisn) === String(payload.nisn));
         if (exist) {
@@ -5433,8 +5430,6 @@
         dataSiswa.push(payload);
         return { mode: 'local-insert', id: payload.id };
       }
-
-      // Sudah ada di siswa (mungkin status Alumni)? → aktifkan lagi
       const { data: existing, error: findErr } = await supabaseClient
         .from('siswa').select('id, status, kelas').eq('nisn', String(payload.nisn)).limit(1);
       if (findErr) throw findErr;
@@ -5458,12 +5453,10 @@
         if (uErr) throw uErr;
         return { mode: 'update', id: existing[0].id };
       }
-
       const { data: ins, error: iErr } = await supabaseClient.from('siswa').insert([payload]).select('id').maybeSingle();
       if (iErr) {
-        // coba tanpa kolom opsional yang mungkin tidak ada
         const msg = String(iErr.message || iErr);
-        if (/column|mulai_sekolah|tgl_mulai/i.test(msg)) {
+        if (/column|mulai_sekolah/i.test(msg)) {
           const p2 = Object.assign({}, payload);
           delete p2.mulai_sekolah;
           const { data: ins2, error: e2 } = await supabaseClient.from('siswa').insert([p2]).select('id').maybeSingle();
@@ -5476,13 +5469,13 @@
     }
 
     document.getElementById('btnBatalkanLulusan')?.addEventListener('click', async () => {
-      if (currentRole !== 'admin') {
+      if (typeof currentRole !== 'undefined' && currentRole !== 'admin') {
         alert('Hanya Admin yang dapat membatalkan kelulusan');
         return;
       }
       const ids = getChecked('cb-lulusan');
       if (!ids.length) {
-        alert('Centang data lulusan yang ingin dibatalkan (dikembalikan ke Data Siswa).');
+        alert('Centang data lulusan yang ingin dibatalkan.');
         return;
       }
       const selected = (dataLulusan || []).filter(x => ids.includes(String(x.id)) || ids.includes(x.id));
@@ -5490,24 +5483,15 @@
         alert('Data terpilih tidak ditemukan. Muat ulang tabel.');
         return;
       }
-      const ok = await (typeof showConfirm === 'function'
-        ? showConfirm(
-            'Batalkan kelulusan ' + selected.length + ' siswa?
-
-' +
-            '• Data dikembalikan ke tabel Siswa (status Aktif)
-' +
-            '• Kelas: dari data lulusan, atau 9A jika kosong
-' +
-            '• Baris di Data Lulusan akan dihapus
-
-' +
-            selected.slice(0, 5).map(s => '· ' + (s.nama || '') + ' (' + (s.nisn || '-') + ')').join('\n') +
-            (selected.length > 5 ? '\n… +' + (selected.length - 5) + ' lainnya' : ''),
-            'Batalkan Kelulusan',
-            '↩️'
-          )
-        : Promise.resolve(confirm('Batalkan kelulusan ' + selected.length + ' siswa?')));
+      const names = selected.slice(0, 5).map(s => '- ' + (s.nama || '') + ' (' + (s.nisn || '-') + ')').join('\n');
+      const more = selected.length > 5 ? '\n... +' + (selected.length - 5) + ' lainnya' : '';
+      const confirmMsg = 'Batalkan kelulusan ' + selected.length + ' siswa?\n\nData dikembalikan ke Siswa (Aktif).\nBaris Lulusan dihapus.\n\n' + names + more;
+      let ok = false;
+      if (typeof showConfirm === 'function') {
+        ok = await showConfirm(confirmMsg, 'Batalkan Kelulusan', '↩️');
+      } else {
+        ok = confirm(confirmMsg);
+      }
       if (!ok) return;
 
       const btn = document.getElementById('btnBatalkanLulusan');
@@ -5515,27 +5499,22 @@
 
       let restored = 0, deleted = 0, fail = 0;
       const errLines = [];
-
       try {
         for (const L of selected) {
           const label = (L.nama || L.nisn || ('id=' + L.id)) + '';
           try {
             await restoreSiswaFromLulusan(L);
             restored++;
-
             if (supabaseClient) {
               const { data: delData, error: delErr } = await supabaseClient
                 .from('lulusan').delete().eq('id', L.id).select('id');
               if (delErr) throw delErr;
               if (delData && delData.length) deleted++;
-              else {
-                // coba by nisn
-                if (L.nisn) {
-                  const { data: d2, error: e2 } = await supabaseClient
-                    .from('lulusan').delete().eq('nisn', String(L.nisn)).select('id');
-                  if (e2) throw e2;
-                  if (d2 && d2.length) deleted += d2.length;
-                }
+              else if (L.nisn) {
+                const { data: d2, error: e2 } = await supabaseClient
+                  .from('lulusan').delete().eq('nisn', String(L.nisn)).select('id');
+                if (e2) throw e2;
+                if (d2 && d2.length) deleted += d2.length;
               }
             } else {
               dataLulusan = (dataLulusan || []).filter(x => String(x.id) !== String(L.id));
@@ -5548,24 +5527,12 @@
           }
           if (btn) btn.textContent = 'Memproses... ' + (restored + fail) + '/' + selected.length;
         }
-
         try { await loadLulusan(); } catch (e) {}
         try { await loadSiswa(); } catch (e) {}
-
-        let msg = 'Batalkan kelulusan:
-• Dikembalikan ke Siswa: ' + restored +
-          '
-• Dihapus dari Lulusan: ' + deleted +
-          (fail ? '
-• Gagal: ' + fail : '');
+        let msg = 'Batalkan kelulusan:\n- Ke Siswa: ' + restored + '\n- Hapus Lulusan: ' + deleted +
+          (fail ? '\n- Gagal: ' + fail : '');
         if (errLines.length) {
-          msg += '
-
-Detail:
-- ' + errLines.slice(0, 8).join('
-- ');
-          if (errLines.length > 8) msg += '
-… +' + (errLines.length - 8) + ' lainnya';
+          msg += '\n\nDetail:\n' + errLines.slice(0, 8).join('\n');
         }
         alert(msg);
       } finally {
@@ -13315,82 +13282,159 @@ document.getElementById('btnBsContohFormat')?.addEventListener('click', () => {
       try { await loadLulusan(); } catch (e) {}
     });
 
+    function normalizeSesiKey(r) {
+      const ur = r.sesi_urutan != null && r.sesi_urutan !== '' ? Number(r.sesi_urutan) : null;
+      if (ur != null && !isNaN(ur) && ur > 0) return 'u:' + ur;
+      const sid = r.sesi_id != null && r.sesi_id !== '' ? String(r.sesi_id) : '';
+      if (sid) return 'id:' + sid;
+      const nm = String(r.sesi_nama || '').trim().toLowerCase().replace(/\s+/g, '');
+      if (!nm || nm === 'sakit' || nm === 'izin' || nm === 'alpa' || nm === 'bolos') return null;
+      const m = nm.match(/sesi?(\d+)/);
+      if (m) return 'u:' + Number(m[1]);
+      return 'n:' + nm;
+    }
+
+    function absensiRowScore(x) {
+      const st = String(x.status || '').toUpperCase();
+      let s = 0;
+      if (x.jam_scan) s += 4;
+      if (st === 'TW' || st === 'H') s += 3;
+      else if (st === 'TL') s += 2;
+      else if (st === 'SAKIT' || st === 'S' || st === 'IZIN' || st === 'I') s += 1;
+      return s;
+    }
+
     async function fetchAbsensiRange(dari, sampai, extraFilter) {
       const f = extraFilter || {};
       const PAGE = 1000;
 
+      function matchPerson(r) {
+        if (f.tipe && r.tipe && r.tipe !== f.tipe) return false;
+        const byRef = f.ref_id != null && f.ref_id !== '' && r.ref_id != null && String(r.ref_id) === String(f.ref_id);
+        const byKode = f.kode && String(r.kode || '') === String(f.kode);
+        if (f.ref_id != null && f.ref_id !== '' && f.kode) return byRef || byKode;
+        if (f.ref_id != null && f.ref_id !== '') return byRef;
+        if (f.kode) return byKode;
+        if (f.namaIlike) {
+          const n = String(r.nama || '').toLowerCase();
+          const k = String(r.kode || '').toLowerCase();
+          const q = String(f.namaIlike).toLowerCase();
+          return n.includes(q) || k.includes(q);
+        }
+        return true;
+      }
+
       async function oneTable(table) {
         if (!supabaseClient) {
           const key = table === 'absensi_historis' ? 'absensi_historis' : 'absensi';
-          let rows = JSON.parse(localStorage.getItem(key) || '[]');
+          let rows = [];
+          try { rows = JSON.parse(localStorage.getItem(key) || '[]'); } catch (e) { rows = []; }
           return rows.filter(r => {
             const t = String(r.tanggal || '').slice(0, 10);
             if (dari && t < dari) return false;
             if (sampai && t > sampai) return false;
-            if (f.tipe && r.tipe !== f.tipe) return false;
-            if (f.kode && String(r.kode) !== String(f.kode)) return false;
-            if (f.ref_id != null && f.ref_id !== '' && String(r.ref_id) !== String(f.ref_id)) return false;
-            if (f.namaIlike) {
-              const n = String(r.nama || '').toLowerCase();
-              const k = String(r.kode || '').toLowerCase();
-              const q = String(f.namaIlike).toLowerCase();
-              if (!n.includes(q) && !k.includes(q)) return false;
-            }
-            return true;
+            return matchPerson(r);
           });
         }
 
-        const all = [];
-        let from = 0;
-        for (let guard = 0; guard < 50; guard++) {
-          let q = supabaseClient.from(table).select('*')
-            .gte('tanggal', dari).lte('tanggal', sampai)
-            .order('tanggal', { ascending: true })
-            .order('id', { ascending: true })
-            .range(from, from + PAGE - 1);
-          if (f.tipe) q = q.eq('tipe', f.tipe);
-          if (f.kode) q = q.eq('kode', f.kode);
-          if (f.ref_id != null && f.ref_id !== '') q = q.eq('ref_id', Number(f.ref_id));
-          if (f.namaIlike) {
-            const s = String(f.namaIlike).replace(/[%_,]/g, '');
-            q = q.or('nama.ilike.%' + s + '%,kode.ilike.%' + s + '%');
+        async function runPaged(applyFilters) {
+          const all = [];
+          let from = 0;
+          for (let guard = 0; guard < 100; guard++) {
+            let q = supabaseClient.from(table).select('*')
+              .gte('tanggal', dari)
+              .lte('tanggal', sampai)
+              .order('tanggal', { ascending: true })
+              .range(from, from + PAGE - 1);
+            q = applyFilters(q);
+            const { data, error } = await q;
+            if (error) throw error;
+            const batch = data || [];
+            all.push(...batch);
+            if (batch.length < PAGE) break;
+            from += PAGE;
           }
-          const { data, error } = await q;
-          if (error) {
-            if (table === 'absensi_historis') return all;
-            throw error;
-          }
-          const batch = data || [];
-          all.push(...batch);
-          if (batch.length < PAGE) break;
-          from += PAGE;
+          return all;
         }
-        return all;
+
+        try {
+          return await runPaged(q => {
+            if (f.tipe) q = q.eq('tipe', f.tipe);
+            if (f.ref_id != null && f.ref_id !== '' && f.kode) {
+              q = q.or('ref_id.eq.' + Number(f.ref_id) + ',kode.eq."' + String(f.kode).replace(/"/g, '') + '"');
+            } else if (f.ref_id != null && f.ref_id !== '') {
+              q = q.eq('ref_id', Number(f.ref_id));
+            } else if (f.kode) {
+              q = q.eq('kode', String(f.kode));
+            }
+            if (f.namaIlike) {
+              const s = String(f.namaIlike).replace(/[%_,]/g, '');
+              q = q.or('nama.ilike.%' + s + '%,kode.ilike.%' + s + '%');
+            }
+            return q;
+          });
+        } catch (e1) {
+          console.warn('[fetchAbsensiRange]', table, e1 && e1.message ? e1.message : e1);
+        }
+
+        try {
+          const parts = [];
+          if (f.ref_id != null && f.ref_id !== '') {
+            try {
+              parts.push(...await runPaged(q => {
+                if (f.tipe) q = q.eq('tipe', f.tipe);
+                return q.eq('ref_id', Number(f.ref_id));
+              }));
+            } catch (e) {}
+          }
+          if (f.kode) {
+            try {
+              parts.push(...await runPaged(q => {
+                if (f.tipe) q = q.eq('tipe', f.tipe);
+                return q.eq('kode', String(f.kode));
+              }));
+            } catch (e) {}
+          }
+          if (parts.length) {
+            const seen = new Set();
+            return parts.filter(r => {
+              const id = r.id != null ? 'i' + r.id : JSON.stringify(r);
+              if (seen.has(id)) return false;
+              seen.add(id);
+              return true;
+            });
+          }
+        } catch (e2) {}
+
+        try {
+          const all = await runPaged(q => {
+            if (f.tipe) q = q.eq('tipe', f.tipe);
+            return q;
+          });
+          return all.filter(matchPerson);
+        } catch (e3) {
+          if (table === 'absensi_historis') return [];
+          throw e3;
+        }
       }
 
       const [a, h] = await Promise.all([oneTable('absensi'), oneTable('absensi_historis')]);
-      // Dedup logika sama Cek Syarat: unik tanggal + orang + sesi (bukan id tabel)
       const map = new Map();
       function rowKey(r) {
         const tgl = String(r.tanggal || '').slice(0, 10);
-        const person = (r.tipe || '') + ':' + (r.ref_id || r.kode || r.nama || '');
-        const sesiKey =
-          (r.sesi_id != null && r.sesi_id !== '' ? 'id:' + r.sesi_id : '') +
-          '|' + (r.sesi_urutan != null && r.sesi_urutan !== '' ? 'u:' + r.sesi_urutan : '') +
-          '|' + String(r.sesi_nama || '').trim();
-        return tgl + '||' + person + '||' + sesiKey;
+        const person = (r.tipe || '') + ':' + (r.ref_id != null && r.ref_id !== '' ? r.ref_id : (r.kode || r.nama || ''));
+        const sk = normalizeSesiKey(r);
+        if (sk == null) return null;
+        return tgl + '||' + person + '||' + sk;
       }
-      function score(x) {
-        return (x.jam_scan ? 2 : 0) + (['TW', 'TL'].includes(String(x.status || '').toUpperCase()) ? 1 : 0);
-      }
-      [...a, ...h].forEach(r => {
+      [...(a || []), ...(h || [])].forEach(r => {
         const key = rowKey(r);
+        if (!key) return;
         if (!map.has(key)) map.set(key, r);
-        else if (score(r) > score(map.get(key))) map.set(key, r);
+        else if (absensiRowScore(r) > absensiRowScore(map.get(key))) map.set(key, r);
       });
       return [...map.values()];
     }
-
 
     async function refreshArsipInfo() {
       const el = document.getElementById('arsipInfo');
@@ -13615,18 +13659,11 @@ document.getElementById('btnBsContohFormat')?.addEventListener('click', () => {
         if (!tgl) return;
         if (mulai && tgl < mulai) return;
         if (akhir && tgl > akhir) return;
-        const sesiKey =
-          (r.sesi_id != null && r.sesi_id !== '' ? 'id:' + r.sesi_id : '') +
-          '|' + (r.sesi_urutan != null && r.sesi_urutan !== '' ? 'u:' + r.sesi_urutan : '') +
-          '|' + String(r.sesi_nama || '').trim();
-        const key = tgl + '||' + sesiKey;
-        if (!map.has(key)) {
-          map.set(key, r);
-        } else {
-          const prev = map.get(key);
-          const score = (x) => (x.jam_scan ? 2 : 0) + (['TW', 'TL'].includes(String(x.status || '').toUpperCase()) ? 1 : 0);
-          if (score(r) > score(prev)) map.set(key, r);
-        }
+        const sk = normalizeSesiKey(r);
+        if (sk == null) return;
+        const key = tgl + '||' + sk;
+        if (!map.has(key)) map.set(key, r);
+        else if (absensiRowScore(r) > absensiRowScore(map.get(key))) map.set(key, r);
       });
       const uniq = [...map.values()];
       const counts = { TW: 0, TL: 0, Sakit: 0, Izin: 0, Alpa: 0, Bolos: 0 };
@@ -13828,21 +13865,23 @@ document.getElementById('btnBsContohFormat')?.addEventListener('click', () => {
 
         let rows = await fetchAbsensiRange(dari, sampai, {
           tipe: 'siswa',
-          ref_id: siswa.id
+          ref_id: siswa.id,
+          kode: siswa.nisn ? String(siswa.nisn) : undefined
         });
         if ((!rows || !rows.length) && siswa.nisn) {
-          rows = await fetchAbsensiRange(dari, sampai, {
-            tipe: 'siswa',
-            kode: siswa.nisn
-          });
+          rows = await fetchAbsensiRange(dari, sampai, { tipe: 'siswa', kode: String(siswa.nisn) });
+        }
+        if ((!rows || !rows.length) && siswa.id) {
+          rows = await fetchAbsensiRange(dari, sampai, { tipe: 'siswa', ref_id: siswa.id });
         }
         const filtered = (rows || []).filter(r => {
           const tgl = String(r.tanggal || '').slice(0, 10);
           if (dari && tgl < dari) return false;
           if (sampai && tgl > sampai) return false;
           if (r.tipe && r.tipe !== 'siswa') return false;
-          return Number(r.ref_id) === Number(siswa.id) ||
-            String(r.kode || '') === String(siswa.nisn || '');
+          const byRef = siswa.id != null && r.ref_id != null && Number(r.ref_id) === Number(siswa.id);
+          const byKode = siswa.nisn && String(r.kode || '') === String(siswa.nisn);
+          return byRef || byKode;
         });
 
         const hitung = hitungSyaratDariRows(filtered, dari, sampai);
