@@ -6288,8 +6288,15 @@
       siswa: {
         title: 'Import Data Siswa',
         filename: 'contoh_siswa.xlsx',
-        headers: ['nama','lp','nisn','kelas','tmp_lahir','tgl_lahir','status','alamat','nama_ayah','nama_ibu','no_hp'],
-        sample: ['Andi Pratama','L','0123456789','7A','Bandung','2012-05-15','Aktif','Jl. Merdeka','Joko','Sari','081111111111']
+        headers: [
+          'nama','lp','nisn','kelas','tmp_lahir','tgl_lahir','mulai_sekolah','status',
+          'alamat','nama_ayah','nama_ibu','no_hp','status_awal','asal_sekolah','foto_url','foto_id'
+        ],
+        sample: [
+          'Ahwaz Aidil Faiz','L','0145197071','7A','Lebak','2013-10-14','2026-07-13','Aktif',
+          'Kp Cikuning','Aris Fahrudin','Rofikoh Munawaroh','085777688387','Siswa Baru','SDN 1 Sukamaju','',''
+        ],
+        desc: 'Kolom lengkap sesuai tabel siswa. Wajib: nama, nisn. Tanggal format YYYY-MM-DD. status_awal: Siswa Baru / Pindahan. foto_url & foto_id opsional (link Google Drive).'
       },
       guru: {
         title: 'Import Data Guru',
@@ -6309,6 +6316,20 @@
       importTarget = target;
       const cfg = IMPORT_CONTOH[target];
       document.getElementById('modalImportTitle').textContent = cfg.title;
+      const desc = document.getElementById('modalImportDesc');
+      if (desc) {
+        if (cfg.desc) {
+          desc.textContent = cfg.desc;
+        } else if (target === 'siswa') {
+          desc.textContent = 'Unduh contoh format, isi semua kolom sesuai database siswa, lalu unggah file Excel/CSV.';
+        } else if (target === 'guru') {
+          desc.textContent = 'Unduh contoh format, isi data guru (PIN wajib), lalu unggah file Excel/CSV.';
+        } else if (target === 'lulusan') {
+          desc.textContent = 'Unduh contoh format, isi data lulusan, lalu unggah file Excel/CSV.';
+        } else {
+          desc.textContent = 'Unduh contoh format Excel, isi data sesuai header, lalu unggah file.';
+        }
+      }
       openModal('modalImport');
     }
 
@@ -6320,7 +6341,7 @@
       }
       const cfg = IMPORT_CONTOH[importTarget];
       const ws = XLSX.utils.aoa_to_sheet([cfg.headers, cfg.sample]);
-      ws['!cols'] = cfg.headers.map(() => ({ wch: 16 }));
+      ws['!cols'] = cfg.headers.map(h => ({ wch: Math.max(12, Math.min(28, String(h).length + 4)) }));
       const wb = XLSX.utils.book_new();
       XLSX.utils.book_append_sheet(wb, ws, 'Data');
       XLSX.writeFile(wb, cfg.filename);
@@ -6379,39 +6400,164 @@
       return v === '' ? null : v;
     }
 
+    function normHeaderKey(h) {
+      return String(h || '').trim().toLowerCase()
+        .replace(/\s+/g, '_')
+        .replace(/[^a-z0-9_]/g, '');
+    }
+
+    function buildHeaderIndex(headerRow) {
+      const map = {};
+      (headerRow || []).forEach((h, i) => {
+        const k = normHeaderKey(h);
+        if (k) map[k] = i;
+      });
+      // sinonim umum
+      const aliases = {
+        tempat_lahir: 'tmp_lahir', tmplahir: 'tmp_lahir', tglahir: 'tgl_lahir', tanggal_lahir: 'tgl_lahir',
+        tgl_mulai_sekolah: 'mulai_sekolah', tanggal_mulai_sekolah: 'mulai_sekolah', mulai: 'mulai_sekolah',
+        status_siswa: 'status', ayah: 'nama_ayah', ibu: 'nama_ibu', hp: 'no_hp', telepon: 'no_hp', nohp: 'no_hp',
+        statusawal: 'status_awal', asal: 'asal_sekolah', sekolah_asal: 'asal_sekolah',
+        foto: 'foto_url', url_foto: 'foto_url', photourl: 'foto_url', fotoid: 'foto_id'
+      };
+      Object.keys(aliases).forEach(a => {
+        if (map[a] != null && map[aliases[a]] == null) map[aliases[a]] = map[a];
+      });
+      return map;
+    }
+
+    function cellByHeader(c, idx, key, fallbackPos) {
+      if (idx && idx[key] != null && idx[key] < c.length) return emptyToNull(c[idx[key]]);
+      if (fallbackPos != null && fallbackPos < c.length) return emptyToNull(c[fallbackPos]);
+      return null;
+    }
+
+    function normStatusAwalImport(v) {
+      if (!v) return null;
+      const s = String(v).trim().toLowerCase();
+      if (!s) return null;
+      if (s.includes('pindah')) return 'Pindahan';
+      if (s.includes('baru') || s === 'baru') return 'Siswa Baru';
+      if (s === 'siswa baru' || s === 'siswabaru') return 'Siswa Baru';
+      // biarkan nilai asli jika sudah valid
+      if (v === 'Siswa Baru' || v === 'Pindahan') return v;
+      return String(v).trim();
+    }
+
+    function normDateImport(v) {
+      if (!v) return null;
+      const s = String(v).trim();
+      if (!s) return null;
+      // YYYY-MM-DD
+      let m = s.match(/^(\d{4})-(\d{1,2})-(\d{1,2})/);
+      if (m) return m[1] + '-' + String(m[2]).padStart(2,'0') + '-' + String(m[3]).padStart(2,'0');
+      // DD/MM/YYYY or DD-MM-YYYY
+      m = s.match(/^(\d{1,2})[\/\-.](\d{1,2})[\/\-.](\d{4})$/);
+      if (m) return m[3] + '-' + String(m[2]).padStart(2,'0') + '-' + String(m[1]).padStart(2,'0');
+      // Excel serial already converted by cellStr if Date
+      return s.slice(0, 10);
+    }
+
     async function handleImportSiswa(file) {
       const lines = await bacaFileSpreadsheet(file);
       if (lines.length < 2) { alert('File kosong / tidak valid'); return; }
+      const headerRow = lines[0] || [];
+      const idx = buildHeaderIndex(headerRow);
+      // deteksi apakah baris 1 benar-benar header (ada 'nama' atau 'nisn')
+      const hasNamedHeader = (idx.nama != null || idx.nisn != null);
       const rows = [];
-      for (let i = 1; i < lines.length; i++) {
+      const start = hasNamedHeader ? 1 : 0;
+      for (let i = start; i < lines.length; i++) {
         const c = (lines[i] || []).map(cellStr);
-        const nama = emptyToNull(c[0]);
-        const nisn = emptyToNull(c[2]);
+        if (!c.some(x => String(x || '').trim())) continue;
+        let nama, nisn, lp, kelas, tmp_lahir, tgl_lahir, mulai_sekolah, status, alamat, nama_ayah, nama_ibu, no_hp, status_awal, asal_sekolah, foto_url, foto_id;
+        if (hasNamedHeader) {
+          nama = cellByHeader(c, idx, 'nama');
+          nisn = cellByHeader(c, idx, 'nisn');
+          lp = normLP(cellByHeader(c, idx, 'lp') || '');
+          kelas = cellByHeader(c, idx, 'kelas');
+          tmp_lahir = cellByHeader(c, idx, 'tmp_lahir');
+          tgl_lahir = normDateImport(cellByHeader(c, idx, 'tgl_lahir'));
+          mulai_sekolah = normDateImport(cellByHeader(c, idx, 'mulai_sekolah'));
+          status = cellByHeader(c, idx, 'status') || 'Aktif';
+          alamat = cellByHeader(c, idx, 'alamat');
+          nama_ayah = cellByHeader(c, idx, 'nama_ayah');
+          nama_ibu = cellByHeader(c, idx, 'nama_ibu');
+          no_hp = cellByHeader(c, idx, 'no_hp');
+          status_awal = normStatusAwalImport(cellByHeader(c, idx, 'status_awal'));
+          asal_sekolah = cellByHeader(c, idx, 'asal_sekolah');
+          foto_url = cellByHeader(c, idx, 'foto_url');
+          foto_id = cellByHeader(c, idx, 'foto_id');
+        } else {
+          // fallback urutan lama + kolom baru di belakang
+          // nama,lp,nisn,kelas,tmp_lahir,tgl_lahir,status,alamat,nama_ayah,nama_ibu,no_hp
+          // ATAU format lengkap:
+          // nama,lp,nisn,kelas,tmp_lahir,tgl_lahir,mulai_sekolah,status,alamat,nama_ayah,nama_ibu,no_hp,status_awal,asal_sekolah,foto_url,foto_id
+          nama = emptyToNull(c[0]);
+          lp = normLP(c[1]);
+          nisn = emptyToNull(c[2]);
+          kelas = emptyToNull(c[3]);
+          tmp_lahir = emptyToNull(c[4]);
+          tgl_lahir = normDateImport(c[5]);
+          // deteksi format: jika c[6] terlihat tanggal → format lengkap (mulai_sekolah di index 6)
+          const c6 = emptyToNull(c[6]);
+          const looksDate = c6 && /^\d{4}-\d{2}-\d{2}/.test(c6);
+          if (looksDate || c.length >= 14) {
+            mulai_sekolah = normDateImport(c[6]);
+            status = emptyToNull(c[7]) || 'Aktif';
+            alamat = emptyToNull(c[8]);
+            nama_ayah = emptyToNull(c[9]);
+            nama_ibu = emptyToNull(c[10]);
+            no_hp = emptyToNull(c[11]);
+            status_awal = normStatusAwalImport(c[12]);
+            asal_sekolah = emptyToNull(c[13]);
+            foto_url = emptyToNull(c[14]);
+            foto_id = emptyToNull(c[15]);
+          } else {
+            // format lama 11 kolom
+            mulai_sekolah = null;
+            status = c6 || 'Aktif';
+            alamat = emptyToNull(c[7]);
+            nama_ayah = emptyToNull(c[8]);
+            nama_ibu = emptyToNull(c[9]);
+            no_hp = emptyToNull(c[10]);
+            status_awal = normStatusAwalImport(c[11]);
+            asal_sekolah = emptyToNull(c[12]);
+            foto_url = emptyToNull(c[13]);
+            foto_id = emptyToNull(c[14]);
+          }
+        }
         if (!nama || !nisn) continue;
-        rows.push({
+        const row = {
           nama: nama,
-          lp: normLP(c[1]),
-          nisn: nisn,
-          kelas: emptyToNull(c[3]),
-          tmp_lahir: emptyToNull(c[4]),
-          tgl_lahir: emptyToNull(c[5]),
-          status: emptyToNull(c[6]) || 'Aktif',
-          alamat: emptyToNull(c[7]),
-          nama_ayah: emptyToNull(c[8]),
-          nama_ibu: emptyToNull(c[9]),
-          no_hp: emptyToNull(c[10])
-        });
+          lp: lp,
+          nisn: String(nisn),
+          kelas: kelas,
+          tmp_lahir: tmp_lahir,
+          tgl_lahir: tgl_lahir,
+          mulai_sekolah: mulai_sekolah,
+          status: status || 'Aktif',
+          alamat: alamat,
+          nama_ayah: nama_ayah,
+          nama_ibu: nama_ibu,
+          no_hp: no_hp,
+          status_awal: status_awal,
+          asal_sekolah: asal_sekolah,
+          foto_url: foto_url,
+          foto_id: foto_id
+        };
+        rows.push(row);
       }
       if (!rows.length) { alert('Tidak ada baris valid (nama & NISN wajib)'); return; }
-      if (!(await showConfirm('Import/Update ' + rows.length + ' data siswa?', 'Import Data', '📥'))) return;
+      if (!(await showConfirm('Import/Update ' + rows.length + ' data siswa dengan kolom lengkap?', 'Import Data', '📥'))) return;
       try {
         if (supabaseClient) {
           const { error } = await supabaseClient.from('siswa').upsert(rows, { onConflict: 'nisn' });
           if (error) throw error;
         } else {
           rows.forEach(r => {
-            const idx = dataSiswa.findIndex(x => x.nisn === r.nisn);
-            if (idx >= 0) dataSiswa[idx] = { ...dataSiswa[idx], ...r };
+            const idxS = dataSiswa.findIndex(x => String(x.nisn) === String(r.nisn));
+            if (idxS >= 0) dataSiswa[idxS] = { ...dataSiswa[idxS], ...r };
             else { r.id = Date.now() + Math.random(); dataSiswa.push(r); }
           });
         }
