@@ -742,10 +742,35 @@
     }
     #page-dashboard .table-wrap th,
     #page-dashboard .table-wrap td {
-      padding: 6px 4px;
+      padding: 6px 8px;
       white-space: nowrap;
       overflow: hidden;
       text-overflow: ellipsis;
+      vertical-align: middle;
+    }
+    /* No */
+    #page-dashboard .table-wrap th:first-child,
+    #page-dashboard .table-wrap td:first-child {
+      width: 36px;
+      text-align: center;
+      padding-left: 6px;
+      padding-right: 4px;
+    }
+    /* Nama — batasi agar tidak meregang jauh dari kolom berikutnya */
+    #page-dashboard .table-wrap th:nth-child(2),
+    #page-dashboard .table-wrap td:nth-child(2) {
+      width: 42%;
+      max-width: 200px;
+      padding-left: 6px;
+      padding-right: 10px;
+    }
+    /* Kolom sesi / kelas (ke-3 dst): rapat tapi lega, rata tengah */
+    #page-dashboard .table-wrap th:nth-child(n+3),
+    #page-dashboard .table-wrap td:nth-child(n+3) {
+      width: 56px;
+      text-align: center;
+      padding-left: 4px;
+      padding-right: 4px;
     }
     #page-nilai-saya .table-wrap {
       overflow-x: auto;
@@ -10006,11 +10031,12 @@
         }
         function buildHead(withKelas) {
           let h = '<tr>';
-          h += '<th style="width:28px;padding:6px 4px;font-size:10px;">No</th>';
-          h += '<th style="padding:6px 4px;font-size:10px;">Nama</th>';
-          if (withKelas) h += '<th style="width:36px;padding:6px 2px;font-size:10px;">Kls</th>';
+          h += '<th style="width:36px;font-size:10px;text-align:center;">No</th>';
+          /* Nama dibatasi % agar jarak ke Kls/Sesi tidak terlalu renggang */
+          h += '<th style="width:' + (withKelas ? '34%' : '40%') + ';font-size:10px;">Nama</th>';
+          if (withKelas) h += '<th style="width:52px;font-size:10px;text-align:center;">Kls</th>';
           sesiList.forEach((s, idx) => {
-            h += '<th style="width:36px;padding:6px 2px;font-size:10px;text-align:center;">' + shortSesiLabel(s, idx) + '</th>';
+            h += '<th style="width:56px;font-size:10px;text-align:center;">' + shortSesiLabel(s, idx) + '</th>';
           });
           return h + '</tr>';
         }
@@ -10020,10 +10046,10 @@
         if (thS) thS.innerHTML = buildHead(true);
 
         function cellSesi(ab) {
-          if (!ab) return '<td style="text-align:center;padding:4px 2px;color:#cbd5e1;font-size:10px;">–</td>';
+          if (!ab) return '<td style="text-align:center;color:#cbd5e1;font-size:10px;">–</td>';
           const jam = fmtJam(ab.jam_scan);
           const jamShort = jam ? jam.slice(0, 5) : '';
-          return '<td style="text-align:center;padding:4px 2px;line-height:1.25;">' +
+          return '<td style="text-align:center;line-height:1.25;">' +
             badgeStatusDash(ab.status) +
             (jamShort ? '<div style="font-size:9px;color:#64748b;">' + jamShort + '</div>' : '') +
             '</td>';
@@ -10035,8 +10061,8 @@
           } else {
             tbG.innerHTML = guruList.map((g, i) => {
               const cells = sesiList.map(ses => cellSesi(resolveAbsensiFast('guru', g.id, ses))).join('');
-              return '<tr><td style="padding:6px 4px;font-size:11px;">' + (i + 1) +
-                '</td><td style="padding:6px 4px;font-size:11px;max-width:110px;overflow:hidden;text-overflow:ellipsis;">' +
+              return '<tr><td style="font-size:11px;text-align:center;">' + (i + 1) +
+                '</td><td style="font-size:11px;overflow:hidden;text-overflow:ellipsis;" title="' + esc(g.nama) + '">' +
                 esc(g.nama) + '</td>' + cells + '</tr>';
             }).join('');
           }
@@ -10054,9 +10080,9 @@
                 const s = siswaList[idx];
                 const cells = sesiList.map(ses => cellSesi(resolveAbsensiFast('siswa', s.id, ses))).join('');
                 parts.push(
-                  '<tr><td style="padding:6px 4px;font-size:11px;">' + (idx + 1) +
-                  '</td><td style="padding:6px 4px;font-size:11px;max-width:100px;overflow:hidden;text-overflow:ellipsis;">' +
-                  esc(s.nama) + '</td><td style="padding:6px 2px;font-size:10px;text-align:center;">' +
+                  '<tr><td style="font-size:11px;text-align:center;">' + (idx + 1) +
+                  '</td><td style="font-size:11px;overflow:hidden;text-overflow:ellipsis;" title="' + esc(s.nama) + '">' +
+                  esc(s.nama) + '</td><td style="font-size:10px;text-align:center;">' +
                   esc(s.kelas || '–') + '</td>' + cells + '</tr>'
                 );
               }
