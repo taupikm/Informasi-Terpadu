@@ -2214,7 +2214,7 @@
 
     <div id="dashSesiInfo" style="background:#e0f7fa;border:1px solid #67e8f9;border-radius:12px;padding:12px 14px;text-align:center;margin-bottom:12px;">
       <div style="font-size:12px;font-weight:600;color:#0e7490;">Informasi Sesi</div>
-      <div id="dashSesiDetail" style="font-size:13px;font-weight:700;color:#155e75;margin-top:4px;">Memuat...</div>
+      <div id="dashSesiDetail" style="font-size:13px;font-weight:700;color:#155e75;margin-top:4px;">Menyiapkan dashboard...</div>
     </div>
     <div id="dashRekapWrap">
       <div class="section-title">Rekap Kehadiran Guru</div>
@@ -10330,61 +10330,88 @@
       }
     }
 
+    let _dashLoading = false;
+    let _dashLoadSeq = 0;
     async function loadDashboard() {
-      // Profil tidak boleh memblokir rekap: jalankan paralel, dengan timeout
-      try {
-        Promise.resolve().then(() => updateDashProfile()).catch(e => console.warn(e));
-      } catch (e) { console.warn(e); }
-
+      if (_dashLoading) return;
+      _dashLoading = true;
+      const seq = ++_dashLoadSeq;
       const tbG = document.getElementById('tbodyDashGuru');
       const tbS = document.getElementById('tbodyDashSiswa');
-      const detEarly = document.getElementById('dashSesiDetail');
+      const thG = document.getElementById('theadDashGuru');
+      const thS = document.getElementById('theadDashSiswa');
+      const det = document.getElementById('dashSesiDetail');
+      const rekapWrap = document.getElementById('dashRekapWrap');
+      const rekapMsg = document.getElementById('dashRekapHiddenMsg');
+
+      // Profil: jangan tunggu
+      try {
+        if (typeof updateDashProfile === 'function') {
+          Promise.resolve().then(() => updateDashProfile()).catch(() => {});
+        }
+      } catch (e) {}
+
+      // Failsafe: kalau masih "Memuat" setelah 12 dtk, tampilkan error
+      const failsafe = setTimeout(() => {
+        try {
+          if (det && /Memuat/i.test(det.textContent || '')) {
+            det.textContent = 'Gagal memuat sesi (timeout). Coba refresh.';
+          }
+          if (tbG && /Memuat/i.test(tbG.textContent || '')) {
+            tbG.innerHTML = '<tr><td colspan="8" style="text-align:center;padding:16px;color:#ef4444;">Timeout memuat data. Refresh halaman.</td></tr>';
+          }
+          if (tbS && /Memuat/i.test(tbS.textContent || '')) {
+            tbS.innerHTML = '<tr><td colspan="8" style="text-align:center;padding:16px;color:#ef4444;">Timeout memuat data. Refresh halaman.</td></tr>';
+          }
+        } catch (e) {}
+      }, 12000);
 
       function withTimeout(promise, ms, label) {
+        let timer;
         return Promise.race([
-          Promise.resolve(promise),
-          new Promise((_, reject) => setTimeout(() => reject(new Error('Timeout ' + (label || '') + ' ' + ms + 'ms')), ms))
+          Promise.resolve(promise).finally(() => { try { clearTimeout(timer); } catch (e) {} }),
+          new Promise((_, reject) => {
+            timer = setTimeout(() => reject(new Error('Timeout ' + (label || '') + ' ' + ms + 'ms')), ms);
+          })
         ]);
       }
-      // Segera ganti teks agar tidak terlihat "stuck"
-      if (detEarly && detEarly.textContent === 'Memuat...') {
-        detEarly.textContent = 'Memuat sesi...';
+
+      function setDet(msg) {
+        if (det) det.textContent = msg;
       }
-      if (tbG && /Memuat/.test(tbG.textContent || '')) {
-        tbG.innerHTML = '<tr><td colspan="8" style="text-align:center;padding:16px;color:#94a3b8;">Memuat data absensi...</td></tr>';
-      }
-      if (tbS && /Memuat/.test(tbS.textContent || '')) {
-        tbS.innerHTML = '<tr><td colspan="8" style="text-align:center;padding:16px;color:#94a3b8;">Memuat data absensi...</td></tr>';
-      }
+      setDet('Memuat sesi...');
+      if (tbG) tbG.innerHTML = '<tr><td colspan="8" style="text-align:center;padding:16px;color:#94a3b8;">Memuat data...</td></tr>';
+      if (tbS) tbS.innerHTML = '<tr><td colspan="8" style="text-align:center;padding:16px;color:#94a3b8;">Memuat data...</td></tr>';
 
       try {
-        // load sesi + libur dengan timeout agar UI tidak stuck "Memuat..."
+        // 1) Sesi
         try {
-          if (typeof loadSesi === 'function') {
-            await withTimeout(loadSesi(), 8000, 'loadSesi');
-          }
+          if (typeof loadSesi === 'function') await withTimeout(loadSesi(), 6000, 'sesi');
         } catch (e) {
           console.warn('loadSesi', e);
-          if (typeof dataSesi === 'undefined' || !dataSesi) dataSesi = [];
+          if (typeof dataSesi === 'undefined' || !Array.isArray(dataSesi)) dataSesi = [];
         }
+
+        // 2) Libur
         try {
-          await withTimeout(loadLiburMap(), 8000, 'loadLiburMap');
+          if (typeof loadLiburMap === 'function') await withTimeout(loadLiburMap(), 6000, 'libur');
         } catch (e) {
           console.warn('loadLiburMap', e);
         }
-        const today = todayLocal();
-        const liburHariIni = isTanggalLibur(today);
-        if (!liburHariIni) {
-          Promise.resolve()
-            .then(() => materializeAbsensiForDate(today))
-            .catch(e => console.warn('materialize', e));
+
+        const today = (typeof todayLocal === 'function') ? todayLocal() : new Date().toISOString().slice(0, 10);
+        const liburHariIni = (typeof isTanggalLibur === 'function') ? isTanggalLibur(today) : null;
+
+        // materialize non-blocking
+        if (!liburHariIni && typeof materializeAbsensiForDate === 'function') {
+          Promise.resolve().then(() => materializeAbsensiForDate(today)).catch(() => {});
         }
-        const sesiList = (typeof dataSesi !== 'undefined' && dataSesi ? dataSesi : [])
-          .filter(s => s.aktif !== false)
+
+        const sesiList = (typeof dataSesi !== 'undefined' && Array.isArray(dataSesi) ? dataSesi : [])
+          .filter(s => s && s.aktif !== false)
           .sort((a, b) => (a.urutan || 0) - (b.urutan || 0));
         const nSesi = Math.max(sesiList.length, 1);
 
-        const det = document.getElementById('dashSesiDetail');
         function fmt3(s) {
           if (!s) return '-';
           const t1 = String(s.jam_mulai || '').slice(0, 5);
@@ -10392,65 +10419,55 @@
           const t3 = String(s.jam_akhir || '').slice(0, 5);
           return t1 + ' – ' + t2 + ' – ' + t3;
         }
-        // true = sembunyikan tabel rekap (sebelum Sesi 1 dibuka)
+
         let hideDashRekap = false;
-        if (det) {
-          const list = (sesiList || []).slice().sort((a, b) => (a.urutan || 0) - (b.urutan || 0));
+        if (liburHariIni) {
+          const ket = liburHariIni.keterangan || 'Hari Libur';
+          const tglStr = new Date().toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' });
+          if (det) det.innerHTML = '<span style="color:#dc2626;">' + ket + '</span><br><span style="font-weight:600;font-size:12px;">' + tglStr + '</span>';
+          hideDashRekap = true;
+        } else {
           let aktif = null;
-          try { aktif = getSesiAktifSekarang(); } catch (e) { aktif = null; }
+          try { aktif = (typeof getSesiAktifSekarang === 'function') ? getSesiAktifSekarang() : null; } catch (e) { aktif = null; }
           const now = new Date();
           const nowMin = now.getHours() * 60 + now.getMinutes() + (now.getSeconds() / 60);
-
-          if (liburHariIni) {
-            const ket = liburHariIni.keterangan || 'Hari Libur';
-            const tglStr = now.toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' });
-            det.innerHTML = '<span style="color:#dc2626;">' + ket + '</span><br><span style="font-weight:600;font-size:12px;">' + tglStr + '</span>';
-            hideDashRekap = true;
-          } else if (aktif) {
-            det.textContent = (aktif.nama || 'Sesi') + ' berlangsung (' + fmt3(aktif) + ')';
+          if (aktif) {
+            setDet((aktif.nama || 'Sesi') + ' berlangsung (' + fmt3(aktif) + ')');
             hideDashRekap = false;
-          } else if (!list.length) {
-            det.textContent = 'Belum ada sesi yang diatur';
+          } else if (!sesiList.length) {
+            setDet('Belum ada sesi yang diatur');
             hideDashRekap = false;
           } else {
-            const first = list[0];
-            const firstMulai = timeToMinutes(first.jam_mulai);
-            const last = list[list.length - 1];
-            const lastAkhir = timeToMinutes(last.jam_akhir);
-
-            // Semua sesi hari ini sudah berakhir → sampai 23:59
+            const first = sesiList[0];
+            const last = sesiList[sesiList.length - 1];
+            const firstMulai = (typeof timeToMinutes === 'function') ? timeToMinutes(first.jam_mulai) : 0;
+            const lastAkhir = (typeof timeToMinutes === 'function') ? timeToMinutes(last.jam_akhir) : 0;
             if (nowMin > lastAkhir) {
-              det.textContent = 'Sesi scan absensi hari ini telah berakhir';
+              setDet('Sesi scan absensi hari ini telah berakhir');
               hideDashRekap = false;
             } else if (nowMin < firstMulai) {
-              // Belum ada sesi dibuka (sebelum Sesi 1)
-              det.textContent = (first.nama || 'Sesi 1') + ' Akan Berlangsung Dari Jam ' + fmt3(first);
+              setDet((first.nama || 'Sesi 1') + ' Akan Berlangsung Dari Jam ' + fmt3(first));
               hideDashRekap = true;
             } else {
-              // Antar sesi: ada yang selesai, sesi berikutnya belum mulai
-              let next = null;
-              let lastEnded = null;
-              for (const s of list) {
+              let next = null, lastEnded = null;
+              for (const s of sesiList) {
                 const mulai = timeToMinutes(s.jam_mulai);
                 const akhir = timeToMinutes(s.jam_akhir);
                 if (nowMin > akhir) lastEnded = s;
                 else if (nowMin < mulai) { next = s; break; }
               }
               if (next && lastEnded) {
-                det.textContent = (lastEnded.nama || 'Sesi') + ' selesai, ' +
-                  (next.nama || 'sesi berikutnya') + ' Akan Berlangsung Dari Jam ' + fmt3(next);
+                setDet((lastEnded.nama || 'Sesi') + ' selesai, ' + (next.nama || 'sesi berikutnya') + ' Akan Berlangsung Dari Jam ' + fmt3(next));
               } else if (next) {
-                det.textContent = (next.nama || 'Sesi') + ' Akan Berlangsung Dari Jam ' + fmt3(next);
+                setDet((next.nama || 'Sesi') + ' Akan Berlangsung Dari Jam ' + fmt3(next));
               } else {
-                det.textContent = 'Sesi scan absensi hari ini telah berakhir';
+                setDet('Sesi scan absensi hari ini telah berakhir');
               }
               hideDashRekap = false;
             }
           }
         }
 
-        const rekapWrap = document.getElementById('dashRekapWrap');
-        const rekapMsg = document.getElementById('dashRekapHiddenMsg');
         if (rekapWrap) rekapWrap.style.display = hideDashRekap ? 'none' : '';
         if (rekapMsg) {
           if (hideDashRekap) {
@@ -10462,33 +10479,61 @@
           }
         }
 
+        // Header tabel segera (meski data belum ada)
+        function shortSesiLabel(s, idx) {
+          return 'S' + (s.urutan != null ? s.urutan : (idx + 1));
+        }
+        function buildHead(withKelas) {
+          let h = '<tr>';
+          h += '<th style="width:28px;font-size:10px;text-align:center;">No</th>';
+          h += '<th style="width:168px;font-size:10px;text-align:left;">Nama</th>';
+          if (withKelas) h += '<th style="width:52px;font-size:10px;text-align:center;">Kls</th>';
+          if (sesiList.length) {
+            sesiList.forEach((s, idx) => {
+              h += '<th style="width:52px;font-size:10px;text-align:center;">' + shortSesiLabel(s, idx) + '</th>';
+            });
+          } else {
+            h += '<th style="font-size:10px;text-align:center;">-</th>';
+          }
+          return h + '</tr>';
+        }
+        if (thG) thG.innerHTML = buildHead(false);
+        if (thS) thS.innerHTML = buildHead(true);
+
+        // 3) Data absensi + master
         let absRows = [];
         let guruList = [];
         let siswaList = [];
 
-        if (supabaseClient) {
+        if (typeof supabaseClient !== 'undefined' && supabaseClient) {
           try {
-            const [ab, g, s] = await withTimeout(Promise.all([
-              supabaseClient.from('absensi').select('id, tipe, ref_id, kode, nama, status, sesi_id, sesi_nama, sesi_urutan, jam_scan, tanggal').eq('tanggal', today),
-              supabaseClient.from('guru').select('id, nama').order('id'),
-              supabaseClient.from('siswa').select('id, nama, kelas').order('nama')
-            ]), 15000, 'dashboard');
-            if (ab.error) console.warn('absensi', ab.error);
-            if (g.error) console.warn('guru', g.error);
-            if (s.error) console.warn('siswa', s.error);
-            absRows = ab.data || [];
-            guruList = sortGuruList(g.data || []);
-            siswaList = sortSiswaList(s.data || []);
+            const qAbs = supabaseClient.from('absensi')
+              .select('id, tipe, ref_id, kode, nama, status, sesi_id, sesi_nama, sesi_urutan, jam_scan, tanggal')
+              .eq('tanggal', today);
+            const qGuru = supabaseClient.from('guru').select('id, nama').order('id');
+            const qSiswa = supabaseClient.from('siswa').select('id, nama, kelas').order('nama');
+            const [ab, g, s] = await withTimeout(Promise.all([qAbs, qGuru, qSiswa]), 12000, 'dashboard-data');
+            if (ab && ab.error) console.warn('absensi', ab.error);
+            if (g && g.error) console.warn('guru', g.error);
+            if (s && s.error) console.warn('siswa', s.error);
+            absRows = (ab && ab.data) || [];
+            guruList = (typeof sortGuruList === 'function') ? sortGuruList((g && g.data) || []) : ((g && g.data) || []);
+            siswaList = (typeof sortSiswaList === 'function') ? sortSiswaList((s && s.data) || []) : ((s && s.data) || []);
           } catch (netErr) {
             console.error('dashboard fetch', netErr);
-            if (tbG) tbG.innerHTML = '<tr><td colspan="8" style="text-align:center;padding:16px;color:#ef4444;">Gagal/timeout memuat data. Coba refresh.</td></tr>';
-            if (tbS) tbS.innerHTML = '<tr><td colspan="8" style="text-align:center;padding:16px;color:#ef4444;">Gagal/timeout memuat data. Coba refresh.</td></tr>';
-            const detErr = document.getElementById('dashSesiDetail');
-            if (detErr && detErr.textContent === 'Memuat...') detErr.textContent = 'Gagal memuat (timeout/jaringan)';
+            if (tbG) tbG.innerHTML = '<tr><td colspan="' + (2 + nSesi) + '" style="text-align:center;padding:16px;color:#ef4444;">Gagal/timeout memuat data. Coba refresh.</td></tr>';
+            if (tbS) tbS.innerHTML = '<tr><td colspan="' + (3 + nSesi) + '" style="text-align:center;padding:16px;color:#ef4444;">Gagal/timeout memuat data. Coba refresh.</td></tr>';
+            clearTimeout(failsafe);
+            _dashLoading = false;
+            return;
           }
         } else {
-          guruList = sortGuruList((typeof dataGuru !== 'undefined' && dataGuru) ? dataGuru : []);
-          siswaList = sortSiswaList((typeof dataSiswa !== 'undefined' && dataSiswa) ? dataSiswa : []);
+          guruList = (typeof sortGuruList === 'function')
+            ? sortGuruList((typeof dataGuru !== 'undefined' && dataGuru) ? dataGuru : [])
+            : [];
+          siswaList = (typeof sortSiswaList === 'function')
+            ? sortSiswaList((typeof dataSiswa !== 'undefined' && dataSiswa) ? dataSiswa : [])
+            : [];
         }
 
         const elTG = document.getElementById('dashTotalGuru');
@@ -10496,6 +10541,7 @@
         if (elTG) elTG.textContent = guruList.length;
         if (elTS) elTS.textContent = siswaList.length;
 
+        // Index absensi
         const absIndex = new Map();
         function sesiKeys(ses) {
           const keys = [];
@@ -10520,7 +10566,7 @@
         });
 
         function resolveAbsensiFast(tipe, refId, ses) {
-          if (today && isTanggalLibur(today)) return null;
+          if (today && typeof isTanggalLibur === 'function' && isTanggalLibur(today)) return null;
           const base = String(tipe || '') + '|' + Number(refId);
           let real = null;
           for (const sk of sesiKeys(ses)) {
@@ -10528,16 +10574,19 @@
             if (hit) { real = hit; break; }
           }
           if (real) return Object.assign({}, real, { _virtual: false });
-          return resolveAbsensi(tipe, refId, ses, absRows, sesiList, today);
+          if (typeof resolveAbsensi === 'function') {
+            return resolveAbsensi(tipe, refId, ses, absRows, sesiList, today);
+          }
+          return null;
         }
 
+        // Statistik: hitung dari index dulu (cepat)
         function countStatusPerSesiHtml(tipe, people, statusKey) {
           if (!sesiList.length) return '-';
           return sesiList.map(ses => {
             let n = 0;
-            const ended = typeof sesiSudahBerakhir === 'function' ? sesiSudahBerakhir(ses, today) : false;
+            const ended = (typeof sesiSudahBerakhir === 'function') ? sesiSudahBerakhir(ses, today) : false;
             for (let i = 0; i < people.length; i++) {
-              // Coba index dulu (cepat); fallback resolve hanya jika perlu status virtual Alpa/Bolos
               const base = String(tipe || '') + '|' + Number(people[i].id);
               let ab = null;
               for (const sk of sesiKeys(ses)) {
@@ -10545,13 +10594,12 @@
                 if (hit) { ab = hit; break; }
               }
               if (!ab) {
-                // Hanya hitung virtual untuk Alpa/Bolos jika sesi sudah berakhir
                 if (!ended) continue;
                 if (statusKey !== 'Alpa' && statusKey !== 'Bolos') continue;
                 ab = resolveAbsensiFast(tipe, people[i].id, ses);
               }
               if (!ab) continue;
-              if (normStatusKey(ab.status) === statusKey) n++;
+              if ((typeof normStatusKey === 'function' ? normStatusKey(ab.status) : ab.status) === statusKey) n++;
             }
             return '<div style="line-height:1.3;font-size:12px;font-weight:500;">' + (n === 0 ? '-' : n) + '</div>';
           }).join('');
@@ -10566,32 +10614,13 @@
           if (elS) elS.innerHTML = countStatusPerSesiHtml('siswa', siswaList, key);
         });
 
-        function shortSesiLabel(s, idx) {
-          return 'S' + (s.urutan != null ? s.urutan : (idx + 1));
-        }
-        function buildHead(withKelas) {
-          let h = '<tr>';
-          h += '<th style="width:28px;font-size:10px;text-align:center;">No</th>';
-          h += '<th style="width:168px;font-size:10px;text-align:left;">Nama</th>';
-          if (withKelas) h += '<th style="width:52px;font-size:10px;text-align:center;">Kls</th>';
-          sesiList.forEach((s, idx) => {
-            h += '<th style="width:52px;font-size:10px;text-align:center;">' + shortSesiLabel(s, idx) + '</th>';
-          });
-          return h + '</tr>';
-        }
-        const thG = document.getElementById('theadDashGuru');
-        const thS = document.getElementById('theadDashSiswa');
-        if (thG) thG.innerHTML = buildHead(false);
-        if (thS) thS.innerHTML = buildHead(true);
-
         function cellSesi(ab) {
-          if (!ab) return '<td style="text-align:center;color:#cbd5e1;font-size:10px;">–</td>';
-          const jam = fmtJam(ab.jam_scan);
-          const jamShort = jam ? jam.slice(0, 5) : '';
-          return '<td style="text-align:center;line-height:1.25;">' +
-            badgeStatusDash(ab.status) +
-            (jamShort ? '<div style="font-size:9px;color:#64748b;">' + jamShort + '</div>' : '') +
-            '</td>';
+          if (!ab) return '<td style="text-align:center;font-size:10px;color:#cbd5e1;">–</td>';
+          const st = (typeof badgeStatusDash === 'function') ? badgeStatusDash(ab.status) : esc(String(ab.status || ''));
+          const jam = ab.jam_scan
+            ? ('<div style="font-size:9px;color:#64748b;">' + esc(String(ab.jam_scan).slice(0, 5)) + '</div>')
+            : (ab._virtual ? '' : '');
+          return '<td style="text-align:center;vertical-align:middle;">' + st + jam + '</td>';
         }
 
         if (tbG) {
@@ -10606,13 +10635,16 @@
             }).join('');
           }
         }
+
         if (tbS) {
           if (!siswaList.length) {
             tbS.innerHTML = '<tr><td colspan="' + (3 + nSesi) + '" style="text-align:center;padding:16px;color:#94a3b8;">Belum ada data siswa</td></tr>';
           } else {
-            const CHUNK = 40;
+            // Render bertahap agar UI tidak freeze
+            const CHUNK = 50;
             let idx = 0;
             const parts = [];
+            const colSpan = 3 + nSesi;
             function renderChunk() {
               const end = Math.min(idx + CHUNK, siswaList.length);
               for (; idx < end; idx++) {
@@ -10627,7 +10659,7 @@
               }
               if (idx < siswaList.length) {
                 tbS.innerHTML = parts.join('') +
-                  '<tr><td colspan="' + (3 + nSesi) + '" style="text-align:center;padding:8px;color:#94a3b8;font-size:11px;">Memuat ' + idx + '/' + siswaList.length + '...</td></tr>';
+                  '<tr><td colspan="' + colSpan + '" style="text-align:center;padding:8px;color:#94a3b8;font-size:11px;">Memuat ' + idx + '/' + siswaList.length + '...</td></tr>';
                 setTimeout(renderChunk, 0);
               } else {
                 tbS.innerHTML = parts.join('');
@@ -10640,15 +10672,10 @@
         console.error('loadDashboard', e);
         if (tbG) tbG.innerHTML = '<tr><td colspan="8" style="text-align:center;padding:16px;color:#ef4444;">Gagal memuat: ' + esc(String(e.message || e)) + '</td></tr>';
         if (tbS) tbS.innerHTML = '<tr><td colspan="8" style="text-align:center;padding:16px;color:#ef4444;">Gagal memuat</td></tr>';
-        const det = document.getElementById('dashSesiDetail');
-        if (det) det.textContent = 'Gagal memuat data — coba refresh';
-        // reset angka statistik agar tidak terlihat kosong selamanya
-        ['TW','TL','Sakit','Izin','Alpa','Bolos'].forEach(label => {
-          const elG = document.getElementById('stGuru' + label);
-          const elS = document.getElementById('stSiswa' + label);
-          if (elG && /Memuat|0/.test(elG.textContent || '')) elG.textContent = '-';
-          if (elS && /Memuat|0/.test(elS.textContent || '')) elS.textContent = '-';
-        });
+        setDet('Gagal memuat data — coba refresh');
+      } finally {
+        clearTimeout(failsafe);
+        if (seq === _dashLoadSeq) _dashLoading = false;
       }
     }
 
@@ -20469,7 +20496,22 @@ async function initResetPinPage() {
     })();
 
     initFromHash();
-    if (currentPage === 'dashboard') loadDashboard();
+    function bootDashboard(reason) {
+      try {
+        if (currentPage === 'dashboard' && typeof loadDashboard === 'function') {
+          loadDashboard();
+        }
+      } catch (e) { console.error('bootDashboard', reason, e); }
+    }
+    bootDashboard('init');
+    setTimeout(function() {
+      var d = document.getElementById('dashSesiDetail');
+      if (d && /Menyiapkan|Memuat sesi/i.test(d.textContent || '')) bootDashboard('retry-2s');
+    }, 2000);
+    setTimeout(function() {
+      var d = document.getElementById('dashSesiDetail');
+      if (d && /Menyiapkan|Memuat sesi/i.test(d.textContent || '')) bootDashboard('retry-5s');
+    }, 5000);
     setTimeout(() => { try { refreshMenuVisibility(); } catch (e) {} }, 500);
     // Logo: coba lagi setelah app_settings sempat termuat (penting di HP)
     setTimeout(() => { try { loadSchoolLogo(); } catch (e) {} }, 800);
