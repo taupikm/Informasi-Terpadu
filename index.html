@@ -271,11 +271,20 @@
       border: none;
       border-radius: 0;
     }
-    .profile-photo img, .sidebar-header .avatar img {
+    .profile-photo img, .sidebar-header .avatar img,
+    .ep-photo-preview img {
       width: 100%;
       height: 100%;
       object-fit: cover;
+      object-position: center 20%;
       display: block;
+    }
+    .ep-logo-preview img {
+      width: 100%;
+      height: 100%;
+      object-fit: contain;
+      display: block;
+      background: transparent;
     }
     .ep-photo-wrap {
       display: flex;
@@ -3111,7 +3120,7 @@
 
   </main>
 <footer class="footer">
-    © 2026 SMPN PANTANG MUNDUR * <span style="opacity:.7">· v2026.10.17c</span>
+    © 2026 SMPN PANTANG MUNDUR * <span style="opacity:.7">· v2026.10.17d</span>
   </footer>
 <div class="modal-overlay" id="modalLogin">
     <div class="modal">
@@ -4219,9 +4228,10 @@
       return list;
     }
 
-    function fileToDataUrlResized(file, maxSide, quality) {
+    function fileToDataUrlResized(file, maxSide, quality, preferPng) {
       maxSide = maxSide || 256;
       quality = quality == null ? 0.85 : quality;
+      preferPng = !!preferPng;
       return new Promise((resolve, reject) => {
         if (!file) return reject(new Error('File kosong'));
         const reader = new FileReader();
@@ -4246,10 +4256,34 @@
               canvas.width = w;
               canvas.height = h;
               const ctx = canvas.getContext('2d');
+              // transparan (penting untuk PNG logo)
               ctx.clearRect(0, 0, w, h);
               ctx.drawImage(img, 0, 0, w, h);
-              // JPEG lebih kecil & andalan di HP
-              let out = canvas.toDataURL('image/jpeg', quality);
+              let out = '';
+              const isPngSrc = preferPng || /png/i.test(file.type || '') || /\.png$/i.test(file.name || '');
+              if (isPngSrc) {
+                out = canvas.toDataURL('image/png');
+                // jika terlalu besar, tetap PNG dulu; baru kompres ke JPEG tanpa paksa (hindari latar hitam)
+                if (out.length > 220000 && !preferPng) {
+                  // foto profil besar: boleh jpeg
+                  const c2 = document.createElement('canvas');
+                  c2.width = w; c2.height = h;
+                  const x2 = c2.getContext('2d');
+                  x2.fillStyle = '#ffffff';
+                  x2.fillRect(0, 0, w, h);
+                  x2.drawImage(img, 0, 0, w, h);
+                  out = c2.toDataURL('image/jpeg', quality);
+                }
+              } else {
+                // JPEG: isi putih dulu agar tidak hitam di area transparan
+                const c2 = document.createElement('canvas');
+                c2.width = w; c2.height = h;
+                const x2 = c2.getContext('2d');
+                x2.fillStyle = '#ffffff';
+                x2.fillRect(0, 0, w, h);
+                x2.drawImage(img, 0, 0, w, h);
+                out = c2.toDataURL('image/jpeg', quality);
+              }
               if (!out || out.length < 32) out = canvas.toDataURL('image/png');
               resolve(out);
             } catch (e) { reject(e); }
@@ -4276,6 +4310,7 @@
         img.src = s;
         img.alt = '';
         img.referrerPolicy = 'no-referrer';
+        img.style.cssText = 'width:100%;height:100%;object-fit:cover;object-position:center 20%;display:block;';
         img.onerror = function () { el.textContent = fbText; };
         el.appendChild(img);
         return;
@@ -4289,6 +4324,7 @@
       const img = document.createElement('img');
       img.alt = '';
       img.referrerPolicy = 'no-referrer';
+      img.style.cssText = 'width:100%;height:100%;object-fit:cover;object-position:center 20%;display:block;';
       let idx = 0;
       img.src = candidates[0];
       img.onerror = function () {
@@ -4328,7 +4364,22 @@
         return;
       }
       if (u) {
-        setImgWithDriveFallback(el, u, 'SP');
+        // Logo: contain + transparan (bukan cover seperti foto profil)
+        el.innerHTML = '';
+        const candidates = gdriveImgFallbacks(u);
+        if (!candidates.length) { el.textContent = 'SP'; return; }
+        const img = document.createElement('img');
+        img.alt = 'Logo';
+        img.referrerPolicy = 'no-referrer';
+        img.style.cssText = 'width:100%;height:100%;object-fit:contain;display:block;background:transparent;border:none;';
+        let idx = 0;
+        img.src = candidates[0];
+        img.onerror = function () {
+          idx++;
+          if (idx < candidates.length) img.src = candidates[idx];
+          else el.textContent = 'SP';
+        };
+        el.appendChild(img);
         return;
       }
       el.textContent = 'SP';
@@ -4458,6 +4509,20 @@
 
     async function loadUserFotoFromDb(role, userId) {
       if (!role || !userId) return null;
+      // 0) dataUrl lokal / app_settings (andalan HP)
+      try {
+        const localImg = localStorage.getItem('profil_img_' + role + '_' + userId);
+        if (localImg && localImg.indexOf('data:image') === 0) {
+          return { url: localImg, id: null, row: null };
+        }
+      } catch (e) {}
+      try {
+        const img = await loadAppSetting(profilSettingsKey(role, userId) + '_img');
+        if (typeof img === 'string' && img.indexOf('data:image') === 0) {
+          try { localStorage.setItem('profil_img_' + role + '_' + userId, img); } catch (e) {}
+          return { url: img, id: null, row: null };
+        }
+      } catch (e) {}
       // 1) kolom tabel jika ada
       try {
         if (supabaseClient) {
@@ -5093,10 +5158,15 @@
             throw new Error('Endpoint Google Drive belum diatur. Admin: Pengaturan → Google Drive.');
           }
           const safeRole = currentRole || 'user';
-          const fname = 'foto_' + safeRole + '_' + (currentUserId || 'x') + '_' + Date.now() + '.jpg';
           const file = _editFotoPending.file;
-          // rename-ish via new File
-          const upFile = new File([file], fname, { type: file.type || 'image/jpeg' });
+          // dataUrl kecil untuk tampilan cepat & konsisten di HP
+          let fotoData = null;
+          try {
+            fotoData = await fileToDataUrlResized(file, 256, 0.88, false);
+          } catch (e) { console.warn('resize foto', e); }
+          const isPng = /png/i.test(file.type || '') || /\.png$/i.test(file.name || '');
+          const fname = 'foto_' + safeRole + '_' + (currentUserId || 'x') + '_' + Date.now() + (isPng ? '.png' : '.jpg');
+          const upFile = new File([file], fname, { type: file.type || (isPng ? 'image/png' : 'image/jpeg') });
           const result = await uploadJawabanFile(upFile, {
             folderId: GDRIVE_DEFAULT_FOLDER_ID || '',
             bankId: 'profil',
@@ -5104,9 +5174,17 @@
             nisn: String(currentUserKode || currentRole || 'user')
           });
           const url = result.url || (result.id ? ('https://drive.google.com/file/d/' + result.id + '/view') : null);
-          currentUserFoto = url;
+          // Prioritas tampilan: dataUrl lokal, fallback Drive
+          currentUserFoto = fotoData || url;
           currentUserFotoId = result.id || null;
-          await saveUserFotoMeta(currentRole, currentUserId, currentUserFoto, currentUserFotoId);
+          await saveUserFotoMeta(currentRole, currentUserId, url || fotoData, currentUserFotoId);
+          // simpan dataUrl terpisah agar HP konsisten
+          if (fotoData) {
+            try {
+              await saveAppSetting(profilSettingsKey(currentRole, currentUserId) + '_img', fotoData);
+              localStorage.setItem('profil_img_' + currentRole + '_' + currentUserId, fotoData);
+            } catch (e) {}
+          }
           fillEditFotoPreview(currentUserFoto, currentUserName);
           try { URL.revokeObjectURL(_editFotoPending.previewUrl); } catch (e) {}
           _editFotoPending = null;
@@ -5131,7 +5209,7 @@
             // WAJIB: buat dataUrl (andalan HP). Tanpa ini logo HP akan SP.
             let dataUrl = null;
             try {
-              dataUrl = await fileToDataUrlResized(file, 80, 0.8);
+              dataUrl = await fileToDataUrlResized(file, 96, 0.9, true); // PNG agar transparan
             } catch (e) {
               console.warn('resize logo', e);
             }
