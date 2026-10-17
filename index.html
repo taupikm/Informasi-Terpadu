@@ -10197,10 +10197,16 @@
           }
           if (extraEl && supabaseClient && currentUserId) {
             try {
-              await loadMasterMapelKelas();
+              await Promise.race([
+                loadMasterMapelKelas(),
+                new Promise((_, rej) => setTimeout(() => rej(new Error('timeout mapel')), 6000))
+              ]).catch(() => {});
               let html = '';
               if (typeof getGuruAmpuPairs === 'function') {
-                const pairs = await getGuruAmpuPairs(currentUserId);
+                const pairs = await Promise.race([
+                  getGuruAmpuPairs(currentUserId),
+                  new Promise((_, rej) => setTimeout(() => rej(new Error('timeout ampu')), 6000))
+                ]).catch(() => []);
                 const idToKelas = {};
                 (masterKelas || []).forEach(k => { idToKelas[Number(k.id)] = k.kelas; });
                 const idToMapel = {};
@@ -10325,15 +10331,47 @@
     }
 
     async function loadDashboard() {
-      try { await updateDashProfile(); } catch (e) { console.warn(e); }
+      // Profil tidak boleh memblokir rekap: jalankan paralel, dengan timeout
+      try {
+        Promise.resolve().then(() => updateDashProfile()).catch(e => console.warn(e));
+      } catch (e) { console.warn(e); }
 
       const tbG = document.getElementById('tbodyDashGuru');
       const tbS = document.getElementById('tbodyDashSiswa');
+      const detEarly = document.getElementById('dashSesiDetail');
+
+      function withTimeout(promise, ms, label) {
+        return Promise.race([
+          Promise.resolve(promise),
+          new Promise((_, reject) => setTimeout(() => reject(new Error('Timeout ' + (label || '') + ' ' + ms + 'ms')), ms))
+        ]);
+      }
+      // Segera ganti teks agar tidak terlihat "stuck"
+      if (detEarly && detEarly.textContent === 'Memuat...') {
+        detEarly.textContent = 'Memuat sesi...';
+      }
+      if (tbG && /Memuat/.test(tbG.textContent || '')) {
+        tbG.innerHTML = '<tr><td colspan="8" style="text-align:center;padding:16px;color:#94a3b8;">Memuat data absensi...</td></tr>';
+      }
+      if (tbS && /Memuat/.test(tbS.textContent || '')) {
+        tbS.innerHTML = '<tr><td colspan="8" style="text-align:center;padding:16px;color:#94a3b8;">Memuat data absensi...</td></tr>';
+      }
+
       try {
-        if (typeof loadSesi === 'function') {
-          await loadSesi();
+        // load sesi + libur dengan timeout agar UI tidak stuck "Memuat..."
+        try {
+          if (typeof loadSesi === 'function') {
+            await withTimeout(loadSesi(), 8000, 'loadSesi');
+          }
+        } catch (e) {
+          console.warn('loadSesi', e);
+          if (typeof dataSesi === 'undefined' || !dataSesi) dataSesi = [];
         }
-        await loadLiburMap();
+        try {
+          await withTimeout(loadLiburMap(), 8000, 'loadLiburMap');
+        } catch (e) {
+          console.warn('loadLiburMap', e);
+        }
         const today = todayLocal();
         const liburHariIni = isTanggalLibur(today);
         if (!liburHariIni) {
@@ -10428,20 +10466,13 @@
         let guruList = [];
         let siswaList = [];
 
-        function withTimeout(promise, ms, label) {
-          return Promise.race([
-            promise,
-            new Promise((_, reject) => setTimeout(() => reject(new Error('Timeout ' + (label || '') + ' ' + ms + 'ms')), ms))
-          ]);
-        }
-
         if (supabaseClient) {
           try {
             const [ab, g, s] = await withTimeout(Promise.all([
               supabaseClient.from('absensi').select('id, tipe, ref_id, kode, nama, status, sesi_id, sesi_nama, sesi_urutan, jam_scan, tanggal').eq('tanggal', today),
               supabaseClient.from('guru').select('id, nama').order('id'),
-              supabaseClient.from('siswa').select('id, nama, kelas').order('kelas').order('nama')
-            ]), 20000, 'dashboard');
+              supabaseClient.from('siswa').select('id, nama, kelas').order('nama')
+            ]), 15000, 'dashboard');
             if (ab.error) console.warn('absensi', ab.error);
             if (g.error) console.warn('guru', g.error);
             if (s.error) console.warn('siswa', s.error);
@@ -10504,8 +10535,21 @@
           if (!sesiList.length) return '-';
           return sesiList.map(ses => {
             let n = 0;
+            const ended = typeof sesiSudahBerakhir === 'function' ? sesiSudahBerakhir(ses, today) : false;
             for (let i = 0; i < people.length; i++) {
-              const ab = resolveAbsensiFast(tipe, people[i].id, ses);
+              // Coba index dulu (cepat); fallback resolve hanya jika perlu status virtual Alpa/Bolos
+              const base = String(tipe || '') + '|' + Number(people[i].id);
+              let ab = null;
+              for (const sk of sesiKeys(ses)) {
+                const hit = absIndex.get(base + '|' + sk);
+                if (hit) { ab = hit; break; }
+              }
+              if (!ab) {
+                // Hanya hitung virtual untuk Alpa/Bolos jika sesi sudah berakhir
+                if (!ended) continue;
+                if (statusKey !== 'Alpa' && statusKey !== 'Bolos') continue;
+                ab = resolveAbsensiFast(tipe, people[i].id, ses);
+              }
               if (!ab) continue;
               if (normStatusKey(ab.status) === statusKey) n++;
             }
@@ -10597,7 +10641,14 @@
         if (tbG) tbG.innerHTML = '<tr><td colspan="8" style="text-align:center;padding:16px;color:#ef4444;">Gagal memuat: ' + esc(String(e.message || e)) + '</td></tr>';
         if (tbS) tbS.innerHTML = '<tr><td colspan="8" style="text-align:center;padding:16px;color:#ef4444;">Gagal memuat</td></tr>';
         const det = document.getElementById('dashSesiDetail');
-        if (det) det.textContent = 'Gagal memuat data';
+        if (det) det.textContent = 'Gagal memuat data — coba refresh';
+        // reset angka statistik agar tidak terlihat kosong selamanya
+        ['TW','TL','Sakit','Izin','Alpa','Bolos'].forEach(label => {
+          const elG = document.getElementById('stGuru' + label);
+          const elS = document.getElementById('stSiswa' + label);
+          if (elG && /Memuat|0/.test(elG.textContent || '')) elG.textContent = '-';
+          if (elS && /Memuat|0/.test(elS.textContent || '')) elS.textContent = '-';
+        });
       }
     }
 
