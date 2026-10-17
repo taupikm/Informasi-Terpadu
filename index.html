@@ -5768,16 +5768,10 @@
 
       try {
         if (supabaseClient) {
-          for (const r of rows) {
-            await supabaseClient.from('nilai')
-              .delete()
-              .eq('periode_id', r.periode_id)
-              .eq('siswa_id', r.siswa_id)
-              .eq('mapel_id', r.mapel_id)
-              .eq('jenis', r.jenis)
-              .eq('ke', r.ke);
-          }
-          const { error } = await supabaseClient.from('nilai').insert(rows);
+          const { error } = await supabaseClient.from('nilai').upsert(rows, {
+            onConflict: 'periode_id,siswa_id,mapel_id,jenis,ke',
+            ignoreDuplicates: false
+          });
           if (error) throw error;
         }
         alert('Berhasil menyimpan ' + rows.length + ' nilai');
@@ -6294,97 +6288,133 @@
           }
         }
 
-        // Group by (mapel_id, kelas, jenis, ke)
-        const groups = {};
+        // Deduplikasi berdasarkan unique key DB:
+        // (periode_id, siswa_id, mapel_id, jenis, ke) — kelas TIDAK termasuk unique
+        // Jika Excel punya baris dobel, nilai terakhir yang dipakai.
+        const dedupMap = new Map();
+        let excelDupCount = 0;
         toSave.forEach(r => {
-          const key = r.mapel_id + '|' + r.kelas + '|' + r.jenis + '|' + r.ke;
+          const uk = [r.periode_id, r.siswa_id, r.mapel_id, r.jenis, r.ke].join('|');
+          if (dedupMap.has(uk)) excelDupCount++;
+          dedupMap.set(uk, r);
+        });
+        const uniqueRows = [...dedupMap.values()];
+
+        // Group untuk progress: mapel + jenis + ke (+ kelas display)
+        const groups = {};
+        uniqueRows.forEach(r => {
+          const key = r.mapel_id + '|' + r.jenis + '|' + r.ke;
           if (!groups[key]) groups[key] = [];
           groups[key].push(r);
         });
 
         let saved = 0;
         let failedRows = 0;
+        let updatedApprox = 0;
         const groupErrors = [];
         const groupKeys = Object.keys(groups);
         const totalGroups = groupKeys.length;
         const chunk = 80;
 
         showImportProgress(true);
-        setImportProgress(2, 'Menyiapkan ' + totalGroups + ' grup (mapel/kelas/jenis)...');
+        let prepMsg = 'Menyiapkan ' + uniqueRows.length + ' nilai unik (' + totalGroups + ' grup)';
+        if (excelDupCount) prepMsg += ' · ' + excelDupCount + ' baris dobel di Excel digabung';
+        setImportProgress(3, prepMsg);
+        if (excelDupCount) {
+          setImportProgress(3, null, 'ℹ ' + excelDupCount + ' baris duplikat di Excel (NISN+mapel+jenis+ke sama) — dipakai nilai terakhir');
+        }
 
         for (let gi = 0; gi < groupKeys.length; gi++) {
           const key = groupKeys[gi];
           const rows = groups[key];
           const sample = rows[0];
           const labelMapel = mapelLabel[Number(sample.mapel_id)] || ('mapel_id=' + sample.mapel_id);
-          const labelGrup = labelMapel + ' · ' + sample.kelas + ' · ' + sample.jenis + sample.ke;
+          const labelGrup = labelMapel + ' · ' + sample.jenis + sample.ke + ' (' + rows.length + ' siswa)';
           const pctBase = 5 + (gi / Math.max(1, totalGroups)) * 90;
-          setImportProgress(pctBase, 'Grup ' + (gi + 1) + '/' + totalGroups + ': ' + labelGrup + ' (' + rows.length + ' nilai)');
+          setImportProgress(pctBase, 'Grup ' + (gi + 1) + '/' + totalGroups + ': ' + labelGrup);
 
-          // pastikan nilai numeric/string aman + buang field undefined
           const cleanRows = rows.map(r => {
             const o = {
-              periode_id: r.periode_id,
-              siswa_id: r.siswa_id,
-              mapel_id: r.mapel_id,
-              kelas: r.kelas,
-              jenis: r.jenis,
-              ke: r.ke,
+              periode_id: Number(r.periode_id),
+              siswa_id: Number(r.siswa_id),
+              mapel_id: Number(r.mapel_id),
+              kelas: String(r.kelas || ''),
+              jenis: String(r.jenis),
+              ke: Number(r.ke),
               nilai: Number(r.nilai),
               updated_at: r.updated_at || new Date().toISOString()
             };
             if (r.guru_id != null && r.guru_id !== '') o.guru_id = Number(r.guru_id);
             return o;
           });
-          const siswaIds = cleanRows.map(r => r.siswa_id);
 
           try {
-            // DELETE lama
-            for (let i = 0; i < siswaIds.length; i += chunk) {
-              const part = siswaIds.slice(i, i + chunk);
-              const { error: delErr } = await supabaseClient.from('nilai').delete()
-                .eq('periode_id', sample.periode_id)
-                .eq('mapel_id', sample.mapel_id)
-                .eq('kelas', sample.kelas)
-                .eq('jenis', sample.jenis)
-                .eq('ke', sample.ke)
-                .in('siswa_id', part);
-              if (delErr) {
-                const err = new Error('Hapus lama gagal: ' + (delErr.message || JSON.stringify(delErr)));
-                err.code = delErr.code;
-                err.details = delErr.details;
-                err.hint = delErr.hint;
-                throw err;
-              }
-            }
-            // INSERT baru (batch); jika gagal coba per-baris
             let groupSaved = 0;
             let groupFailDetail = [];
+
             for (let i = 0; i < cleanRows.length; i += chunk) {
               const part = cleanRows.slice(i, i + chunk);
-              const { error: insErr } = await supabaseClient.from('nilai').insert(part);
-              if (!insErr) {
+              // UPSERT: update nilai/kelas jika kombinasi unique sudah ada
+              const { error: upErr } = await supabaseClient.from('nilai').upsert(part, {
+                onConflict: 'periode_id,siswa_id,mapel_id,jenis,ke',
+                ignoreDuplicates: false
+              });
+              if (!upErr) {
                 groupSaved += part.length;
                 continue;
               }
-              // fallback satu per satu untuk tahu baris bermasalah
+
+              // Fallback per baris jika batch gagal
               setImportProgress(
                 pctBase + 2,
                 'Grup ' + (gi + 1) + '/' + totalGroups + ': batch gagal, coba per baris...',
-                '⚠ ' + labelGrup + ' batch gagal: ' + (insErr.message || insErr.code || 'error')
+                '⚠ ' + labelGrup + ' batch: ' + (upErr.message || upErr.code || 'error')
               );
               for (const one of part) {
-                const { error: oneErr } = await supabaseClient.from('nilai').insert([one]);
+                const { error: oneErr } = await supabaseClient.from('nilai').upsert([one], {
+                  onConflict: 'periode_id,siswa_id,mapel_id,jenis,ke',
+                  ignoreDuplicates: false
+                });
                 if (!oneErr) {
                   groupSaved++;
                 } else {
-                  groupFailDetail.push({
-                    siswa_id: one.siswa_id,
-                    msg: oneErr.message || oneErr.code || String(oneErr)
-                  });
+                  // Coba update manual jika upsert ditolak RLS insert
+                  const { data: existing, error: selErr } = await supabaseClient.from('nilai')
+                    .select('id')
+                    .eq('periode_id', one.periode_id)
+                    .eq('siswa_id', one.siswa_id)
+                    .eq('mapel_id', one.mapel_id)
+                    .eq('jenis', one.jenis)
+                    .eq('ke', one.ke)
+                    .maybeSingle();
+                  if (!selErr && existing && existing.id) {
+                    const { error: updErr } = await supabaseClient.from('nilai')
+                      .update({
+                        nilai: one.nilai,
+                        kelas: one.kelas,
+                        updated_at: one.updated_at,
+                        ...(one.guru_id != null ? { guru_id: one.guru_id } : {})
+                      })
+                      .eq('id', existing.id);
+                    if (!updErr) {
+                      groupSaved++;
+                      updatedApprox++;
+                      continue;
+                    }
+                    groupFailDetail.push({
+                      siswa_id: one.siswa_id,
+                      msg: (updErr && (updErr.message || updErr.code)) || (oneErr.message || oneErr.code || String(oneErr))
+                    });
+                  } else {
+                    groupFailDetail.push({
+                      siswa_id: one.siswa_id,
+                      msg: oneErr.message || oneErr.code || String(oneErr)
+                    });
+                  }
                 }
               }
             }
+
             saved += groupSaved;
             failedRows += groupFailDetail.length;
             if (groupFailDetail.length) {
@@ -6411,7 +6441,8 @@
 
         // Laporan detail
         let resultMsg = 'Import massal selesai.\n\n';
-        resultMsg += '✓ Berhasil disimpan: ' + saved + ' nilai\n';
+        resultMsg += '✓ Berhasil disimpan/diperbarui: ' + saved + ' nilai\n';
+        if (excelDupCount) resultMsg += 'ℹ Baris dobel di Excel digabung: ' + excelDupCount + '\n';
         if (failedRows) resultMsg += '✖ Gagal tersimpan: ' + failedRows + ' nilai\n';
         if (groupErrors.length) {
           resultMsg += '\nDetail grup bermasalah (' + groupErrors.length + '):\n';
