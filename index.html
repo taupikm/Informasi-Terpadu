@@ -4319,24 +4319,46 @@
     }
 
     function setSchoolLogoDisplay(url, dataUrl) {
-      const el = document.querySelector('.topbar-left .logo');
+      const el = document.querySelector('.topbar-left .logo') || document.querySelector('.logo');
       if (!el) return;
-      // Prioritas dataUrl (andalan HP) → url Drive
-      const src = dataUrl || schoolLogoDataUrl || url || schoolLogoUrl || null;
-      if (src && String(src).indexOf('data:') === 0) {
+      const du = dataUrl || schoolLogoDataUrl || null;
+      const u = url || schoolLogoUrl || null;
+      // 1) data URL — paling andalan di HP
+      if (du && String(du).indexOf('data:') === 0) {
         el.innerHTML = '';
         const img = document.createElement('img');
-        img.src = src;
+        img.src = du;
         img.alt = 'Logo';
+        img.decoding = 'async';
+        img.style.cssText = 'width:100%;height:100%;object-fit:contain;display:block;background:transparent;border:none;';
         img.onerror = function () {
-          // fallback ke Drive jika dataUrl rusak
-          if (url || schoolLogoUrl) setImgWithDriveFallback(el, url || schoolLogoUrl, 'SP');
+          if (u) setImgWithDriveFallback(el, u, 'SP');
           else el.textContent = 'SP';
         };
         el.appendChild(img);
         return;
       }
-      setImgWithDriveFallback(el, src, 'SP');
+      if (u) {
+        setImgWithDriveFallback(el, u, 'SP');
+        return;
+      }
+      el.textContent = 'SP';
+    }
+
+    /** Baca logo dari localStorage secara sinkron (sebelum paint) */
+    function loadSchoolLogoSync() {
+      try {
+        const raw = localStorage.getItem(LOGO_SETTINGS_KEY);
+        if (!raw) return;
+        const o = JSON.parse(raw);
+        if (!o || typeof o !== 'object') return;
+        if (o.dataUrl) schoolLogoDataUrl = o.dataUrl;
+        if (o.url) schoolLogoUrl = o.url;
+        if (o.id) schoolLogoId = o.id;
+        if (schoolLogoDataUrl || schoolLogoUrl) {
+          setSchoolLogoDisplay(schoolLogoUrl, schoolLogoDataUrl);
+        }
+      } catch (e) {}
     }
 
     function profilSettingsKey(role, userId) {
@@ -4383,30 +4405,38 @@
     async function loadSchoolLogo() {
       function applyLogoObj(o) {
         if (!o || typeof o !== 'object') return false;
-        schoolLogoUrl = o.url || (o.id ? ('https://drive.google.com/file/d/' + o.id + '/view') : schoolLogoUrl);
-        schoolLogoId = o.id || schoolLogoId;
-        if (o.dataUrl) schoolLogoDataUrl = o.dataUrl;
+        if (o.url) schoolLogoUrl = o.url;
+        else if (o.id) schoolLogoUrl = 'https://drive.google.com/file/d/' + o.id + '/view';
+        if (o.id) schoolLogoId = o.id;
+        if (o.dataUrl && String(o.dataUrl).indexOf('data:') === 0) {
+          schoolLogoDataUrl = o.dataUrl;
+        }
         if (schoolLogoDataUrl || schoolLogoUrl) {
           setSchoolLogoDisplay(schoolLogoUrl, schoolLogoDataUrl);
           return true;
         }
         return false;
       }
-      try {
-        const raw = localStorage.getItem(LOGO_SETTINGS_KEY);
-        if (raw) applyLogoObj(JSON.parse(raw));
-      } catch (e) {}
+      loadSchoolLogoSync();
       try {
         const v = await loadAppSetting('logo_sekolah');
         if (v) {
           applyLogoObj(v);
           try {
             localStorage.setItem(LOGO_SETTINGS_KEY, JSON.stringify({
-              url: schoolLogoUrl,
-              id: schoolLogoId,
+              url: schoolLogoUrl || null,
+              id: schoolLogoId || null,
               dataUrl: schoolLogoDataUrl || null
             }));
-          } catch (e) {}
+          } catch (e) {
+            // localStorage penuh: simpan tanpa dataUrl
+            try {
+              localStorage.setItem(LOGO_SETTINGS_KEY, JSON.stringify({
+                url: schoolLogoUrl || null,
+                id: schoolLogoId || null
+              }));
+            } catch (e2) {}
+          }
         }
       } catch (e) { console.warn(e); }
     }
@@ -4698,7 +4728,7 @@
           }
         } catch (e) {}
         document.getElementById('editUsername').value = uname;
-        fillEditLogoPreview(schoolLogoUrl);
+        fillEditLogoPreview(schoolLogoDataUrl || schoolLogoUrl);
       }
 
       // muat foto terbaru
@@ -5086,7 +5116,8 @@
             // dataUrl dulu (cepat & andalan di HP), baru upload Drive
             let dataUrl = null;
             try {
-              dataUrl = await fileToDataUrlResized(file, 192, 0.92);
+              // kecil agar muat localStorage HP & cepat load
+              dataUrl = await fileToDataUrlResized(file, 96, 0.82);
             } catch (e) {
               console.warn('resize logo', e);
             }
@@ -15030,15 +15061,65 @@ document.getElementById('btnBsContohFormat')?.addEventListener('click', () => {
         if (supabaseClient) {
           while (true) {
             const { data, error } = await supabaseClient.from('absensi').select('*')
-              .lte('tanggal', tgl).limit(500);
+              .lte('tanggal', tgl).order('id', { ascending: true }).limit(500);
             if (error) throw error;
             if (!data || !data.length) break;
-            const { error: e2 } = await supabaseClient.from('absensi_historis').insert(data);
-            if (e2) throw e2;
+            // Jangan bawa id (biar serial historis / hindari bentrok); simpan id_asal
+            const rows = data.map(r => {
+              const o = { ...r };
+              const asal = o.id;
+              delete o.id;
+              o.id_asal = asal;
+              return o;
+            });
+            let e2 = null;
+            {
+              const res = await supabaseClient.from('absensi_historis').insert(rows);
+              e2 = res.error;
+            }
+            // fallback: tanpa id_asal jika kolom belum ada
+            if (e2 && /id_asal|column/i.test(String(e2.message || e2))) {
+              const rows2 = data.map(r => {
+                const o = { ...r };
+                delete o.id;
+                return o;
+              });
+              const res2 = await supabaseClient.from('absensi_historis').insert(rows2);
+              e2 = res2.error;
+            }
+            // fallback terakhir: insert apa adanya (dengan id)
+            if (e2 && /id_asal|column|schema/i.test(String(e2.message || e2))) {
+              const res3 = await supabaseClient.from('absensi_historis').insert(data);
+              e2 = res3.error;
+            }
+            if (e2) {
+              const msg = String(e2.message || e2);
+              if (/row-level security|RLS|policy/i.test(msg)) {
+                throw new Error(
+                  'RLS memblokir insert ke absensi_historis.\n\n' +
+                  'Jalankan di Supabase SQL Editor:\n\n' +
+                  'ALTER TABLE public.absensi_historis ENABLE ROW LEVEL SECURITY;\n' +
+                  'CREATE POLICY "absensi_historis_all" ON public.absensi_historis\n' +
+                  '  FOR ALL USING (true) WITH CHECK (true);\n\n' +
+                  '(Atau longgarkan policy INSERT untuk role anon/authenticated.)\n\nDetail: ' + msg
+                );
+              }
+              throw e2;
+            }
             const ids = data.map(r => r.id);
             const { error: e3 } = await supabaseClient.from('absensi').delete().in('id', ids);
-            if (e3) throw e3;
+            if (e3) {
+              const msg = String(e3.message || e3);
+              if (/row-level security|RLS|policy/i.test(msg)) {
+                throw new Error(
+                  'Data sudah masuk historis, tapi hapus dari absensi aktif diblokir RLS.\n\n' +
+                  'Jalankan policy DELETE pada tabel absensi.\n\nDetail: ' + msg
+                );
+              }
+              throw e3;
+            }
             moved += data.length;
+            out.textContent = 'Memindahkan... ' + moved + ' baris';
             if (data.length < 500) break;
           }
         } else {
@@ -15057,7 +15138,9 @@ document.getElementById('btnBsContohFormat')?.addEventListener('click', () => {
         out.innerHTML = 'Berhasil memindahkan <b>' + moved + '</b> baris ke historis.';
         await refreshArsipInfo();
       } catch (e) {
-        out.textContent = 'Gagal: ' + (e.message || e) + ' — pastikan tabel absensi_historis sudah dibuat.';
+        out.style.whiteSpace = 'pre-wrap';
+        out.style.color = '#b91c1c';
+        out.textContent = 'Gagal: ' + (e.message || e);
       }
     });
 
@@ -18177,6 +18260,7 @@ async function initResetPinPage() {
     });
 
     (function restoreSession() {
+      try { loadSchoolLogoSync(); } catch (e) {}
       const ses = loadSession();
       if (ses && ses.role && ses.role !== 'guest' && ROLE_DATA[ses.role]) {
         ROLE_DATA[ses.role].name = ses.name || ROLE_DATA[ses.role].name;
