@@ -734,11 +734,18 @@
       overflow: hidden;
       text-overflow: ellipsis;
     }
+    /* Rekap dashboard: kolom ringkas seperti sketsa (No|Nama|Kls|S1|S2|…) */
+    #page-dashboard .table-wrap {
+      overflow-x: auto;
+      -webkit-overflow-scrolling: touch;
+    }
     #page-dashboard .table-wrap table {
+      width: max-content;
+      max-width: none;
       min-width: 0;
-      width: 100%;
       table-layout: fixed;
       font-size: 11px;
+      border-collapse: collapse;
     }
     #page-dashboard .table-wrap th,
     #page-dashboard .table-wrap td {
@@ -748,26 +755,32 @@
       text-overflow: ellipsis;
       vertical-align: middle;
     }
-    /* No */
+    /* No — sempit */
     #page-dashboard .table-wrap th:first-child,
     #page-dashboard .table-wrap td:first-child {
-      width: 36px;
+      width: 28px;
+      min-width: 28px;
+      max-width: 28px;
       text-align: center;
-      padding-left: 6px;
+      padding-left: 4px;
       padding-right: 4px;
     }
-    /* Nama — batasi agar tidak meregang jauh dari kolom berikutnya */
+    /* Nama — fixed, tidak meregang */
     #page-dashboard .table-wrap th:nth-child(2),
     #page-dashboard .table-wrap td:nth-child(2) {
-      width: 42%;
-      max-width: 200px;
-      padding-left: 6px;
-      padding-right: 10px;
+      width: 168px;
+      min-width: 168px;
+      max-width: 168px;
+      text-align: left;
+      padding-left: 8px;
+      padding-right: 8px;
     }
-    /* Kolom sesi / kelas (ke-3 dst): rapat tapi lega, rata tengah */
+    /* Kelas + semua kolom sesi — lebar seragam, rata tengah */
     #page-dashboard .table-wrap th:nth-child(n+3),
     #page-dashboard .table-wrap td:nth-child(n+3) {
-      width: 56px;
+      width: 52px;
+      min-width: 52px;
+      max-width: 52px;
       text-align: center;
       padding-left: 4px;
       padding-right: 4px;
@@ -10031,12 +10044,11 @@
         }
         function buildHead(withKelas) {
           let h = '<tr>';
-          h += '<th style="width:36px;font-size:10px;text-align:center;">No</th>';
-          /* Nama dibatasi % agar jarak ke Kls/Sesi tidak terlalu renggang */
-          h += '<th style="width:' + (withKelas ? '34%' : '40%') + ';font-size:10px;">Nama</th>';
+          h += '<th style="width:28px;font-size:10px;text-align:center;">No</th>';
+          h += '<th style="width:168px;font-size:10px;text-align:left;">Nama</th>';
           if (withKelas) h += '<th style="width:52px;font-size:10px;text-align:center;">Kls</th>';
           sesiList.forEach((s, idx) => {
-            h += '<th style="width:56px;font-size:10px;text-align:center;">' + shortSesiLabel(s, idx) + '</th>';
+            h += '<th style="width:52px;font-size:10px;text-align:center;">' + shortSesiLabel(s, idx) + '</th>';
           });
           return h + '</tr>';
         }
