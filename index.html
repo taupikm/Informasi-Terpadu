@@ -243,24 +243,30 @@
     .btn-toggle:active { background: rgba(255,255,255,0.3); }
 
     .logo {
-      width: 36px;
-      height: 36px;
-      background: white;
-      border-radius: 8px;
+      width: 40px;
+      height: 40px;
+      background: transparent;
+      border: none;
+      border-radius: 0;
+      box-shadow: none;
       display: flex;
       align-items: center;
       justify-content: center;
       font-weight: 800;
-      color: var(--primary);
+      color: #fff;
       font-size: 14px;
       overflow: hidden;
       flex-shrink: 0;
+      padding: 0;
     }
     .logo img {
       width: 100%;
       height: 100%;
-      object-fit: cover;
+      object-fit: contain;
       display: block;
+      background: transparent;
+      border: none;
+      border-radius: 0;
     }
     .profile-photo img, .sidebar-header .avatar img {
       width: 100%;
@@ -4132,6 +4138,7 @@
     let currentUserFotoId = null;
     let schoolLogoUrl = null;
     let schoolLogoId = null;
+    let schoolLogoDataUrl = null; // base64 — andalan di HP (tanpa tergantung Drive)
     const SESSION_KEY = 'smpn_session';
     const LOGO_SETTINGS_KEY = 'app_logo_sekolah';
 
@@ -4209,6 +4216,61 @@
       return list;
     }
 
+    function fileToDataUrlResized(file, maxSide, quality) {
+      maxSide = maxSide || 256;
+      quality = quality == null ? 0.88 : quality;
+      return new Promise((resolve, reject) => {
+        if (!file) return reject(new Error('File kosong'));
+        // SVG: baca sebagai text data url tanpa canvas
+        if (file.type === 'image/svg+xml') {
+          const reader = new FileReader();
+          reader.onload = () => resolve(String(reader.result || ''));
+          reader.onerror = () => reject(reader.error || new Error('Gagal baca SVG'));
+          reader.readAsDataURL(file);
+          return;
+        }
+        const url = URL.createObjectURL(file);
+        const img = new Image();
+        img.onload = () => {
+          try {
+            let w = img.naturalWidth || img.width;
+            let h = img.naturalHeight || img.height;
+            if (!w || !h) throw new Error('Gambar tidak valid');
+            if (w > maxSide || h > maxSide) {
+              if (w >= h) { h = Math.round(h * maxSide / w); w = maxSide; }
+              else { w = Math.round(w * maxSide / h); h = maxSide; }
+            }
+            const canvas = document.createElement('canvas');
+            canvas.width = w;
+            canvas.height = h;
+            const ctx = canvas.getContext('2d');
+            ctx.clearRect(0, 0, w, h);
+            ctx.drawImage(img, 0, 0, w, h);
+            let out = '';
+            try {
+              out = canvas.toDataURL('image/png');
+              // png logo kecil; jika terlalu besar pakai jpeg
+              if (out.length > 180000) {
+                out = canvas.toDataURL('image/jpeg', quality);
+              }
+            } catch (e) {
+              out = canvas.toDataURL('image/jpeg', quality);
+            }
+            URL.revokeObjectURL(url);
+            resolve(out);
+          } catch (e) {
+            try { URL.revokeObjectURL(url); } catch (_) {}
+            reject(e);
+          }
+        };
+        img.onerror = () => {
+          try { URL.revokeObjectURL(url); } catch (_) {}
+          reject(new Error('Gagal memuat gambar untuk preview'));
+        };
+        img.src = url;
+      });
+    }
+
     function setImgWithDriveFallback(el, idOrUrl, fallbackText) {
       if (!el) return;
       const fbText = fallbackText == null ? '?' : String(fallbackText);
@@ -4256,10 +4318,25 @@
       setImgWithDriveFallback(el, fotoUrl, L);
     }
 
-    function setSchoolLogoDisplay(url) {
+    function setSchoolLogoDisplay(url, dataUrl) {
       const el = document.querySelector('.topbar-left .logo');
       if (!el) return;
-      setImgWithDriveFallback(el, url, 'SP');
+      // Prioritas dataUrl (andalan HP) → url Drive
+      const src = dataUrl || schoolLogoDataUrl || url || schoolLogoUrl || null;
+      if (src && String(src).indexOf('data:') === 0) {
+        el.innerHTML = '';
+        const img = document.createElement('img');
+        img.src = src;
+        img.alt = 'Logo';
+        img.onerror = function () {
+          // fallback ke Drive jika dataUrl rusak
+          if (url || schoolLogoUrl) setImgWithDriveFallback(el, url || schoolLogoUrl, 'SP');
+          else el.textContent = 'SP';
+        };
+        el.appendChild(img);
+        return;
+      }
+      setImgWithDriveFallback(el, src, 'SP');
     }
 
     function profilSettingsKey(role, userId) {
@@ -4304,26 +4381,32 @@
     }
 
     async function loadSchoolLogo() {
+      function applyLogoObj(o) {
+        if (!o || typeof o !== 'object') return false;
+        schoolLogoUrl = o.url || (o.id ? ('https://drive.google.com/file/d/' + o.id + '/view') : schoolLogoUrl);
+        schoolLogoId = o.id || schoolLogoId;
+        if (o.dataUrl) schoolLogoDataUrl = o.dataUrl;
+        if (schoolLogoDataUrl || schoolLogoUrl) {
+          setSchoolLogoDisplay(schoolLogoUrl, schoolLogoDataUrl);
+          return true;
+        }
+        return false;
+      }
       try {
         const raw = localStorage.getItem(LOGO_SETTINGS_KEY);
-        if (raw) {
-          const o = JSON.parse(raw);
-          if (o && o.url) {
-            schoolLogoUrl = o.url;
-            schoolLogoId = o.id || null;
-            setSchoolLogoDisplay(schoolLogoUrl);
-          }
-        }
+        if (raw) applyLogoObj(JSON.parse(raw));
       } catch (e) {}
       try {
         const v = await loadAppSetting('logo_sekolah');
-        if (v && (v.url || v.id)) {
-          schoolLogoUrl = v.url || (v.id ? ('https://drive.google.com/file/d/' + v.id + '/view') : null);
-          schoolLogoId = v.id || null;
+        if (v) {
+          applyLogoObj(v);
           try {
-            localStorage.setItem(LOGO_SETTINGS_KEY, JSON.stringify({ url: schoolLogoUrl, id: schoolLogoId }));
+            localStorage.setItem(LOGO_SETTINGS_KEY, JSON.stringify({
+              url: schoolLogoUrl,
+              id: schoolLogoId,
+              dataUrl: schoolLogoDataUrl || null
+            }));
           } catch (e) {}
-          setSchoolLogoDisplay(schoolLogoUrl);
         }
       } catch (e) { console.warn(e); }
     }
@@ -4862,39 +4945,41 @@
           ROLE_DATA[role].label = 'Siswa';
         }
 
-        // muat foto profil user
-        try {
-          const meta = await loadUserFotoFromDb(role, userId);
-          if (meta && meta.url) {
-            currentUserFoto = meta.url;
-            currentUserFotoId = meta.id || null;
-          } else {
-            currentUserFoto = null;
-            currentUserFotoId = null;
-          }
-        } catch (e) {
-          currentUserFoto = null;
-          currentUserFotoId = null;
-        }
         if (userName) {
           ROLE_DATA[role].avatar = String(userName).charAt(0).toUpperCase();
         }
-
+        // Jangan blokir UI login — foto & GDrive dimuat di background
+        currentUserFoto = currentUserFoto || null;
         applyRole(role);
-        try {
-          // Admin tidak dicatat di log login
-          if (role !== 'admin') {
-            await recordLoginLog({
-              user_id: userId,
-              role: role,
-              nama: userName || ROLE_DATA[role]?.name || '',
-              kode: currentUserKode || kode,
-              kelas: currentUserKelas || null
-            });
-          }
-        } catch (e) { console.warn('login log', e); }
-        try { await loadGdriveSettingsFromDb(); } catch (e) {}
         closeModal('modalLogin');
+
+        // background tasks (HP tetap responsif)
+        (async () => {
+          try {
+            if (role !== 'admin') {
+              await recordLoginLog({
+                user_id: userId,
+                role: role,
+                nama: userName || ROLE_DATA[role]?.name || '',
+                kode: currentUserKode || kode,
+                kelas: currentUserKelas || null
+              });
+            }
+          } catch (e) { console.warn('login log', e); }
+          try { await loadGdriveSettingsFromDb(); } catch (e) {}
+          try {
+            const meta = await loadUserFotoFromDb(role, userId);
+            if (meta && meta.url) {
+              currentUserFoto = meta.url;
+              currentUserFotoId = meta.id || null;
+              setAvatarEl(document.getElementById('profileBtn'), currentUserFoto, userName || '?');
+              setAvatarEl(document.getElementById('sidebarAvatar'), currentUserFoto, userName || '?');
+              saveSession();
+            }
+          } catch (e) { console.warn('load foto login', e); }
+          try { await loadSchoolLogo(); } catch (e) {}
+        })();
+
         const extra = currentUserIsAlumni ? '\n(Alumni / Lulusan)' : '';
         alert('Login berhasil sebagai ' + ROLE_DATA[role].label + (userName ? '\n' + userName : '') + extra);
         if (role === 'admin') { try { refreshLoginLogBadge(); } catch (e) {} }
@@ -4998,6 +5083,13 @@
             }
             const file = _editLogoPending.file;
             const ext = (file.name.split('.').pop() || 'png').toLowerCase();
+            // dataUrl dulu (cepat & andalan di HP), baru upload Drive
+            let dataUrl = null;
+            try {
+              dataUrl = await fileToDataUrlResized(file, 192, 0.92);
+            } catch (e) {
+              console.warn('resize logo', e);
+            }
             const upFile = new File([file], 'logo_sekolah_' + Date.now() + '.' + ext, { type: file.type || 'image/png' });
             const result = await uploadJawabanFile(upFile, {
               folderId: GDRIVE_DEFAULT_FOLDER_ID || '',
@@ -5007,19 +5099,26 @@
             });
             schoolLogoUrl = result.url || (result.id ? ('https://drive.google.com/file/d/' + result.id + '/view') : null);
             schoolLogoId = result.id || null;
-            const payload = { url: schoolLogoUrl, id: schoolLogoId, updated_at: new Date().toISOString() };
+            schoolLogoDataUrl = dataUrl || null;
+            const payload = {
+              url: schoolLogoUrl,
+              id: schoolLogoId,
+              dataUrl: schoolLogoDataUrl,
+              updated_at: new Date().toISOString()
+            };
             try { localStorage.setItem(LOGO_SETTINGS_KEY, JSON.stringify(payload)); } catch (e) {}
             await saveAppSetting('logo_sekolah', payload);
-            setSchoolLogoDisplay(schoolLogoUrl);
-            fillEditLogoPreview(schoolLogoUrl);
+            setSchoolLogoDisplay(schoolLogoUrl, schoolLogoDataUrl);
+            fillEditLogoPreview(schoolLogoDataUrl || schoolLogoUrl);
             try { URL.revokeObjectURL(_editLogoPending.previewUrl); } catch (e) {}
             _editLogoPending = null;
           } else if (_editLogoCleared) {
             schoolLogoUrl = null;
             schoolLogoId = null;
+            schoolLogoDataUrl = null;
             try { localStorage.removeItem(LOGO_SETTINGS_KEY); } catch (e) {}
-            await saveAppSetting('logo_sekolah', { url: null, id: null });
-            setSchoolLogoDisplay(null);
+            await saveAppSetting('logo_sekolah', { url: null, id: null, dataUrl: null });
+            setSchoolLogoDisplay(null, null);
             _editLogoCleared = false;
           }
         }
