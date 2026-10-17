@@ -1069,29 +1069,67 @@
       font-size: 12px; font-weight: 700; line-height: 1.4;
     }
 
+    /* Halaman form sempit (menu Guru & Umum) */
+    .page-narrow {
+      /* helper class optional */
+    }
     @media (min-width: 768px) {
+      /* —— Submenu GURU: form sempit —— */
       #page-input-nilai,
       #page-daftar-nilai,
       #page-scan-barcode,
       #page-input-izin,
-      #page-cari-siswa,
-      #page-sidik-jari,
       #page-download-absensi,
-      #page-jadwal-kelas,
-      #page-jadwal-mapel,
-      #page-validasi-lulusan,
-      #page-kelulusan,
-      #page-tugas-ujian {
+      #page-jadwal-mapel {
         max-width: 640px;
         margin-left: auto;
         margin-right: auto;
       }
+      /* —— Submenu GURU: tabel lebih lebar —— */
+      #page-rekap-data,
+      #page-kelola-tugas,
+      #page-bank-soal-detail,
+      #page-bank-soal-hasil {
+        max-width: 900px;
+        margin-left: auto;
+        margin-right: auto;
+      }
+      /* —— Lainnya (umum/siswa/admin form) —— */
+      #page-cari-siswa,
+      #page-sidik-jari,
+      #page-jadwal-kelas,
+      #page-validasi-lulusan,
+      #page-kelulusan,
+      #page-tugas-ujian,
+      #page-syarat-naik,
+      #page-kerjakan-ujian {
+        max-width: 640px;
+        margin-left: auto;
+        margin-right: auto;
+      }
+
       #page-input-nilai .page-title,
-      #page-daftar-nilai .page-title { text-align: center; }
+      #page-daftar-nilai .page-title,
+      #page-scan-barcode .page-title,
+      #page-input-izin .page-title,
+      #page-rekap-data .page-title,
+      #page-jadwal-mapel .page-title,
+      #page-kelola-tugas .page-title,
+      #page-download-absensi .page-title {
+        text-align: center;
+      }
       #page-input-nilai .card,
-      #page-daftar-nilai .card {
+      #page-daftar-nilai .card,
+      #page-scan-barcode .card,
+      #page-input-izin .card,
+      #page-rekap-data .card,
+      #page-jadwal-mapel .card,
+      #page-kelola-tugas .card,
+      #page-download-absensi .card {
         box-shadow: 0 2px 12px rgba(15, 23, 42, 0.06);
       }
+
+      /* Input Nilai — kolom rapi */
       #page-input-nilai #tableInputNilai { font-size: 13px; }
       #page-input-nilai #tableInputNilai th,
       #page-input-nilai #tableInputNilai td { padding: 9px 10px; }
@@ -1105,10 +1143,21 @@
         max-width: 72px; padding: 7px 6px; font-size: 14px;
       }
       #page-input-nilai .rekap-filter-row label,
-      #page-daftar-nilai .rekap-filter-row label {
+      #page-daftar-nilai .rekap-filter-row label,
+      #page-input-izin .rekap-filter-row label,
+      #page-rekap-data .rekap-filter-row label,
+      #page-download-absensi .rekap-filter-row label {
         flex: 0 0 130px; font-size: 13px;
       }
+      #page-input-nilai .toolbar,
+      #page-daftar-nilai .toolbar,
+      #page-rekap-data .toolbar,
+      #page-kelola-tugas .toolbar {
+        justify-content: center;
+        flex-wrap: wrap;
+      }
 
+      /* Dashboard */
       #page-dashboard {
         max-width: 720px;
         margin-left: auto;
@@ -1153,28 +1202,39 @@
       body.dash-logged-in .dash-stats-block { min-width: 0; }
     }
     @media (min-width: 1100px) {
+      /* Form sempit guru */
       #page-input-nilai,
-      #page-daftar-nilai { max-width: 680px; }
+      #page-daftar-nilai,
       #page-scan-barcode,
       #page-input-izin,
-      #page-cari-siswa,
-      #page-sidik-jari,
       #page-download-absensi,
-      #page-jadwal-kelas,
-      #page-jadwal-mapel,
-      #page-validasi-lulusan,
-      #page-kelulusan,
-      #page-tugas-ujian { max-width: 680px; }
-      #page-data-siswa,
-      #page-data-guru,
-      #page-data-lulusan,
-      #page-kelola-tugas {
-        max-width: 960px;
+      #page-jadwal-mapel { max-width: 680px; }
+      /* Tabel guru */
+      #page-rekap-data {
+        max-width: 1100px;
         margin-left: auto;
         margin-right: auto;
       }
-      #page-rekap-data {
-        max-width: 1100px;
+      #page-kelola-tugas,
+      #page-bank-soal-detail,
+      #page-bank-soal-hasil {
+        max-width: 1000px;
+        margin-left: auto;
+        margin-right: auto;
+      }
+      /* Umum / siswa / admin */
+      #page-cari-siswa,
+      #page-sidik-jari,
+      #page-jadwal-kelas,
+      #page-validasi-lulusan,
+      #page-kelulusan,
+      #page-tugas-ujian,
+      #page-syarat-naik,
+      #page-kerjakan-ujian { max-width: 680px; }
+      #page-data-siswa,
+      #page-data-guru,
+      #page-data-lulusan {
+        max-width: 960px;
         margin-left: auto;
         margin-right: auto;
       }
