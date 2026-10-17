@@ -811,13 +811,16 @@
       font-weight: 700;
       line-height: 1.4;
     }
+    .dash-top-row {
+      display: block;
+    }
     @media (min-width: 768px) {
       #page-dashboard {
         max-width: 720px;
         margin-left: auto;
         margin-right: auto;
       }
-      /* 3 kolom atas, 3 bawah (2 baris) — desktop */
+      /* 3 kolom × 2 baris — desktop */
       .dash-stat-grid {
         grid-template-columns: repeat(3, 1fr);
         gap: 8px;
@@ -831,31 +834,54 @@
       .dash-stat > div:last-child {
         font-size: 18px !important;
       }
-      /* Profil login hanya di desktop */
+      /* Login: profil kiri, statistik kanan */
       body.dash-logged-in #dashProfileCard {
         display: block !important;
       }
       body.dash-logged-in #page-dashboard {
-        max-width: 900px;
+        max-width: 980px;
+      }
+      body.dash-logged-in .dash-top-row {
+        display: grid;
+        grid-template-columns: minmax(240px, 300px) 1fr;
+        gap: 14px;
+        align-items: start;
+        margin-bottom: 4px;
+      }
+      body.dash-logged-in .dash-profile-card {
+        margin-bottom: 0;
+        position: sticky;
+        top: calc(var(--topbar-h, 64px) + 8px);
       }
       body.dash-logged-in .dash-profile-inner {
-        flex-direction: row;
-        align-items: flex-start;
-        text-align: left;
-        gap: 18px;
-        padding: 18px 20px;
+        flex-direction: column;
+        align-items: center;
+        text-align: center;
+        gap: 10px;
+        padding: 18px 16px;
+        height: 100%;
       }
       body.dash-logged-in .dash-profile-photo {
-        width: 100px;
-        height: 100px;
+        width: 96px;
+        height: 96px;
         font-size: 32px;
       }
       body.dash-logged-in .dash-profile-info {
-        flex: 1;
+        width: 100%;
         min-width: 0;
       }
       body.dash-logged-in .dash-profile-name {
-        font-size: 18px;
+        font-size: 16px;
+      }
+      body.dash-logged-in .dash-profile-meta,
+      body.dash-logged-in .dash-profile-extra {
+        text-align: left;
+      }
+      body.dash-logged-in .dash-stats-block {
+        min-width: 0;
+      }
+      body.dash-logged-in .dash-stat-card {
+        margin-bottom: 10px;
       }
     }
     @media (min-width: 1100px) {
@@ -863,13 +889,20 @@
         max-width: 780px;
       }
       body.dash-logged-in #page-dashboard {
-        max-width: 960px;
+        max-width: 1040px;
+      }
+      body.dash-logged-in .dash-top-row {
+        grid-template-columns: minmax(260px, 320px) 1fr;
+        gap: 16px;
       }
     }
-    /* HP: profil dashboard tetap disembunyikan, grid 6 kolom seperti semula */
+    /* HP: profil dashboard disembunyikan, statistik 6 kolom seperti semula */
     @media (max-width: 767px) {
       #dashProfileCard {
         display: none !important;
+      }
+      .dash-top-row {
+        display: block;
       }
       .dash-stat-grid {
         grid-template-columns: repeat(6, 1fr);
@@ -1831,7 +1864,8 @@
   </aside>
 <main class="main">
 <section class="page active" id="page-dashboard">
-    <!-- Profil user (desktop + login only; HP disembunyikan via CSS) -->
+    <!-- Desktop login: profil kiri | statistik kanan. HP: hanya statistik -->
+    <div class="dash-top-row">
     <div id="dashProfileCard" class="dash-profile-card" style="display:none;">
       <div class="dash-profile-inner">
         <div class="dash-profile-photo" id="dashProfilePhoto">?</div>
@@ -1911,6 +1945,7 @@
         </div>
       </div>
     </div>
+    </div><!-- /.dash-top-row -->
 
     <div id="dashSesiInfo" style="background:#e0f7fa;border:1px solid #67e8f9;border-radius:12px;padding:12px 14px;text-align:center;margin-bottom:12px;">
       <div style="font-size:12px;font-weight:600;color:#0e7490;">Informasi Sesi</div>
