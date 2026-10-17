@@ -3164,7 +3164,7 @@
 
   </main>
 <footer class="footer">
-    © 2026 SMPN PANTANG MUNDUR * <span style="opacity:.7">· v2026.10.17e</span>
+    © 2026 SMPN PANTANG MUNDUR * <span style="opacity:.7">· v2026.10.17f</span>
   </footer>
 <div class="modal-overlay" id="modalLogin">
     <div class="modal">
@@ -4844,7 +4844,7 @@
         let uname = '';
         try {
           if (supabaseClient && currentUserId) {
-            const { data } = await supabaseClient.from('admin').select('id, nama, username, pin').eq('id', currentUserId).maybeSingle();
+            const { data } = await supabaseClient.from('admin').select('id, nama, username').eq('id', currentUserId).maybeSingle();
             if (data) {
               if (data.nama) document.getElementById('editNama').value = data.nama;
               uname = data.username || '';
@@ -4984,25 +4984,35 @@
 
       try {
         if (supabaseClient) {
-          const { data: adminData } = await supabaseClient
-            .from('admin').select('id, nama, pin').eq('pin', kode).maybeSingle();
-          if (adminData) {
-            role = 'admin';
-            userName = adminData.nama;
-            userId = adminData.id;
+          // Login aman: RPC SECURITY DEFINER (PIN tidak di-SELECT dari client)
+          let loginRow = null;
+          try {
+            const { data: rpcData, error: rpcErr } = await supabaseClient.rpc('app_login', { p_kode: kode });
+            if (rpcErr) {
+              console.warn('app_login rpc:', rpcErr.message || rpcErr);
+            } else if (rpcData && rpcData.ok) {
+              loginRow = rpcData;
+            }
+          } catch (e) {
+            console.warn('app_login', e);
           }
 
-          if (!role) {
-            const { data: guruData } = await supabaseClient
-              .from('guru').select('id, nama, pin').eq('pin', kode).maybeSingle();
-            if (guruData) {
-              role = 'guru';
-              userName = guruData.nama;
-              userId = guruData.id;
+          // Fallback lama jika fungsi belum dipasang di Supabase
+          if (!loginRow) {
+            const { data: adminData } = await supabaseClient
+              .from('admin').select('id, nama').eq('pin', kode).maybeSingle();
+            if (adminData) {
+              loginRow = { ok: true, role: 'admin', id: adminData.id, nama: adminData.nama, kode: kode, is_alumni: false };
             }
           }
-
-          if (!role) {
+          if (!loginRow) {
+            const { data: guruData } = await supabaseClient
+              .from('guru').select('id, nama, nip').eq('pin', kode).maybeSingle();
+            if (guruData) {
+              loginRow = { ok: true, role: 'guru', id: guruData.id, nama: guruData.nama, kode: guruData.nip || kode, is_alumni: false };
+            }
+          }
+          if (!loginRow) {
             let siswaData = null;
             let siswaErr = null;
             {
@@ -5017,18 +5027,15 @@
               siswaData = r2.data;
             }
             if (siswaData) {
-              role = 'siswa';
-              userName = siswaData.nama;
-              userId = siswaData.id;
-              window._loginKelas = siswaData.kelas || null;
-              window._loginNisn = siswaData.nisn || kode;
-              window._loginIsAlumni = false;
+              loginRow = {
+                ok: true, role: 'siswa', id: siswaData.id, nama: siswaData.nama,
+                kode: siswaData.nisn || kode, kelas: siswaData.kelas || null, is_alumni: false
+              };
             } else if (siswaErr) {
               console.warn('login siswa:', siswaErr.message || siswaErr);
             }
           }
-
-          if (!role) {
+          if (!loginRow) {
             let lusData = null;
             let lusErr = null;
             {
@@ -5055,21 +5062,28 @@
               if (r.data && r.data.length) lusData = r.data[0];
             }
             if (lusData) {
-              role = 'siswa';
-              userName = lusData.nama;
-              userId = lusData.id;
-              window._loginKelas = lusData.kelas || '9';
-              window._loginNisn = lusData.nisn || kode;
-              window._loginIsAlumni = true;
+              loginRow = {
+                ok: true, role: 'siswa', id: lusData.id, nama: lusData.nama,
+                kode: lusData.nisn || kode, kelas: lusData.kelas || '9', is_alumni: true
+              };
             } else if (lusErr) {
               const em = String(lusErr.message || lusErr);
               if (/permission|policy|RLS|row-level/i.test(em)) {
-                alert('Gagal membaca data lulusan (izin database).\n\nDi Supabase SQL Editor jalankan:\n\nALTER TABLE public.lulusan ENABLE ROW LEVEL SECURITY;\nCREATE POLICY "lulusan_select_public" ON public.lulusan FOR SELECT USING (true);\n\nDetail: ' + em);
+                alert('Gagal membaca data lulusan (izin database).\n\nJalankan file rls_security.sql di Supabase SQL Editor.\n\nDetail: ' + em);
                 return;
               }
             }
           }
-        } else {
+
+          if (loginRow && loginRow.ok) {
+            role = loginRow.role;
+            userName = loginRow.nama;
+            userId = loginRow.id;
+            window._loginKelas = loginRow.kelas || null;
+            window._loginNisn = loginRow.kode || kode;
+            window._loginIsAlumni = !!loginRow.is_alumni;
+          }
+                } else {
           if (kode === '0123456789' || kode === '012345678') {
             role = 'siswa'; userName = 'Siswa Demo'; userId = 1;
           } else if (kode === '123456') {
@@ -18342,7 +18356,7 @@ document.getElementById('btnBsContohFormat')?.addEventListener('click', () => {
       const payload = {
         meta: {
           app: 'SMPN PANTANG MUNDUR',
-          version: 'v2026.10.17e',
+          version: 'v2026.10.17f',
           exported_at: new Date().toISOString(),
           tables: tables
         },
