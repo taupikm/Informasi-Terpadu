@@ -846,6 +846,7 @@
       #page-set-naik-lulus,
       #page-set-reset-pin,
       #page-set-gdrive,
+      #page-set-backup,
       #page-validasi-lulusan {
         max-width: 720px;
         margin-left: auto;
@@ -860,7 +861,8 @@
       #page-set-arsip .page-title,
       #page-set-naik-lulus .page-title,
       #page-set-reset-pin .page-title,
-      #page-set-gdrive .page-title {
+      #page-set-gdrive .page-title,
+      #page-set-backup .page-title {
         text-align: center;
       }
       #page-syarat-naik .card,
@@ -872,7 +874,8 @@
       #page-set-arsip .card,
       #page-set-naik-lulus .card,
       #page-set-reset-pin .card,
-      #page-set-gdrive .card {
+      #page-set-gdrive .card,
+      #page-set-backup .card {
         box-shadow: 0 2px 12px rgba(15, 23, 42, 0.06);
       }
       #page-syarat-naik #syaratCardPrint {
@@ -1680,6 +1683,7 @@
         <button class="menu-item" data-page="set-naik-lulus"><span class="icon">🎓</span> Naik Kelas &amp; Kelulusan</button>
         <button class="menu-item" data-page="set-reset-pin"><span class="icon">🔑</span> Reset PIN</button>
         <button class="menu-item" data-page="set-gdrive"><span class="icon">☁</span> Integrasi GDrive</button>
+        <button class="menu-item" data-page="set-backup"><span class="icon">💾</span> Backup Data</button>
       </div>
     </nav>
   </aside>
@@ -3118,9 +3122,49 @@
 
     </section>
 
+    <section class="page" id="page-set-backup">
+      <div class="page-title">💾 Backup Data</div>
+      <div class="card" style="padding:14px;margin-bottom:12px;">
+        <div style="font-size:13px;color:#475569;line-height:1.45;margin-bottom:10px;">
+          Unduh salinan data dari Supabase ke file <b>JSON</b> di perangkat Anda.
+          Cocok untuk paket gratis (tanpa akses pg_dump). Simpan file di Drive/USB secara berkala.
+        </div>
+        <div style="font-size:12px;font-weight:700;color:#64748b;margin-bottom:6px;">Pilih tabel</div>
+        <div id="backupTableList" style="display:grid;grid-template-columns:1fr 1fr;gap:6px 12px;margin-bottom:12px;font-size:13px;"></div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:8px;">
+          <button type="button" class="btn btn-outline" id="btnBackupSelectAll" style="flex:1;">☑ Pilih semua</button>
+          <button type="button" class="btn btn-outline" id="btnBackupSelectNone" style="flex:1;">☐ Kosongkan</button>
+        </div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;">
+          <button type="button" class="btn btn-primary" id="btnBackupExport" style="flex:1;">⬇ Unduh Backup JSON</button>
+          <button type="button" class="btn btn-outline" id="btnBackupCount" style="flex:1;">🔢 Cek Jumlah Baris</button>
+        </div>
+        <div id="backupProgress" style="margin-top:12px;font-size:12px;color:#64748b;white-space:pre-wrap;"></div>
+      </div>
+
+      <div class="card" style="padding:14px;margin-bottom:12px;">
+        <div style="font-size:14px;font-weight:700;margin-bottom:8px;color:#0f172a;">↩ Pulihkan dari Backup</div>
+        <div style="font-size:12px;color:#64748b;margin-bottom:10px;line-height:1.4;">
+          Unggah file JSON hasil backup. Data akan di-<b>upsert</b> (baris dengan id sama diperbarui).
+          Tidak menghapus data lain yang tidak ada di file. Gunakan hati-hati.
+        </div>
+        <input type="file" id="backupRestoreFile" accept="application/json,.json" style="display:none;">
+        <div style="display:flex;gap:8px;flex-wrap:wrap;">
+          <button type="button" class="btn btn-outline" id="btnBackupPickRestore" style="flex:1;">📂 Pilih File JSON</button>
+          <button type="button" class="btn" id="btnBackupRestore" style="flex:1;background:#b45309;color:#fff;border:none;">↩ Pulihkan</button>
+        </div>
+        <div id="backupRestoreInfo" style="margin-top:10px;font-size:12px;color:#64748b;white-space:pre-wrap;"></div>
+      </div>
+
+      <div class="card" style="padding:12px;font-size:11px;color:#94a3b8;line-height:1.4;">
+        Tips paket gratis Supabase: backup manual 1–2× seminggu, terutama sebelum naik kelas / kelulusan / arsip absensi.
+        File backup berisi PIN guru/admin — simpan di tempat aman.
+      </div>
+    </section>
+
   </main>
 <footer class="footer">
-    © 2026 SMPN PANTANG MUNDUR * <span style="opacity:.7">· v2026.10.17d</span>
+    © 2026 SMPN PANTANG MUNDUR * <span style="opacity:.7">· v2026.10.17e</span>
   </footer>
 <div class="modal-overlay" id="modalLogin">
     <div class="modal">
@@ -5362,6 +5406,7 @@
       if (pageId === 'set-naik-lulus') { try { loadNaikLulusTable(); } catch (e) {} }
       if (pageId === 'set-reset-pin') { try { initResetPinPage(); } catch (e) {} }
       if (pageId === 'set-gdrive') { try { initGdriveSettingsPage(); } catch (e) {} }
+      if (pageId === 'set-backup') { try { initBackupPage(); } catch (e) {} }
       if (pageId === 'pengaturan') showPage('set-mapel', true);
       if (pageId === 'scan-barcode') initScanPage();
       if (pageId === 'dashboard') loadDashboard();
@@ -18172,7 +18217,265 @@ document.getElementById('btnBsContohFormat')?.addEventListener('click', () => {
 
     let _dataRpGuru = [];
 
-    function initGdriveSettingsPage() {
+    
+    // ===== BACKUP / RESTORE DATA (client-side, cocok free tier) =====
+    const BACKUP_TABLES = [
+      { key: 'siswa', label: 'Siswa' },
+      { key: 'guru', label: 'Guru' },
+      { key: 'admin', label: 'Admin' },
+      { key: 'mapel', label: 'Mapel' },
+      { key: 'kelas', label: 'Kelas' },
+      { key: 'periode', label: 'Periode' },
+      { key: 'sesi', label: 'Sesi' },
+      { key: 'hari_libur', label: 'Hari Libur' },
+      { key: 'nilai', label: 'Nilai' },
+      { key: 'absensi', label: 'Absensi (aktif)' },
+      { key: 'absensi_historis', label: 'Absensi historis' },
+      { key: 'lulusan', label: 'Lulusan' },
+      { key: 'guru_mapel', label: 'Guru–Mapel' },
+      { key: 'guru_kelas', label: 'Guru–Kelas' },
+      { key: 'bank_soal', label: 'Bank Soal' },
+      { key: 'bank_soal_item', label: 'Item Bank Soal' },
+      { key: 'bank_soal_hasil', label: 'Hasil Bank Soal' },
+      { key: 'jadwal_mapel', label: 'Jadwal Mapel' },
+      { key: 'izin_sidik_jari', label: 'Izin Sidik Jari' },
+      { key: 'pengaturan_absensi', label: 'Pengaturan Absensi' },
+      { key: 'app_settings', label: 'App Settings' },
+      { key: 'login_log', label: 'Log Login' }
+    ];
+
+    let _backupRestorePayload = null;
+
+    function initBackupPage() {
+      const box = document.getElementById('backupTableList');
+      if (!box) return;
+      if (!box.dataset.ready) {
+        box.innerHTML = BACKUP_TABLES.map(t =>
+          '<label style="display:flex;align-items:center;gap:6px;cursor:pointer;">' +
+          '<input type="checkbox" class="cb-backup-table" value="' + t.key + '" checked> ' +
+          esc(t.label) + '</label>'
+        ).join('');
+        box.dataset.ready = '1';
+      }
+      const prog = document.getElementById('backupProgress');
+      if (prog) prog.textContent = '';
+    }
+
+    function getSelectedBackupTables() {
+      return [...document.querySelectorAll('.cb-backup-table:checked')].map(c => c.value);
+    }
+
+    async function fetchAllTableRows(table, onProgress) {
+      const pageSize = 1000;
+      let all = [];
+      let from = 0;
+      for (;;) {
+        const { data, error } = await supabaseClient
+          .from(table)
+          .select('*')
+          .range(from, from + pageSize - 1);
+        if (error) throw error;
+        if (!data || !data.length) break;
+        all = all.concat(data);
+        if (onProgress) onProgress(table, all.length);
+        if (data.length < pageSize) break;
+        from += pageSize;
+        // yield ke UI
+        await new Promise(r => setTimeout(r, 0));
+      }
+      return all;
+    }
+
+    function downloadJsonFile(filename, obj) {
+      const text = JSON.stringify(obj, null, 2);
+      const blob = new Blob([text], { type: 'application/json;charset=utf-8' });
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      setTimeout(() => {
+        try { URL.revokeObjectURL(a.href); } catch (e) {}
+        a.remove();
+      }, 1500);
+    }
+
+    document.getElementById('btnBackupSelectAll')?.addEventListener('click', () => {
+      document.querySelectorAll('.cb-backup-table').forEach(c => { c.checked = true; });
+    });
+    document.getElementById('btnBackupSelectNone')?.addEventListener('click', () => {
+      document.querySelectorAll('.cb-backup-table').forEach(c => { c.checked = false; });
+    });
+
+    document.getElementById('btnBackupCount')?.addEventListener('click', async () => {
+      const out = document.getElementById('backupProgress');
+      if (!supabaseClient) { alert('Supabase belum terhubung'); return; }
+      const tables = getSelectedBackupTables();
+      if (!tables.length) { alert('Pilih minimal satu tabel'); return; }
+      out.textContent = 'Menghitung...';
+      const lines = [];
+      for (const t of tables) {
+        try {
+          const { count, error } = await supabaseClient.from(t).select('*', { count: 'exact', head: true });
+          if (error) lines.push(t + ': error — ' + (error.message || error));
+          else lines.push(t + ': ' + (count || 0) + ' baris');
+        } catch (e) {
+          lines.push(t + ': error — ' + (e.message || e));
+        }
+        out.textContent = lines.join('\n');
+      }
+      out.textContent = lines.join('\n') + '\n\nSelesai.';
+    });
+
+    document.getElementById('btnBackupExport')?.addEventListener('click', async () => {
+      const out = document.getElementById('backupProgress');
+      if (!supabaseClient) { alert('Supabase belum terhubung'); return; }
+      const tables = getSelectedBackupTables();
+      if (!tables.length) { alert('Pilih minimal satu tabel'); return; }
+      if (!(await showConfirm(
+        'Unduh backup ' + tables.length + ' tabel ke file JSON?\n\nFile dapat berisi PIN — simpan dengan aman.',
+        'Backup Data', '💾'
+      ))) return;
+
+      const btn = document.getElementById('btnBackupExport');
+      if (btn) { btn.disabled = true; btn.textContent = 'Mengunduh...'; }
+      const payload = {
+        meta: {
+          app: 'SMPN PANTANG MUNDUR',
+          version: 'v2026.10.17e',
+          exported_at: new Date().toISOString(),
+          tables: tables
+        },
+        data: {}
+      };
+      const summary = [];
+      try {
+        for (const t of tables) {
+          out.textContent = 'Mengambil: ' + t + ' ...';
+          try {
+            const rows = await fetchAllTableRows(t, (name, n) => {
+              out.textContent = 'Mengambil: ' + name + ' ... ' + n + ' baris';
+            });
+            payload.data[t] = rows;
+            summary.push(t + ': ' + rows.length + ' baris');
+          } catch (e) {
+            payload.data[t] = { _error: String(e.message || e) };
+            summary.push(t + ': GAGAL — ' + (e.message || e));
+          }
+        }
+        const stamp = new Date().toISOString().slice(0, 19).replace(/[:T]/g, '-');
+        const fname = 'backup-smpn-' + stamp + '.json';
+        downloadJsonFile(fname, payload);
+        out.textContent = summary.join('\n') + '\n\n✓ File diunduh: ' + fname;
+        alert('Backup selesai.\nFile: ' + fname + '\n\n' + summary.slice(0, 8).join('\n') + (summary.length > 8 ? '\n...' : ''));
+      } catch (e) {
+        console.error(e);
+        out.textContent = 'Gagal: ' + (e.message || e);
+        alert('Gagal backup: ' + (e.message || e));
+      } finally {
+        if (btn) { btn.disabled = false; btn.textContent = '⬇ Unduh Backup JSON'; }
+      }
+    });
+
+    document.getElementById('btnBackupPickRestore')?.addEventListener('click', () => {
+      document.getElementById('backupRestoreFile')?.click();
+    });
+
+    document.getElementById('backupRestoreFile')?.addEventListener('change', async function () {
+      const f = this.files && this.files[0];
+      const info = document.getElementById('backupRestoreInfo');
+      _backupRestorePayload = null;
+      if (!f) return;
+      try {
+        const text = await f.text();
+        const json = JSON.parse(text);
+        if (!json || typeof json !== 'object' || !json.data) {
+          throw new Error('Format tidak dikenali (butuh objek .data)');
+        }
+        _backupRestorePayload = json;
+        const keys = Object.keys(json.data);
+        const lines = ['File: ' + f.name, 'Diekspor: ' + (json.meta && json.meta.exported_at ? json.meta.exported_at : '-'), ''];
+        keys.forEach(k => {
+          const v = json.data[k];
+          if (Array.isArray(v)) lines.push(k + ': ' + v.length + ' baris');
+          else lines.push(k + ': (bukan array)');
+        });
+        info.textContent = lines.join('\n');
+      } catch (e) {
+        info.textContent = 'Gagal baca file: ' + (e.message || e);
+        this.value = '';
+      }
+    });
+
+    document.getElementById('btnBackupRestore')?.addEventListener('click', async () => {
+      const info = document.getElementById('backupRestoreInfo');
+      if (!_backupRestorePayload || !_backupRestorePayload.data) {
+        alert('Pilih file backup JSON dulu');
+        return;
+      }
+      if (currentRole !== 'admin') {
+        alert('Hanya admin yang boleh memulihkan data');
+        return;
+      }
+      if (!supabaseClient) { alert('Supabase belum terhubung'); return; }
+      if (!(await showConfirm(
+        'Pulihkan data dari backup?\n\nBaris dengan id yang sama akan diperbarui (upsert).\nProses ini tidak bisa dibatalkan otomatis.',
+        'Pulihkan Backup', '⚠'
+      ))) return;
+
+      const btn = document.getElementById('btnBackupRestore');
+      if (btn) { btn.disabled = true; btn.textContent = 'Memulihkan...'; }
+      const data = _backupRestorePayload.data;
+      const report = [];
+      try {
+        for (const table of Object.keys(data)) {
+          const rows = data[table];
+          if (!Array.isArray(rows)) {
+            report.push(table + ': dilewati');
+            continue;
+          }
+          if (!rows.length) {
+            report.push(table + ': 0 baris');
+            continue;
+          }
+          info.textContent = 'Memulihkan ' + table + ' (' + rows.length + ')...';
+          // upsert per batch 200
+          let ok = 0, fail = 0;
+          for (let i = 0; i < rows.length; i += 200) {
+            const chunk = rows.slice(i, i + 200);
+            // coba onConflict id
+            let error = null;
+            {
+              const res = await supabaseClient.from(table).upsert(chunk, { onConflict: 'id' });
+              error = res.error;
+            }
+            if (error) {
+              // fallback insert biasa
+              const res2 = await supabaseClient.from(table).insert(chunk);
+              if (res2.error) {
+                fail += chunk.length;
+                report.push(table + ' batch@' + i + ': ' + (res2.error.message || res2.error));
+              } else ok += chunk.length;
+            } else {
+              ok += chunk.length;
+            }
+            await new Promise(r => setTimeout(r, 0));
+          }
+          report.push(table + ': OK ' + ok + (fail ? (', gagal ' + fail) : ''));
+          info.textContent = report.join('\n');
+        }
+        info.textContent = report.join('\n') + '\n\n✓ Selesai.';
+        alert('Pemulihan selesai.\n\n' + report.slice(0, 12).join('\n'));
+      } catch (e) {
+        console.error(e);
+        info.textContent = (report.join('\n') + '\nGagal: ' + (e.message || e)).trim();
+        alert('Gagal pulihkan: ' + (e.message || e));
+      } finally {
+        if (btn) { btn.disabled = false; btn.textContent = '↩ Pulihkan'; }
+      }
+    });
+
+function initGdriveSettingsPage() {
       const ep = document.getElementById('gdEndpoint');
       const fd = document.getElementById('gdFolderId');
       const st = document.getElementById('gdStatus');
