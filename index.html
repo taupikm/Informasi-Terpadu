@@ -734,16 +734,27 @@
       overflow: hidden;
       text-overflow: ellipsis;
     }
-    /* Rekap dashboard: kolom ringkas seperti sketsa (No|Nama|Kls|S1|S2|…) */
+    /* Rekap dashboard: tabel di tengah, melebar otomatis saat kolom bertambah */
+    #page-dashboard #dashRekapWrap {
+      width: 100%;
+    }
+    #page-dashboard #dashRekapWrap .section-title {
+      text-align: center;
+    }
     #page-dashboard .table-wrap {
       overflow-x: auto;
       -webkit-overflow-scrolling: touch;
+      display: flex;
+      justify-content: center;
+      width: 100%;
     }
     #page-dashboard .table-wrap table {
       width: max-content;
       max-width: none;
       min-width: 0;
-      table-layout: fixed;
+      margin-left: auto;
+      margin-right: auto;
+      table-layout: auto;
       font-size: 11px;
       border-collapse: collapse;
     }
@@ -755,35 +766,28 @@
       text-overflow: ellipsis;
       vertical-align: middle;
     }
-    /* No — sempit */
     #page-dashboard .table-wrap th:first-child,
     #page-dashboard .table-wrap td:first-child {
       width: 28px;
       min-width: 28px;
-      max-width: 28px;
       text-align: center;
       padding-left: 4px;
       padding-right: 4px;
     }
-    /* Nama — fixed, tidak meregang */
     #page-dashboard .table-wrap th:nth-child(2),
     #page-dashboard .table-wrap td:nth-child(2) {
-      width: 162px;
-      min-width: 150px;
-      max-width: 162px;
+      min-width: 140px;
+      max-width: 220px;
       text-align: left;
       padding-left: 6px;
       padding-right: 6px;
     }
-    /* Kelas + semua kolom sesi — lebar seragam, rata tengah */
     #page-dashboard .table-wrap th:nth-child(n+3),
     #page-dashboard .table-wrap td:nth-child(n+3) {
-      width: 38px;
-      min-width: 38px;
-      max-width: 38px;
+      min-width: 42px;
       text-align: center;
-      padding-left: 1px;
-      padding-right: 1px;
+      padding-left: 4px;
+      padding-right: 4px;
     }
     #page-nilai-saya .table-wrap {
       overflow-x: auto;
@@ -1114,6 +1118,8 @@
       text-align: center;
     }
     .dash-top-row { display: block; }
+    .app-shell { display: block; width: 100%; }
+    .app-content { min-width: 0; width: 100%; }
     .dash-profile-card { display: none; margin-bottom: 12px; }
     .dash-profile-inner {
       display: flex; flex-direction: column; align-items: center; text-align: center;
@@ -1298,19 +1304,22 @@
       .dash-stat > div:first-child { font-size: 10px !important; font-weight: 600 !important; }
       .dash-stat > div:last-child { font-size: 12px !important; font-weight: 500 !important; }
 
-      body.dash-logged-in #dashProfileCard { display: block !important; }
-      body.dash-logged-in #page-dashboard { max-width: 980px; }
-      body.dash-logged-in .dash-top-row {
+      /* Profil sticky di kiri — semua halaman saat login (desktop) */
+      body.dash-logged-in .app-shell {
         display: grid;
         grid-template-columns: minmax(240px, 300px) 1fr;
         gap: 14px;
         align-items: start;
-        margin-bottom: 4px;
+        max-width: 1100px;
+        margin-left: auto;
+        margin-right: auto;
       }
-      body.dash-logged-in .dash-profile-card {
+      body.dash-logged-in #dashProfileCard {
+        display: block !important;
         margin-bottom: 0;
         position: sticky;
         top: calc(var(--topbar-h, 64px) + 8px);
+        align-self: start;
       }
       body.dash-logged-in .dash-profile-inner {
         flex-direction: column;
@@ -1326,6 +1335,9 @@
       body.dash-logged-in .dash-profile-name { font-size: 16px; }
       body.dash-logged-in .dash-profile-meta,
       body.dash-logged-in .dash-profile-extra { text-align: left; }
+      body.dash-logged-in .app-content { min-width: 0; }
+      body.dash-logged-in #page-dashboard { max-width: none; margin: 0; }
+      body.dash-logged-in .dash-top-row { display: block; margin-bottom: 4px; }
       body.dash-logged-in .dash-stats-block { min-width: 0; }
     }
     @media (min-width: 1100px) {
@@ -1366,13 +1378,15 @@
         margin-right: auto;
       }
       #page-dashboard { max-width: 780px; }
-      body.dash-logged-in #page-dashboard { max-width: 1040px; }
-      body.dash-logged-in .dash-top-row {
+      body.dash-logged-in .app-shell {
+        max-width: 1200px;
         grid-template-columns: minmax(260px, 320px) 1fr;
         gap: 16px;
       }
+      body.dash-logged-in #page-dashboard { max-width: none; }
     }
     @media (max-width: 767px) {
+      body.dash-logged-in .app-shell { display: block; max-width: none; }
       #dashProfileCard { display: none !important; }
       .dash-top-row { display: block; }
       .dash-stat-grid {
@@ -2070,9 +2084,8 @@
     </nav>
   </aside>
 <main class="main">
-<section class="page active" id="page-dashboard">
-    <!-- Desktop login: profil kiri | statistik kanan. HP: hanya statistik -->
-    <div class="dash-top-row">
+  <!-- Profil global (semua halaman saat login, desktop) -->
+  <div class="app-shell">
       <div id="dashProfileCard" class="dash-profile-card" style="display:none;">
         <div class="dash-profile-inner">
           <div class="dash-profile-photo" id="dashProfilePhoto">?</div>
@@ -2086,6 +2099,11 @@
         </div>
       </div>
 
+  <div class="app-content">
+
+<section class="page active" id="page-dashboard">
+    <!-- Desktop login: profil kiri | statistik kanan. HP: hanya statistik -->
+    <div class="dash-top-row">
       <div class="dash-stats-block">
         <div class="card dash-stat-card" style="padding:12px;margin-bottom:10px;">
           <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
@@ -3639,7 +3657,10 @@
       </div>
     </section>
 
-  </main>
+  
+  </div><!-- /.app-content -->
+  </div><!-- /.app-shell -->
+</main>
 <footer class="footer">
     © 2026 SMPN PANTANG MUNDUR * <span style="opacity:.7">· v2026.10.17f</span>
   </footer>
@@ -5156,6 +5177,9 @@
       saveSession();
 
       try { refreshMenuVisibility(); } catch (e) { console.warn(e); }
+      try {
+        if (typeof updateDashProfile === 'function') updateDashProfile();
+      } catch (e) { console.warn(e); }
 
       if (!skipRedirect) {
         showPage('dashboard', false);
@@ -5881,6 +5905,13 @@
       } else {
         history.replaceState({ page: pageId }, '', hash);
       }
+
+      // Kartu profil tetap tampil di setiap halaman (desktop)
+      try {
+        if (currentRole && currentRole !== 'guest' && typeof updateDashProfile === 'function') {
+          updateDashProfile();
+        }
+      } catch (e) {}
 
       if (pageId === 'data-siswa') loadSiswa();
       if (pageId === 'data-guru') loadGuru();
