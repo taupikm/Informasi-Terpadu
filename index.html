@@ -950,6 +950,7 @@
         max-width: 860px;
       }
     }
+    /* ===== Halaman form + tabel: tidak full-bleed di desktop ===== */
     #page-input-nilai .table-wrap {
       overflow-x: hidden;
       -webkit-overflow-scrolling: touch;
@@ -962,42 +963,217 @@
     }
     #page-input-nilai #tableInputNilai th,
     #page-input-nilai #tableInputNilai td {
-      padding: 6px 4px;
+      padding: 7px 8px;
       vertical-align: middle;
       overflow: hidden;
       text-overflow: ellipsis;
     }
     #page-input-nilai #tableInputNilai th:nth-child(1),
     #page-input-nilai #tableInputNilai td:nth-child(1) {
-      width: 28px;
+      width: 36px;
       text-align: center;
       white-space: nowrap;
     }
     #page-input-nilai #tableInputNilai th:nth-child(2),
     #page-input-nilai #tableInputNilai td:nth-child(2) {
-      width: 72px;
+      width: 110px;
       white-space: nowrap;
-      font-size: 11px;
+      font-size: 12px;
     }
     #page-input-nilai #tableInputNilai th:nth-child(3),
     #page-input-nilai #tableInputNilai td:nth-child(3) {
       width: auto;
       white-space: normal;
       word-break: break-word;
-      line-height: 1.3;
+      line-height: 1.35;
     }
     #page-input-nilai #tableInputNilai th:nth-child(4),
     #page-input-nilai #tableInputNilai td:nth-child(4) {
-      width: 64px;
+      width: 72px;
       text-align: center;
       white-space: nowrap;
     }
     #page-input-nilai #tableInputNilai .nilai-input {
       width: 100%;
-      max-width: 58px;
-      padding: 5px 4px;
+      max-width: 64px;
+      padding: 6px 4px;
       font-size: 13px;
       box-sizing: border-box;
+      margin: 0 auto;
+      display: block;
+    }
+
+    /* Daftar Nilai: kolom proporsional */
+    #page-daftar-nilai .table-wrap {
+      overflow-x: auto;
+      -webkit-overflow-scrolling: touch;
+    }
+    #page-daftar-nilai #tableDaftarNilai {
+      width: 100%;
+      min-width: 0;
+      table-layout: fixed;
+      font-size: 12px;
+    }
+    #page-daftar-nilai #tableDaftarNilai th,
+    #page-daftar-nilai #tableDaftarNilai td {
+      padding: 7px 6px;
+      vertical-align: middle;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    #page-daftar-nilai #tableDaftarNilai th:nth-child(1),
+    #page-daftar-nilai #tableDaftarNilai td:nth-child(1) {
+      width: 36px;
+      text-align: center;
+    }
+    #page-daftar-nilai #tableDaftarNilai th:nth-child(2),
+    #page-daftar-nilai #tableDaftarNilai td:nth-child(2) {
+      width: 36px;
+      text-align: center;
+    }
+    #page-daftar-nilai #tableDaftarNilai th:nth-child(3),
+    #page-daftar-nilai #tableDaftarNilai td:nth-child(3) {
+      width: 110px;
+      white-space: nowrap;
+    }
+    #page-daftar-nilai #tableDaftarNilai th:nth-child(4),
+    #page-daftar-nilai #tableDaftarNilai td:nth-child(4) {
+      width: auto;
+      white-space: normal;
+      word-break: break-word;
+      line-height: 1.35;
+    }
+    #page-daftar-nilai #tableDaftarNilai th:nth-child(5),
+    #page-daftar-nilai #tableDaftarNilai td:nth-child(5) {
+      width: 40px;
+      text-align: center;
+    }
+    #page-daftar-nilai #tableDaftarNilai th:nth-child(6),
+    #page-daftar-nilai #tableDaftarNilai td:nth-child(6) {
+      width: 52px;
+      text-align: center;
+      font-weight: 700;
+    }
+
+    /* Filter bar: label tidak terlalu lebar di layar kecil */
+    .rekap-filter-row label {
+      flex: 0 0 100px;
+    }
+
+    /* Desktop: pusat konten form+tabel, tidak full page */
+    @media (min-width: 768px) {
+      #page-input-nilai,
+      #page-daftar-nilai,
+      #page-scan-barcode,
+      #page-input-izin,
+      #page-cari-siswa,
+      #page-sidik-jari,
+      #page-download-absensi,
+      #page-jadwal-kelas,
+      #page-jadwal-mapel,
+      #page-validasi-lulusan,
+      #page-kelulusan,
+      #page-tugas-ujian {
+        max-width: 640px;
+        margin-left: auto;
+        margin-right: auto;
+      }
+      #page-input-nilai .page-title,
+      #page-daftar-nilai .page-title,
+      #page-scan-barcode .page-title,
+      #page-input-izin .page-title,
+      #page-cari-siswa .page-title,
+      #page-download-absensi .page-title {
+        text-align: center;
+      }
+      #page-input-nilai .card,
+      #page-daftar-nilai .card,
+      #page-scan-barcode .card,
+      #page-input-izin .card,
+      #page-cari-siswa .card {
+        box-shadow: 0 2px 12px rgba(15, 23, 42, 0.06);
+      }
+      #page-input-nilai #tableInputNilai {
+        font-size: 13px;
+      }
+      #page-input-nilai #tableInputNilai th,
+      #page-input-nilai #tableInputNilai td {
+        padding: 9px 10px;
+      }
+      #page-input-nilai #tableInputNilai th:nth-child(1),
+      #page-input-nilai #tableInputNilai td:nth-child(1) {
+        width: 44px;
+      }
+      #page-input-nilai #tableInputNilai th:nth-child(2),
+      #page-input-nilai #tableInputNilai td:nth-child(2) {
+        width: 120px;
+        font-size: 13px;
+      }
+      #page-input-nilai #tableInputNilai th:nth-child(4),
+      #page-input-nilai #tableInputNilai td:nth-child(4) {
+        width: 80px;
+      }
+      #page-input-nilai #tableInputNilai .nilai-input {
+        max-width: 72px;
+        padding: 7px 6px;
+        font-size: 14px;
+      }
+      #page-daftar-nilai #tableDaftarNilai {
+        font-size: 13px;
+      }
+      #page-daftar-nilai #tableDaftarNilai th,
+      #page-daftar-nilai #tableDaftarNilai td {
+        padding: 9px 10px;
+      }
+      /* Filter: label + field lebih rapi */
+      #page-input-nilai .rekap-filter-row,
+      #page-daftar-nilai .rekap-filter-row,
+      #page-cari-siswa .rekap-filter-row,
+      #page-download-absensi .rekap-filter-row {
+        max-width: 100%;
+      }
+      #page-input-nilai .rekap-filter-row label,
+      #page-daftar-nilai .rekap-filter-row label {
+        flex: 0 0 130px;
+        font-size: 13px;
+      }
+      #page-input-nilai .toolbar,
+      #page-daftar-nilai .toolbar {
+        flex-wrap: wrap;
+        justify-content: flex-start;
+      }
+    }
+    @media (min-width: 1100px) {
+      #page-input-nilai,
+      #page-daftar-nilai {
+        max-width: 680px;
+      }
+      #page-scan-barcode,
+      #page-input-izin,
+      #page-cari-siswa,
+      #page-sidik-jari,
+      #page-download-absensi,
+      #page-jadwal-kelas,
+      #page-jadwal-mapel,
+      #page-validasi-lulusan,
+      #page-kelulusan,
+      #page-tugas-ujian {
+        max-width: 680px;
+      }
+      /* Data master yang butuh tabel lebih lebar */
+      #page-data-siswa,
+      #page-data-guru,
+      #page-data-lulusan,
+      #page-kelola-tugas {
+        max-width: 960px;
+        margin-left: auto;
+        margin-right: auto;
+      }
+      #page-rekap-data {
+        max-width: 1100px;
+        margin-left: auto;
+        margin-right: auto;
+      }
     }
     th {
       background: #f1f5f9;
@@ -3404,17 +3580,16 @@
           <input type="tel" id="guruHp" inputmode="numeric" placeholder="08xxxxxxxxxx">
         </div>
         <div class="form-group">
-          <label>Mapel &amp; Kelas yang diampu</label>
-          <p style="font-size:11px;color:#64748b;margin:0 0 8px;line-height:1.4;">
-            Centang mapel, lalu pilih kelas untuk mapel tersebut.
-            Contoh: Bahasa Indonesia → 7A, 7B · IPS → 8B, 8C.
-          </p>
-          <div id="guruAmpuList" style="max-height:280px;overflow-y:auto;border:1px solid #e2e8f0;border-radius:8px;padding:8px;background:#f8fafc;">
-            <span style="color:#94a3b8;font-size:12px;">Memuat...</span>
+          <label>Mapel yang diampu (bisa pilih lebih dari 1)</label>
+          <div id="guruMapelList" class="check-list">
+            <span style="color:#94a3b8;font-size:12px;">Memuat mapel...</span>
           </div>
-          <!-- legacy hidden containers for compatibility -->
-          <div id="guruMapelList" style="display:none;"></div>
-          <div id="guruKelasList" style="display:none;"></div>
+        </div>
+        <div class="form-group">
+          <label>Kelas yang diajar (bisa pilih lebih dari 1)</label>
+          <div id="guruKelasList" class="check-list">
+            <span style="color:#94a3b8;font-size:12px;">Memuat kelas...</span>
+          </div>
         </div>
       </div>
       <div class="modal-footer">
@@ -5978,92 +6153,32 @@
       }
     }
 
-    /** Pasangan mapel–kelas yang diampu guru: [{mapel_id, kelas_id, kelas}] */
-    let _guruAmpuCache = null; // for current logged-in guru
-
     function renderMapelChecks(selectedIds) {
-      // legacy no-op; ampunan UI uses renderGuruAmpu
-      selectedIds = selectedIds || [];
-    }
-
-    function renderKelasChecks(selectedIds) {
-      selectedIds = selectedIds || [];
-    }
-
-    /** pairs: Map mapelId -> Set of kelasId (as string) */
-    function renderGuruAmpu(pairsMap) {
-      const box = document.getElementById('guruAmpuList');
-      if (!box) return;
-      pairsMap = pairsMap || new Map();
+      selectedIds = (selectedIds || []).map(String);
+      const box = document.getElementById('guruMapelList');
       if (!masterMapel.length) {
         box.innerHTML = '<span style="color:#94a3b8;font-size:12px;">Tidak ada data mapel</span>';
         return;
       }
+      box.innerHTML = masterMapel.map(m => `
+        <label>
+          <input type="checkbox" class="cb-mapel" value="${m.id}" ${selectedIds.includes(String(m.id)) ? 'checked' : ''}>
+          ${m.kode} – ${m.mapel}
+        </label>`).join('');
+    }
+
+    function renderKelasChecks(selectedIds) {
+      selectedIds = (selectedIds || []).map(String);
+      const box = document.getElementById('guruKelasList');
       if (!masterKelas.length) {
         box.innerHTML = '<span style="color:#94a3b8;font-size:12px;">Tidak ada data kelas</span>';
         return;
       }
-      const kelasSorted = masterKelas.slice().sort((a, b) =>
-        String(a.kelas || '').localeCompare(String(b.kelas || ''), 'id', { numeric: true })
-      );
-      box.innerHTML = masterMapel.map(m => {
-        const mid = String(m.id);
-        const selectedKelas = pairsMap.get(Number(m.id)) || pairsMap.get(mid) || new Set();
-        const hasAny = selectedKelas.size > 0;
-        const kelasHtml = kelasSorted.map(k => {
-          const kid = String(k.id);
-          const checked = selectedKelas.has(Number(k.id)) || selectedKelas.has(kid) ? ' checked' : '';
-          return '<label style="display:inline-flex;align-items:center;gap:3px;font-size:11px;font-weight:500;background:#fff;border:1px solid #e2e8f0;border-radius:6px;padding:3px 7px;cursor:pointer;">' +
-            '<input type="checkbox" class="cb-ampu-kelas" data-mapel-id="' + mid + '" value="' + kid + '"' + checked + '> ' +
-            esc(k.kelas) + '</label>';
-        }).join('');
-        return '<div class="ampu-mapel-block" data-mapel-id="' + mid + '" style="margin-bottom:10px;padding:8px 10px;background:#fff;border:1px solid #e2e8f0;border-radius:10px;">' +
-          '<label style="display:flex;align-items:center;gap:8px;font-size:13px;font-weight:700;color:#0f172a;margin-bottom:6px;cursor:pointer;">' +
-          '<input type="checkbox" class="cb-ampu-mapel" value="' + mid + '"' + (hasAny ? ' checked' : '') + '> ' +
-          esc((m.kode || '') + ' – ' + (m.mapel || m.nama || '')) + '</label>' +
-          '<div class="ampu-kelas-row" style="display:flex;flex-wrap:wrap;gap:5px;' + (hasAny ? '' : 'opacity:0.45;pointer-events:none;') + '">' +
-          kelasHtml + '</div></div>';
-      }).join('');
-
-      box.querySelectorAll('.cb-ampu-mapel').forEach(cb => {
-        cb.addEventListener('change', () => {
-          const block = cb.closest('.ampu-mapel-block');
-          const row = block && block.querySelector('.ampu-kelas-row');
-          if (!row) return;
-          if (cb.checked) {
-            row.style.opacity = '1';
-            row.style.pointerEvents = '';
-          } else {
-            row.style.opacity = '0.45';
-            row.style.pointerEvents = 'none';
-            row.querySelectorAll('.cb-ampu-kelas').forEach(c => { c.checked = false; });
-          }
-        });
-      });
-      box.querySelectorAll('.cb-ampu-kelas').forEach(cb => {
-        cb.addEventListener('change', () => {
-          const block = cb.closest('.ampu-mapel-block');
-          const mapelCb = block && block.querySelector('.cb-ampu-mapel');
-          if (!mapelCb) return;
-          const any = [...block.querySelectorAll('.cb-ampu-kelas')].some(c => c.checked);
-          mapelCb.checked = any;
-          const row = block.querySelector('.ampu-kelas-row');
-          if (row) {
-            row.style.opacity = any ? '1' : '0.45';
-            row.style.pointerEvents = any ? '' : 'none';
-          }
-        });
-      });
-    }
-
-    function collectGuruAmpuPairs() {
-      const pairs = [];
-      document.querySelectorAll('.cb-ampu-kelas:checked').forEach(c => {
-        const mid = Number(c.dataset.mapelId);
-        const kid = Number(c.value);
-        if (mid && kid) pairs.push({ mapel_id: mid, kelas_id: kid });
-      });
-      return pairs;
+      box.innerHTML = masterKelas.map(k => `
+        <label>
+          <input type="checkbox" class="cb-kelas" value="${k.id}" ${selectedIds.includes(String(k.id)) ? 'checked' : ''}>
+          ${k.kelas}
+        </label>`).join('');
     }
 
     async function getGuruMapelIds(guruId) {
@@ -6077,73 +6192,19 @@
       return (data || []).map(r => r.kelas_id);
     }
 
-    /** Load pairs mapel-kelas for a guru. Prefer guru_mapel_kelas; fallback cartesian. */
-    async function getGuruAmpuPairs(guruId) {
-      if (!supabaseClient || !guruId) return [];
-      try {
-        const { data, error } = await supabaseClient
-          .from('guru_mapel_kelas')
-          .select('mapel_id, kelas_id')
-          .eq('guru_id', guruId);
-        if (!error && data && data.length) {
-          return data.map(r => ({ mapel_id: Number(r.mapel_id), kelas_id: Number(r.kelas_id) }));
-        }
-        if (error && !/relation|does not exist|42P01/i.test(String(error.message || error))) {
-          console.warn('guru_mapel_kelas', error);
-        }
-      } catch (e) {
-        console.warn('guru_mapel_kelas load', e);
-      }
-      // Fallback: cartesian product of independent lists (legacy)
-      const [mids, kids] = await Promise.all([getGuruMapelIds(guruId), getGuruKelasIds(guruId)]);
-      const pairs = [];
-      (mids || []).forEach(mid => {
-        (kids || []).forEach(kid => {
-          pairs.push({ mapel_id: Number(mid), kelas_id: Number(kid) });
-        });
-      });
-      return pairs;
-    }
-
     async function saveGuruRelasi(guruId) {
       if (!supabaseClient || !guruId) return;
-      const pairs = collectGuruAmpuPairs();
-      const mapelIds = [...new Set(pairs.map(p => p.mapel_id))];
-      const kelasIds = [...new Set(pairs.map(p => p.kelas_id))];
+      const mapelIds = [...document.querySelectorAll('.cb-mapel:checked')].map(c => Number(c.value));
+      const kelasIds = [...document.querySelectorAll('.cb-kelas:checked')].map(c => Number(c.value));
 
       await supabaseClient.from('guru_mapel').delete().eq('guru_id', guruId);
       await supabaseClient.from('guru_kelas').delete().eq('guru_id', guruId);
-      try {
-        await supabaseClient.from('guru_mapel_kelas').delete().eq('guru_id', guruId);
-      } catch (e) { /* table may not exist yet */ }
 
       if (mapelIds.length) {
         await supabaseClient.from('guru_mapel').insert(mapelIds.map(mid => ({ guru_id: Number(guruId), mapel_id: mid })));
       }
       if (kelasIds.length) {
         await supabaseClient.from('guru_kelas').insert(kelasIds.map(kid => ({ guru_id: Number(guruId), kelas_id: kid })));
-      }
-      if (pairs.length) {
-        const { error } = await supabaseClient.from('guru_mapel_kelas').insert(
-          pairs.map(p => ({ guru_id: Number(guruId), mapel_id: p.mapel_id, kelas_id: p.kelas_id }))
-        );
-        if (error) {
-          if (/relation|does not exist|42P01/i.test(String(error.message || error))) {
-            console.warn('Tabel guru_mapel_kelas belum ada. Jalankan SQL create table. Relasi mapel/kelas terpisah tetap disimpan.');
-            alert('Catatan: tabel guru_mapel_kelas belum ada di Supabase.\\n\\n' +
-              'Agar filter kelas per mapel bekerja, jalankan SQL berikut di Supabase SQL Editor:\\n\\n' +
-              'CREATE TABLE IF NOT EXISTS guru_mapel_kelas (\\n' +
-              '  id BIGSERIAL PRIMARY KEY,\\n' +
-              '  guru_id BIGINT NOT NULL,\\n' +
-              '  mapel_id BIGINT NOT NULL,\\n' +
-              '  kelas_id BIGINT NOT NULL,\\n' +
-              '  UNIQUE(guru_id, mapel_id, kelas_id)\\n' +
-              ');\\n\\n' +
-              'Sementara itu, mapel & kelas diampu disimpan secara terpisah (filter kelas belum spesifik per mapel).');
-          } else {
-            throw error;
-          }
-        }
       }
     }
 
@@ -6154,7 +6215,8 @@
       document.getElementById('guruLp').value = 'L';
       document.getElementById('guruStatus').value = 'Aktif';
       await loadMasterMapelKelas();
-      renderGuruAmpu(new Map());
+      renderMapelChecks([]);
+      renderKelasChecks([]);
       openModal('modalGuru');
     });
 
@@ -6176,14 +6238,10 @@
       document.getElementById('guruStatus').value = g.status || 'Aktif';
       document.getElementById('guruHp').value = g.no_hp || '';
       await loadMasterMapelKelas();
-      const pairs = await getGuruAmpuPairs(g.id);
-      const pairsMap = new Map();
-      pairs.forEach(p => {
-        const mid = Number(p.mapel_id);
-        if (!pairsMap.has(mid)) pairsMap.set(mid, new Set());
-        pairsMap.get(mid).add(Number(p.kelas_id));
-      });
-      renderGuruAmpu(pairsMap);
+      const mapelIds = await getGuruMapelIds(g.id);
+      const kelasIds = await getGuruKelasIds(g.id);
+      renderMapelChecks(mapelIds);
+      renderKelasChecks(kelasIds);
       openModal('modalGuru');
     });
 
@@ -6737,48 +6795,27 @@
       await loadMasterMapelKelas();
       let mapelList = masterMapel.slice();
       let kelasList = masterKelas.slice();
-      // mapel_id -> [kelas name strings]
-      let mapelToKelas = null;
 
       if (currentRole === 'guru' && currentUserId && supabaseClient) {
         try {
-          const pairs = await getGuruAmpuPairs(currentUserId);
-          _guruAmpuCache = pairs;
-          const mapelIds = [...new Set(pairs.map(p => Number(p.mapel_id)))];
-          const kelasIds = [...new Set(pairs.map(p => Number(p.kelas_id)))];
-          if (mapelIds.length) mapelList = masterMapel.filter(m => mapelIds.includes(Number(m.id)));
+          const [gm, gk] = await Promise.all([
+            supabaseClient.from('guru_mapel').select('mapel_id').eq('guru_id', currentUserId),
+            supabaseClient.from('guru_kelas').select('kelas_id').eq('guru_id', currentUserId)
+          ]);
+          const mapelIds = (gm.data || []).map(r => r.mapel_id);
+          const kelasIds = (gk.data || []).map(r => r.kelas_id);
+          if (mapelIds.length) mapelList = masterMapel.filter(m => mapelIds.includes(m.id));
           else mapelList = [];
-          if (kelasIds.length) kelasList = masterKelas.filter(k => kelasIds.includes(Number(k.id)));
+          if (kelasIds.length) kelasList = masterKelas.filter(k => kelasIds.includes(k.id));
           else kelasList = [];
-
-          // Build per-mapel kelas map (for cascading filter)
-          mapelToKelas = {};
-          const idToKelasName = {};
-          masterKelas.forEach(k => { idToKelasName[Number(k.id)] = k.kelas; });
-          pairs.forEach(p => {
-            const mid = String(p.mapel_id);
-            const kn = idToKelasName[Number(p.kelas_id)];
-            if (!kn) return;
-            if (!mapelToKelas[mid]) mapelToKelas[mid] = [];
-            if (!mapelToKelas[mid].includes(kn)) mapelToKelas[mid].push(kn);
-          });
-          Object.keys(mapelToKelas).forEach(mid => {
-            mapelToKelas[mid].sort((a, b) => String(a).localeCompare(String(b), 'id', { numeric: true }));
-          });
-          window._guruMapelToKelas = mapelToKelas;
         } catch (e) {
           console.warn('Filter mapel/kelas guru gagal', e);
-          mapelList = [];
-          kelasList = [];
-          window._guruMapelToKelas = {};
         }
-      } else {
-        window._guruMapelToKelas = null;
       }
 
       const mapelOpts = '<option value="">- Pilih Mapel -</option>' +
         mapelList.map(m => `<option value="${m.id}">${m.kode} – ${m.mapel}</option>`).join('');
-      const kelasOptsAll = '<option value="">- Pilih Kelas -</option>' +
+      const kelasOpts = '<option value="">- Pilih Kelas -</option>' +
         kelasList.map(k => `<option value="${k.kelas}">${k.kelas}</option>`).join('');
       ['inMapel', 'dnMapel'].forEach(id => {
         const el = document.getElementById(id);
@@ -6786,40 +6823,8 @@
       });
       ['inKelas', 'dnKelas'].forEach(id => {
         const el = document.getElementById(id);
-        if (el) el.innerHTML = kelasOptsAll;
+        if (el) el.innerHTML = kelasOpts;
       });
-
-      // Cascading: when mapel changes, restrict kelas options to those taught for that mapel
-      function bindMapelKelasCascade(mapelId, kelasId) {
-        const mEl = document.getElementById(mapelId);
-        const kEl = document.getElementById(kelasId);
-        if (!mEl || !kEl) return;
-        if (mEl._cascadeBound) return;
-        mEl._cascadeBound = true;
-        mEl.addEventListener('change', () => {
-          const mt = window._guruMapelToKelas;
-          const mid = mEl.value;
-          if (!mt || currentRole !== 'guru') {
-            // admin/all: keep full list already filled; no change needed from mapel
-            return;
-          }
-          let opts = '<option value="">- Pilih Kelas -</option>';
-          if (mid && mt[mid] && mt[mid].length) {
-            opts += mt[mid].map(k => '<option value="' + k + '">' + k + '</option>').join('');
-          } else if (!mid) {
-            // no mapel selected: show all allowed kelas for this guru
-            const all = new Set();
-            Object.values(mt).forEach(arr => (arr || []).forEach(k => all.add(k)));
-            const sorted = [...all].sort((a, b) => String(a).localeCompare(String(b), 'id', { numeric: true }));
-            opts += sorted.map(k => '<option value="' + k + '">' + k + '</option>').join('');
-          } else {
-            opts = '<option value="">- Tidak ada kelas untuk mapel ini -</option>';
-          }
-          kEl.innerHTML = opts;
-        });
-      }
-      bindMapelKelasCascade('inMapel', 'inKelas');
-      bindMapelKelasCascade('dnMapel', 'dnKelas');
     }
 
     async function initNilaiPage(pageId) {
@@ -13120,37 +13125,25 @@ document.getElementById('btnBsContohFormat')?.addEventListener('click', () => {
         kelasList = ['7A','7B','7C','7D','8A','8B','8C','8D','9A','9B','9C','9D'];
       }
 
-      // mapel name (lower) -> allowed kelas names for this guru
-      let bsMapelToKelas = null;
-
       if (currentRole === 'guru' && currentUserId && supabaseClient) {
         try {
-          const pairs = await getGuruAmpuPairs(currentUserId);
-          const mapelIds = new Set(pairs.map(p => Number(p.mapel_id)));
-          const kelasIds = new Set(pairs.map(p => Number(p.kelas_id)));
-          if (mapelIds.size) {
-            mapelList = mapelList.filter(m => mapelIds.has(Number(m.id)));
+          const [gm, gk] = await Promise.all([
+            supabaseClient.from('guru_mapel').select('mapel_id').eq('guru_id', currentUserId),
+            supabaseClient.from('guru_kelas').select('kelas_id').eq('guru_id', currentUserId)
+          ]);
+          const mapelIds = (gm.data || []).map(r => Number(r.mapel_id));
+          const kelasIds = (gk.data || []).map(r => Number(r.kelas_id));
+          if (mapelIds.length) {
+            mapelList = mapelList.filter(m => mapelIds.includes(Number(m.id)));
           } else {
             mapelList = [];
           }
-          const idToKelas = {};
-          (kelasRows.length ? kelasRows : masterKelas).forEach(k => {
-            idToKelas[Number(k.id)] = String(k.kelas || k.nama || '').trim();
-          });
-          const idToMapelName = {};
-          mapelList.forEach(m => {
-            idToMapelName[Number(m.id)] = String(m.mapel || m.nama || '').trim().toLowerCase();
-          });
-          bsMapelToKelas = {};
-          pairs.forEach(p => {
-            const mn = idToMapelName[Number(p.mapel_id)];
-            const kn = idToKelas[Number(p.kelas_id)];
-            if (!mn || !kn) return;
-            if (!bsMapelToKelas[mn]) bsMapelToKelas[mn] = [];
-            if (!bsMapelToKelas[mn].includes(kn)) bsMapelToKelas[mn].push(kn);
-          });
-          if (kelasIds.size) {
-            const allowed = new Set([...kelasIds].map(id => idToKelas[id]).filter(Boolean));
+          if (kelasIds.length && kelasRows.length) {
+            const allowed = new Set(
+              kelasRows.filter(k => kelasIds.includes(Number(k.id)))
+                .map(k => String(k.kelas || k.nama || '').trim())
+                .filter(Boolean)
+            );
             const allowedLow = new Set([...allowed].map(x => x.toLowerCase()));
             kelasList = kelasList.filter(k =>
               allowed.has(k) || allowedLow.has(String(k).toLowerCase())
@@ -13158,15 +13151,11 @@ document.getElementById('btnBsContohFormat')?.addEventListener('click', () => {
           } else {
             kelasList = [];
           }
-          window._bsMapelToKelas = bsMapelToKelas;
         } catch (e) {
           console.warn('Filter ampua guru bank soal', e);
           mapelList = [];
           kelasList = [];
-          window._bsMapelToKelas = null;
         }
-      } else {
-        window._bsMapelToKelas = null;
       }
 
       if (!mapelList.length && currentRole === 'guru') {
@@ -13179,35 +13168,14 @@ document.getElementById('btnBsContohFormat')?.addEventListener('click', () => {
           }).join('');
       }
 
-      function renderBsKelasBox(list) {
-        list = [...new Set(list || [])].sort((a, b) => String(a).localeCompare(String(b), 'id', { numeric: true }));
-        boxK.innerHTML = list.length
-          ? list.map(k =>
-            '<label style="display:flex;align-items:center;gap:4px;font-size:12px;cursor:pointer;">' +
-            '<input type="checkbox" class="cb-bs-kelas" value="' + esc(k) + '"> ' + esc(k) + '</label>'
-          ).join('')
-          : '<span style="font-size:12px;color:#b45309;">Belum ada kelas diampu. Minta admin atur di Data Guru.</span>';
-      }
-
       kelasList = [...new Set(kelasList)].sort((a, b) => String(a).localeCompare(String(b), 'id', { numeric: true }));
-      renderBsKelasBox(kelasList);
-      window._bsAllAllowedKelas = kelasList.slice();
 
-      if (!selM._cascadeBound) {
-        selM._cascadeBound = true;
-        selM.addEventListener('change', () => {
-          const mt = window._bsMapelToKelas;
-          if (!mt || currentRole !== 'guru') return;
-          const nama = String(selM.value || '').trim().toLowerCase();
-          if (nama && mt[nama] && mt[nama].length) {
-            renderBsKelasBox(mt[nama]);
-          } else if (!nama) {
-            renderBsKelasBox(window._bsAllAllowedKelas || []);
-          } else {
-            renderBsKelasBox([]);
-          }
-        });
-      }
+      boxK.innerHTML = kelasList.length
+        ? kelasList.map(k =>
+          '<label style="display:flex;align-items:center;gap:4px;font-size:12px;cursor:pointer;">' +
+          '<input type="checkbox" class="cb-bs-kelas" value="' + esc(k) + '"> ' + esc(k) + '</label>'
+        ).join('')
+        : '<span style="font-size:12px;color:#b45309;">Belum ada kelas diampu. Minta admin atur di Data Guru.</span>';
     }
 
     function getBsKelasChecked() {
