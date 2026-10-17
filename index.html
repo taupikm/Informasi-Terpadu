@@ -734,6 +734,148 @@
       overflow: hidden;
       text-overflow: ellipsis;
     }
+    /* Dashboard: grid statistik + profil login (desktop) */
+    .dash-stat-grid {
+      display: grid;
+      grid-template-columns: repeat(6, 1fr);
+      gap: 6px;
+      text-align: center;
+    }
+    .dash-profile-card {
+      display: none;
+      margin-bottom: 12px;
+    }
+    .dash-profile-inner {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      text-align: center;
+      gap: 12px;
+      padding: 16px;
+      background: #fff;
+      border-radius: 14px;
+      border: 1px solid #e2e8f0;
+      box-shadow: 0 2px 12px rgba(15, 23, 42, 0.06);
+    }
+    .dash-profile-photo {
+      width: 88px;
+      height: 88px;
+      border-radius: 50%;
+      background: #e0e7ff;
+      border: 3px solid #c7d2fe;
+      overflow: hidden;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 800;
+      font-size: 28px;
+      color: var(--primary);
+      flex-shrink: 0;
+    }
+    .dash-profile-photo img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      object-position: center 20%;
+      display: block;
+    }
+    .dash-profile-name {
+      font-size: 16px;
+      font-weight: 800;
+      color: #0f172a;
+      line-height: 1.3;
+    }
+    .dash-profile-role {
+      font-size: 12px;
+      font-weight: 600;
+      color: #64748b;
+      margin-top: 2px;
+    }
+    .dash-profile-meta {
+      font-size: 12px;
+      color: #475569;
+      line-height: 1.55;
+      margin-top: 6px;
+    }
+    .dash-profile-extra {
+      font-size: 12px;
+      color: #334155;
+      line-height: 1.5;
+      margin-top: 6px;
+    }
+    .dash-profile-badge {
+      margin-top: 10px;
+      padding: 8px 12px;
+      border-radius: 10px;
+      font-size: 12px;
+      font-weight: 700;
+      line-height: 1.4;
+    }
+    @media (min-width: 768px) {
+      #page-dashboard {
+        max-width: 720px;
+        margin-left: auto;
+        margin-right: auto;
+      }
+      /* 3 kolom atas, 3 bawah (2 baris) — desktop */
+      .dash-stat-grid {
+        grid-template-columns: repeat(3, 1fr);
+        gap: 8px;
+      }
+      .dash-stat {
+        padding: 10px 6px !important;
+      }
+      .dash-stat > div:first-child {
+        font-size: 11px !important;
+      }
+      .dash-stat > div:last-child {
+        font-size: 18px !important;
+      }
+      /* Profil login hanya di desktop */
+      body.dash-logged-in #dashProfileCard {
+        display: block !important;
+      }
+      body.dash-logged-in #page-dashboard {
+        max-width: 900px;
+      }
+      body.dash-logged-in .dash-profile-inner {
+        flex-direction: row;
+        align-items: flex-start;
+        text-align: left;
+        gap: 18px;
+        padding: 18px 20px;
+      }
+      body.dash-logged-in .dash-profile-photo {
+        width: 100px;
+        height: 100px;
+        font-size: 32px;
+      }
+      body.dash-logged-in .dash-profile-info {
+        flex: 1;
+        min-width: 0;
+      }
+      body.dash-logged-in .dash-profile-name {
+        font-size: 18px;
+      }
+    }
+    @media (min-width: 1100px) {
+      #page-dashboard {
+        max-width: 780px;
+      }
+      body.dash-logged-in #page-dashboard {
+        max-width: 960px;
+      }
+    }
+    /* HP: profil dashboard tetap disembunyikan, grid 6 kolom seperti semula */
+    @media (max-width: 767px) {
+      #dashProfileCard {
+        display: none !important;
+      }
+      .dash-stat-grid {
+        grid-template-columns: repeat(6, 1fr);
+        gap: 6px;
+      }
+    }
     #page-dashboard .table-wrap table {
       min-width: 0;
       width: 100%;
@@ -950,7 +1092,6 @@
         max-width: 860px;
       }
     }
-    /* ===== Halaman form + tabel: tidak full-bleed di desktop ===== */
     #page-input-nilai .table-wrap {
       overflow-x: hidden;
       -webkit-overflow-scrolling: touch;
@@ -963,217 +1104,42 @@
     }
     #page-input-nilai #tableInputNilai th,
     #page-input-nilai #tableInputNilai td {
-      padding: 7px 8px;
+      padding: 6px 4px;
       vertical-align: middle;
       overflow: hidden;
       text-overflow: ellipsis;
     }
     #page-input-nilai #tableInputNilai th:nth-child(1),
     #page-input-nilai #tableInputNilai td:nth-child(1) {
-      width: 36px;
+      width: 28px;
       text-align: center;
       white-space: nowrap;
     }
     #page-input-nilai #tableInputNilai th:nth-child(2),
     #page-input-nilai #tableInputNilai td:nth-child(2) {
-      width: 110px;
+      width: 72px;
       white-space: nowrap;
-      font-size: 12px;
+      font-size: 11px;
     }
     #page-input-nilai #tableInputNilai th:nth-child(3),
     #page-input-nilai #tableInputNilai td:nth-child(3) {
       width: auto;
       white-space: normal;
       word-break: break-word;
-      line-height: 1.35;
+      line-height: 1.3;
     }
     #page-input-nilai #tableInputNilai th:nth-child(4),
     #page-input-nilai #tableInputNilai td:nth-child(4) {
-      width: 72px;
+      width: 64px;
       text-align: center;
       white-space: nowrap;
     }
     #page-input-nilai #tableInputNilai .nilai-input {
       width: 100%;
-      max-width: 64px;
-      padding: 6px 4px;
+      max-width: 58px;
+      padding: 5px 4px;
       font-size: 13px;
       box-sizing: border-box;
-      margin: 0 auto;
-      display: block;
-    }
-
-    /* Daftar Nilai: kolom proporsional */
-    #page-daftar-nilai .table-wrap {
-      overflow-x: auto;
-      -webkit-overflow-scrolling: touch;
-    }
-    #page-daftar-nilai #tableDaftarNilai {
-      width: 100%;
-      min-width: 0;
-      table-layout: fixed;
-      font-size: 12px;
-    }
-    #page-daftar-nilai #tableDaftarNilai th,
-    #page-daftar-nilai #tableDaftarNilai td {
-      padding: 7px 6px;
-      vertical-align: middle;
-      overflow: hidden;
-      text-overflow: ellipsis;
-    }
-    #page-daftar-nilai #tableDaftarNilai th:nth-child(1),
-    #page-daftar-nilai #tableDaftarNilai td:nth-child(1) {
-      width: 36px;
-      text-align: center;
-    }
-    #page-daftar-nilai #tableDaftarNilai th:nth-child(2),
-    #page-daftar-nilai #tableDaftarNilai td:nth-child(2) {
-      width: 36px;
-      text-align: center;
-    }
-    #page-daftar-nilai #tableDaftarNilai th:nth-child(3),
-    #page-daftar-nilai #tableDaftarNilai td:nth-child(3) {
-      width: 110px;
-      white-space: nowrap;
-    }
-    #page-daftar-nilai #tableDaftarNilai th:nth-child(4),
-    #page-daftar-nilai #tableDaftarNilai td:nth-child(4) {
-      width: auto;
-      white-space: normal;
-      word-break: break-word;
-      line-height: 1.35;
-    }
-    #page-daftar-nilai #tableDaftarNilai th:nth-child(5),
-    #page-daftar-nilai #tableDaftarNilai td:nth-child(5) {
-      width: 40px;
-      text-align: center;
-    }
-    #page-daftar-nilai #tableDaftarNilai th:nth-child(6),
-    #page-daftar-nilai #tableDaftarNilai td:nth-child(6) {
-      width: 52px;
-      text-align: center;
-      font-weight: 700;
-    }
-
-    /* Filter bar: label tidak terlalu lebar di layar kecil */
-    .rekap-filter-row label {
-      flex: 0 0 100px;
-    }
-
-    /* Desktop: pusat konten form+tabel, tidak full page */
-    @media (min-width: 768px) {
-      #page-input-nilai,
-      #page-daftar-nilai,
-      #page-scan-barcode,
-      #page-input-izin,
-      #page-cari-siswa,
-      #page-sidik-jari,
-      #page-download-absensi,
-      #page-jadwal-kelas,
-      #page-jadwal-mapel,
-      #page-validasi-lulusan,
-      #page-kelulusan,
-      #page-tugas-ujian {
-        max-width: 640px;
-        margin-left: auto;
-        margin-right: auto;
-      }
-      #page-input-nilai .page-title,
-      #page-daftar-nilai .page-title,
-      #page-scan-barcode .page-title,
-      #page-input-izin .page-title,
-      #page-cari-siswa .page-title,
-      #page-download-absensi .page-title {
-        text-align: center;
-      }
-      #page-input-nilai .card,
-      #page-daftar-nilai .card,
-      #page-scan-barcode .card,
-      #page-input-izin .card,
-      #page-cari-siswa .card {
-        box-shadow: 0 2px 12px rgba(15, 23, 42, 0.06);
-      }
-      #page-input-nilai #tableInputNilai {
-        font-size: 13px;
-      }
-      #page-input-nilai #tableInputNilai th,
-      #page-input-nilai #tableInputNilai td {
-        padding: 9px 10px;
-      }
-      #page-input-nilai #tableInputNilai th:nth-child(1),
-      #page-input-nilai #tableInputNilai td:nth-child(1) {
-        width: 44px;
-      }
-      #page-input-nilai #tableInputNilai th:nth-child(2),
-      #page-input-nilai #tableInputNilai td:nth-child(2) {
-        width: 120px;
-        font-size: 13px;
-      }
-      #page-input-nilai #tableInputNilai th:nth-child(4),
-      #page-input-nilai #tableInputNilai td:nth-child(4) {
-        width: 80px;
-      }
-      #page-input-nilai #tableInputNilai .nilai-input {
-        max-width: 72px;
-        padding: 7px 6px;
-        font-size: 14px;
-      }
-      #page-daftar-nilai #tableDaftarNilai {
-        font-size: 13px;
-      }
-      #page-daftar-nilai #tableDaftarNilai th,
-      #page-daftar-nilai #tableDaftarNilai td {
-        padding: 9px 10px;
-      }
-      /* Filter: label + field lebih rapi */
-      #page-input-nilai .rekap-filter-row,
-      #page-daftar-nilai .rekap-filter-row,
-      #page-cari-siswa .rekap-filter-row,
-      #page-download-absensi .rekap-filter-row {
-        max-width: 100%;
-      }
-      #page-input-nilai .rekap-filter-row label,
-      #page-daftar-nilai .rekap-filter-row label {
-        flex: 0 0 130px;
-        font-size: 13px;
-      }
-      #page-input-nilai .toolbar,
-      #page-daftar-nilai .toolbar {
-        flex-wrap: wrap;
-        justify-content: flex-start;
-      }
-    }
-    @media (min-width: 1100px) {
-      #page-input-nilai,
-      #page-daftar-nilai {
-        max-width: 680px;
-      }
-      #page-scan-barcode,
-      #page-input-izin,
-      #page-cari-siswa,
-      #page-sidik-jari,
-      #page-download-absensi,
-      #page-jadwal-kelas,
-      #page-jadwal-mapel,
-      #page-validasi-lulusan,
-      #page-kelulusan,
-      #page-tugas-ujian {
-        max-width: 680px;
-      }
-      /* Data master yang butuh tabel lebih lebar */
-      #page-data-siswa,
-      #page-data-guru,
-      #page-data-lulusan,
-      #page-kelola-tugas {
-        max-width: 960px;
-        margin-left: auto;
-        margin-right: auto;
-      }
-      #page-rekap-data {
-        max-width: 1100px;
-        margin-left: auto;
-        margin-right: auto;
-      }
     }
     th {
       background: #f1f5f9;
@@ -1865,12 +1831,27 @@
   </aside>
 <main class="main">
 <section class="page active" id="page-dashboard">
-<div class="card" style="padding:12px;margin-bottom:10px;">
+    <!-- Profil user (desktop + login only; HP disembunyikan via CSS) -->
+    <div id="dashProfileCard" class="dash-profile-card" style="display:none;">
+      <div class="dash-profile-inner">
+        <div class="dash-profile-photo" id="dashProfilePhoto">?</div>
+        <div class="dash-profile-info">
+          <div class="dash-profile-name" id="dashProfileName">-</div>
+          <div class="dash-profile-role" id="dashProfileRole">-</div>
+          <div class="dash-profile-meta" id="dashProfileMeta"></div>
+          <div class="dash-profile-extra" id="dashProfileExtra"></div>
+          <div class="dash-profile-badge" id="dashProfileBadge" style="display:none;"></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="dash-stats-block">
+      <div class="card dash-stat-card" style="padding:12px;margin-bottom:10px;">
         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
           <div style="font-size:13px;font-weight:700;">Statistik Guru</div>
           <div id="dashTotalGuru" style="background:#e0f2fe;color:#0369a1;font-size:12px;font-weight:700;padding:2px 10px;border-radius:8px;">0</div>
         </div>
-        <div style="display:grid;grid-template-columns:repeat(6,1fr);gap:6px;text-align:center;">
+        <div class="dash-stat-grid">
           <div class="dash-stat" style="background:#dcfce7;border:1px solid #86efac;border-radius:8px;padding:8px 2px;">
             <div style="font-weight:700;color:#166534;font-size:10px;">TW</div>
             <div id="stGuruTW" style="font-weight:800;margin-top:3px;color:#166534;font-size:15px;">0</div>
@@ -1897,12 +1878,12 @@
           </div>
         </div>
       </div>
-<div class="card" style="padding:12px;margin-bottom:10px;">
+      <div class="card dash-stat-card" style="padding:12px;margin-bottom:10px;">
         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
           <div style="font-size:13px;font-weight:700;">Statistik Siswa</div>
           <div id="dashTotalSiswa" style="background:#e0f2fe;color:#0369a1;font-size:12px;font-weight:700;padding:2px 10px;border-radius:8px;">0</div>
         </div>
-        <div style="display:grid;grid-template-columns:repeat(6,1fr);gap:6px;text-align:center;">
+        <div class="dash-stat-grid">
           <div class="dash-stat" style="background:#dcfce7;border:1px solid #86efac;border-radius:8px;padding:8px 2px;">
             <div style="font-weight:700;color:#166534;font-size:10px;">TW</div>
             <div id="stSiswaTW" style="font-weight:800;margin-top:3px;color:#166534;font-size:15px;">0</div>
@@ -1929,11 +1910,13 @@
           </div>
         </div>
       </div>
-<div id="dashSesiInfo" style="background:#e0f7fa;border:1px solid #67e8f9;border-radius:12px;padding:12px 14px;text-align:center;margin-bottom:12px;">
-        <div style="font-size:12px;font-weight:600;color:#0e7490;">Informasi Sesi</div>
-        <div id="dashSesiDetail" style="font-size:13px;font-weight:700;color:#155e75;margin-top:4px;">Memuat...</div>
-      </div>
-<div id="dashRekapWrap">
+    </div>
+
+    <div id="dashSesiInfo" style="background:#e0f7fa;border:1px solid #67e8f9;border-radius:12px;padding:12px 14px;text-align:center;margin-bottom:12px;">
+      <div style="font-size:12px;font-weight:600;color:#0e7490;">Informasi Sesi</div>
+      <div id="dashSesiDetail" style="font-size:13px;font-weight:700;color:#155e75;margin-top:4px;">Memuat...</div>
+    </div>
+    <div id="dashRekapWrap">
       <div class="section-title">Rekap Kehadiran Guru</div>
       <div class="table-wrap">
         <table>
@@ -9313,7 +9296,216 @@
       await renderLoginLogList();
     });
 
+    async function updateDashProfile() {
+      const card = document.getElementById('dashProfileCard');
+      if (!card) return;
+      const isLogged = currentRole && currentRole !== 'guest';
+      try {
+        if (isLogged) document.body.classList.add('dash-logged-in');
+        else document.body.classList.remove('dash-logged-in');
+      } catch (e) {}
+
+      if (!isLogged) {
+        card.style.display = 'none';
+        return;
+      }
+      // Tampil hanya di desktop via CSS; di sini set display block agar CSS body.dash-logged-in berlaku
+      card.style.display = '';
+
+      const photoEl = document.getElementById('dashProfilePhoto');
+      const nameEl = document.getElementById('dashProfileName');
+      const roleEl = document.getElementById('dashProfileRole');
+      const metaEl = document.getElementById('dashProfileMeta');
+      const extraEl = document.getElementById('dashProfileExtra');
+      const badgeEl = document.getElementById('dashProfileBadge');
+
+      const nama = currentUserName || '-';
+      const roleLabel = (ROLE_DATA[currentRole] && ROLE_DATA[currentRole].label) || currentRole;
+      if (nameEl) nameEl.textContent = nama;
+      if (roleEl) roleEl.textContent = roleLabel;
+
+      if (photoEl) {
+        if (typeof setAvatarEl === 'function') {
+          setAvatarEl(photoEl, currentUserFoto, nama);
+        } else {
+          photoEl.textContent = (nama || '?').charAt(0).toUpperCase();
+        }
+      }
+
+      if (metaEl) metaEl.innerHTML = '<span style="color:#94a3b8;">Memuat identitas...</span>';
+      if (extraEl) extraEl.innerHTML = '';
+      if (badgeEl) { badgeEl.style.display = 'none'; badgeEl.textContent = ''; }
+
+      try {
+        if (currentRole === 'admin') {
+          let username = '-';
+          if (supabaseClient && currentUserId) {
+            try {
+              const { data } = await supabaseClient.from('admin').select('nama, username').eq('id', currentUserId).maybeSingle();
+              if (data) {
+                if (data.nama && nameEl) nameEl.textContent = data.nama;
+                username = data.username || '-';
+              }
+            } catch (e) {}
+          }
+          if (metaEl) {
+            metaEl.innerHTML =
+              '<div><span style="color:#64748b;">Username</span> : <b>' + esc(username) + '</b></div>' +
+              '<div><span style="color:#64748b;">Peran</span> : <b>Administrator</b></div>';
+          }
+        } else if (currentRole === 'guru') {
+          let nip = currentUserKode || '-';
+          let jabatan = '-';
+          if (supabaseClient && currentUserId) {
+            try {
+              const { data } = await supabaseClient.from('guru').select('nama, nip, pin, jabatan').eq('id', currentUserId).maybeSingle();
+              if (data) {
+                if (data.nama && nameEl) nameEl.textContent = data.nama;
+                nip = data.nip || data.pin || nip;
+                jabatan = data.jabatan || '-';
+              }
+            } catch (e) {}
+          }
+          if (metaEl) {
+            metaEl.innerHTML =
+              '<div><span style="color:#64748b;">NIP / Kode</span> : <b>' + esc(nip) + '</b></div>' +
+              '<div><span style="color:#64748b;">Jabatan</span> : <b>' + esc(jabatan) + '</b></div>';
+          }
+          // Mapel & kelas diampu
+          if (extraEl && supabaseClient && currentUserId) {
+            try {
+              await loadMasterMapelKelas();
+              const pairs = (typeof getGuruAmpuPairs === 'function')
+                ? await getGuruAmpuPairs(currentUserId)
+                : [];
+              const byMapel = {};
+              const idToKelas = {};
+              (masterKelas || []).forEach(k => { idToKelas[Number(k.id)] = k.kelas; });
+              const idToMapel = {};
+              (masterMapel || []).forEach(m => {
+                idToMapel[Number(m.id)] = (m.kode ? m.kode + ' – ' : '') + (m.mapel || m.nama || '');
+              });
+              pairs.forEach(p => {
+                const mn = idToMapel[Number(p.mapel_id)] || ('Mapel #' + p.mapel_id);
+                const kn = idToKelas[Number(p.kelas_id)] || '';
+                if (!byMapel[mn]) byMapel[mn] = [];
+                if (kn && !byMapel[mn].includes(kn)) byMapel[mn].push(kn);
+              });
+              const lines = Object.keys(byMapel).sort().map(mn => {
+                const kls = byMapel[mn].sort((a, b) => String(a).localeCompare(String(b), 'id', { numeric: true }));
+                return '<div style="margin-top:4px;"><b style="color:#1e40af;">' + esc(mn) + '</b> → ' +
+                  (kls.length ? esc(kls.join(', ')) : '<span style="color:#94a3b8;">(belum ada kelas)</span>') + '</div>';
+              });
+              if (lines.length) {
+                extraEl.innerHTML = '<div style="font-size:11px;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:.03em;margin-bottom:2px;">Mapel & Kelas diampu</div>' +
+                  lines.join('');
+              } else {
+                extraEl.innerHTML = '<div style="color:#94a3b8;font-size:12px;">Belum ada mapel/kelas diampu. Hubungi admin.</div>';
+              }
+            } catch (e) {
+              console.warn('dash guru ampua', e);
+              extraEl.innerHTML = '';
+            }
+          }
+        } else if (currentRole === 'siswa') {
+          let nisn = currentUserKode || '-';
+          let kelas = currentUserKelas || '-';
+          let namaS = nama;
+          if (supabaseClient && currentUserId && !currentUserIsAlumni) {
+            try {
+              const { data } = await supabaseClient.from('siswa').select('nama, nisn, kelas').eq('id', currentUserId).maybeSingle();
+              if (data) {
+                namaS = data.nama || namaS;
+                nisn = data.nisn || nisn;
+                kelas = data.kelas || kelas;
+                currentUserKelas = kelas;
+                currentUserKode = nisn;
+                if (nameEl) nameEl.textContent = namaS;
+              }
+            } catch (e) {}
+          }
+          if (metaEl) {
+            metaEl.innerHTML =
+              '<div><span style="color:#64748b;">NISN</span> : <b>' + esc(nisn) + '</b></div>' +
+              '<div><span style="color:#64748b;">Kelas</span> : <b>' + esc(kelas) + '</b></div>' +
+              (currentUserIsAlumni ? '<div><span style="color:#64748b;">Status</span> : <b>Alumni</b></div>' : '');
+          }
+          // Syarat naik / lulus
+          if (badgeEl && !currentUserIsAlumni && supabaseClient && currentUserId) {
+            badgeEl.style.display = 'block';
+            badgeEl.style.background = '#f1f5f9';
+            badgeEl.style.color = '#64748b';
+            badgeEl.textContent = 'Memeriksa syarat kehadiran...';
+            try {
+              if (!aktifPeriode && typeof loadAktifPeriode === 'function') await loadAktifPeriode();
+              const settings = await loadAbsenSettings();
+              let dari = settings.mulai ? String(settings.mulai).slice(0, 10) : '';
+              let sampai = settings.akhir ? String(settings.akhir).slice(0, 10) : '';
+              const today = todayLocal();
+              if (sampai && sampai > today) sampai = today;
+              if (!dari || !sampai) {
+                badgeEl.textContent = 'Pengaturan absensi belum lengkap';
+              } else {
+                let rows = await fetchAbsensiRange(dari, sampai, {
+                  tipe: 'siswa',
+                  ref_id: currentUserId,
+                  kode: nisn && nisn !== '-' ? String(nisn) : undefined
+                });
+                const filtered = (rows || []).filter(r => {
+                  const tgl = String(r.tanggal || '').slice(0, 10);
+                  if (dari && tgl < dari) return false;
+                  if (sampai && tgl > sampai) return false;
+                  const byRef = r.ref_id != null && Number(r.ref_id) === Number(currentUserId);
+                  const byKode = nisn && nisn !== '-' && String(r.kode || '') === String(nisn);
+                  return byRef || byKode;
+                });
+                const hitung = hitungSyaratDariRows(filtered, dari, sampai);
+                const persen = Number(hitung.persen) || 0;
+                const minH = Number(settings.minHadir) || 80;
+                const ok = persen >= minH;
+                const tingkat = tingkatDariKelas(kelas);
+                if (tingkat === '9') {
+                  if (ok) {
+                    badgeEl.style.background = '#dcfce7';
+                    badgeEl.style.color = '#166534';
+                    badgeEl.style.border = '1px solid #86efac';
+                    badgeEl.innerHTML = '🎓 Memenuhi syarat lulus <span style="opacity:.85;font-weight:600;">(' + persen.toFixed(1) + '% ≥ ' + minH + '%)</span>';
+                  } else {
+                    badgeEl.style.background = '#fee2e2';
+                    badgeEl.style.color = '#991b1b';
+                    badgeEl.style.border = '1px solid #fca5a5';
+                    badgeEl.innerHTML = '❌ Belum memenuhi syarat lulus <span style="opacity:.85;font-weight:600;">(' + persen.toFixed(1) + '% < ' + minH + '%)</span>';
+                  }
+                } else {
+                  if (ok) {
+                    badgeEl.style.background = '#dcfce7';
+                    badgeEl.style.color = '#166534';
+                    badgeEl.style.border = '1px solid #86efac';
+                    badgeEl.innerHTML = '⬆️ Memenuhi syarat naik kelas <span style="opacity:.85;font-weight:600;">(' + persen.toFixed(1) + '% ≥ ' + minH + '%)</span>';
+                  } else {
+                    badgeEl.style.background = '#fee2e2';
+                    badgeEl.style.color = '#991b1b';
+                    badgeEl.style.border = '1px solid #fca5a5';
+                    badgeEl.innerHTML = '❌ Belum memenuhi syarat naik kelas <span style="opacity:.85;font-weight:600;">(' + persen.toFixed(1) + '% < ' + minH + '%)</span>';
+                  }
+                }
+              }
+            } catch (e) {
+              console.warn('dash syarat', e);
+              badgeEl.textContent = 'Gagal memuat status syarat';
+            }
+          }
+        } else {
+          if (metaEl) metaEl.innerHTML = '';
+        }
+      } catch (e) {
+        console.warn('updateDashProfile', e);
+      }
+    }
+
     async function loadDashboard() {
+      try { await updateDashProfile(); } catch (e) { console.warn(e); }
+
       const tbG = document.getElementById('tbodyDashGuru');
       const tbS = document.getElementById('tbodyDashSiswa');
       try {
