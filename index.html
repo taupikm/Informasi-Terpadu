@@ -1144,46 +1144,6 @@
       font-size: 12px; font-weight: 700; line-height: 1.4;
     }
 
-
-    /* Overlay progress upload */
-    #uploadProgressOverlay {
-      position: fixed; inset: 0; z-index: 4000;
-      background: rgba(15, 23, 42, 0.45);
-      display: none; align-items: center; justify-content: center;
-      padding: 16px;
-    }
-    #uploadProgressOverlay.show { display: flex; }
-    #uploadProgressCard {
-      background: #fff; border-radius: 14px; padding: 20px 22px;
-      width: min(360px, 92vw); box-shadow: 0 12px 40px rgba(0,0,0,.2);
-      text-align: center;
-    }
-    #uploadProgressTitle {
-      font-size: 15px; font-weight: 700; color: #0f172a; margin-bottom: 6px;
-    }
-    #uploadProgressDetail {
-      font-size: 12px; color: #64748b; line-height: 1.45; margin-bottom: 14px;
-      min-height: 2.6em;
-    }
-    #uploadProgressBarWrap {
-      height: 8px; background: #e2e8f0; border-radius: 999px; overflow: hidden;
-      margin-bottom: 8px;
-    }
-    #uploadProgressBar {
-      height: 100%; width: 0%; background: linear-gradient(90deg, #2563eb, #0d9488);
-      border-radius: 999px; transition: width 0.25s ease;
-    }
-    #uploadProgressPct {
-      font-size: 12px; font-weight: 600; color: #334155;
-      font-variant-numeric: tabular-nums;
-    }
-    .upload-spinner {
-      width: 36px; height: 36px; margin: 0 auto 12px;
-      border: 3px solid #dbeafe; border-top-color: #2563eb;
-      border-radius: 50%; animation: upSpin 0.8s linear infinite;
-    }
-    @keyframes upSpin { to { transform: rotate(360deg); } }
-
     /* Admin: Edit Profil User */
     .pu-grid {
       display: grid;
@@ -2005,9 +1965,117 @@
       background: #f1f5f9;
       color: #64748b;
     }
+
+    /* ===== Upload progress (foto profil / logo) ===== */
+    #uploadProgressOverlay {
+      display: none;
+      position: fixed;
+      inset: 0;
+      z-index: 5000;
+      background: rgba(15, 23, 42, 0.55);
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+      -webkit-backdrop-filter: blur(2px);
+      backdrop-filter: blur(2px);
+    }
+    #uploadProgressOverlay.show {
+      display: flex;
+    }
+    .up-box {
+      width: 100%;
+      max-width: 320px;
+      background: #fff;
+      border-radius: 16px;
+      padding: 22px 20px 18px;
+      box-shadow: 0 20px 50px rgba(0,0,0,0.25);
+      text-align: center;
+    }
+    .up-spinner {
+      width: 44px;
+      height: 44px;
+      margin: 0 auto 14px;
+      border: 3.5px solid #e2e8f0;
+      border-top-color: #1a56db;
+      border-radius: 50%;
+      animation: upSpin 0.8s linear infinite;
+    }
+    @keyframes upSpin {
+      to { transform: rotate(360deg); }
+    }
+    .up-title {
+      font-size: 15px;
+      font-weight: 700;
+      color: #0f172a;
+      margin-bottom: 6px;
+    }
+    .up-msg {
+      font-size: 12px;
+      color: #64748b;
+      line-height: 1.45;
+      min-height: 1.4em;
+      margin-bottom: 14px;
+    }
+    .up-bar-wrap {
+      height: 10px;
+      background: #e2e8f0;
+      border-radius: 999px;
+      overflow: hidden;
+      margin-bottom: 8px;
+    }
+    .up-bar {
+      height: 100%;
+      width: 0%;
+      background: linear-gradient(90deg, #1a56db, #38bdf8);
+      border-radius: 999px;
+      transition: width 0.35s ease;
+    }
+    .up-bar.indeterminate {
+      width: 40% !important;
+      animation: upIndet 1.2s ease-in-out infinite;
+    }
+    @keyframes upIndet {
+      0% { transform: translateX(-100%); }
+      100% { transform: translateX(280%); }
+    }
+    .up-pct {
+      font-size: 12px;
+      font-weight: 700;
+      color: #1e40af;
+      font-variant-numeric: tabular-nums;
+    }
+    .pu-card.uploading {
+      opacity: 0.65;
+      pointer-events: none;
+      position: relative;
+    }
+    .pu-card.uploading::after {
+      content: '⏳ Mengunggah...';
+      position: absolute;
+      inset: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: rgba(255,255,255,0.85);
+      border-radius: 12px;
+      font-size: 12px;
+      font-weight: 700;
+      color: #1e40af;
+    }
   </style>
 </head>
 <body>
+
+<div id="uploadProgressOverlay" aria-live="polite" aria-busy="false">
+  <div class="up-box" role="status">
+    <div class="up-spinner" aria-hidden="true"></div>
+    <div class="up-title" id="upTitle">Mengunggah...</div>
+    <div class="up-msg" id="upMsg">Mohon tunggu, jangan tutup halaman</div>
+    <div class="up-bar-wrap"><div class="up-bar" id="upBar"></div></div>
+    <div class="up-pct" id="upPct">0%</div>
+  </div>
+</div>
+
 <header class="topbar">
     <div class="topbar-left">
       <button class="btn-toggle" id="btnToggle" aria-label="Menu" style="display:none;">☰</button>
@@ -2214,7 +2282,7 @@
 
     <div id="dashSesiInfo" style="background:#e0f7fa;border:1px solid #67e8f9;border-radius:12px;padding:12px 14px;text-align:center;margin-bottom:12px;">
       <div style="font-size:12px;font-weight:600;color:#0e7490;">Informasi Sesi</div>
-      <div id="dashSesiDetail" style="font-size:13px;font-weight:700;color:#155e75;margin-top:4px;">Menyiapkan dashboard...</div>
+      <div id="dashSesiDetail" style="font-size:13px;font-weight:700;color:#155e75;margin-top:4px;">Memuat...</div>
     </div>
     <div id="dashRekapWrap">
       <div class="section-title">Rekap Kehadiran Guru</div>
@@ -5294,10 +5362,96 @@
       e.preventDefault();
       openModal('modalLogin');
     });
+
     let _editFotoPending = null; // { file, previewUrl } or null
     let _editLogoPending = null;
     let _editFotoCleared = false;
     let _editLogoCleared = false;
+
+    // ===== Progress overlay unggah foto/logo =====
+    let _upProgTimer = null;
+    function showUploadProgress(title, msg, pct) {
+      const ov = document.getElementById('uploadProgressOverlay');
+      if (!ov) return;
+      const t = document.getElementById('upTitle');
+      const m = document.getElementById('upMsg');
+      const bar = document.getElementById('upBar');
+      const pctEl = document.getElementById('upPct');
+      if (t) t.textContent = title || 'Mengunggah...';
+      if (m) m.textContent = msg || 'Mohon tunggu, jangan tutup halaman';
+      if (bar) {
+        bar.classList.remove('indeterminate');
+        const n = (typeof pct === 'number') ? Math.max(0, Math.min(100, pct)) : 0;
+        bar.style.width = n + '%';
+      }
+      if (pctEl) pctEl.textContent = (typeof pct === 'number' ? Math.round(pct) : 0) + '%';
+      ov.classList.add('show');
+      ov.setAttribute('aria-busy', 'true');
+      document.body.style.overflow = 'hidden';
+    }
+    function setUploadProgress(pct, msg) {
+      const bar = document.getElementById('upBar');
+      const pctEl = document.getElementById('upPct');
+      const m = document.getElementById('upMsg');
+      if (typeof pct === 'number') {
+        const n = Math.max(0, Math.min(100, pct));
+        if (bar) {
+          bar.classList.remove('indeterminate');
+          bar.style.width = n + '%';
+        }
+        if (pctEl) pctEl.textContent = Math.round(n) + '%';
+      }
+      if (msg != null && m) m.textContent = msg;
+    }
+    function setUploadProgressIndeterminate(msg) {
+      const bar = document.getElementById('upBar');
+      const pctEl = document.getElementById('upPct');
+      const m = document.getElementById('upMsg');
+      if (bar) {
+        bar.classList.add('indeterminate');
+        bar.style.width = '40%';
+      }
+      if (pctEl) pctEl.textContent = '...';
+      if (msg != null && m) m.textContent = msg;
+    }
+    function hideUploadProgress() {
+      const ov = document.getElementById('uploadProgressOverlay');
+      if (ov) {
+        ov.classList.remove('show');
+        ov.setAttribute('aria-busy', 'false');
+      }
+      document.body.style.overflow = '';
+      if (_upProgTimer) {
+        clearInterval(_upProgTimer);
+        _upProgTimer = null;
+      }
+      const bar = document.getElementById('upBar');
+      if (bar) {
+        bar.classList.remove('indeterminate');
+        bar.style.width = '0%';
+      }
+    }
+    /** Animasi progress bertahap saat menunggu network (fetch GDrive tidak kasih % byte) */
+    function startFakeUploadProgress(fromPct, toPct, durationMs) {
+      if (_upProgTimer) clearInterval(_upProgTimer);
+      const start = Math.max(0, fromPct || 0);
+      const end = Math.min(99, toPct || 90);
+      const dur = durationMs || 8000;
+      const t0 = Date.now();
+      setUploadProgress(start);
+      _upProgTimer = setInterval(() => {
+        const t = (Date.now() - t0) / dur;
+        if (t >= 1) {
+          setUploadProgress(end);
+          clearInterval(_upProgTimer);
+          _upProgTimer = null;
+          return;
+        }
+        // ease-out
+        const eased = 1 - Math.pow(1 - t, 2.2);
+        setUploadProgress(start + (end - start) * eased);
+      }, 120);
+    }
 
     function fillEditFotoPreview(url, letter) {
       const el = document.getElementById('editFotoPreview');
@@ -5744,13 +5898,14 @@
       const btn = document.getElementById('btnSaveProfil');
       const prevLabel = btn ? btn.textContent : '';
       if (btn) { btn.disabled = true; btn.textContent = 'Menyimpan...'; }
-      const needUploadFoto = !!(!(_editFotoCleared) && _editFotoPending && _editFotoPending.file);
-      const needUploadLogo = !!(currentRole === 'admin' && _editLogoPending && _editLogoPending.file);
+
+      const needUploadFoto = !!( _editFotoPending && _editFotoPending.file );
+      const needUploadLogo = !!( currentRole === 'admin' && _editLogoPending && _editLogoPending.file );
       if (needUploadFoto || needUploadLogo) {
         showUploadProgress(
-          needUploadFoto && needUploadLogo ? 'Mengunggah foto & logo...' :
-            (needUploadFoto ? 'Mengunggah foto profil...' : 'Mengunggah logo sekolah...'),
-          'Menyiapkan file, mohon tunggu...'
+          needUploadFoto ? 'Mengunggah foto profil' : 'Mengunggah logo sekolah',
+          'Menyiapkan file...',
+          5
         );
       }
 
@@ -5768,22 +5923,25 @@
           }
           const safeRole = currentRole || 'user';
           const file = _editFotoPending.file;
+          setUploadProgress(12, 'Memproses gambar...');
           // dataUrl kecil untuk tampilan cepat & konsisten di HP
           let fotoData = null;
           try {
             fotoData = await fileToDataUrlResized(file, 256, 0.88, false);
           } catch (e) { console.warn('resize foto', e); }
+          setUploadProgress(28, 'Mengunggah ke Google Drive...');
+          startFakeUploadProgress(28, 82, Math.min(12000, 4000 + Math.round((file.size || 0) / 800)));
           const isPng = /png/i.test(file.type || '') || /\.png$/i.test(file.name || '');
           const fname = 'foto_' + safeRole + '_' + (currentUserId || 'x') + '_' + Date.now() + (isPng ? '.png' : '.jpg');
           const upFile = new File([file], fname, { type: file.type || (isPng ? 'image/png' : 'image/jpeg') });
-          setUploadProgress(null, 'Mengunggah foto ke Google Drive...');
           const result = await uploadJawabanFile(upFile, {
             folderId: GDRIVE_DEFAULT_FOLDER_ID || '',
             bankId: 'profil',
             soalId: String(currentUserId || '0'),
             nisn: String(currentUserKode || currentRole || 'user')
           });
-          setUploadProgress(92, 'Menyimpan data foto...');
+          if (_upProgTimer) { clearInterval(_upProgTimer); _upProgTimer = null; }
+          setUploadProgress(88, 'Menyimpan data profil...');
           const url = result.url || (result.id ? ('https://drive.google.com/file/d/' + result.id + '/view') : null);
           // Prioritas tampilan: dataUrl lokal, fallback Drive
           currentUserFoto = fotoData || url;
@@ -5796,6 +5954,7 @@
               localStorage.setItem('profil_img_' + currentRole + '_' + currentUserId, fotoData);
             } catch (e) {}
           }
+          setUploadProgress(95, 'Foto profil berhasil diunggah');
           fillEditFotoPreview(currentUserFoto, currentUserName);
           try { URL.revokeObjectURL(_editFotoPending.previewUrl); } catch (e) {}
           _editFotoPending = null;
@@ -5817,6 +5976,7 @@
             }
             const file = _editLogoPending.file;
             const ext = (file.name.split('.').pop() || 'png').toLowerCase();
+            showUploadProgress('Mengunggah logo sekolah', 'Memproses gambar logo...', 15);
             // WAJIB: buat dataUrl (andalan HP). Tanpa ini logo HP akan SP.
             let dataUrl = null;
             try {
@@ -5841,14 +6001,17 @@
                 try { await loadGdriveSettingsFromDb(); } catch (e) {}
               }
               if (GDRIVE_UPLOAD_ENDPOINT) {
+                setUploadProgress(40, 'Mengunggah logo ke Google Drive...');
+                startFakeUploadProgress(40, 85, 7000);
                 const upFile = new File([file], 'logo_sekolah_' + Date.now() + '.' + ext, { type: file.type || 'image/png' });
-                setUploadProgress(null, 'Mengunggah logo ke Google Drive...');
                 const result = await uploadJawabanFile(upFile, {
                   folderId: GDRIVE_DEFAULT_FOLDER_ID || '',
                   bankId: 'logo',
                   soalId: 'sekolah',
                   nisn: 'logo'
                 });
+                if (_upProgTimer) { clearInterval(_upProgTimer); _upProgTimer = null; }
+                setUploadProgress(92, 'Menyimpan pengaturan logo...');
                 schoolLogoUrl = result.url || (result.id ? ('https://drive.google.com/file/d/' + result.id + '/view') : null);
                 schoolLogoId = result.id || null;
                 driveOk = true;
@@ -5926,11 +6089,15 @@
         let okMsg = 'Profil berhasil disimpan.';
         if (pass1) okMsg += '\nPIN sudah diubah.';
         alert(okMsg);
+        if (needUploadFoto || needUploadLogo) {
+          setUploadProgress(100, 'Selesai');
+          await new Promise(r => setTimeout(r, 280));
+        }
       } catch (e) {
         console.error(e);
         alert('Gagal menyimpan profil: ' + (e.message || e));
       } finally {
-        try { hideUploadProgress(); } catch (e) {}
+        hideUploadProgress();
         if (btn) { btn.disabled = false; btn.textContent = prevLabel || 'Simpan'; }
       }
     });
@@ -10197,16 +10364,10 @@
           }
           if (extraEl && supabaseClient && currentUserId) {
             try {
-              await Promise.race([
-                loadMasterMapelKelas(),
-                new Promise((_, rej) => setTimeout(() => rej(new Error('timeout mapel')), 6000))
-              ]).catch(() => {});
+              await loadMasterMapelKelas();
               let html = '';
               if (typeof getGuruAmpuPairs === 'function') {
-                const pairs = await Promise.race([
-                  getGuruAmpuPairs(currentUserId),
-                  new Promise((_, rej) => setTimeout(() => rej(new Error('timeout ampu')), 6000))
-                ]).catch(() => []);
+                const pairs = await getGuruAmpuPairs(currentUserId);
                 const idToKelas = {};
                 (masterKelas || []).forEach(k => { idToKelas[Number(k.id)] = k.kelas; });
                 const idToMapel = {};
@@ -10330,88 +10491,29 @@
       }
     }
 
-    let _dashLoading = false;
-    let _dashLoadSeq = 0;
     async function loadDashboard() {
-      if (_dashLoading) return;
-      _dashLoading = true;
-      const seq = ++_dashLoadSeq;
+      try { await updateDashProfile(); } catch (e) { console.warn(e); }
+
       const tbG = document.getElementById('tbodyDashGuru');
       const tbS = document.getElementById('tbodyDashSiswa');
-      const thG = document.getElementById('theadDashGuru');
-      const thS = document.getElementById('theadDashSiswa');
-      const det = document.getElementById('dashSesiDetail');
-      const rekapWrap = document.getElementById('dashRekapWrap');
-      const rekapMsg = document.getElementById('dashRekapHiddenMsg');
-
-      // Profil: jangan tunggu
       try {
-        if (typeof updateDashProfile === 'function') {
-          Promise.resolve().then(() => updateDashProfile()).catch(() => {});
+        if (typeof loadSesi === 'function') {
+          await loadSesi();
         }
-      } catch (e) {}
-
-      // Failsafe: kalau masih "Memuat" setelah 12 dtk, tampilkan error
-      const failsafe = setTimeout(() => {
-        try {
-          if (det && /Memuat/i.test(det.textContent || '')) {
-            det.textContent = 'Gagal memuat sesi (timeout). Coba refresh.';
-          }
-          if (tbG && /Memuat/i.test(tbG.textContent || '')) {
-            tbG.innerHTML = '<tr><td colspan="8" style="text-align:center;padding:16px;color:#ef4444;">Timeout memuat data. Refresh halaman.</td></tr>';
-          }
-          if (tbS && /Memuat/i.test(tbS.textContent || '')) {
-            tbS.innerHTML = '<tr><td colspan="8" style="text-align:center;padding:16px;color:#ef4444;">Timeout memuat data. Refresh halaman.</td></tr>';
-          }
-        } catch (e) {}
-      }, 12000);
-
-      function withTimeout(promise, ms, label) {
-        let timer;
-        return Promise.race([
-          Promise.resolve(promise).finally(() => { try { clearTimeout(timer); } catch (e) {} }),
-          new Promise((_, reject) => {
-            timer = setTimeout(() => reject(new Error('Timeout ' + (label || '') + ' ' + ms + 'ms')), ms);
-          })
-        ]);
-      }
-
-      function setDet(msg) {
-        if (det) det.textContent = msg;
-      }
-      setDet('Memuat sesi...');
-      if (tbG) tbG.innerHTML = '<tr><td colspan="8" style="text-align:center;padding:16px;color:#94a3b8;">Memuat data...</td></tr>';
-      if (tbS) tbS.innerHTML = '<tr><td colspan="8" style="text-align:center;padding:16px;color:#94a3b8;">Memuat data...</td></tr>';
-
-      try {
-        // 1) Sesi
-        try {
-          if (typeof loadSesi === 'function') await withTimeout(loadSesi(), 6000, 'sesi');
-        } catch (e) {
-          console.warn('loadSesi', e);
-          if (typeof dataSesi === 'undefined' || !Array.isArray(dataSesi)) dataSesi = [];
+        await loadLiburMap();
+        const today = todayLocal();
+        const liburHariIni = isTanggalLibur(today);
+        if (!liburHariIni) {
+          Promise.resolve()
+            .then(() => materializeAbsensiForDate(today))
+            .catch(e => console.warn('materialize', e));
         }
-
-        // 2) Libur
-        try {
-          if (typeof loadLiburMap === 'function') await withTimeout(loadLiburMap(), 6000, 'libur');
-        } catch (e) {
-          console.warn('loadLiburMap', e);
-        }
-
-        const today = (typeof todayLocal === 'function') ? todayLocal() : new Date().toISOString().slice(0, 10);
-        const liburHariIni = (typeof isTanggalLibur === 'function') ? isTanggalLibur(today) : null;
-
-        // materialize non-blocking
-        if (!liburHariIni && typeof materializeAbsensiForDate === 'function') {
-          Promise.resolve().then(() => materializeAbsensiForDate(today)).catch(() => {});
-        }
-
-        const sesiList = (typeof dataSesi !== 'undefined' && Array.isArray(dataSesi) ? dataSesi : [])
-          .filter(s => s && s.aktif !== false)
+        const sesiList = (typeof dataSesi !== 'undefined' && dataSesi ? dataSesi : [])
+          .filter(s => s.aktif !== false)
           .sort((a, b) => (a.urutan || 0) - (b.urutan || 0));
         const nSesi = Math.max(sesiList.length, 1);
 
+        const det = document.getElementById('dashSesiDetail');
         function fmt3(s) {
           if (!s) return '-';
           const t1 = String(s.jam_mulai || '').slice(0, 5);
@@ -10419,55 +10521,65 @@
           const t3 = String(s.jam_akhir || '').slice(0, 5);
           return t1 + ' – ' + t2 + ' – ' + t3;
         }
-
+        // true = sembunyikan tabel rekap (sebelum Sesi 1 dibuka)
         let hideDashRekap = false;
-        if (liburHariIni) {
-          const ket = liburHariIni.keterangan || 'Hari Libur';
-          const tglStr = new Date().toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' });
-          if (det) det.innerHTML = '<span style="color:#dc2626;">' + ket + '</span><br><span style="font-weight:600;font-size:12px;">' + tglStr + '</span>';
-          hideDashRekap = true;
-        } else {
+        if (det) {
+          const list = (sesiList || []).slice().sort((a, b) => (a.urutan || 0) - (b.urutan || 0));
           let aktif = null;
-          try { aktif = (typeof getSesiAktifSekarang === 'function') ? getSesiAktifSekarang() : null; } catch (e) { aktif = null; }
+          try { aktif = getSesiAktifSekarang(); } catch (e) { aktif = null; }
           const now = new Date();
           const nowMin = now.getHours() * 60 + now.getMinutes() + (now.getSeconds() / 60);
-          if (aktif) {
-            setDet((aktif.nama || 'Sesi') + ' berlangsung (' + fmt3(aktif) + ')');
+
+          if (liburHariIni) {
+            const ket = liburHariIni.keterangan || 'Hari Libur';
+            const tglStr = now.toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' });
+            det.innerHTML = '<span style="color:#dc2626;">' + ket + '</span><br><span style="font-weight:600;font-size:12px;">' + tglStr + '</span>';
+            hideDashRekap = true;
+          } else if (aktif) {
+            det.textContent = (aktif.nama || 'Sesi') + ' berlangsung (' + fmt3(aktif) + ')';
             hideDashRekap = false;
-          } else if (!sesiList.length) {
-            setDet('Belum ada sesi yang diatur');
+          } else if (!list.length) {
+            det.textContent = 'Belum ada sesi yang diatur';
             hideDashRekap = false;
           } else {
-            const first = sesiList[0];
-            const last = sesiList[sesiList.length - 1];
-            const firstMulai = (typeof timeToMinutes === 'function') ? timeToMinutes(first.jam_mulai) : 0;
-            const lastAkhir = (typeof timeToMinutes === 'function') ? timeToMinutes(last.jam_akhir) : 0;
+            const first = list[0];
+            const firstMulai = timeToMinutes(first.jam_mulai);
+            const last = list[list.length - 1];
+            const lastAkhir = timeToMinutes(last.jam_akhir);
+
+            // Semua sesi hari ini sudah berakhir → sampai 23:59
             if (nowMin > lastAkhir) {
-              setDet('Sesi scan absensi hari ini telah berakhir');
+              det.textContent = 'Sesi scan absensi hari ini telah berakhir';
               hideDashRekap = false;
             } else if (nowMin < firstMulai) {
-              setDet((first.nama || 'Sesi 1') + ' Akan Berlangsung Dari Jam ' + fmt3(first));
+              // Belum ada sesi dibuka (sebelum Sesi 1)
+              det.textContent = (first.nama || 'Sesi 1') + ' Akan Berlangsung Dari Jam ' + fmt3(first);
               hideDashRekap = true;
             } else {
-              let next = null, lastEnded = null;
-              for (const s of sesiList) {
+              // Antar sesi: ada yang selesai, sesi berikutnya belum mulai
+              let next = null;
+              let lastEnded = null;
+              for (const s of list) {
                 const mulai = timeToMinutes(s.jam_mulai);
                 const akhir = timeToMinutes(s.jam_akhir);
                 if (nowMin > akhir) lastEnded = s;
                 else if (nowMin < mulai) { next = s; break; }
               }
               if (next && lastEnded) {
-                setDet((lastEnded.nama || 'Sesi') + ' selesai, ' + (next.nama || 'sesi berikutnya') + ' Akan Berlangsung Dari Jam ' + fmt3(next));
+                det.textContent = (lastEnded.nama || 'Sesi') + ' selesai, ' +
+                  (next.nama || 'sesi berikutnya') + ' Akan Berlangsung Dari Jam ' + fmt3(next);
               } else if (next) {
-                setDet((next.nama || 'Sesi') + ' Akan Berlangsung Dari Jam ' + fmt3(next));
+                det.textContent = (next.nama || 'Sesi') + ' Akan Berlangsung Dari Jam ' + fmt3(next);
               } else {
-                setDet('Sesi scan absensi hari ini telah berakhir');
+                det.textContent = 'Sesi scan absensi hari ini telah berakhir';
               }
               hideDashRekap = false;
             }
           }
         }
 
+        const rekapWrap = document.getElementById('dashRekapWrap');
+        const rekapMsg = document.getElementById('dashRekapHiddenMsg');
         if (rekapWrap) rekapWrap.style.display = hideDashRekap ? 'none' : '';
         if (rekapMsg) {
           if (hideDashRekap) {
@@ -10479,61 +10591,40 @@
           }
         }
 
-        // Header tabel segera (meski data belum ada)
-        function shortSesiLabel(s, idx) {
-          return 'S' + (s.urutan != null ? s.urutan : (idx + 1));
-        }
-        function buildHead(withKelas) {
-          let h = '<tr>';
-          h += '<th style="width:28px;font-size:10px;text-align:center;">No</th>';
-          h += '<th style="width:168px;font-size:10px;text-align:left;">Nama</th>';
-          if (withKelas) h += '<th style="width:52px;font-size:10px;text-align:center;">Kls</th>';
-          if (sesiList.length) {
-            sesiList.forEach((s, idx) => {
-              h += '<th style="width:52px;font-size:10px;text-align:center;">' + shortSesiLabel(s, idx) + '</th>';
-            });
-          } else {
-            h += '<th style="font-size:10px;text-align:center;">-</th>';
-          }
-          return h + '</tr>';
-        }
-        if (thG) thG.innerHTML = buildHead(false);
-        if (thS) thS.innerHTML = buildHead(true);
-
-        // 3) Data absensi + master
         let absRows = [];
         let guruList = [];
         let siswaList = [];
 
-        if (typeof supabaseClient !== 'undefined' && supabaseClient) {
+        function withTimeout(promise, ms, label) {
+          return Promise.race([
+            promise,
+            new Promise((_, reject) => setTimeout(() => reject(new Error('Timeout ' + (label || '') + ' ' + ms + 'ms')), ms))
+          ]);
+        }
+
+        if (supabaseClient) {
           try {
-            const qAbs = supabaseClient.from('absensi')
-              .select('id, tipe, ref_id, kode, nama, status, sesi_id, sesi_nama, sesi_urutan, jam_scan, tanggal')
-              .eq('tanggal', today);
-            const qGuru = supabaseClient.from('guru').select('id, nama').order('id');
-            const qSiswa = supabaseClient.from('siswa').select('id, nama, kelas').order('nama');
-            const [ab, g, s] = await withTimeout(Promise.all([qAbs, qGuru, qSiswa]), 12000, 'dashboard-data');
-            if (ab && ab.error) console.warn('absensi', ab.error);
-            if (g && g.error) console.warn('guru', g.error);
-            if (s && s.error) console.warn('siswa', s.error);
-            absRows = (ab && ab.data) || [];
-            guruList = (typeof sortGuruList === 'function') ? sortGuruList((g && g.data) || []) : ((g && g.data) || []);
-            siswaList = (typeof sortSiswaList === 'function') ? sortSiswaList((s && s.data) || []) : ((s && s.data) || []);
+            const [ab, g, s] = await withTimeout(Promise.all([
+              supabaseClient.from('absensi').select('id, tipe, ref_id, kode, nama, status, sesi_id, sesi_nama, sesi_urutan, jam_scan, tanggal').eq('tanggal', today),
+              supabaseClient.from('guru').select('id, nama').order('id'),
+              supabaseClient.from('siswa').select('id, nama, kelas').order('kelas').order('nama')
+            ]), 20000, 'dashboard');
+            if (ab.error) console.warn('absensi', ab.error);
+            if (g.error) console.warn('guru', g.error);
+            if (s.error) console.warn('siswa', s.error);
+            absRows = ab.data || [];
+            guruList = sortGuruList(g.data || []);
+            siswaList = sortSiswaList(s.data || []);
           } catch (netErr) {
             console.error('dashboard fetch', netErr);
-            if (tbG) tbG.innerHTML = '<tr><td colspan="' + (2 + nSesi) + '" style="text-align:center;padding:16px;color:#ef4444;">Gagal/timeout memuat data. Coba refresh.</td></tr>';
-            if (tbS) tbS.innerHTML = '<tr><td colspan="' + (3 + nSesi) + '" style="text-align:center;padding:16px;color:#ef4444;">Gagal/timeout memuat data. Coba refresh.</td></tr>';
-            clearTimeout(failsafe);
-            _dashLoading = false;
-            return;
+            if (tbG) tbG.innerHTML = '<tr><td colspan="8" style="text-align:center;padding:16px;color:#ef4444;">Gagal/timeout memuat data. Coba refresh.</td></tr>';
+            if (tbS) tbS.innerHTML = '<tr><td colspan="8" style="text-align:center;padding:16px;color:#ef4444;">Gagal/timeout memuat data. Coba refresh.</td></tr>';
+            const detErr = document.getElementById('dashSesiDetail');
+            if (detErr && detErr.textContent === 'Memuat...') detErr.textContent = 'Gagal memuat (timeout/jaringan)';
           }
         } else {
-          guruList = (typeof sortGuruList === 'function')
-            ? sortGuruList((typeof dataGuru !== 'undefined' && dataGuru) ? dataGuru : [])
-            : [];
-          siswaList = (typeof sortSiswaList === 'function')
-            ? sortSiswaList((typeof dataSiswa !== 'undefined' && dataSiswa) ? dataSiswa : [])
-            : [];
+          guruList = sortGuruList((typeof dataGuru !== 'undefined' && dataGuru) ? dataGuru : []);
+          siswaList = sortSiswaList((typeof dataSiswa !== 'undefined' && dataSiswa) ? dataSiswa : []);
         }
 
         const elTG = document.getElementById('dashTotalGuru');
@@ -10541,7 +10632,6 @@
         if (elTG) elTG.textContent = guruList.length;
         if (elTS) elTS.textContent = siswaList.length;
 
-        // Index absensi
         const absIndex = new Map();
         function sesiKeys(ses) {
           const keys = [];
@@ -10566,7 +10656,7 @@
         });
 
         function resolveAbsensiFast(tipe, refId, ses) {
-          if (today && typeof isTanggalLibur === 'function' && isTanggalLibur(today)) return null;
+          if (today && isTanggalLibur(today)) return null;
           const base = String(tipe || '') + '|' + Number(refId);
           let real = null;
           for (const sk of sesiKeys(ses)) {
@@ -10574,32 +10664,17 @@
             if (hit) { real = hit; break; }
           }
           if (real) return Object.assign({}, real, { _virtual: false });
-          if (typeof resolveAbsensi === 'function') {
-            return resolveAbsensi(tipe, refId, ses, absRows, sesiList, today);
-          }
-          return null;
+          return resolveAbsensi(tipe, refId, ses, absRows, sesiList, today);
         }
 
-        // Statistik: hitung dari index dulu (cepat)
         function countStatusPerSesiHtml(tipe, people, statusKey) {
           if (!sesiList.length) return '-';
           return sesiList.map(ses => {
             let n = 0;
-            const ended = (typeof sesiSudahBerakhir === 'function') ? sesiSudahBerakhir(ses, today) : false;
             for (let i = 0; i < people.length; i++) {
-              const base = String(tipe || '') + '|' + Number(people[i].id);
-              let ab = null;
-              for (const sk of sesiKeys(ses)) {
-                const hit = absIndex.get(base + '|' + sk);
-                if (hit) { ab = hit; break; }
-              }
-              if (!ab) {
-                if (!ended) continue;
-                if (statusKey !== 'Alpa' && statusKey !== 'Bolos') continue;
-                ab = resolveAbsensiFast(tipe, people[i].id, ses);
-              }
+              const ab = resolveAbsensiFast(tipe, people[i].id, ses);
               if (!ab) continue;
-              if ((typeof normStatusKey === 'function' ? normStatusKey(ab.status) : ab.status) === statusKey) n++;
+              if (normStatusKey(ab.status) === statusKey) n++;
             }
             return '<div style="line-height:1.3;font-size:12px;font-weight:500;">' + (n === 0 ? '-' : n) + '</div>';
           }).join('');
@@ -10614,13 +10689,32 @@
           if (elS) elS.innerHTML = countStatusPerSesiHtml('siswa', siswaList, key);
         });
 
+        function shortSesiLabel(s, idx) {
+          return 'S' + (s.urutan != null ? s.urutan : (idx + 1));
+        }
+        function buildHead(withKelas) {
+          let h = '<tr>';
+          h += '<th style="width:28px;font-size:10px;text-align:center;">No</th>';
+          h += '<th style="width:168px;font-size:10px;text-align:left;">Nama</th>';
+          if (withKelas) h += '<th style="width:52px;font-size:10px;text-align:center;">Kls</th>';
+          sesiList.forEach((s, idx) => {
+            h += '<th style="width:52px;font-size:10px;text-align:center;">' + shortSesiLabel(s, idx) + '</th>';
+          });
+          return h + '</tr>';
+        }
+        const thG = document.getElementById('theadDashGuru');
+        const thS = document.getElementById('theadDashSiswa');
+        if (thG) thG.innerHTML = buildHead(false);
+        if (thS) thS.innerHTML = buildHead(true);
+
         function cellSesi(ab) {
-          if (!ab) return '<td style="text-align:center;font-size:10px;color:#cbd5e1;">–</td>';
-          const st = (typeof badgeStatusDash === 'function') ? badgeStatusDash(ab.status) : esc(String(ab.status || ''));
-          const jam = ab.jam_scan
-            ? ('<div style="font-size:9px;color:#64748b;">' + esc(String(ab.jam_scan).slice(0, 5)) + '</div>')
-            : (ab._virtual ? '' : '');
-          return '<td style="text-align:center;vertical-align:middle;">' + st + jam + '</td>';
+          if (!ab) return '<td style="text-align:center;color:#cbd5e1;font-size:10px;">–</td>';
+          const jam = fmtJam(ab.jam_scan);
+          const jamShort = jam ? jam.slice(0, 5) : '';
+          return '<td style="text-align:center;line-height:1.25;">' +
+            badgeStatusDash(ab.status) +
+            (jamShort ? '<div style="font-size:9px;color:#64748b;">' + jamShort + '</div>' : '') +
+            '</td>';
         }
 
         if (tbG) {
@@ -10635,16 +10729,13 @@
             }).join('');
           }
         }
-
         if (tbS) {
           if (!siswaList.length) {
             tbS.innerHTML = '<tr><td colspan="' + (3 + nSesi) + '" style="text-align:center;padding:16px;color:#94a3b8;">Belum ada data siswa</td></tr>';
           } else {
-            // Render bertahap agar UI tidak freeze
-            const CHUNK = 50;
+            const CHUNK = 40;
             let idx = 0;
             const parts = [];
-            const colSpan = 3 + nSesi;
             function renderChunk() {
               const end = Math.min(idx + CHUNK, siswaList.length);
               for (; idx < end; idx++) {
@@ -10659,7 +10750,7 @@
               }
               if (idx < siswaList.length) {
                 tbS.innerHTML = parts.join('') +
-                  '<tr><td colspan="' + colSpan + '" style="text-align:center;padding:8px;color:#94a3b8;font-size:11px;">Memuat ' + idx + '/' + siswaList.length + '...</td></tr>';
+                  '<tr><td colspan="' + (3 + nSesi) + '" style="text-align:center;padding:8px;color:#94a3b8;font-size:11px;">Memuat ' + idx + '/' + siswaList.length + '...</td></tr>';
                 setTimeout(renderChunk, 0);
               } else {
                 tbS.innerHTML = parts.join('');
@@ -10672,10 +10763,8 @@
         console.error('loadDashboard', e);
         if (tbG) tbG.innerHTML = '<tr><td colspan="8" style="text-align:center;padding:16px;color:#ef4444;">Gagal memuat: ' + esc(String(e.message || e)) + '</td></tr>';
         if (tbS) tbS.innerHTML = '<tr><td colspan="8" style="text-align:center;padding:16px;color:#ef4444;">Gagal memuat</td></tr>';
-        setDet('Gagal memuat data — coba refresh');
-      } finally {
-        clearTimeout(failsafe);
-        if (seq === _dashLoadSeq) _dashLoading = false;
+        const det = document.getElementById('dashSesiDetail');
+        if (det) det.textContent = 'Gagal memuat data';
       }
     }
 
@@ -12889,59 +12978,6 @@
       const m = String(ans.url || '').match(/\/d\/([a-zA-Z0-9_-]+)/);
       if (m) return m[1];
       return null;
-    }
-
-
-    let _uploadProgressTimer = null;
-    function showUploadProgress(title, detail) {
-      const ov = document.getElementById('uploadProgressOverlay');
-      const t = document.getElementById('uploadProgressTitle');
-      const d = document.getElementById('uploadProgressDetail');
-      const bar = document.getElementById('uploadProgressBar');
-      const pct = document.getElementById('uploadProgressPct');
-      if (t) t.textContent = title || 'Mengunggah...';
-      if (d) d.textContent = detail || 'Mohon tunggu, jangan tutup halaman.';
-      if (bar) bar.style.width = '5%';
-      if (pct) pct.textContent = '5%';
-      if (ov) ov.classList.add('show');
-      // animasi progres palsu agar user tahu proses masih jalan (fetch GDrive tidak report progress)
-      if (_uploadProgressTimer) clearInterval(_uploadProgressTimer);
-      let n = 5;
-      _uploadProgressTimer = setInterval(() => {
-        // naik pelan sampai ~90%, sisanya saat selesai
-        if (n < 90) {
-          n += (n < 40 ? 3 : (n < 70 ? 1.5 : 0.6));
-          if (n > 90) n = 90;
-          setUploadProgress(n);
-        }
-      }, 400);
-    }
-    function setUploadProgress(percent, detail) {
-      const bar = document.getElementById('uploadProgressBar');
-      const pct = document.getElementById('uploadProgressPct');
-      const d = document.getElementById('uploadProgressDetail');
-      if (percent != null && percent !== '') {
-        const n = Math.max(0, Math.min(100, Math.round(Number(percent) || 0)));
-        if (bar) bar.style.width = n + '%';
-        if (pct) pct.textContent = n + '%';
-      }
-      if (detail != null && d) d.textContent = detail;
-    }
-    function hideUploadProgress() {
-      if (_uploadProgressTimer) {
-        clearInterval(_uploadProgressTimer);
-        _uploadProgressTimer = null;
-      }
-      const ov = document.getElementById('uploadProgressOverlay');
-      const bar = document.getElementById('uploadProgressBar');
-      const pct = document.getElementById('uploadProgressPct');
-      if (bar) bar.style.width = '100%';
-      if (pct) pct.textContent = '100%';
-      setTimeout(() => {
-        if (ov) ov.classList.remove('show');
-        if (bar) bar.style.width = '0%';
-        if (pct) pct.textContent = '0%';
-      }, 280);
     }
 
     async function uploadJawabanFile(file, meta) {
@@ -17118,18 +17154,7 @@ document.getElementById('btnBsContohFormat')?.addEventListener('click', () => {
       w.document.write('<style>body{font-family:-apple-system,BlinkMacSystemFont,Segoe UI,Roboto,sans-serif;padding:12px;background:#fff;color:#0f172a;}@media print{button{display:none!important;}}</style>');
       w.document.write('</head><body>');
       w.document.write(card.innerHTML);
-      w.document.write('
-<div id="uploadProgressOverlay" aria-live="polite" aria-busy="true">
-  <div id="uploadProgressCard">
-    <div class="upload-spinner" id="uploadProgressSpinner"></div>
-    <div id="uploadProgressTitle">Mengunggah...</div>
-    <div id="uploadProgressDetail">Mohon tunggu, jangan tutup halaman.</div>
-    <div id="uploadProgressBarWrap"><div id="uploadProgressBar"></div></div>
-    <div id="uploadProgressPct">0%</div>
-  </div>
-</div>
-
-</body></html>');
+      w.document.write('</body></html>');
       w.document.close();
       setTimeout(() => { try { w.print(); } catch (e) {} }, 400);
     });
@@ -20093,27 +20118,31 @@ document.getElementById('btnBsContohFormat')?.addEventListener('click', () => {
       }
       const grid = document.getElementById('puGrid');
       const prevInfo = document.getElementById('puInfo');
+      const infoBackup = prevInfo ? prevInfo.textContent : '';
       if (prevInfo) prevInfo.textContent = 'Mengunggah foto ' + (nama || '') + '...';
-      // nonaktifkan tombol di grid selama upload
-      if (grid) grid.querySelectorAll('button').forEach(b => { b.disabled = true; });
-      showUploadProgress('Mengunggah foto: ' + (nama || 'user'), 'Menyiapkan gambar...');
+      // tandai kartu terkait
+      let cardEl = null;
+      if (grid) {
+        cardEl = grid.querySelector('.pu-card[data-role="' + role + '"][data-id="' + String(userId) + '"]');
+        if (cardEl) cardEl.classList.add('uploading');
+      }
+      showUploadProgress('Mengunggah foto profil', 'Memproses foto ' + (nama || 'user') + '...', 8);
       try {
         let fotoData = null;
-        try {
-          setUploadProgress(12, 'Mengompresi preview foto...');
-          fotoData = await fileToDataUrlResized(file, 256, 0.88, false);
-        } catch (e) {}
+        try { fotoData = await fileToDataUrlResized(file, 256, 0.88, false); } catch (e) {}
+        setUploadProgress(25, 'Mengunggah ke Google Drive...');
+        startFakeUploadProgress(25, 80, Math.min(12000, 4000 + Math.round((file.size || 0) / 800)));
         const isPng = /png/i.test(file.type || '') || /\.png$/i.test(file.name || '');
         const fname = 'foto_' + role + '_' + userId + '_' + Date.now() + (isPng ? '.png' : '.jpg');
         const upFile = new File([file], fname, { type: file.type || (isPng ? 'image/png' : 'image/jpeg') });
-        setUploadProgress(null, 'Mengunggah ke Google Drive... (bisa 10–30 detik)');
         const result = await uploadJawabanFile(upFile, {
           folderId: GDRIVE_DEFAULT_FOLDER_ID || '',
           bankId: 'profil',
           soalId: String(userId || '0'),
           nisn: String(role + '_' + userId)
         });
-        setUploadProgress(93, 'Menyimpan data ke database...');
+        if (_upProgTimer) { clearInterval(_upProgTimer); _upProgTimer = null; }
+        setUploadProgress(88, 'Menyimpan data foto...');
         const url = result.url || (result.id ? ('https://drive.google.com/file/d/' + result.id + '/view') : null);
         const displayUrl = fotoData || url;
         await saveUserFotoMeta(role, userId, url || fotoData, result.id || null);
@@ -20134,18 +20163,20 @@ document.getElementById('btnBsContohFormat')?.addEventListener('click', () => {
           if (dash) setAvatarEl(dash, displayUrl, nama || '?');
           saveSession();
         }
-        setUploadProgress(100, 'Selesai!');
+        setUploadProgress(100, 'Selesai');
+        await new Promise(r => setTimeout(r, 250));
         renderProfilUserGrid();
         alert('Foto ' + (nama || '') + ' berhasil diperbarui.');
       } catch (e) {
         console.error(e);
         alert('Gagal unggah: ' + (e.message || e));
-        if (prevInfo) prevInfo.textContent = '';
+        if (prevInfo) prevInfo.textContent = infoBackup || '';
         renderProfilUserGrid();
       } finally {
-        try { hideUploadProgress(); } catch (e) {}
-        if (prevInfo && !prevInfo.textContent.includes('Mengunggah')) {
-          /* biarkan renderProfilUserGrid mengisi info */
+        hideUploadProgress();
+        if (cardEl) cardEl.classList.remove('uploading');
+        if (prevInfo && prevInfo.textContent.indexOf('Mengunggah') === 0) {
+          // biarkan renderProfilUserGrid mengisi ulang
         }
       }
     }
@@ -20496,22 +20527,7 @@ async function initResetPinPage() {
     })();
 
     initFromHash();
-    function bootDashboard(reason) {
-      try {
-        if (currentPage === 'dashboard' && typeof loadDashboard === 'function') {
-          loadDashboard();
-        }
-      } catch (e) { console.error('bootDashboard', reason, e); }
-    }
-    bootDashboard('init');
-    setTimeout(function() {
-      var d = document.getElementById('dashSesiDetail');
-      if (d && /Menyiapkan|Memuat sesi/i.test(d.textContent || '')) bootDashboard('retry-2s');
-    }, 2000);
-    setTimeout(function() {
-      var d = document.getElementById('dashSesiDetail');
-      if (d && /Menyiapkan|Memuat sesi/i.test(d.textContent || '')) bootDashboard('retry-5s');
-    }, 5000);
+    if (currentPage === 'dashboard') loadDashboard();
     setTimeout(() => { try { refreshMenuVisibility(); } catch (e) {} }, 500);
     // Logo: coba lagi setelah app_settings sempat termuat (penting di HP)
     setTimeout(() => { try { loadSchoolLogo(); } catch (e) {} }, 800);
