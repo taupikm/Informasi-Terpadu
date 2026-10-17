@@ -1418,11 +1418,11 @@
     }
 
 
-    /* Kamera scanner: ukuran sedang, tetap tidak full-screen */
+    /* Kamera scanner: fokus lebih lebar kiri-kanan, tinggi tetap nyaman di HP */
     #qrReaderWrap {
       display: none;
       margin-top: 12px;
-      max-width: min(92vw, 360px);
+      max-width: min(96vw, 420px);
       margin-left: auto;
       margin-right: auto;
     }
@@ -1452,12 +1452,12 @@
       object-fit: cover !important;
       border-radius: 0 !important;
     }
-    /* satu bingkai fokus putih di tengah */
+    /* bingkai fokus: lebih lebar kiri-kanan, tinggi tetap */
     #qrFocusFrame {
       pointer-events: none;
       position: absolute;
-      left: 12%;
-      right: 12%;
+      left: 4%;
+      right: 4%;
       top: 14%;
       bottom: 14%;
       z-index: 5;
@@ -10684,11 +10684,16 @@
           ket + ' · ' + now.toLocaleTimeString('id-ID'));
         try { prependScanLogRow(row); } catch (e) {}
         scheduleLoadScanLog();
-        // refresh kamera tiap 5 scan sukses agar tidak ngelag
+        // cek kesehatan video tiap beberapa scan — restart hanya jika blank/freeze
         _scanSuccessCount = (_scanSuccessCount || 0) + 1;
-        if (_scanSuccessCount >= 5) {
+        if (_scanSuccessCount >= 8) {
           _scanSuccessCount = 0;
-          setTimeout(() => { softRestartKamera(); }, 1000);
+          setTimeout(() => {
+            try {
+              if (!isScanVideoHealthy()) softRestartKamera();
+              else { lastScanCode = ''; lastScanTime = 0; }
+            } catch (e) {}
+          }, 600);
         }
       } catch (e) {
         console.error(e);
@@ -10722,33 +10727,108 @@
       } catch (e) {}
     }
 
+    function buildScanQrConfig() {
+      const shell = document.getElementById('qrReaderShell');
+      const shellW = (shell && shell.clientWidth) ? shell.clientWidth : Math.min(window.innerWidth - 24, 400);
+      const shellH = (shell && shell.clientHeight) ? shell.clientHeight : 280;
+      // fokus lebih lebar kiri-kanan; tinggi tetap proporsional layar HP
+      const boxW = Math.max(220, Math.min(shellW - 8, Math.floor(shellW * 0.94)));
+      const boxH = Math.max(150, Math.floor(shellH * 0.70));
+      const cfg = {
+        fps: 20,
+        qrbox: { width: boxW, height: boxH },
+        aspectRatio: 1.333,
+        disableFlip: false
+      };
+      try {
+        cfg.experimentalFeatures = { useBarCodeDetectorIfSupported: true };
+      } catch (e) {}
+      return cfg;
+    }
+
+    async function stopScanEngine() {
+      if (!html5QrCode) return;
+      try { await html5QrCode.stop(); } catch (e) {}
+      try { html5QrCode.clear(); } catch (e) {}
+      html5QrCode = null;
+      const readerEl = document.getElementById('qrReader');
+      if (readerEl) readerEl.innerHTML = '';
+    }
+
+    async function startScanEngine() {
+      if (typeof Html5Qrcode === 'undefined') throw new Error('Library scanner belum termuat');
+      await stopScanEngine();
+      // beri waktu browser melepaskan track kamera (penting di HP Chrome)
+      await new Promise(r => setTimeout(r, 350));
+      const readerEl = document.getElementById('qrReader');
+      if (readerEl) readerEl.innerHTML = '';
+      html5QrCode = new Html5Qrcode('qrReader');
+      const config = buildScanQrConfig();
+      try {
+        await html5QrCode.start(
+          { facingMode: 'environment' },
+          config,
+          onScanSuccessFast,
+          () => {}
+        );
+      } catch (err) {
+        // fallback tanpa object facingMode
+        try {
+          await html5QrCode.start(
+            { facingMode: 'environment' },
+            { fps: 18, qrbox: config.qrbox, aspectRatio: 1.333 },
+            onScanSuccessFast,
+            () => {}
+          );
+        } catch (err2) {
+          throw err2 || err;
+        }
+      }
+      kameraAktif = true;
+      lastScanCode = '';
+      lastScanTime = 0;
+      _scanBusy = false;
+    }
+
+    function isScanVideoHealthy() {
+      try {
+        const v = document.querySelector('#qrReader video');
+        if (!v) return false;
+        if (v.paused) return false;
+        if (v.readyState < 2) return false;
+        if (v.videoWidth < 16 || v.videoHeight < 16) return false;
+        return true;
+      } catch (e) {
+        return false;
+      }
+    }
+
     async function softRestartKamera() {
       if (_softRestarting || !kameraAktif) return;
       _softRestarting = true;
       try {
-        if (html5QrCode) {
-          try { await html5QrCode.stop(); } catch (e) {}
-          try { html5QrCode.clear(); } catch (e) {}
+        // jika video masih hidup, cukup reset state — hindari blank screen
+        if (isScanVideoHealthy()) {
+          lastScanCode = '';
+          lastScanTime = 0;
+          _scanBusy = false;
+          return;
         }
-        const readerEl = document.getElementById('qrReader');
-        if (readerEl) readerEl.innerHTML = '';
-        html5QrCode = new Html5Qrcode('qrReader');
-        const shell = document.getElementById('qrReaderShell');
-        const shellW = (shell && shell.clientWidth) ? shell.clientWidth : 320;
-        const shellH = (shell && shell.clientHeight) ? shell.clientHeight : 260;
-        const boxW = Math.max(200, Math.floor(shellW * 0.78));
-        const boxH = Math.max(160, Math.floor(shellH * 0.72));
-        await html5QrCode.start(
-          { facingMode: 'environment' },
-          { fps: 12, qrbox: { width: boxW, height: boxH }, aspectRatio: 1.333 },
-          onScanSuccessFast,
-          () => {}
-        );
-        lastScanCode = '';
-        lastScanTime = 0;
-        _scanBusy = false;
+        await startScanEngine();
       } catch (e) {
         console.warn('softRestartKamera', e);
+        try {
+          await new Promise(r => setTimeout(r, 500));
+          await startScanEngine();
+        } catch (e2) {
+          console.warn('softRestart retry gagal', e2);
+          // biarkan user buka ulang manual
+          try {
+            document.getElementById('btnBukaKamera').style.display = 'block';
+            document.getElementById('btnTutupKamera').style.display = 'none';
+          } catch (e3) {}
+          kameraAktif = false;
+        }
       } finally {
         _softRestarting = false;
       }
@@ -10760,7 +10840,8 @@
         const now = Date.now();
         const code = String(decodedText || '').trim();
         if (!code) return;
-        if (code === lastScanCode && (now - lastScanTime) < 1200) return;
+        // debounce singkat agar barcode sama tidak dobel, tetap responsif
+        if (code === lastScanCode && (now - lastScanTime) < 900) return;
         if (_scanBusy) return;
 
         lastScanCode = code;
@@ -10768,11 +10849,10 @@
         _scanBusy = true;
         try { if (navigator.vibrate) navigator.vibrate(40); } catch (e) {}
 
-        // tanpa pause video — lebih stabil untuk antrian panjang
         prosesScan(code)
           .catch(e => console.error('prosesScan', e))
           .finally(() => {
-            setTimeout(() => { _scanBusy = false; }, 450);
+            setTimeout(() => { _scanBusy = false; }, 350);
           });
       } catch (e) {
         console.error('onScanSuccessFast', e);
@@ -10811,61 +10891,13 @@
           tutupKamera();
           return;
         }
-        // clear sisa DOM jika ada instance lama
-        try {
-          if (html5QrCode) {
-            try { await html5QrCode.stop(); } catch (e) {}
-            try { html5QrCode.clear(); } catch (e) {}
-          }
-        } catch (e) {}
-        const readerEl = document.getElementById('qrReader');
-        if (readerEl) readerEl.innerHTML = '';
-
-        html5QrCode = new Html5Qrcode('qrReader');
-        const shell = document.getElementById('qrReaderShell');
-        const shellW = (shell && shell.clientWidth) ? shell.clientWidth : Math.min(window.innerWidth - 32, 360);
-        const shellH = (shell && shell.clientHeight) ? shell.clientHeight : 280;
-        const boxW = Math.max(200, Math.floor(shellW * 0.78));
-        const boxH = Math.max(160, Math.floor(shellH * 0.72));
-
-        // config stabil (tanpa advanced yang sering bikin freeze di HP)
-        const config = {
-          fps: 15,
-          qrbox: { width: boxW, height: boxH },
-          aspectRatio: 1.333,
-          disableFlip: false
-        };
-
-        await html5QrCode.start(
-          { facingMode: 'environment' },
-          config,
-          onScanSuccessFast,
-          () => {}
-        );
-        kameraAktif = true;
+        await startScanEngine();
       } catch (err) {
         console.error(err);
-        // fallback kamera depan / tanpa facingMode object
-        try {
-          html5QrCode = new Html5Qrcode('qrReader');
-          const shell = document.getElementById('qrReaderShell');
-          const shellW = (shell && shell.clientWidth) ? shell.clientWidth : 320;
-          const shellH = (shell && shell.clientHeight) ? shell.clientHeight : 260;
-          await html5QrCode.start(
-            { facingMode: 'environment' },
-            { fps: 12, qrbox: { width: Math.floor(shellW * 0.8), height: Math.floor(shellH * 0.7) } },
-            onScanSuccessFast,
-            () => {}
-          );
-          kameraAktif = true;
-        } catch (err2) {
-          console.error(err2);
-          alert('Gagal membuka kamera.\n\nPastikan:\n• Izin kamera diizinkan di browser\n• Situs memakai HTTPS\n\nError: ' + (err2.message || err.message || err2));
-          tutupKamera();
-        }
+        alert('Gagal membuka kamera.\n\nPastikan:\n• Izin kamera diizinkan di browser\n• Situs memakai HTTPS\n\nError: ' + (err.message || err));
+        tutupKamera();
       }
     }
-
     async function tutupKamera() {
       try {
         if (html5QrCode && kameraAktif) {
