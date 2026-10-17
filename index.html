@@ -253,6 +253,95 @@
       font-weight: 800;
       color: var(--primary);
       font-size: 14px;
+      overflow: hidden;
+      flex-shrink: 0;
+    }
+    .logo img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      display: block;
+    }
+    .profile-photo img, .sidebar-header .avatar img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      display: block;
+    }
+    .ep-photo-wrap {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      margin-bottom: 14px;
+    }
+    .ep-photo-preview {
+      width: 72px;
+      height: 72px;
+      border-radius: 50%;
+      background: #e0e7ff;
+      border: 2px solid #c7d2fe;
+      overflow: hidden;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 800;
+      color: var(--primary);
+      font-size: 22px;
+      flex-shrink: 0;
+    }
+    .ep-photo-preview img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+    .ep-logo-preview {
+      width: 72px;
+      height: 72px;
+      border-radius: 12px;
+      background: #f1f5f9;
+      border: 1px dashed #cbd5e1;
+      overflow: hidden;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 800;
+      color: var(--primary);
+      font-size: 18px;
+      flex-shrink: 0;
+    }
+    .ep-logo-preview img {
+      width: 100%;
+      height: 100%;
+      object-fit: contain;
+      background: #fff;
+    }
+    .ep-photo-actions {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      flex: 1;
+      min-width: 0;
+    }
+    .ep-photo-actions .btn {
+      width: 100%;
+      padding: 8px 10px;
+      font-size: 12px;
+    }
+    .ep-hint {
+      font-size: 11px;
+      color: #94a3b8;
+      line-height: 1.35;
+      margin-top: 2px;
+    }
+    .ep-section-title {
+      font-size: 12px;
+      font-weight: 700;
+      color: #64748b;
+      text-transform: uppercase;
+      letter-spacing: 0.4px;
+      margin: 12px 0 8px;
+      padding-top: 8px;
+      border-top: 1px solid #e2e8f0;
     }
 
     .topbar-center {
@@ -3039,27 +3128,56 @@
     </div>
   </div>
 <div class="modal-overlay" id="modalEditProfil">
-    <div class="modal">
+    <div class="modal modal-lg">
       <div class="modal-header">
         <h3>Edit Profil</h3>
         <button class="modal-close" data-close="modalEditProfil">&times;</button>
       </div>
       <div class="modal-body">
-        <div class="form-group">
+        <div class="ep-section-title" style="margin-top:0;border-top:none;padding-top:0;">Foto Profil</div>
+        <div class="ep-photo-wrap">
+          <div class="ep-photo-preview" id="editFotoPreview">?</div>
+          <div class="ep-photo-actions">
+            <button type="button" class="btn btn-outline" id="btnPilihFoto">📷 Pilih / Ganti Foto</button>
+            <button type="button" class="btn btn-outline" id="btnHapusFoto" style="color:#ef4444;border-color:#fca5a5;">🗑️ Hapus Foto</button>
+            <input type="file" id="editFotoFile" accept="image/jpeg,image/png,image/webp,image/gif" style="display:none;">
+            <div class="ep-hint">JPG/PNG/WebP, disarankan &lt; 2 MB. Disimpan ke Google Drive.</div>
+          </div>
+        </div>
+
+        <div class="form-group" id="editNamaGroup">
           <label>Nama Lengkap</label>
-          <input type="text" id="editNama" value="Admin Sekolah" placeholder="Nama lengkap" autocomplete="off">
+          <input type="text" id="editNama" placeholder="Nama lengkap" autocomplete="off">
         </div>
-        <div class="form-group">
+        <div class="form-group" id="editUsernameGroup">
           <label>Username</label>
-          <input type="text" id="editUsername" value="admin" placeholder="Username" autocomplete="off">
+          <input type="text" id="editUsername" placeholder="Username" autocomplete="off">
         </div>
-        <div class="form-group">
-          <label>Password Baru</label>
+        <div class="form-group" id="editKodeGroup" style="display:none;">
+          <label id="editKodeLabel">NISN / NIP</label>
+          <input type="text" id="editKode" disabled style="background:#f8fafc;color:#64748b;">
+        </div>
+        <div class="form-group" id="editPassGroup">
+          <label>PIN / Password Baru</label>
           <input type="password" id="editPass" placeholder="Kosongkan jika tidak diubah" autocomplete="new-password">
         </div>
-        <div class="form-group">
-          <label>Konfirmasi Password</label>
-          <input type="password" id="editPass2" placeholder="Ulangi password baru" autocomplete="new-password">
+        <div class="form-group" id="editPass2Group">
+          <label>Konfirmasi PIN / Password</label>
+          <input type="password" id="editPass2" placeholder="Ulangi jika mengubah" autocomplete="new-password">
+        </div>
+        <p class="ep-hint" id="editProfilHint" style="margin-bottom:8px;"></p>
+
+        <div id="editLogoSection" style="display:none;">
+          <div class="ep-section-title">Logo Sekolah</div>
+          <div class="ep-photo-wrap">
+            <div class="ep-logo-preview" id="editLogoPreview">SP</div>
+            <div class="ep-photo-actions">
+              <button type="button" class="btn btn-outline" id="btnPilihLogo">🏫 Pilih / Ganti Logo</button>
+              <button type="button" class="btn btn-outline" id="btnHapusLogo" style="color:#ef4444;border-color:#fca5a5;">🗑️ Hapus Logo</button>
+              <input type="file" id="editLogoFile" accept="image/jpeg,image/png,image/webp,image/gif,image/svg+xml" style="display:none;">
+              <div class="ep-hint">Logo tampil di pojok kiri atas. Disimpan ke Google Drive (khusus Admin).</div>
+            </div>
+          </div>
         </div>
       </div>
       <div class="modal-footer">
@@ -4010,7 +4128,12 @@
     let currentUserKode = null;
     let currentUserKelas = null;
     let currentUserIsAlumni = false;
+    let currentUserFoto = null;   // url foto profil user login
+    let currentUserFotoId = null;
+    let schoolLogoUrl = null;
+    let schoolLogoId = null;
     const SESSION_KEY = 'smpn_session';
+    const LOGO_SETTINGS_KEY = 'app_logo_sekolah';
 
     const ROLE_DATA = {
       siswa: { name: 'Siswa Demo', avatar: 'S', label: 'Siswa' },
@@ -4031,7 +4154,9 @@
         userId: currentUserId,
         kode: currentUserKode,
         kelas: currentUserKelas,
-        isAlumni: !!currentUserIsAlumni
+        isAlumni: !!currentUserIsAlumni,
+        foto: currentUserFoto || null,
+        fotoId: currentUserFotoId || null
       }));
     }
 
@@ -4045,6 +4170,166 @@
       }
     }
 
+
+    function gdriveViewUrl(idOrUrl) {
+      if (!idOrUrl) return '';
+      const s = String(idOrUrl);
+      if (/^https?:\/\//i.test(s)) {
+        // convert file/d/ID/view → direct-ish preview
+        const m = s.match(/\/d\/([a-zA-Z0-9_-]+)/);
+        if (m) return 'https://drive.google.com/thumbnail?id=' + m[1] + '&sz=w400';
+        return s;
+      }
+      return 'https://drive.google.com/thumbnail?id=' + s + '&sz=w400';
+    }
+
+    function setAvatarEl(el, fotoUrl, letter) {
+      if (!el) return;
+      const L = (letter || '?').toString().charAt(0).toUpperCase();
+      if (fotoUrl) {
+        const src = gdriveViewUrl(fotoUrl);
+        el.innerHTML = '';
+        const img = document.createElement('img');
+        img.src = src;
+        img.alt = '';
+        img.referrerPolicy = 'no-referrer';
+        img.onerror = function () { el.textContent = L; };
+        el.appendChild(img);
+      } else {
+        el.textContent = L;
+      }
+    }
+
+    function setSchoolLogoDisplay(url) {
+      const el = document.querySelector('.topbar-left .logo');
+      if (!el) return;
+      if (url) {
+        const src = gdriveViewUrl(url);
+        el.innerHTML = '';
+        const img = document.createElement('img');
+        img.src = src;
+        img.alt = 'Logo';
+        img.referrerPolicy = 'no-referrer';
+        img.onerror = function () { el.textContent = 'SP'; };
+        el.appendChild(img);
+      } else {
+        el.textContent = 'SP';
+      }
+    }
+
+    function profilSettingsKey(role, userId) {
+      return 'profil_' + String(role || 'x') + '_' + String(userId || '0');
+    }
+
+    async function loadAppSetting(key) {
+      try {
+        if (supabaseClient) {
+          const { data } = await supabaseClient.from('app_settings').select('value').eq('key', key).maybeSingle();
+          if (data && data.value != null) {
+            let v = data.value;
+            if (typeof v === 'string') {
+              try { v = JSON.parse(v); } catch (e) {}
+            }
+            return v;
+          }
+        }
+      } catch (e) { console.warn('loadAppSetting', key, e); }
+      try {
+        const raw = localStorage.getItem('app_setting_' + key);
+        if (raw) return JSON.parse(raw);
+      } catch (e) {}
+      return null;
+    }
+
+    async function saveAppSetting(key, value) {
+      try {
+        localStorage.setItem('app_setting_' + key, JSON.stringify(value));
+      } catch (e) {}
+      if (!supabaseClient) return;
+      try {
+        const { data: existing } = await supabaseClient.from('app_settings').select('key').eq('key', key).maybeSingle();
+        if (existing) {
+          await supabaseClient.from('app_settings').update({ value: value }).eq('key', key);
+        } else {
+          await supabaseClient.from('app_settings').insert([{ key: key, value: value }]);
+        }
+      } catch (e) {
+        console.warn('saveAppSetting gagal (local tetap):', e);
+      }
+    }
+
+    async function loadSchoolLogo() {
+      try {
+        const raw = localStorage.getItem(LOGO_SETTINGS_KEY);
+        if (raw) {
+          const o = JSON.parse(raw);
+          if (o && o.url) {
+            schoolLogoUrl = o.url;
+            schoolLogoId = o.id || null;
+            setSchoolLogoDisplay(schoolLogoUrl);
+          }
+        }
+      } catch (e) {}
+      try {
+        const v = await loadAppSetting('logo_sekolah');
+        if (v && (v.url || v.id)) {
+          schoolLogoUrl = v.url || (v.id ? ('https://drive.google.com/file/d/' + v.id + '/view') : null);
+          schoolLogoId = v.id || null;
+          try {
+            localStorage.setItem(LOGO_SETTINGS_KEY, JSON.stringify({ url: schoolLogoUrl, id: schoolLogoId }));
+          } catch (e) {}
+          setSchoolLogoDisplay(schoolLogoUrl);
+        }
+      } catch (e) { console.warn(e); }
+    }
+
+    async function loadUserFotoFromDb(role, userId) {
+      if (!role || !userId) return null;
+      // 1) kolom tabel jika ada
+      try {
+        if (supabaseClient) {
+          const table = role === 'admin' ? 'admin' : (role === 'guru' ? 'guru' : (role === 'siswa' ? 'siswa' : null));
+          if (table) {
+            const { data, error } = await supabaseClient.from(table).select('*').eq('id', userId).maybeSingle();
+            if (!error && data) {
+              const url = data.foto_url || data.foto || data.photo_url || data.photo || null;
+              const fid = data.foto_id || data.photo_id || null;
+              if (url || fid) {
+                return { url: url || (fid ? 'https://drive.google.com/file/d/' + fid + '/view' : null), id: fid, row: data };
+              }
+              return { url: null, id: null, row: data };
+            }
+          }
+        }
+      } catch (e) { console.warn('loadUserFoto table', e); }
+      // 2) app_settings fallback
+      try {
+        const v = await loadAppSetting(profilSettingsKey(role, userId));
+        if (v && (v.url || v.id)) {
+          return { url: v.url || ('https://drive.google.com/file/d/' + v.id + '/view'), id: v.id || null, row: null };
+        }
+      } catch (e) {}
+      return null;
+    }
+
+    async function saveUserFotoMeta(role, userId, url, fileId) {
+      const payload = { url: url || null, id: fileId || null, updated_at: new Date().toISOString() };
+      await saveAppSetting(profilSettingsKey(role, userId), payload);
+      if (!supabaseClient || !userId) return;
+      const table = role === 'admin' ? 'admin' : (role === 'guru' ? 'guru' : (role === 'siswa' ? 'siswa' : null));
+      if (!table) return;
+      // coba update kolom umum; jika gagal abaikan (tetap di app_settings)
+      try {
+        const { error } = await supabaseClient.from(table).update({ foto_url: url, foto_id: fileId }).eq('id', userId);
+        if (error) {
+          const { error: e2 } = await supabaseClient.from(table).update({ foto: url }).eq('id', userId);
+          if (e2) console.warn('Kolom foto belum ada di tabel ' + table + ' — memakai app_settings');
+        }
+      } catch (e) {
+        console.warn('saveUserFotoMeta table', e);
+      }
+    }
+
     function applyRole(role, skipRedirect) {
       currentRole = role;
       if (role === 'guest') {
@@ -4052,6 +4337,8 @@
         currentUserId = null;
         currentUserKode = null;
         currentUserKelas = null;
+        currentUserFoto = null;
+        currentUserFotoId = null;
         if (ROLE_DATA.siswa) ROLE_DATA.siswa.label = 'Siswa';
       }
 
@@ -4077,15 +4364,15 @@
         const d = ROLE_DATA[role];
         currentUserName = d.name;
         document.getElementById('username').textContent = d.name + ' (' + d.label + ')';
-        document.getElementById('profileBtn').textContent = d.avatar;
-        document.getElementById('sidebarAvatar').textContent = d.avatar;
+        setAvatarEl(document.getElementById('profileBtn'), currentUserFoto, d.avatar || d.name);
+        setAvatarEl(document.getElementById('sidebarAvatar'), currentUserFoto, d.avatar || d.name);
         document.getElementById('sidebarName').textContent = d.name;
         document.getElementById('sidebarRole').textContent = d.label;
       } else {
         currentUserName = 'Tamu (Belum Login)';
         document.getElementById('username').textContent = currentUserName;
-        document.getElementById('profileBtn').textContent = '?';
-        document.getElementById('sidebarAvatar').textContent = '?';
+        setAvatarEl(document.getElementById('profileBtn'), null, '?');
+        setAvatarEl(document.getElementById('sidebarAvatar'), null, '?');
         document.getElementById('sidebarName').textContent = 'Tamu';
         document.getElementById('sidebarRole').textContent = 'Belum Login';
         closeSidebar();
@@ -4183,10 +4470,212 @@
       e.preventDefault();
       openModal('modalLogin');
     });
+    let _editFotoPending = null; // { file, previewUrl } or null
+    let _editLogoPending = null;
+    let _editFotoCleared = false;
+    let _editLogoCleared = false;
+
+    function fillEditFotoPreview(url, letter) {
+      const el = document.getElementById('editFotoPreview');
+      if (!el) return;
+      const L = (letter || (currentUserName || '?')).toString().charAt(0).toUpperCase();
+      if (url) {
+        el.innerHTML = '';
+        const img = document.createElement('img');
+        img.src = gdriveViewUrl(url);
+        img.alt = '';
+        img.referrerPolicy = 'no-referrer';
+        img.onerror = function () { el.textContent = L; };
+        el.appendChild(img);
+      } else {
+        el.textContent = L;
+      }
+    }
+
+    function fillEditLogoPreview(url) {
+      const el = document.getElementById('editLogoPreview');
+      if (!el) return;
+      if (url) {
+        el.innerHTML = '';
+        const img = document.createElement('img');
+        img.src = gdriveViewUrl(url);
+        img.alt = 'Logo';
+        img.referrerPolicy = 'no-referrer';
+        img.onerror = function () { el.textContent = 'SP'; };
+        el.appendChild(img);
+      } else {
+        el.textContent = 'SP';
+      }
+    }
+
+    async function openEditProfilModal() {
+      if (currentRole === 'guest') {
+        alert('Login dulu untuk mengedit profil');
+        return;
+      }
+      _editFotoPending = null;
+      _editLogoPending = null;
+      _editFotoCleared = false;
+      _editLogoCleared = false;
+      const ff = document.getElementById('editFotoFile');
+      const fl = document.getElementById('editLogoFile');
+      if (ff) ff.value = '';
+      if (fl) fl.value = '';
+
+      document.getElementById('editNama').value = currentUserName || '';
+      document.getElementById('editPass').value = '';
+      document.getElementById('editPass2').value = '';
+
+      const namaG = document.getElementById('editNamaGroup');
+      const ug = document.getElementById('editUsernameGroup');
+      const kg = document.getElementById('editKodeGroup');
+      const passG = document.getElementById('editPassGroup');
+      const pass2G = document.getElementById('editPass2Group');
+      const logoSec = document.getElementById('editLogoSection');
+      const hint = document.getElementById('editProfilHint');
+
+      // Hak edit per peran:
+      // siswa → hanya foto
+      // guru  → foto + PIN
+      // admin → semua (nama, username, PIN, foto, logo)
+      if (currentRole === 'siswa') {
+        if (namaG) namaG.style.display = 'none';
+        if (ug) ug.style.display = 'none';
+        if (kg) {
+          kg.style.display = '';
+          document.getElementById('editKodeLabel').textContent = 'NISN';
+          document.getElementById('editKode').value = currentUserKode || '';
+        }
+        if (passG) passG.style.display = 'none';
+        if (pass2G) pass2G.style.display = 'none';
+        if (logoSec) logoSec.style.display = 'none';
+        if (hint) hint.textContent = 'Siswa hanya dapat mengubah foto profil. Nama & NISN dikelola admin.';
+      } else if (currentRole === 'guru') {
+        if (namaG) {
+          namaG.style.display = '';
+          const inp = document.getElementById('editNama');
+          if (inp) { inp.readOnly = true; inp.style.background = '#f8fafc'; inp.style.color = '#64748b'; }
+        }
+        if (ug) ug.style.display = 'none';
+        if (kg) {
+          kg.style.display = '';
+          document.getElementById('editKodeLabel').textContent = 'NIP / Kode';
+          document.getElementById('editKode').value = currentUserKode || '';
+        }
+        if (passG) passG.style.display = '';
+        if (pass2G) pass2G.style.display = '';
+        if (logoSec) logoSec.style.display = 'none';
+        if (hint) hint.textContent = 'Guru dapat mengubah foto profil dan PIN login. Nama dikelola admin.';
+      } else {
+        // admin
+        if (namaG) {
+          namaG.style.display = '';
+          const inp = document.getElementById('editNama');
+          if (inp) { inp.readOnly = false; inp.style.background = ''; inp.style.color = ''; }
+        }
+        if (ug) ug.style.display = '';
+        if (kg) kg.style.display = 'none';
+        if (passG) passG.style.display = '';
+        if (pass2G) pass2G.style.display = '';
+        if (logoSec) logoSec.style.display = '';
+        if (hint) hint.textContent = 'Admin dapat mengubah nama, username, PIN, foto, dan logo sekolah.';
+        let uname = '';
+        try {
+          if (supabaseClient && currentUserId) {
+            const { data } = await supabaseClient.from('admin').select('id, nama, username, pin').eq('id', currentUserId).maybeSingle();
+            if (data) {
+              if (data.nama) document.getElementById('editNama').value = data.nama;
+              uname = data.username || '';
+            }
+          }
+        } catch (e) {}
+        document.getElementById('editUsername').value = uname;
+        fillEditLogoPreview(schoolLogoUrl);
+      }
+
+      // muat foto terbaru
+      try {
+        const meta = await loadUserFotoFromDb(currentRole, currentUserId);
+        if (meta && meta.url) {
+          currentUserFoto = meta.url;
+          currentUserFotoId = meta.id || null;
+        }
+      } catch (e) {}
+      fillEditFotoPreview(currentUserFoto, currentUserName);
+      openModal('modalEditProfil');
+    }
+
     document.getElementById('btnEditProfil').addEventListener('click', (e) => {
       e.preventDefault();
-      openModal('modalEditProfil');
+      openEditProfilModal();
     });
+
+    document.getElementById('btnPilihFoto')?.addEventListener('click', () => {
+      document.getElementById('editFotoFile')?.click();
+    });
+    document.getElementById('btnPilihLogo')?.addEventListener('click', () => {
+      document.getElementById('editLogoFile')?.click();
+    });
+
+    document.getElementById('editFotoFile')?.addEventListener('change', function () {
+      const f = this.files && this.files[0];
+      if (!f) return;
+      if (!/^image\//i.test(f.type)) {
+        alert('Pilih file gambar (JPG/PNG/WebP)');
+        this.value = '';
+        return;
+      }
+      if (f.size > 5 * 1024 * 1024) {
+        alert('Ukuran foto maksimal 5 MB');
+        this.value = '';
+        return;
+      }
+      _editFotoCleared = false;
+      if (_editFotoPending && _editFotoPending.previewUrl) {
+        try { URL.revokeObjectURL(_editFotoPending.previewUrl); } catch (e) {}
+      }
+      const previewUrl = URL.createObjectURL(f);
+      _editFotoPending = { file: f, previewUrl };
+      fillEditFotoPreview(previewUrl, currentUserName);
+    });
+
+    document.getElementById('editLogoFile')?.addEventListener('change', function () {
+      const f = this.files && this.files[0];
+      if (!f) return;
+      if (!/^image\//i.test(f.type) && f.type !== 'image/svg+xml') {
+        alert('Pilih file gambar logo');
+        this.value = '';
+        return;
+      }
+      if (f.size > 5 * 1024 * 1024) {
+        alert('Ukuran logo maksimal 5 MB');
+        this.value = '';
+        return;
+      }
+      _editLogoCleared = false;
+      if (_editLogoPending && _editLogoPending.previewUrl) {
+        try { URL.revokeObjectURL(_editLogoPending.previewUrl); } catch (e) {}
+      }
+      const previewUrl = URL.createObjectURL(f);
+      _editLogoPending = { file: f, previewUrl };
+      fillEditLogoPreview(previewUrl);
+    });
+
+    document.getElementById('btnHapusFoto')?.addEventListener('click', () => {
+      _editFotoPending = null;
+      _editFotoCleared = true;
+      const ff = document.getElementById('editFotoFile');
+      if (ff) ff.value = '';
+      fillEditFotoPreview(null, currentUserName);
+    });
+    document.getElementById('btnHapusLogo')?.addEventListener('click', () => {
+      _editLogoPending = null;
+      _editLogoCleared = true;
+      const fl = document.getElementById('editLogoFile');
+      if (fl) fl.value = '';
+      fillEditLogoPreview(null);
+    });
+
     document.getElementById('btnLogout').addEventListener('click', async (e) => {
       e.preventDefault();
       if (await showConfirm('Yakin ingin logout?', 'Logout', '🚪')) {
@@ -4348,6 +4837,24 @@
           ROLE_DATA[role].label = 'Siswa';
         }
 
+        // muat foto profil user
+        try {
+          const meta = await loadUserFotoFromDb(role, userId);
+          if (meta && meta.url) {
+            currentUserFoto = meta.url;
+            currentUserFotoId = meta.id || null;
+          } else {
+            currentUserFoto = null;
+            currentUserFotoId = null;
+          }
+        } catch (e) {
+          currentUserFoto = null;
+          currentUserFotoId = null;
+        }
+        if (userName) {
+          ROLE_DATA[role].avatar = String(userName).charAt(0).toUpperCase();
+        }
+
         applyRole(role);
         try {
           // Admin tidak dicatat di log login
@@ -4379,16 +4886,166 @@
       if (e.key === 'Enter') document.getElementById('btnDoLogin').click();
     });
 
-    document.getElementById('btnSaveProfil').addEventListener('click', () => {
-      const nama = document.getElementById('editNama').value.trim();
-      if (!nama) {
-        alert('Nama harus diisi');
+    document.getElementById('btnSaveProfil').addEventListener('click', async () => {
+      if (currentRole === 'guest') {
+        alert('Login dulu');
         return;
       }
-      document.getElementById('username').textContent = nama + (currentRole !== 'guest' ? ' (' + ROLE_DATA[currentRole].label + ')' : '');
-      document.getElementById('sidebarName').textContent = nama;
-      closeModal('modalEditProfil');
-      alert('Profil berhasil disimpan (demo)');
+
+      // Batasan per peran
+      const canEditNama = (currentRole === 'admin');
+      const canEditUser = (currentRole === 'admin');
+      const canEditPass = (currentRole === 'admin' || currentRole === 'guru');
+      const canEditLogo = (currentRole === 'admin');
+      // foto: semua role yang login
+
+      let nama = (currentUserName || '').trim();
+      if (canEditNama) {
+        nama = document.getElementById('editNama').value.trim();
+        if (!nama) {
+          alert('Nama harus diisi');
+          return;
+        }
+      }
+
+      const pass1 = canEditPass ? (document.getElementById('editPass')?.value || '').trim() : '';
+      const pass2 = canEditPass ? (document.getElementById('editPass2')?.value || '').trim() : '';
+      if (pass1 || pass2) {
+        if (pass1.length < 4) {
+          alert('PIN / Password baru minimal 4 karakter');
+          return;
+        }
+        if (pass1 !== pass2) {
+          alert('Konfirmasi PIN / Password tidak cocok');
+          return;
+        }
+      }
+
+      const btn = document.getElementById('btnSaveProfil');
+      const prevLabel = btn ? btn.textContent : '';
+      if (btn) { btn.disabled = true; btn.textContent = 'Menyimpan...'; }
+
+      try {
+        // --- Upload foto profil ke GDrive ---
+        if (_editFotoPending && _editFotoPending.file) {
+          if (typeof uploadJawabanFile !== 'function') {
+            throw new Error('Fungsi upload belum siap');
+          }
+          if (!GDRIVE_UPLOAD_ENDPOINT) {
+            try { await loadGdriveSettingsFromDb(); } catch (e) {}
+          }
+          if (!GDRIVE_UPLOAD_ENDPOINT) {
+            throw new Error('Endpoint Google Drive belum diatur. Admin: Pengaturan → Google Drive.');
+          }
+          const safeRole = currentRole || 'user';
+          const fname = 'foto_' + safeRole + '_' + (currentUserId || 'x') + '_' + Date.now() + '.jpg';
+          const file = _editFotoPending.file;
+          // rename-ish via new File
+          const upFile = new File([file], fname, { type: file.type || 'image/jpeg' });
+          const result = await uploadJawabanFile(upFile, {
+            folderId: GDRIVE_DEFAULT_FOLDER_ID || '',
+            bankId: 'profil',
+            soalId: String(currentUserId || '0'),
+            nisn: String(currentUserKode || currentRole || 'user')
+          });
+          const url = result.url || (result.id ? ('https://drive.google.com/file/d/' + result.id + '/view') : null);
+          currentUserFoto = url;
+          currentUserFotoId = result.id || null;
+          await saveUserFotoMeta(currentRole, currentUserId, currentUserFoto, currentUserFotoId);
+          try { URL.revokeObjectURL(_editFotoPending.previewUrl); } catch (e) {}
+          _editFotoPending = null;
+        } else if (_editFotoCleared) {
+          currentUserFoto = null;
+          currentUserFotoId = null;
+          await saveUserFotoMeta(currentRole, currentUserId, null, null);
+          _editFotoCleared = false;
+        }
+
+        // --- Upload logo sekolah (admin saja) ---
+        if (canEditLogo) {
+          if (_editLogoPending && _editLogoPending.file) {
+            if (!GDRIVE_UPLOAD_ENDPOINT) {
+              try { await loadGdriveSettingsFromDb(); } catch (e) {}
+            }
+            if (!GDRIVE_UPLOAD_ENDPOINT) {
+              throw new Error('Endpoint Google Drive belum diatur.');
+            }
+            const file = _editLogoPending.file;
+            const ext = (file.name.split('.').pop() || 'png').toLowerCase();
+            const upFile = new File([file], 'logo_sekolah_' + Date.now() + '.' + ext, { type: file.type || 'image/png' });
+            const result = await uploadJawabanFile(upFile, {
+              folderId: GDRIVE_DEFAULT_FOLDER_ID || '',
+              bankId: 'logo',
+              soalId: 'sekolah',
+              nisn: 'logo'
+            });
+            schoolLogoUrl = result.url || (result.id ? ('https://drive.google.com/file/d/' + result.id + '/view') : null);
+            schoolLogoId = result.id || null;
+            const payload = { url: schoolLogoUrl, id: schoolLogoId, updated_at: new Date().toISOString() };
+            try { localStorage.setItem(LOGO_SETTINGS_KEY, JSON.stringify(payload)); } catch (e) {}
+            await saveAppSetting('logo_sekolah', payload);
+            setSchoolLogoDisplay(schoolLogoUrl);
+            try { URL.revokeObjectURL(_editLogoPending.previewUrl); } catch (e) {}
+            _editLogoPending = null;
+          } else if (_editLogoCleared) {
+            schoolLogoUrl = null;
+            schoolLogoId = null;
+            try { localStorage.removeItem(LOGO_SETTINGS_KEY); } catch (e) {}
+            await saveAppSetting('logo_sekolah', { url: null, id: null });
+            setSchoolLogoDisplay(null);
+            _editLogoCleared = false;
+          }
+        }
+
+        // --- Update data di DB sesuai hak peran ---
+        if (supabaseClient && currentUserId) {
+          if (currentRole === 'admin') {
+            const payload = {};
+            if (canEditNama) payload.nama = nama;
+            if (canEditUser) {
+              const uname = (document.getElementById('editUsername')?.value || '').trim();
+              if (uname) payload.username = uname;
+            }
+            if (pass1) payload.pin = pass1;
+            if (Object.keys(payload).length) {
+              const { error } = await supabaseClient.from('admin').update(payload).eq('id', currentUserId);
+              if (error) throw error;
+            }
+          } else if (currentRole === 'guru') {
+            // guru hanya boleh ubah PIN (nama tidak)
+            if (pass1) {
+              const { error } = await supabaseClient.from('guru').update({ pin: pass1 }).eq('id', currentUserId);
+              if (error) throw error;
+            }
+          } else if (currentRole === 'siswa') {
+            // siswa tidak mengubah nama/PIN lewat menu ini
+          }
+        }
+
+        // --- Update UI session ---
+        if (canEditNama) {
+          currentUserName = nama;
+          if (ROLE_DATA[currentRole]) {
+            ROLE_DATA[currentRole].name = nama;
+            ROLE_DATA[currentRole].avatar = nama.charAt(0).toUpperCase();
+          }
+          document.getElementById('username').textContent = nama + ' (' + (ROLE_DATA[currentRole]?.label || currentRole) + ')';
+          document.getElementById('sidebarName').textContent = nama;
+        }
+        setAvatarEl(document.getElementById('profileBtn'), currentUserFoto, currentUserName || '?');
+        setAvatarEl(document.getElementById('sidebarAvatar'), currentUserFoto, currentUserName || '?');
+        saveSession();
+
+        closeModal('modalEditProfil');
+        let okMsg = 'Profil berhasil disimpan.';
+        if (pass1) okMsg += '\nPIN sudah diubah.';
+        alert(okMsg);
+      } catch (e) {
+        console.error(e);
+        alert('Gagal menyimpan profil: ' + (e.message || e));
+      } finally {
+        if (btn) { btn.disabled = false; btn.textContent = prevLabel || 'Simpan'; }
+      }
     });
 
     let currentPage = 'dashboard';
@@ -17402,11 +18059,24 @@ async function initResetPinPage() {
         currentUserKode = ses.kode || null;
         currentUserKelas = ses.kelas || null;
         currentUserIsAlumni = !!ses.isAlumni;
+        currentUserFoto = ses.foto || null;
+        currentUserFotoId = ses.fotoId || null;
         if (currentUserIsAlumni && ses.role === 'siswa') {
           ROLE_DATA.siswa.label = 'Alumni';
         }
         applyRole(ses.role, true);
+        // refresh foto dari DB di background
+        loadUserFotoFromDb(ses.role, ses.userId).then(meta => {
+          if (meta && meta.url) {
+            currentUserFoto = meta.url;
+            currentUserFotoId = meta.id || null;
+            setAvatarEl(document.getElementById('profileBtn'), currentUserFoto, ses.name || '?');
+            setAvatarEl(document.getElementById('sidebarAvatar'), currentUserFoto, ses.name || '?');
+            saveSession();
+          }
+        }).catch(() => {});
       }
+      loadSchoolLogo().catch(() => {});
     })();
 
     initFromHash();
