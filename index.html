@@ -2258,9 +2258,12 @@
       </div>
       <div class="toolbar">
         <button class="btn btn-secondary" id="btnSimpanNilai" disabled>💾 Simpan Semua Nilai</button>
-        <button class="btn btn-outline" id="btnTemplateNilai" disabled title="Unduh template Excel (NISN & Nama siswa)">📄 Template Excel</button>
-        <button class="btn btn-outline" id="btnImportNilai" disabled title="Import nilai dari Excel">📥 Import Excel</button>
+        <button class="btn btn-outline" id="btnTemplateNilai" disabled title="Unduh template Excel 1 mapel/kelas (NISN & Nama)">📄 Template</button>
+        <button class="btn btn-outline" id="btnImportNilai" disabled title="Import nilai 1 mapel/kelas ke tabel">📥 Import</button>
+        <button class="btn btn-outline" id="btnTemplateNilaiMassal" title="Unduh template Excel semua mapel & kelas">📄 Template Massal</button>
+        <button class="btn btn-primary" id="btnImportNilaiMassal" title="Import nilai semua mapel & kelas sekaligus ke database">📥 Import Massal</button>
         <input type="file" id="fileImportNilai" accept=".xlsx,.xls,.csv" style="display:none;">
+        <input type="file" id="fileImportNilaiMassal" accept=".xlsx,.xls,.csv" style="display:none;">
         <span class="toolbar-info" id="infoInputNilai"></span>
       </div>
       <div class="table-wrap">
@@ -5772,7 +5775,56 @@
     });
 
 
-    /* ===== Import / Template Nilai (Excel) ===== */
+
+    /* ===== Import / Template Nilai (Excel) — 1 mapel + massal ===== */
+
+    function normNisnKey(v) {
+      const s = String(v == null ? '' : v).trim();
+      if (!s) return '';
+      return s.replace(/^0+/, '') || '0';
+    }
+
+    function parseNilaiCell(raw) {
+      if (raw === undefined || raw === null || String(raw).trim() === '') return null;
+      let s = String(raw).trim().replace(',', '.');
+      s = s.replace(/[^\d.\-]/g, '');
+      const num = parseFloat(s);
+      if (isNaN(num) || num < 0 || num > 100) return null;
+      return num;
+    }
+
+    function resolveMapelId(token, mapelList) {
+      const t = String(token || '').trim();
+      if (!t) return null;
+      if (/^\d+$/.test(t)) {
+        const byId = mapelList.find(m => Number(m.id) === Number(t));
+        if (byId) return byId.id;
+      }
+      const tl = t.toLowerCase();
+      let hit = mapelList.find(m => String(m.kode || '').toLowerCase() === tl);
+      if (hit) return hit.id;
+      hit = mapelList.find(m => String(m.mapel || '').toLowerCase() === tl);
+      if (hit) return hit.id;
+      hit = mapelList.find(m => {
+        const label = (String(m.kode || '') + ' – ' + String(m.mapel || '')).toLowerCase();
+        const label2 = (String(m.kode || '') + ' - ' + String(m.mapel || '')).toLowerCase();
+        return label === tl || label2 === tl || String(m.mapel || '').toLowerCase().includes(tl);
+      });
+      return hit ? hit.id : null;
+    }
+
+    function normJenisNilai(v) {
+      const u = String(v || '').trim().toUpperCase();
+      if (!u) return '';
+      const allowed = ['NH', 'TGS', 'PTS', 'ASAS', 'ASAJ', 'ASAT', 'PAS', 'PAT'];
+      if (allowed.includes(u)) return u === 'PAS' ? 'ASAS' : (u === 'PAT' ? 'ASAT' : u);
+      if (u.includes('HARIAN') || u === 'N.H' || u === 'N H') return 'NH';
+      if (u.includes('TUGAS')) return 'TGS';
+      if (u.includes('TENGAH') || u === 'UTS') return 'PTS';
+      if (u.includes('AKHIR') && u.includes('SEMESTER')) return 'ASAS';
+      return u;
+    }
+
     document.getElementById('btnTemplateNilai')?.addEventListener('click', () => {
       if (typeof XLSX === 'undefined') {
         alert('Library Excel belum termuat. Cek koneksi internet.');
@@ -5810,43 +5862,21 @@
         return;
       }
       const fi = document.getElementById('fileImportNilai');
-      if (fi) {
-        fi.value = '';
-        fi.click();
-      }
+      if (fi) { fi.value = ''; fi.click(); }
     });
 
     document.getElementById('fileImportNilai')?.addEventListener('change', async function () {
       const file = this.files && this.files[0];
       if (!file) return;
       try {
-        if (typeof bacaFileSpreadsheet !== 'function' && typeof XLSX === 'undefined') {
-          alert('Library Excel belum termuat. Cek koneksi internet.');
-          return;
-        }
-        let lines;
-        if (typeof bacaFileSpreadsheet === 'function') {
-          lines = await bacaFileSpreadsheet(file);
-        } else {
-          const data = await file.arrayBuffer();
-          const wb = XLSX.read(data, { type: 'array', cellDates: true });
-          const sheet = wb.Sheets[wb.SheetNames[0]];
-          lines = XLSX.utils.sheet_to_json(sheet, { header: 1, defval: '', raw: false });
-        }
-        if (!lines || lines.length < 2) {
-          alert('File kosong / tidak valid');
-          return;
-        }
+        const lines = await bacaFileSpreadsheet(file);
+        if (!lines || lines.length < 2) { alert('File kosong / tidak valid'); return; }
 
-        // Deteksi kolom: cari header NISN & Nilai (fleksibel)
         const header = (lines[0] || []).map(h => String(h || '').trim().toLowerCase());
         let idxNisn = header.findIndex(h => h === 'nisn' || h === 'nis' || h.includes('nisn'));
         let idxNilai = header.findIndex(h => h === 'nilai' || h === 'score' || h === 'angka' || h === 'nilai siswa');
-        let idxNama = header.findIndex(h => h === 'nama' || h === 'nama siswa');
-        // Fallback kolom posisi: NISN | Nama | Nilai
         if (idxNisn < 0) idxNisn = 0;
         if (idxNilai < 0) idxNilai = header.length >= 3 ? 2 : 1;
-        if (idxNama < 0) idxNama = 1;
 
         const mapByNisn = {};
         let parsed = 0;
@@ -5854,16 +5884,10 @@
           const row = lines[i] || [];
           const nisn = String(row[idxNisn] != null ? row[idxNisn] : '').trim();
           if (!nisn) continue;
-          let rawVal = row[idxNilai];
-          if (rawVal === undefined || rawVal === null || String(rawVal).trim() === '') continue;
-          // angka: dukung koma desimal
-          let s = String(rawVal).trim().replace(',', '.');
-          s = s.replace(/[^\d.\-]/g, '');
-          const num = parseFloat(s);
-          if (isNaN(num) || num < 0 || num > 100) continue;
+          const num = parseNilaiCell(row[idxNilai]);
+          if (num === null) continue;
           mapByNisn[nisn] = num;
-          // juga tanpa leading zero variation
-          mapByNisn[nisn.replace(/^0+/, '') || '0'] = num;
+          mapByNisn[normNisnKey(nisn)] = num;
           parsed++;
         }
         if (!parsed) {
@@ -5872,50 +5896,382 @@
         }
 
         let matched = 0;
-        let unmatched = 0;
         document.querySelectorAll('#tbodyInputNilai .nilai-input').forEach(inp => {
           const tr = inp.closest('tr');
-          const nisnCell = tr ? tr.children[1] : null;
-          const nisn = nisnCell ? String(nisnCell.textContent || '').trim() : '';
+          const nisn = tr ? String(tr.children[1]?.textContent || '').trim() : '';
           let val = mapByNisn[nisn];
-          if (val === undefined && nisn) {
-            val = mapByNisn[nisn.replace(/^0+/, '') || '0'];
-          }
+          if (val === undefined && nisn) val = mapByNisn[normNisnKey(nisn)];
           if (val !== undefined) {
             inp.value = String(val);
-            // sinkron ke cache list
             const sid = Number(inp.dataset.siswaId);
             const item = (siswaNilaiList || []).find(x => Number(x.id) === sid);
             if (item) item._nilai = val;
             matched++;
           }
         });
-        // hitung yang di file tapi tidak di tabel
-        const tableNisn = new Set();
-        document.querySelectorAll('#tbodyInputNilai tr[data-siswa-id]').forEach(tr => {
-          const n = String(tr.children[1]?.textContent || '').trim();
-          if (n) {
-            tableNisn.add(n);
-            tableNisn.add(n.replace(/^0+/, '') || '0');
-          }
-        });
-        Object.keys(mapByNisn).forEach(n => {
-          if (!tableNisn.has(n) && !tableNisn.has(String(n).replace(/^0+/, '') || '0')) unmatched++;
-        });
-        // unmatched dihitung per key unik ~ /2 karena kita duplikasi key
-        unmatched = Math.max(0, Math.floor(unmatched / 2));
 
         const info = document.getElementById('infoInputNilai');
-        if (info) {
-          info.textContent = (siswaNilaiList?.length || 0) + ' siswa · terisi dari Excel: ' + matched;
-        }
-        let msg = 'Import selesai.\nNilai terisi: ' + matched + ' siswa';
-        if (unmatched > 0) msg += '\n(' + unmatched + ' NISN di file tidak cocok dengan siswa di tabel)';
-        msg += '\n\nPeriksa nilai di tabel, lalu klik "Simpan Semua Nilai".';
-        alert(msg);
+        if (info) info.textContent = (siswaNilaiList?.length || 0) + ' siswa · terisi dari Excel: ' + matched;
+        alert('Import selesai.\nNilai terisi: ' + matched + ' siswa\n\nPeriksa nilai di tabel, lalu klik "Simpan Semua Nilai".');
       } catch (e) {
         console.error(e);
         alert('Gagal membaca file: ' + (e.message || e));
+      } finally {
+        this.value = '';
+      }
+    });
+
+    /* ---- Template & Import MASSAL (semua mapel / kelas) ---- */
+
+    document.getElementById('btnTemplateNilaiMassal')?.addEventListener('click', async () => {
+      if (typeof XLSX === 'undefined') {
+        alert('Library Excel belum termuat. Cek koneksi internet.');
+        return;
+      }
+      try {
+        await loadAktifPeriode();
+        await loadMasterMapelKelas();
+        let mapelList = masterMapel.slice();
+        let kelasList = masterKelas.slice();
+
+        if (currentRole === 'guru' && currentUserId && supabaseClient) {
+          try {
+            const [gm, gk] = await Promise.all([
+              supabaseClient.from('guru_mapel').select('mapel_id').eq('guru_id', currentUserId),
+              supabaseClient.from('guru_kelas').select('kelas_id').eq('guru_id', currentUserId)
+            ]);
+            const mapelIds = (gm.data || []).map(r => r.mapel_id);
+            const kelasIds = (gk.data || []).map(r => r.kelas_id);
+            if (mapelIds.length) mapelList = masterMapel.filter(m => mapelIds.includes(m.id));
+            if (kelasIds.length) kelasList = masterKelas.filter(k => kelasIds.includes(k.id));
+          } catch (e) { console.warn(e); }
+        }
+
+        // Ambil sampel siswa aktif (maks ~40 baris contoh)
+        let siswaSample = [];
+        if (supabaseClient) {
+          const { data } = await supabaseClient.from('siswa')
+            .select('nisn, nama, kelas').eq('status', 'Aktif').order('kelas').order('nama').limit(30);
+          siswaSample = data || [];
+        } else {
+          if (!dataSiswa.length) await loadSiswa();
+          siswaSample = dataSiswa.filter(s => (s.status || 'Aktif') === 'Aktif').slice(0, 30);
+        }
+
+        const jenisDefault = document.getElementById('inJenis')?.value || 'NH';
+        const keDefault = document.getElementById('inKe')?.value || '1';
+        const firstMapelKode = mapelList[0] ? (mapelList[0].kode || mapelList[0].id) : 'MTK';
+
+        const aoa = [
+          ['NISN', 'Nama', 'Kelas', 'Kode_Mapel', 'Jenis', 'Ke', 'Nilai'],
+        ];
+        if (siswaSample.length) {
+          siswaSample.forEach(s => {
+            aoa.push([
+              String(s.nisn || ''),
+              String(s.nama || ''),
+              String(s.kelas || ''),
+              String(firstMapelKode),
+              jenisDefault,
+              Number(keDefault) || 1,
+              ''
+            ]);
+          });
+        } else {
+          aoa.push(['0012345678', 'Contoh Siswa', '9A', 'MTK', 'NH', 1, 85]);
+          aoa.push(['0012345679', 'Contoh Siswa 2', '9A', 'BINDO', 'NH', 1, 78]);
+        }
+
+        // Sheet referensi kode mapel
+        const refAoa = [
+          ['id', 'Kode_Mapel', 'Nama_Mapel'],
+          ...mapelList.map(m => [m.id, m.kode || '', m.mapel || ''])
+        ];
+        const kelasAoa = [
+          ['Kelas'],
+          ...kelasList.map(k => [k.kelas || k])
+        ];
+
+        const ws = XLSX.utils.aoa_to_sheet(aoa);
+        ws['!cols'] = [{ wch: 14 }, { wch: 26 }, { wch: 8 }, { wch: 12 }, { wch: 8 }, { wch: 6 }, { wch: 8 }];
+        const wsRef = XLSX.utils.aoa_to_sheet(refAoa);
+        wsRef['!cols'] = [{ wch: 6 }, { wch: 12 }, { wch: 32 }];
+        const wsKelas = XLSX.utils.aoa_to_sheet(kelasAoa);
+
+        const wb = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(wb, ws, 'Nilai');
+        XLSX.utils.book_append_sheet(wb, wsRef, 'Ref_Mapel');
+        XLSX.utils.book_append_sheet(wb, wsKelas, 'Ref_Kelas');
+        const ta = (aktifPeriode && aktifPeriode.tahun_ajaran) ? String(aktifPeriode.tahun_ajaran).replace(/\//g, '-') : 'TA';
+        XLSX.writeFile(wb, 'Template_Nilai_Massal_' + ta + '.xlsx');
+      } catch (e) {
+        console.error(e);
+        alert('Gagal buat template: ' + (e.message || e));
+      }
+    });
+
+    document.getElementById('btnImportNilaiMassal')?.addEventListener('click', () => {
+      if (currentRole !== 'admin' && currentRole !== 'guru') {
+        alert('Hanya Admin/Guru yang dapat import nilai massal');
+        return;
+      }
+      const fi = document.getElementById('fileImportNilaiMassal');
+      if (fi) { fi.value = ''; fi.click(); }
+    });
+
+    document.getElementById('fileImportNilaiMassal')?.addEventListener('change', async function () {
+      const file = this.files && this.files[0];
+      if (!file) return;
+      try {
+        if (!aktifPeriode) await loadAktifPeriode();
+        if (!aktifPeriode) {
+          alert('Belum ada periode aktif. Buat periode di Pengaturan → Periode.');
+          return;
+        }
+        await loadMasterMapelKelas();
+
+        let mapelList = masterMapel.slice();
+        let allowedMapelIds = null;
+        let allowedKelas = null;
+        if (currentRole === 'guru' && currentUserId && supabaseClient) {
+          try {
+            const [gm, gk] = await Promise.all([
+              supabaseClient.from('guru_mapel').select('mapel_id').eq('guru_id', currentUserId),
+              supabaseClient.from('guru_kelas').select('kelas_id').eq('guru_id', currentUserId)
+            ]);
+            const mapelIds = (gm.data || []).map(r => Number(r.mapel_id));
+            const kelasIds = (gk.data || []).map(r => r.kelas_id);
+            if (mapelIds.length) {
+              allowedMapelIds = new Set(mapelIds);
+              mapelList = masterMapel.filter(m => allowedMapelIds.has(Number(m.id)));
+            }
+            if (kelasIds.length) {
+              const kelasNames = masterKelas.filter(k => kelasIds.includes(k.id)).map(k => String(k.kelas));
+              allowedKelas = new Set(kelasNames);
+            }
+          } catch (e) { console.warn(e); }
+        }
+
+        const lines = await bacaFileSpreadsheet(file);
+        if (!lines || lines.length < 2) { alert('File kosong / tidak valid'); return; }
+
+        const header = (lines[0] || []).map(h => String(h || '').trim().toLowerCase().replace(/\s+/g, '_'));
+        const findCol = (...names) => {
+          for (const n of names) {
+            const i = header.findIndex(h => h === n || h.includes(n));
+            if (i >= 0) return i;
+          }
+          return -1;
+        };
+        let idxNisn = findCol('nisn', 'nis');
+        let idxNama = findCol('nama');
+        let idxKelas = findCol('kelas');
+        let idxMapel = findCol('kode_mapel', 'kode mapel', 'mapel', 'kode');
+        let idxJenis = findCol('jenis', 'jenis_penilaian', 'tipe');
+        let idxKe = findCol('ke', 'ke_', 'penilaian_ke', 'no');
+        let idxNilai = findCol('nilai', 'score', 'angka');
+
+        // Fallback posisi default: NISN | Nama | Kelas | Kode_Mapel | Jenis | Ke | Nilai
+        if (idxNisn < 0) idxNisn = 0;
+        if (idxKelas < 0) idxKelas = 2;
+        if (idxMapel < 0) idxMapel = 3;
+        if (idxJenis < 0) idxJenis = 4;
+        if (idxKe < 0) idxKe = 5;
+        if (idxNilai < 0) idxNilai = 6;
+
+        // Kumpulkan baris valid
+        const rawRows = [];
+        const skipReasons = { noNisn: 0, noNilai: 0, noMapel: 0, noKelas: 0, noJenis: 0 };
+        for (let i = 1; i < lines.length; i++) {
+          const row = lines[i] || [];
+          const nisn = String(row[idxNisn] != null ? row[idxNisn] : '').trim();
+          if (!nisn) { skipReasons.noNisn++; continue; }
+          const num = parseNilaiCell(row[idxNilai]);
+          if (num === null) { skipReasons.noNilai++; continue; }
+          const kelas = String(row[idxKelas] != null ? row[idxKelas] : '').trim();
+          const mapelTok = String(row[idxMapel] != null ? row[idxMapel] : '').trim();
+          const jenis = normJenisNilai(row[idxJenis]);
+          let ke = parseInt(String(row[idxKe] != null ? row[idxKe] : '1').trim(), 10);
+          if (isNaN(ke) || ke < 1) ke = 1;
+          if (ke > 50) ke = 50;
+          if (!kelas) { skipReasons.noKelas++; continue; }
+          if (!mapelTok) { skipReasons.noMapel++; continue; }
+          if (!jenis) { skipReasons.noJenis++; continue; }
+          rawRows.push({
+            nisn,
+            nisnKey: normNisnKey(nisn),
+            nama: idxNama >= 0 ? String(row[idxNama] || '').trim() : '',
+            kelas,
+            mapelTok,
+            jenis,
+            ke,
+            nilai: num
+          });
+        }
+
+        if (!rawRows.length) {
+          alert('Tidak ada baris valid.\nKolom wajib: NISN, Kelas, Kode_Mapel, Jenis, Ke, Nilai (0–100).');
+          return;
+        }
+
+        // Resolve mapel
+        let mapelFail = 0;
+        let kelasForbidden = 0;
+        let mapelForbidden = 0;
+        const prepared = [];
+        for (const r of rawRows) {
+          const mid = resolveMapelId(r.mapelTok, mapelList.length ? mapelList : masterMapel);
+          if (!mid) { mapelFail++; continue; }
+          if (allowedMapelIds && !allowedMapelIds.has(Number(mid))) { mapelForbidden++; continue; }
+          if (allowedKelas && !allowedKelas.has(r.kelas)) { kelasForbidden++; continue; }
+          prepared.push({ ...r, mapel_id: Number(mid) });
+        }
+
+        if (!prepared.length) {
+          alert('Tidak ada baris yang bisa diimpor.\nMapel tidak dikenali: ' + mapelFail +
+            (mapelForbidden ? '\nMapel di luar wewenang guru: ' + mapelForbidden : '') +
+            (kelasForbidden ? '\nKelas di luar wewenang guru: ' + kelasForbidden : ''));
+          return;
+        }
+
+        // Load siswa by NISN
+        const nisnSet = [...new Set(prepared.map(r => r.nisn))];
+        const nisnKeySet = [...new Set(prepared.map(r => r.nisnKey))];
+        let siswaByNisn = {};
+        let siswaByKey = {};
+
+        if (supabaseClient) {
+          // chunk query
+          const chunk = 200;
+          for (let i = 0; i < nisnSet.length; i += chunk) {
+            const part = nisnSet.slice(i, i + chunk);
+            const { data, error } = await supabaseClient.from('siswa')
+              .select('id, nisn, nama, kelas, status')
+              .in('nisn', part);
+            if (error) throw error;
+            (data || []).forEach(s => {
+              siswaByNisn[String(s.nisn)] = s;
+              siswaByKey[normNisnKey(s.nisn)] = s;
+            });
+          }
+          // fallback: if some missing, try all aktif (small schools)
+          const missing = prepared.filter(r => !siswaByNisn[r.nisn] && !siswaByKey[r.nisnKey]);
+          if (missing.length && missing.length < 80) {
+            const { data } = await supabaseClient.from('siswa').select('id, nisn, nama, kelas, status').eq('status', 'Aktif');
+            (data || []).forEach(s => {
+              siswaByNisn[String(s.nisn)] = s;
+              siswaByKey[normNisnKey(s.nisn)] = s;
+            });
+          }
+        } else {
+          if (!dataSiswa.length) await loadSiswa();
+          dataSiswa.forEach(s => {
+            siswaByNisn[String(s.nisn)] = s;
+            siswaByKey[normNisnKey(s.nisn)] = s;
+          });
+        }
+
+        const toSave = [];
+        let siswaFail = 0;
+        for (const r of prepared) {
+          const s = siswaByNisn[r.nisn] || siswaByKey[r.nisnKey];
+          if (!s) { siswaFail++; continue; }
+          toSave.push({
+            periode_id: aktifPeriode.id,
+            siswa_id: Number(s.id),
+            mapel_id: r.mapel_id,
+            kelas: r.kelas || s.kelas || '',
+            jenis: r.jenis,
+            ke: r.ke,
+            nilai: r.nilai,
+            guru_id: (currentRole === 'guru' && currentUserId) ? Number(currentUserId) : null,
+            updated_at: new Date().toISOString()
+          });
+        }
+
+        if (!toSave.length) {
+          alert('Tidak ada data yang cocok dengan siswa di database.\nNISN tidak ditemukan: ' + siswaFail);
+          return;
+        }
+
+        // Ringkas unique kombinasi
+        const comboSet = new Set(toSave.map(r => r.mapel_id + '|' + r.kelas + '|' + r.jenis + '|' + r.ke));
+        let msgConfirm = 'Import MASSAL nilai ke database?\n\n' +
+          '• Baris siap simpan: ' + toSave.length + '\n' +
+          '• Kombinasi mapel/kelas/jenis/ke: ' + comboSet.size + '\n' +
+          '• Periode: ' + (aktifPeriode.tahun_ajaran || aktifPeriode.id);
+        if (siswaFail) msgConfirm += '\n• NISN tidak ditemukan: ' + siswaFail;
+        if (mapelFail) msgConfirm += '\n• Mapel tidak dikenali: ' + mapelFail;
+        if (mapelForbidden) msgConfirm += '\n• Mapel di luar wewenang: ' + mapelForbidden;
+        if (kelasForbidden) msgConfirm += '\n• Kelas di luar wewenang: ' + kelasForbidden;
+        msgConfirm += '\n\nNilai lama dengan kombinasi yang sama akan diganti.';
+
+        if (!(await showConfirm(msgConfirm, 'Import Nilai Massal', '📥'))) return;
+
+        if (!supabaseClient) {
+          alert('Butuh koneksi Supabase untuk menyimpan.');
+          return;
+        }
+
+        // Group by (mapel_id, kelas, jenis, ke) for efficient delete+insert
+        const groups = {};
+        toSave.forEach(r => {
+          const key = r.mapel_id + '|' + r.kelas + '|' + r.jenis + '|' + r.ke;
+          if (!groups[key]) groups[key] = [];
+          groups[key].push(r);
+        });
+
+        let saved = 0;
+        let errCount = 0;
+        const groupKeys = Object.keys(groups);
+        for (const key of groupKeys) {
+          const rows = groups[key];
+          const sample = rows[0];
+          const siswaIds = rows.map(r => r.siswa_id);
+          try {
+            // hapus nilai lama untuk siswa-siswa ini pada kombinasi yang sama
+            // chunk delete
+            const chunk = 150;
+            for (let i = 0; i < siswaIds.length; i += chunk) {
+              const part = siswaIds.slice(i, i + chunk);
+              const { error: delErr } = await supabaseClient.from('nilai').delete()
+                .eq('periode_id', sample.periode_id)
+                .eq('mapel_id', sample.mapel_id)
+                .eq('kelas', sample.kelas)
+                .eq('jenis', sample.jenis)
+                .eq('ke', sample.ke)
+                .in('siswa_id', part);
+              if (delErr) throw delErr;
+            }
+            for (let i = 0; i < rows.length; i += chunk) {
+              const part = rows.slice(i, i + chunk);
+              const { error: insErr } = await supabaseClient.from('nilai').insert(part);
+              if (insErr) throw insErr;
+              saved += part.length;
+            }
+          } catch (e) {
+            console.error('group fail', key, e);
+            errCount++;
+          }
+        }
+
+        let resultMsg = 'Import massal selesai.\n\nBerhasil disimpan: ' + saved + ' nilai';
+        if (errCount) resultMsg += '\nGagal (grup): ' + errCount;
+        if (siswaFail) resultMsg += '\nNISN tidak ditemukan: ' + siswaFail;
+        if (mapelFail) resultMsg += '\nMapel tidak dikenali: ' + mapelFail;
+        alert(resultMsg);
+
+        // Refresh tabel jika filter saat ini cocok
+        const curMapel = document.getElementById('inMapel')?.value;
+        const curKelas = document.getElementById('inKelas')?.value;
+        if (curMapel && curKelas && document.getElementById('btnLoadSiswaNilai')) {
+          document.getElementById('btnLoadSiswaNilai').click();
+        }
+        const info = document.getElementById('infoInputNilai');
+        if (info) info.textContent = 'Import massal: ' + saved + ' nilai tersimpan';
+      } catch (e) {
+        console.error(e);
+        alert('Gagal import massal: ' + (e.message || e));
       } finally {
         this.value = '';
       }
