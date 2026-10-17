@@ -3857,6 +3857,18 @@
       </div>
     </div>
   </div>
+
+<div id="importProgressOverlay" style="display:none;position:fixed;inset:0;background:rgba(15,23,42,.55);z-index:4000;align-items:center;justify-content:center;padding:16px;">
+  <div style="background:#fff;border-radius:14px;width:100%;max-width:420px;padding:18px 16px;box-shadow:0 20px 40px rgba(0,0,0,.2);">
+    <div style="font-size:15px;font-weight:700;margin-bottom:8px;" id="ipTitle">Import Nilai</div>
+    <div style="font-size:13px;color:#475569;margin-bottom:10px;line-height:1.45;" id="ipStatus">Memulai...</div>
+    <div style="height:10px;background:#e2e8f0;border-radius:999px;overflow:hidden;margin-bottom:8px;">
+      <div id="ipBar" style="height:100%;width:0%;background:linear-gradient(90deg,#2563eb,#0d9488);transition:width .2s;"></div>
+    </div>
+    <div style="font-size:12px;color:#64748b;" id="ipPct">0%</div>
+    <div id="ipLog" style="margin-top:10px;max-height:140px;overflow-y:auto;font-size:11px;color:#334155;line-height:1.4;background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;padding:8px;display:none;"></div>
+  </div>
+</div>
 <div class="modal-overlay" id="modalImport">
     <div class="modal">
       <div class="modal-header">
@@ -6118,19 +6130,36 @@
         let mapelFail = 0;
         let kelasForbidden = 0;
         let mapelForbidden = 0;
+        const mapelFailSamples = [];
+        const kelasForbidSamples = [];
+        const mapelForbidSamples = [];
         const prepared = [];
         for (const r of rawRows) {
           const mid = resolveMapelId(r.mapelTok, mapelList.length ? mapelList : masterMapel);
-          if (!mid) { mapelFail++; continue; }
-          if (allowedMapelIds && !allowedMapelIds.has(Number(mid))) { mapelForbidden++; continue; }
-          if (allowedKelas && !allowedKelas.has(r.kelas)) { kelasForbidden++; continue; }
+          if (!mid) {
+            mapelFail++;
+            if (mapelFailSamples.length < 8) mapelFailSamples.push(String(r.mapelTok));
+            continue;
+          }
+          if (allowedMapelIds && !allowedMapelIds.has(Number(mid))) {
+            mapelForbidden++;
+            if (mapelForbidSamples.length < 8) mapelForbidSamples.push(String(r.mapelTok));
+            continue;
+          }
+          if (allowedKelas && !allowedKelas.has(r.kelas)) {
+            kelasForbidden++;
+            if (kelasForbidSamples.length < 8) kelasForbidSamples.push(String(r.kelas));
+            continue;
+          }
           prepared.push({ ...r, mapel_id: Number(mid) });
         }
 
         if (!prepared.length) {
-          alert('Tidak ada baris yang bisa diimpor.\nMapel tidak dikenali: ' + mapelFail +
-            (mapelForbidden ? '\nMapel di luar wewenang guru: ' + mapelForbidden : '') +
-            (kelasForbidden ? '\nKelas di luar wewenang guru: ' + kelasForbidden : ''));
+          let msg = 'Tidak ada baris yang bisa diimpor.';
+          if (mapelFail) msg += '\nMapel tidak dikenali: ' + mapelFail + (mapelFailSamples.length ? ('\n  contoh: ' + [...new Set(mapelFailSamples)].join(', ')) : '');
+          if (mapelForbidden) msg += '\nMapel di luar wewenang guru: ' + mapelForbidden + (mapelForbidSamples.length ? ('\n  contoh: ' + [...new Set(mapelForbidSamples)].join(', ')) : '');
+          if (kelasForbidden) msg += '\nKelas di luar wewenang guru: ' + kelasForbidden + (kelasForbidSamples.length ? ('\n  contoh: ' + [...new Set(kelasForbidSamples)].join(', ')) : '');
+          alert(msg);
           return;
         }
 
@@ -6173,9 +6202,14 @@
 
         const toSave = [];
         let siswaFail = 0;
+        const siswaFailSamples = [];
         for (const r of prepared) {
           const s = siswaByNisn[r.nisn] || siswaByKey[r.nisnKey];
-          if (!s) { siswaFail++; continue; }
+          if (!s) {
+            siswaFail++;
+            if (siswaFailSamples.length < 8) siswaFailSamples.push(r.nisn + (r.nama ? (' (' + r.nama + ')') : ''));
+            continue;
+          }
           toSave.push({
             periode_id: aktifPeriode.id,
             siswa_id: Number(s.id),
@@ -6190,7 +6224,9 @@
         }
 
         if (!toSave.length) {
-          alert('Tidak ada data yang cocok dengan siswa di database.\nNISN tidak ditemukan: ' + siswaFail);
+          let msg = 'Tidak ada data yang cocok dengan siswa di database.\nNISN tidak ditemukan: ' + siswaFail;
+          if (siswaFailSamples.length) msg += '\n  contoh: ' + siswaFailSamples.join(', ');
+          alert(msg);
           return;
         }
 
@@ -6200,10 +6236,22 @@
           '• Baris siap simpan: ' + toSave.length + '\n' +
           '• Kombinasi mapel/kelas/jenis/ke: ' + comboSet.size + '\n' +
           '• Periode: ' + (aktifPeriode.tahun_ajaran || aktifPeriode.id);
-        if (siswaFail) msgConfirm += '\n• NISN tidak ditemukan: ' + siswaFail;
-        if (mapelFail) msgConfirm += '\n• Mapel tidak dikenali: ' + mapelFail;
-        if (mapelForbidden) msgConfirm += '\n• Mapel di luar wewenang: ' + mapelForbidden;
-        if (kelasForbidden) msgConfirm += '\n• Kelas di luar wewenang: ' + kelasForbidden;
+        if (siswaFail) {
+          msgConfirm += '\n• NISN tidak ditemukan: ' + siswaFail;
+          if (siswaFailSamples.length) msgConfirm += '\n  contoh: ' + siswaFailSamples.join(', ');
+        }
+        if (mapelFail) {
+          msgConfirm += '\n• Mapel tidak dikenali: ' + mapelFail;
+          if (mapelFailSamples.length) msgConfirm += '\n  contoh kode: ' + [...new Set(mapelFailSamples)].join(', ');
+        }
+        if (mapelForbidden) {
+          msgConfirm += '\n• Mapel di luar wewenang: ' + mapelForbidden;
+          if (mapelForbidSamples.length) msgConfirm += '\n  contoh: ' + [...new Set(mapelForbidSamples)].join(', ');
+        }
+        if (kelasForbidden) {
+          msgConfirm += '\n• Kelas di luar wewenang: ' + kelasForbidden;
+          if (kelasForbidSamples.length) msgConfirm += '\n  contoh: ' + [...new Set(kelasForbidSamples)].join(', ');
+        }
         msgConfirm += '\n\nNilai lama dengan kombinasi yang sama akan diganti.';
 
         if (!(await showConfirm(msgConfirm, 'Import Nilai Massal', '📥'))) return;
@@ -6213,7 +6261,40 @@
           return;
         }
 
-        // Group by (mapel_id, kelas, jenis, ke) for efficient delete+insert
+        const mapelLabel = {};
+        (masterMapel || []).forEach(m => {
+          mapelLabel[Number(m.id)] = (m.kode ? m.kode + ' – ' : '') + (m.mapel || ('id:' + m.id));
+        });
+
+        function showImportProgress(show) {
+          const el = document.getElementById('importProgressOverlay');
+          if (!el) return;
+          el.style.display = show ? 'flex' : 'none';
+          if (show) {
+            const log = document.getElementById('ipLog');
+            if (log) { log.innerHTML = ''; log.style.display = 'none'; }
+          }
+        }
+        function setImportProgress(pct, status, logLine) {
+          const bar = document.getElementById('ipBar');
+          const pctEl = document.getElementById('ipPct');
+          const st = document.getElementById('ipStatus');
+          if (bar) bar.style.width = Math.max(0, Math.min(100, pct)) + '%';
+          if (pctEl) pctEl.textContent = Math.round(pct) + '%';
+          if (st && status != null) st.textContent = status;
+          if (logLine) {
+            const log = document.getElementById('ipLog');
+            if (log) {
+              log.style.display = 'block';
+              const div = document.createElement('div');
+              div.textContent = logLine;
+              log.appendChild(div);
+              log.scrollTop = log.scrollHeight;
+            }
+          }
+        }
+
+        // Group by (mapel_id, kelas, jenis, ke)
         const groups = {};
         toSave.forEach(r => {
           const key = r.mapel_id + '|' + r.kelas + '|' + r.jenis + '|' + r.ke;
@@ -6222,16 +6303,43 @@
         });
 
         let saved = 0;
-        let errCount = 0;
+        let failedRows = 0;
+        const groupErrors = [];
         const groupKeys = Object.keys(groups);
-        for (const key of groupKeys) {
+        const totalGroups = groupKeys.length;
+        const chunk = 80;
+
+        showImportProgress(true);
+        setImportProgress(2, 'Menyiapkan ' + totalGroups + ' grup (mapel/kelas/jenis)...');
+
+        for (let gi = 0; gi < groupKeys.length; gi++) {
+          const key = groupKeys[gi];
           const rows = groups[key];
           const sample = rows[0];
-          const siswaIds = rows.map(r => r.siswa_id);
+          const labelMapel = mapelLabel[Number(sample.mapel_id)] || ('mapel_id=' + sample.mapel_id);
+          const labelGrup = labelMapel + ' · ' + sample.kelas + ' · ' + sample.jenis + sample.ke;
+          const pctBase = 5 + (gi / Math.max(1, totalGroups)) * 90;
+          setImportProgress(pctBase, 'Grup ' + (gi + 1) + '/' + totalGroups + ': ' + labelGrup + ' (' + rows.length + ' nilai)');
+
+          // pastikan nilai numeric/string aman + buang field undefined
+          const cleanRows = rows.map(r => {
+            const o = {
+              periode_id: r.periode_id,
+              siswa_id: r.siswa_id,
+              mapel_id: r.mapel_id,
+              kelas: r.kelas,
+              jenis: r.jenis,
+              ke: r.ke,
+              nilai: Number(r.nilai),
+              updated_at: r.updated_at || new Date().toISOString()
+            };
+            if (r.guru_id != null && r.guru_id !== '') o.guru_id = Number(r.guru_id);
+            return o;
+          });
+          const siswaIds = cleanRows.map(r => r.siswa_id);
+
           try {
-            // hapus nilai lama untuk siswa-siswa ini pada kombinasi yang sama
-            // chunk delete
-            const chunk = 150;
+            // DELETE lama
             for (let i = 0; i < siswaIds.length; i += chunk) {
               const part = siswaIds.slice(i, i + chunk);
               const { error: delErr } = await supabaseClient.from('nilai').delete()
@@ -6241,24 +6349,97 @@
                 .eq('jenis', sample.jenis)
                 .eq('ke', sample.ke)
                 .in('siswa_id', part);
-              if (delErr) throw delErr;
+              if (delErr) {
+                const err = new Error('Hapus lama gagal: ' + (delErr.message || JSON.stringify(delErr)));
+                err.code = delErr.code;
+                err.details = delErr.details;
+                err.hint = delErr.hint;
+                throw err;
+              }
             }
-            for (let i = 0; i < rows.length; i += chunk) {
-              const part = rows.slice(i, i + chunk);
+            // INSERT baru (batch); jika gagal coba per-baris
+            let groupSaved = 0;
+            let groupFailDetail = [];
+            for (let i = 0; i < cleanRows.length; i += chunk) {
+              const part = cleanRows.slice(i, i + chunk);
               const { error: insErr } = await supabaseClient.from('nilai').insert(part);
-              if (insErr) throw insErr;
-              saved += part.length;
+              if (!insErr) {
+                groupSaved += part.length;
+                continue;
+              }
+              // fallback satu per satu untuk tahu baris bermasalah
+              setImportProgress(
+                pctBase + 2,
+                'Grup ' + (gi + 1) + '/' + totalGroups + ': batch gagal, coba per baris...',
+                '⚠ ' + labelGrup + ' batch gagal: ' + (insErr.message || insErr.code || 'error')
+              );
+              for (const one of part) {
+                const { error: oneErr } = await supabaseClient.from('nilai').insert([one]);
+                if (!oneErr) {
+                  groupSaved++;
+                } else {
+                  groupFailDetail.push({
+                    siswa_id: one.siswa_id,
+                    msg: oneErr.message || oneErr.code || String(oneErr)
+                  });
+                }
+              }
+            }
+            saved += groupSaved;
+            failedRows += groupFailDetail.length;
+            if (groupFailDetail.length) {
+              const uniqMsg = [...new Set(groupFailDetail.map(x => x.msg))].slice(0, 3);
+              const errText = labelGrup + ' — ' + groupFailDetail.length + ' baris gagal. ' + uniqMsg.join(' | ');
+              groupErrors.push(errText);
+              setImportProgress(pctBase + 3, null, '✖ ' + errText);
+            } else {
+              setImportProgress(pctBase + 3, null, '✓ ' + labelGrup + ' · ' + groupSaved + ' nilai');
             }
           } catch (e) {
             console.error('group fail', key, e);
-            errCount++;
+            failedRows += rows.length;
+            const reason = (e && (e.message || e.details || e.hint || e.code)) ? String(e.message || e.details || e.hint || e.code) : String(e);
+            const errText = labelGrup + ' — SEMUA gagal (' + rows.length + ' nilai). Penyebab: ' + reason;
+            groupErrors.push(errText);
+            setImportProgress(pctBase + 3, null, '✖ ' + errText);
           }
         }
 
-        let resultMsg = 'Import massal selesai.\n\nBerhasil disimpan: ' + saved + ' nilai';
-        if (errCount) resultMsg += '\nGagal (grup): ' + errCount;
-        if (siswaFail) resultMsg += '\nNISN tidak ditemukan: ' + siswaFail;
-        if (mapelFail) resultMsg += '\nMapel tidak dikenali: ' + mapelFail;
+        setImportProgress(100, 'Selesai. Menyusun laporan...');
+        await new Promise(r => setTimeout(r, 350));
+        showImportProgress(false);
+
+        // Laporan detail
+        let resultMsg = 'Import massal selesai.\n\n';
+        resultMsg += '✓ Berhasil disimpan: ' + saved + ' nilai\n';
+        if (failedRows) resultMsg += '✖ Gagal tersimpan: ' + failedRows + ' nilai\n';
+        if (groupErrors.length) {
+          resultMsg += '\nDetail grup bermasalah (' + groupErrors.length + '):\n';
+          groupErrors.slice(0, 12).forEach((g, i) => {
+            resultMsg += (i + 1) + '. ' + g + '\n';
+          });
+          if (groupErrors.length > 12) resultMsg += '... dan ' + (groupErrors.length - 12) + ' grup lain (lihat console).\n';
+        }
+        if (siswaFail) {
+          resultMsg += '\n• NISN tidak ditemukan di DB: ' + siswaFail;
+          if (siswaFailSamples.length) resultMsg += '\n  contoh: ' + siswaFailSamples.join(', ');
+        }
+        if (mapelFail) {
+          resultMsg += '\n• Mapel tidak dikenali: ' + mapelFail;
+          if (mapelFailSamples.length) resultMsg += '\n  contoh kode: ' + [...new Set(mapelFailSamples)].join(', ');
+        }
+        if (mapelForbidden) {
+          resultMsg += '\n• Mapel di luar wewenang guru: ' + mapelForbidden;
+          if (mapelForbidSamples.length) resultMsg += '\n  contoh: ' + [...new Set(mapelForbidSamples)].join(', ');
+        }
+        if (kelasForbidden) {
+          resultMsg += '\n• Kelas di luar wewenang guru: ' + kelasForbidden;
+          if (kelasForbidSamples.length) resultMsg += '\n  contoh: ' + [...new Set(kelasForbidSamples)].join(', ');
+        }
+
+        if (groupErrors.length) {
+          console.warn('Import nilai — error detail:', groupErrors);
+        }
         alert(resultMsg);
 
         // Refresh tabel jika filter saat ini cocok
@@ -6268,9 +6449,15 @@
           document.getElementById('btnLoadSiswaNilai').click();
         }
         const info = document.getElementById('infoInputNilai');
-        if (info) info.textContent = 'Import massal: ' + saved + ' nilai tersimpan';
+        if (info) {
+          info.textContent = 'Import massal: ' + saved + ' OK' + (failedRows ? (', ' + failedRows + ' gagal') : '');
+        }
       } catch (e) {
         console.error(e);
+        try {
+          const el = document.getElementById('importProgressOverlay');
+          if (el) el.style.display = 'none';
+        } catch (_) {}
         alert('Gagal import massal: ' + (e.message || e));
       } finally {
         this.value = '';
