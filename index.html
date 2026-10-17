@@ -1144,6 +1144,46 @@
       font-size: 12px; font-weight: 700; line-height: 1.4;
     }
 
+
+    /* Overlay progress upload */
+    #uploadProgressOverlay {
+      position: fixed; inset: 0; z-index: 4000;
+      background: rgba(15, 23, 42, 0.45);
+      display: none; align-items: center; justify-content: center;
+      padding: 16px;
+    }
+    #uploadProgressOverlay.show { display: flex; }
+    #uploadProgressCard {
+      background: #fff; border-radius: 14px; padding: 20px 22px;
+      width: min(360px, 92vw); box-shadow: 0 12px 40px rgba(0,0,0,.2);
+      text-align: center;
+    }
+    #uploadProgressTitle {
+      font-size: 15px; font-weight: 700; color: #0f172a; margin-bottom: 6px;
+    }
+    #uploadProgressDetail {
+      font-size: 12px; color: #64748b; line-height: 1.45; margin-bottom: 14px;
+      min-height: 2.6em;
+    }
+    #uploadProgressBarWrap {
+      height: 8px; background: #e2e8f0; border-radius: 999px; overflow: hidden;
+      margin-bottom: 8px;
+    }
+    #uploadProgressBar {
+      height: 100%; width: 0%; background: linear-gradient(90deg, #2563eb, #0d9488);
+      border-radius: 999px; transition: width 0.25s ease;
+    }
+    #uploadProgressPct {
+      font-size: 12px; font-weight: 600; color: #334155;
+      font-variant-numeric: tabular-nums;
+    }
+    .upload-spinner {
+      width: 36px; height: 36px; margin: 0 auto 12px;
+      border: 3px solid #dbeafe; border-top-color: #2563eb;
+      border-radius: 50%; animation: upSpin 0.8s linear infinite;
+    }
+    @keyframes upSpin { to { transform: rotate(360deg); } }
+
     /* Admin: Edit Profil User */
     .pu-grid {
       display: grid;
@@ -5704,6 +5744,15 @@
       const btn = document.getElementById('btnSaveProfil');
       const prevLabel = btn ? btn.textContent : '';
       if (btn) { btn.disabled = true; btn.textContent = 'Menyimpan...'; }
+      const needUploadFoto = !!(!(_editFotoCleared) && _editFotoPending && _editFotoPending.file);
+      const needUploadLogo = !!(currentRole === 'admin' && _editLogoPending && _editLogoPending.file);
+      if (needUploadFoto || needUploadLogo) {
+        showUploadProgress(
+          needUploadFoto && needUploadLogo ? 'Mengunggah foto & logo...' :
+            (needUploadFoto ? 'Mengunggah foto profil...' : 'Mengunggah logo sekolah...'),
+          'Menyiapkan file, mohon tunggu...'
+        );
+      }
 
       try {
         // --- Upload foto profil ke GDrive ---
@@ -5727,12 +5776,14 @@
           const isPng = /png/i.test(file.type || '') || /\.png$/i.test(file.name || '');
           const fname = 'foto_' + safeRole + '_' + (currentUserId || 'x') + '_' + Date.now() + (isPng ? '.png' : '.jpg');
           const upFile = new File([file], fname, { type: file.type || (isPng ? 'image/png' : 'image/jpeg') });
+          setUploadProgress(null, 'Mengunggah foto ke Google Drive...');
           const result = await uploadJawabanFile(upFile, {
             folderId: GDRIVE_DEFAULT_FOLDER_ID || '',
             bankId: 'profil',
             soalId: String(currentUserId || '0'),
             nisn: String(currentUserKode || currentRole || 'user')
           });
+          setUploadProgress(92, 'Menyimpan data foto...');
           const url = result.url || (result.id ? ('https://drive.google.com/file/d/' + result.id + '/view') : null);
           // Prioritas tampilan: dataUrl lokal, fallback Drive
           currentUserFoto = fotoData || url;
@@ -5791,6 +5842,7 @@
               }
               if (GDRIVE_UPLOAD_ENDPOINT) {
                 const upFile = new File([file], 'logo_sekolah_' + Date.now() + '.' + ext, { type: file.type || 'image/png' });
+                setUploadProgress(null, 'Mengunggah logo ke Google Drive...');
                 const result = await uploadJawabanFile(upFile, {
                   folderId: GDRIVE_DEFAULT_FOLDER_ID || '',
                   bankId: 'logo',
@@ -5878,6 +5930,7 @@
         console.error(e);
         alert('Gagal menyimpan profil: ' + (e.message || e));
       } finally {
+        try { hideUploadProgress(); } catch (e) {}
         if (btn) { btn.disabled = false; btn.textContent = prevLabel || 'Simpan'; }
       }
     });
@@ -12760,6 +12813,59 @@
       return null;
     }
 
+
+    let _uploadProgressTimer = null;
+    function showUploadProgress(title, detail) {
+      const ov = document.getElementById('uploadProgressOverlay');
+      const t = document.getElementById('uploadProgressTitle');
+      const d = document.getElementById('uploadProgressDetail');
+      const bar = document.getElementById('uploadProgressBar');
+      const pct = document.getElementById('uploadProgressPct');
+      if (t) t.textContent = title || 'Mengunggah...';
+      if (d) d.textContent = detail || 'Mohon tunggu, jangan tutup halaman.';
+      if (bar) bar.style.width = '5%';
+      if (pct) pct.textContent = '5%';
+      if (ov) ov.classList.add('show');
+      // animasi progres palsu agar user tahu proses masih jalan (fetch GDrive tidak report progress)
+      if (_uploadProgressTimer) clearInterval(_uploadProgressTimer);
+      let n = 5;
+      _uploadProgressTimer = setInterval(() => {
+        // naik pelan sampai ~90%, sisanya saat selesai
+        if (n < 90) {
+          n += (n < 40 ? 3 : (n < 70 ? 1.5 : 0.6));
+          if (n > 90) n = 90;
+          setUploadProgress(n);
+        }
+      }, 400);
+    }
+    function setUploadProgress(percent, detail) {
+      const bar = document.getElementById('uploadProgressBar');
+      const pct = document.getElementById('uploadProgressPct');
+      const d = document.getElementById('uploadProgressDetail');
+      if (percent != null && percent !== '') {
+        const n = Math.max(0, Math.min(100, Math.round(Number(percent) || 0)));
+        if (bar) bar.style.width = n + '%';
+        if (pct) pct.textContent = n + '%';
+      }
+      if (detail != null && d) d.textContent = detail;
+    }
+    function hideUploadProgress() {
+      if (_uploadProgressTimer) {
+        clearInterval(_uploadProgressTimer);
+        _uploadProgressTimer = null;
+      }
+      const ov = document.getElementById('uploadProgressOverlay');
+      const bar = document.getElementById('uploadProgressBar');
+      const pct = document.getElementById('uploadProgressPct');
+      if (bar) bar.style.width = '100%';
+      if (pct) pct.textContent = '100%';
+      setTimeout(() => {
+        if (ov) ov.classList.remove('show');
+        if (bar) bar.style.width = '0%';
+        if (pct) pct.textContent = '0%';
+      }, 280);
+    }
+
     async function uploadJawabanFile(file, meta) {
 
       meta = meta || {};
@@ -16934,7 +17040,18 @@ document.getElementById('btnBsContohFormat')?.addEventListener('click', () => {
       w.document.write('<style>body{font-family:-apple-system,BlinkMacSystemFont,Segoe UI,Roboto,sans-serif;padding:12px;background:#fff;color:#0f172a;}@media print{button{display:none!important;}}</style>');
       w.document.write('</head><body>');
       w.document.write(card.innerHTML);
-      w.document.write('</body></html>');
+      w.document.write('
+<div id="uploadProgressOverlay" aria-live="polite" aria-busy="true">
+  <div id="uploadProgressCard">
+    <div class="upload-spinner" id="uploadProgressSpinner"></div>
+    <div id="uploadProgressTitle">Mengunggah...</div>
+    <div id="uploadProgressDetail">Mohon tunggu, jangan tutup halaman.</div>
+    <div id="uploadProgressBarWrap"><div id="uploadProgressBar"></div></div>
+    <div id="uploadProgressPct">0%</div>
+  </div>
+</div>
+
+</body></html>');
       w.document.close();
       setTimeout(() => { try { w.print(); } catch (e) {} }, 400);
     });
@@ -19899,18 +20016,26 @@ document.getElementById('btnBsContohFormat')?.addEventListener('click', () => {
       const grid = document.getElementById('puGrid');
       const prevInfo = document.getElementById('puInfo');
       if (prevInfo) prevInfo.textContent = 'Mengunggah foto ' + (nama || '') + '...';
+      // nonaktifkan tombol di grid selama upload
+      if (grid) grid.querySelectorAll('button').forEach(b => { b.disabled = true; });
+      showUploadProgress('Mengunggah foto: ' + (nama || 'user'), 'Menyiapkan gambar...');
       try {
         let fotoData = null;
-        try { fotoData = await fileToDataUrlResized(file, 256, 0.88, false); } catch (e) {}
+        try {
+          setUploadProgress(12, 'Mengompresi preview foto...');
+          fotoData = await fileToDataUrlResized(file, 256, 0.88, false);
+        } catch (e) {}
         const isPng = /png/i.test(file.type || '') || /\.png$/i.test(file.name || '');
         const fname = 'foto_' + role + '_' + userId + '_' + Date.now() + (isPng ? '.png' : '.jpg');
         const upFile = new File([file], fname, { type: file.type || (isPng ? 'image/png' : 'image/jpeg') });
+        setUploadProgress(null, 'Mengunggah ke Google Drive... (bisa 10–30 detik)');
         const result = await uploadJawabanFile(upFile, {
           folderId: GDRIVE_DEFAULT_FOLDER_ID || '',
           bankId: 'profil',
           soalId: String(userId || '0'),
           nisn: String(role + '_' + userId)
         });
+        setUploadProgress(93, 'Menyimpan data ke database...');
         const url = result.url || (result.id ? ('https://drive.google.com/file/d/' + result.id + '/view') : null);
         const displayUrl = fotoData || url;
         await saveUserFotoMeta(role, userId, url || fotoData, result.id || null);
@@ -19931,6 +20056,7 @@ document.getElementById('btnBsContohFormat')?.addEventListener('click', () => {
           if (dash) setAvatarEl(dash, displayUrl, nama || '?');
           saveSession();
         }
+        setUploadProgress(100, 'Selesai!');
         renderProfilUserGrid();
         alert('Foto ' + (nama || '') + ' berhasil diperbarui.');
       } catch (e) {
@@ -19938,6 +20064,11 @@ document.getElementById('btnBsContohFormat')?.addEventListener('click', () => {
         alert('Gagal unggah: ' + (e.message || e));
         if (prevInfo) prevInfo.textContent = '';
         renderProfilUserGrid();
+      } finally {
+        try { hideUploadProgress(); } catch (e) {}
+        if (prevInfo && !prevInfo.textContent.includes('Mengunggah')) {
+          /* biarkan renderProfilUserGrid mengisi info */
+        }
       }
     }
 
