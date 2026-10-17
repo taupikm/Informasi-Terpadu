@@ -734,27 +734,16 @@
       overflow: hidden;
       text-overflow: ellipsis;
     }
-    /* Rekap dashboard: tabel di tengah, melebar otomatis saat kolom bertambah */
-    #page-dashboard #dashRekapWrap {
-      width: 100%;
-    }
-    #page-dashboard #dashRekapWrap .section-title {
-      text-align: center;
-    }
+    /* Rekap dashboard: kolom ringkas seperti sketsa (No|Nama|Kls|S1|S2|…) */
     #page-dashboard .table-wrap {
       overflow-x: auto;
       -webkit-overflow-scrolling: touch;
-      display: flex;
-      justify-content: center;
-      width: 100%;
     }
     #page-dashboard .table-wrap table {
       width: max-content;
       max-width: none;
       min-width: 0;
-      margin-left: auto;
-      margin-right: auto;
-      table-layout: auto;
+      table-layout: fixed;
       font-size: 11px;
       border-collapse: collapse;
     }
@@ -771,26 +760,30 @@
     #page-dashboard .table-wrap td:first-child {
       width: 28px;
       min-width: 28px;
+      max-width: 28px;
       text-align: center;
       padding-left: 4px;
       padding-right: 4px;
     }
-    /* Nama — nyaman dibaca */
+    /* Nama — fixed, tidak meregang */
     #page-dashboard .table-wrap th:nth-child(2),
     #page-dashboard .table-wrap td:nth-child(2) {
-      min-width: 140px;
-      max-width: 220px;
+      width: 162px;
+      min-width: 150px;
+      max-width: 162px;
       text-align: left;
       padding-left: 6px;
       padding-right: 6px;
     }
-    /* Kelas + kolom sesi — melebar natural */
+    /* Kelas + semua kolom sesi — lebar seragam, rata tengah */
     #page-dashboard .table-wrap th:nth-child(n+3),
     #page-dashboard .table-wrap td:nth-child(n+3) {
-      min-width: 42px;
+      width: 38px;
+      min-width: 38px;
+      max-width: 38px;
       text-align: center;
-      padding-left: 4px;
-      padding-right: 4px;
+      padding-left: 1px;
+      padding-right: 1px;
     }
     #page-nilai-saya .table-wrap {
       overflow-x: auto;
@@ -890,12 +883,16 @@
       #page-set-arsip,
       #page-set-naik-lulus,
       #page-set-reset-pin,
+      #page-set-profil-user,
       #page-set-gdrive,
       #page-set-backup,
       #page-validasi-lulusan {
         max-width: 720px;
         margin-left: auto;
         margin-right: auto;
+      }
+      #page-set-profil-user {
+        max-width: 960px;
       }
       #page-syarat-naik .page-title,
       #page-set-mapel .page-title,
@@ -906,6 +903,7 @@
       #page-set-arsip .page-title,
       #page-set-naik-lulus .page-title,
       #page-set-reset-pin .page-title,
+      #page-set-profil-user .page-title,
       #page-set-gdrive .page-title,
       #page-set-backup .page-title {
         text-align: center;
@@ -919,6 +917,7 @@
       #page-set-arsip .card,
       #page-set-naik-lulus .card,
       #page-set-reset-pin .card,
+      #page-set-profil-user .card,
       #page-set-gdrive .card,
       #page-set-backup .card {
         box-shadow: 0 2px 12px rgba(15, 23, 42, 0.06);
@@ -1107,7 +1106,7 @@
 
     .rekap-filter-row label { flex: 0 0 100px; }
 
-    /* Dashboard + profil global */
+    /* Dashboard */
     .dash-stat-grid {
       display: grid;
       grid-template-columns: repeat(6, 1fr);
@@ -1115,8 +1114,6 @@
       text-align: center;
     }
     .dash-top-row { display: block; }
-    .app-shell { display: block; width: 100%; }
-    .app-content { min-width: 0; width: 100%; }
     .dash-profile-card { display: none; margin-bottom: 12px; }
     .dash-profile-inner {
       display: flex; flex-direction: column; align-items: center; text-align: center;
@@ -1134,11 +1131,64 @@
     }
     .dash-profile-name { font-size: 16px; font-weight: 800; color: #0f172a; line-height: 1.3; }
     .dash-profile-role { font-size: 12px; font-weight: 600; color: #64748b; margin-top: 2px; }
-    .dash-profile-meta { font-size: 12px; color: #475569; line-height: 1.55; margin-top: 6px; text-align: left; width: 100%; }
-    .dash-profile-extra { font-size: 12px; color: #334155; line-height: 1.5; margin-top: 8px; text-align: left; width: 100%; border-top: 1px solid #e2e8f0; padding-top: 8px; }
+    .dash-profile-meta { font-size: 12px; color: #475569; line-height: 1.55; margin-top: 6px; }
+    .dash-profile-extra { font-size: 12px; color: #334155; line-height: 1.5; margin-top: 6px; }
     .dash-profile-badge {
       margin-top: 10px; padding: 8px 12px; border-radius: 10px;
-      font-size: 12px; font-weight: 700; line-height: 1.4; width: 100%; text-align: center;
+      font-size: 12px; font-weight: 700; line-height: 1.4;
+    }
+
+    /* Admin: Edit Profil User */
+    .pu-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+      gap: 12px;
+    }
+    .pu-card {
+      background: #fff;
+      border: 1px solid #e2e8f0;
+      border-radius: 12px;
+      padding: 12px 10px;
+      text-align: center;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 6px;
+    }
+    .pu-card.has-foto { border-color: #93c5fd; }
+    .pu-avatar {
+      width: 72px; height: 72px; border-radius: 50%;
+      background: #e0e7ff; border: 2px solid #c7d2fe;
+      overflow: hidden; display: flex; align-items: center; justify-content: center;
+      font-weight: 800; font-size: 22px; color: var(--primary); flex-shrink: 0;
+    }
+    .pu-avatar img {
+      width: 100%; height: 100%; object-fit: cover; object-position: center 20%; display: block;
+    }
+    .pu-name {
+      font-size: 12px; font-weight: 700; color: #0f172a; line-height: 1.3;
+      max-width: 100%; overflow: hidden; text-overflow: ellipsis;
+      display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;
+      min-height: 2.6em;
+    }
+    .pu-meta { font-size: 10px; color: #64748b; line-height: 1.35; }
+    .pu-badge {
+      display: inline-block; font-size: 10px; font-weight: 700;
+      padding: 2px 8px; border-radius: 999px; margin-top: 2px;
+    }
+    .pu-badge-admin { background: #ede9fe; color: #5b21b6; }
+    .pu-badge-guru { background: #dcfce7; color: #166534; }
+    .pu-badge-siswa { background: #dbeafe; color: #1d4ed8; }
+    .pu-actions {
+      display: flex; flex-direction: column; gap: 4px; width: 100%; margin-top: 4px;
+    }
+    .pu-actions .btn {
+      width: 100%; padding: 6px 8px; font-size: 11px;
+    }
+    @media (min-width: 768px) {
+      .pu-grid { grid-template-columns: repeat(auto-fill, minmax(168px, 1fr)); gap: 14px; }
+      .pu-avatar { width: 84px; height: 84px; font-size: 26px; }
     }
 
     /* Halaman form sempit (menu Guru & Umum) */
@@ -1248,22 +1298,19 @@
       .dash-stat > div:first-child { font-size: 11px !important; }
       .dash-stat > div:last-child { font-size: 18px !important; }
 
-      /* Profil sticky di kiri — semua halaman saat login (desktop) */
-      body.dash-logged-in .app-shell {
+      body.dash-logged-in #dashProfileCard { display: block !important; }
+      body.dash-logged-in #page-dashboard { max-width: 980px; }
+      body.dash-logged-in .dash-top-row {
         display: grid;
         grid-template-columns: minmax(240px, 300px) 1fr;
         gap: 14px;
         align-items: start;
-        max-width: 1100px;
-        margin-left: auto;
-        margin-right: auto;
+        margin-bottom: 4px;
       }
-      body.dash-logged-in #dashProfileCard {
-        display: block !important;
+      body.dash-logged-in .dash-profile-card {
         margin-bottom: 0;
         position: sticky;
         top: calc(var(--topbar-h, 64px) + 8px);
-        align-self: start;
       }
       body.dash-logged-in .dash-profile-inner {
         flex-direction: column;
@@ -1279,9 +1326,6 @@
       body.dash-logged-in .dash-profile-name { font-size: 16px; }
       body.dash-logged-in .dash-profile-meta,
       body.dash-logged-in .dash-profile-extra { text-align: left; }
-      body.dash-logged-in .app-content { min-width: 0; }
-      body.dash-logged-in #page-dashboard { max-width: none; margin: 0; }
-      body.dash-logged-in .dash-top-row { display: block; margin-bottom: 4px; }
       body.dash-logged-in .dash-stats-block { min-width: 0; }
     }
     @media (min-width: 1100px) {
@@ -1322,15 +1366,13 @@
         margin-right: auto;
       }
       #page-dashboard { max-width: 780px; }
-      body.dash-logged-in .app-shell {
-        max-width: 1200px;
+      body.dash-logged-in #page-dashboard { max-width: 1040px; }
+      body.dash-logged-in .dash-top-row {
         grid-template-columns: minmax(260px, 320px) 1fr;
         gap: 16px;
       }
-      body.dash-logged-in #page-dashboard { max-width: none; }
     }
     @media (max-width: 767px) {
-      body.dash-logged-in .app-shell { display: block; max-width: none; }
       #dashProfileCard { display: none !important; }
       .dash-top-row { display: block; }
       .dash-stat-grid {
@@ -2021,14 +2063,16 @@
         <button class="menu-item" data-page="set-arsip"><span class="icon">📦</span> Arsip Absensi</button>
         <button class="menu-item" data-page="set-naik-lulus"><span class="icon">🎓</span> Naik Kelas &amp; Kelulusan</button>
         <button class="menu-item" data-page="set-reset-pin"><span class="icon">🔑</span> Reset PIN</button>
+        <button class="menu-item" data-page="set-profil-user"><span class="icon">🖼️</span> Edit Profil User</button>
         <button class="menu-item" data-page="set-gdrive"><span class="icon">☁</span> Integrasi GDrive</button>
         <button class="menu-item" data-page="set-backup"><span class="icon">💾</span> Backup Data</button>
       </div>
     </nav>
   </aside>
 <main class="main">
-  <!-- Profil global (tampil di semua halaman saat login, desktop) -->
-  <div class="app-shell">
+<section class="page active" id="page-dashboard">
+    <!-- Desktop login: profil kiri | statistik kanan. HP: hanya statistik -->
+    <div class="dash-top-row">
       <div id="dashProfileCard" class="dash-profile-card" style="display:none;">
         <div class="dash-profile-inner">
           <div class="dash-profile-photo" id="dashProfilePhoto">?</div>
@@ -2042,12 +2086,6 @@
         </div>
       </div>
 
-
-  <div class="app-content">
-
-<section class="page active" id="page-dashboard">
-    <!-- Desktop login: profil kiri | statistik kanan. HP: hanya statistik -->
-    <div class="dash-top-row">
       <div class="dash-stats-block">
         <div class="card dash-stat-card" style="padding:12px;margin-bottom:10px;">
           <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
@@ -2057,27 +2095,27 @@
           <div class="dash-stat-grid">
             <div class="dash-stat" style="background:#dcfce7;border:1px solid #86efac;border-radius:8px;padding:8px 2px;">
               <div style="font-weight:700;color:#166534;font-size:10px;">TW</div>
-              <div id="stGuruTW" style="font-weight:800;margin-top:3px;color:#166534;font-size:15px;">-</div>
+              <div id="stGuruTW" style="font-weight:800;margin-top:3px;color:#166534;font-size:15px;">0</div>
             </div>
             <div class="dash-stat" style="background:#fef3c7;border:1px solid #fcd34d;border-radius:8px;padding:8px 2px;">
               <div style="font-weight:700;color:#a16207;font-size:10px;">TL</div>
-              <div id="stGuruTL" style="font-weight:800;margin-top:3px;color:#a16207;font-size:15px;">-</div>
+              <div id="stGuruTL" style="font-weight:800;margin-top:3px;color:#a16207;font-size:15px;">0</div>
             </div>
             <div class="dash-stat" style="background:#f3e8ff;border:1px solid #d8b4fe;border-radius:8px;padding:8px 2px;">
               <div style="font-weight:700;color:#7e22ce;font-size:10px;">Sakit</div>
-              <div id="stGuruSakit" style="font-weight:800;margin-top:3px;color:#7e22ce;font-size:15px;">-</div>
+              <div id="stGuruSakit" style="font-weight:800;margin-top:3px;color:#7e22ce;font-size:15px;">0</div>
             </div>
             <div class="dash-stat" style="background:#dbeafe;border:1px solid #93c5fd;border-radius:8px;padding:8px 2px;">
               <div style="font-weight:700;color:#1d4ed8;font-size:10px;">Izin</div>
-              <div id="stGuruIzin" style="font-weight:800;margin-top:3px;color:#1d4ed8;font-size:15px;">-</div>
+              <div id="stGuruIzin" style="font-weight:800;margin-top:3px;color:#1d4ed8;font-size:15px;">0</div>
             </div>
             <div class="dash-stat" style="background:#fee2e2;border:1px solid #fca5a5;border-radius:8px;padding:8px 2px;">
               <div style="font-weight:700;color:#dc2626;font-size:10px;">Alpa</div>
-              <div id="stGuruAlpa" style="font-weight:800;margin-top:3px;color:#dc2626;font-size:15px;">-</div>
+              <div id="stGuruAlpa" style="font-weight:800;margin-top:3px;color:#dc2626;font-size:15px;">0</div>
             </div>
             <div class="dash-stat" style="background:#fecaca;border:1px solid #f87171;border-radius:8px;padding:8px 2px;">
               <div style="font-weight:700;color:#991b1b;font-size:10px;">Bolos</div>
-              <div id="stGuruBolos" style="font-weight:800;margin-top:3px;color:#991b1b;font-size:15px;">-</div>
+              <div id="stGuruBolos" style="font-weight:800;margin-top:3px;color:#991b1b;font-size:15px;">0</div>
             </div>
           </div>
         </div>
@@ -2089,27 +2127,27 @@
           <div class="dash-stat-grid">
             <div class="dash-stat" style="background:#dcfce7;border:1px solid #86efac;border-radius:8px;padding:8px 2px;">
               <div style="font-weight:700;color:#166534;font-size:10px;">TW</div>
-              <div id="stSiswaTW" style="font-weight:800;margin-top:3px;color:#166534;font-size:15px;">-</div>
+              <div id="stSiswaTW" style="font-weight:800;margin-top:3px;color:#166534;font-size:15px;">0</div>
             </div>
             <div class="dash-stat" style="background:#fef3c7;border:1px solid #fcd34d;border-radius:8px;padding:8px 2px;">
               <div style="font-weight:700;color:#a16207;font-size:10px;">TL</div>
-              <div id="stSiswaTL" style="font-weight:800;margin-top:3px;color:#a16207;font-size:15px;">-</div>
+              <div id="stSiswaTL" style="font-weight:800;margin-top:3px;color:#a16207;font-size:15px;">0</div>
             </div>
             <div class="dash-stat" style="background:#f3e8ff;border:1px solid #d8b4fe;border-radius:8px;padding:8px 2px;">
               <div style="font-weight:700;color:#7e22ce;font-size:10px;">Sakit</div>
-              <div id="stSiswaSakit" style="font-weight:800;margin-top:3px;color:#7e22ce;font-size:15px;">-</div>
+              <div id="stSiswaSakit" style="font-weight:800;margin-top:3px;color:#7e22ce;font-size:15px;">0</div>
             </div>
             <div class="dash-stat" style="background:#dbeafe;border:1px solid #93c5fd;border-radius:8px;padding:8px 2px;">
               <div style="font-weight:700;color:#1d4ed8;font-size:10px;">Izin</div>
-              <div id="stSiswaIzin" style="font-weight:800;margin-top:3px;color:#1d4ed8;font-size:15px;">-</div>
+              <div id="stSiswaIzin" style="font-weight:800;margin-top:3px;color:#1d4ed8;font-size:15px;">0</div>
             </div>
             <div class="dash-stat" style="background:#fee2e2;border:1px solid #fca5a5;border-radius:8px;padding:8px 2px;">
               <div style="font-weight:700;color:#dc2626;font-size:10px;">Alpa</div>
-              <div id="stSiswaAlpa" style="font-weight:800;margin-top:3px;color:#dc2626;font-size:15px;">-</div>
+              <div id="stSiswaAlpa" style="font-weight:800;margin-top:3px;color:#dc2626;font-size:15px;">0</div>
             </div>
             <div class="dash-stat" style="background:#fecaca;border:1px solid #f87171;border-radius:8px;padding:8px 2px;">
               <div style="font-weight:700;color:#991b1b;font-size:10px;">Bolos</div>
-              <div id="stSiswaBolos" style="font-weight:800;margin-top:3px;color:#991b1b;font-size:15px;">-</div>
+              <div id="stSiswaBolos" style="font-weight:800;margin-top:3px;color:#991b1b;font-size:15px;">0</div>
             </div>
           </div>
         </div>
@@ -3462,6 +3500,45 @@
       </div>
     </section>
 
+    <section class="page" id="page-set-profil-user">
+      <div class="page-title">🖼️ Edit Profil User</div>
+      <p style="font-size:12px;color:#64748b;margin-bottom:12px;line-height:1.45;">
+        Admin dapat melihat, mengganti, atau menghapus foto profil semua user (admin, guru, siswa).
+        Gunakan sebagai kontrol jika ada yang mengunggah foto tidak pantas.
+      </p>
+      <div class="card" style="padding:12px;margin-bottom:12px;">
+        <div class="rekap-filter-row" style="margin-bottom:8px;">
+          <label>Filter peran</label>
+          <select id="puFilterRole">
+            <option value="all">Semua</option>
+            <option value="admin">Admin</option>
+            <option value="guru">Guru</option>
+            <option value="siswa">Siswa</option>
+          </select>
+        </div>
+        <div class="rekap-filter-row" style="margin-bottom:8px;">
+          <label>Cari</label>
+          <input type="search" id="puCari" placeholder="Nama / NISN / NIP / Username">
+        </div>
+        <div class="rekap-filter-row" style="margin-bottom:0;">
+          <label>Hanya berfoto</label>
+          <select id="puFilterFoto">
+            <option value="all">Semua</option>
+            <option value="ada">Sudah ada foto</option>
+            <option value="kosong">Belum ada foto</option>
+          </select>
+        </div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:10px;align-items:center;">
+          <button type="button" class="btn btn-outline" id="btnPuRefresh" style="flex:1;">🔄 Muat Ulang</button>
+          <span id="puInfo" style="font-size:12px;color:#64748b;">0 user</span>
+        </div>
+      </div>
+      <div id="puGrid" class="pu-grid">
+        <div style="text-align:center;padding:24px;color:#94a3b8;font-size:13px;grid-column:1/-1;">Memuat...</div>
+      </div>
+      <input type="file" id="puFotoFile" accept="image/jpeg,image/png,image/webp,image/gif" style="display:none;">
+    </section>
+
     <section class="page" id="page-set-gdrive">
       <div class="page-title">☁ Integrasi Google Drive</div>
       
@@ -3525,10 +3602,7 @@
       </div>
     </section>
 
-  
-  </div><!-- /.app-content -->
-  </div><!-- /.app-shell -->
-</main>
+  </main>
 <footer class="footer">
     © 2026 SMPN PANTANG MUNDUR * <span style="opacity:.7">· v2026.10.17f</span>
   </footer>
@@ -5045,9 +5119,6 @@
       saveSession();
 
       try { refreshMenuVisibility(); } catch (e) { console.warn(e); }
-      try {
-        if (typeof updateDashProfile === 'function') updateDashProfile();
-      } catch (e) { console.warn(e); }
 
       if (!skipRedirect) {
         showPage('dashboard', false);
@@ -5774,13 +5845,6 @@
         history.replaceState({ page: pageId }, '', hash);
       }
 
-      // Pastikan kartu profil tetap tampil (desktop) di setiap halaman
-      try {
-        if (currentRole && currentRole !== 'guest' && typeof updateDashProfile === 'function') {
-          updateDashProfile();
-        }
-      } catch (e) {}
-
       if (pageId === 'data-siswa') loadSiswa();
       if (pageId === 'data-guru') loadGuru();
       if (pageId === 'data-lulusan') loadLulusan();
@@ -5796,6 +5860,7 @@
       if (pageId === 'set-arsip') { try { refreshArsipInfo(); } catch (e) {} try { loadSetAbsenForm(); } catch (e) {} }
       if (pageId === 'set-naik-lulus') { try { loadNaikLulusTable(); } catch (e) {} }
       if (pageId === 'set-reset-pin') { try { initResetPinPage(); } catch (e) {} }
+      if (pageId === 'set-profil-user') { try { initProfilUserPage(); } catch (e) {} }
       if (pageId === 'set-gdrive') { try { initGdriveSettingsPage(); } catch (e) {} }
       if (pageId === 'set-backup') { try { initBackupPage(); } catch (e) {} }
       if (pageId === 'pengaturan') showPage('set-mapel', true);
@@ -9732,30 +9797,20 @@
         } else if (currentRole === 'guru') {
           let nip = currentUserKode || '-';
           let jabatan = '-';
-          let tmpLahir = '-';
-          let tglLahir = '';
-          let alamat = '-';
           if (supabaseClient && currentUserId) {
             try {
-              const { data } = await supabaseClient.from('guru').select('*').eq('id', currentUserId).maybeSingle();
+              const { data } = await supabaseClient.from('guru').select('nama, nip, pin, jabatan').eq('id', currentUserId).maybeSingle();
               if (data) {
                 if (data.nama && nameEl) nameEl.textContent = data.nama;
                 nip = data.nip || data.pin || nip;
                 jabatan = data.jabatan || '-';
-                tmpLahir = data.tmp_lahir || data.tempat_lahir || '-';
-                tglLahir = data.tgl_lahir || data.tanggal_lahir || '';
-                alamat = data.alamat || '-';
               }
             } catch (e) {}
           }
-          const ttlStr = (typeof fmtTglId === 'function' ? fmtTglId(tglLahir) : String(tglLahir || '').slice(0, 10));
-          const ttlGuru = [tmpLahir && tmpLahir !== '-' ? tmpLahir : '', ttlStr && ttlStr !== '-' ? ttlStr : ''].filter(Boolean).join(', ') || '-';
           if (metaEl) {
             metaEl.innerHTML =
-              '<div><span style="color:#64748b;">NIP</span> : <b>' + esc(nip || '-') + '</b></div>' +
-              '<div><span style="color:#64748b;">Tempat/Tgl Lahir</span> : <b>' + esc(ttlGuru) + '</b></div>' +
-              '<div><span style="color:#64748b;">Jabatan</span> : <b>' + esc(jabatan || '-') + '</b></div>' +
-              '<div><span style="color:#64748b;">Alamat</span> : <b>' + esc(alamat || '-') + '</b></div>';
+              '<div><span style="color:#64748b;">NIP / Kode</span> : <b>' + esc(nip) + '</b></div>' +
+              '<div><span style="color:#64748b;">Jabatan</span> : <b>' + esc(jabatan) + '</b></div>';
           }
           if (extraEl && supabaseClient && currentUserId) {
             try {
@@ -9808,43 +9863,22 @@
         } else if (currentRole === 'siswa') {
           let nisn = currentUserKode || '-';
           let kelas = currentUserKelas || '-';
-          let tmpLahir = '-';
-          let tglLahir = '';
-          let alamat = '-';
           if (supabaseClient && currentUserId && !currentUserIsAlumni) {
             try {
-              const { data } = await supabaseClient.from('siswa').select('nama, nisn, kelas, tmp_lahir, tgl_lahir, alamat').eq('id', currentUserId).maybeSingle();
+              const { data } = await supabaseClient.from('siswa').select('nama, nisn, kelas').eq('id', currentUserId).maybeSingle();
               if (data) {
                 if (data.nama && nameEl) nameEl.textContent = data.nama;
                 nisn = data.nisn || nisn;
                 kelas = data.kelas || kelas;
-                tmpLahir = data.tmp_lahir || '-';
-                tglLahir = data.tgl_lahir || '';
-                alamat = data.alamat || '-';
                 currentUserKelas = kelas;
                 currentUserKode = nisn;
               }
             } catch (e) {}
-          } else if (supabaseClient && currentUserIsAlumni && currentUserKode) {
-            try {
-              const { data } = await supabaseClient.from('lulusan').select('nama, nisn, tmp_lahir, tgl_lahir, alamat').eq('nisn', String(currentUserKode)).maybeSingle();
-              if (data) {
-                if (data.nama && nameEl) nameEl.textContent = data.nama;
-                nisn = data.nisn || nisn;
-                tmpLahir = data.tmp_lahir || '-';
-                tglLahir = data.tgl_lahir || '';
-                alamat = data.alamat || '-';
-              }
-            } catch (e) {}
           }
-          const ttlStrS = (typeof fmtTglId === 'function' ? fmtTglId(tglLahir) : String(tglLahir || '').slice(0, 10));
-          const ttlSiswa = [tmpLahir && tmpLahir !== '-' ? tmpLahir : '', ttlStrS && ttlStrS !== '-' ? ttlStrS : ''].filter(Boolean).join(', ') || '-';
           if (metaEl) {
             metaEl.innerHTML =
-              '<div><span style="color:#64748b;">NISN</span> : <b>' + esc(nisn || '-') + '</b></div>' +
-              '<div><span style="color:#64748b;">Tempat/Tgl Lahir</span> : <b>' + esc(ttlSiswa) + '</b></div>' +
-              '<div><span style="color:#64748b;">Kelas</span> : <b>' + esc(kelas || '-') + '</b></div>' +
-              '<div><span style="color:#64748b;">Alamat</span> : <b>' + esc(alamat || '-') + '</b></div>' +
+              '<div><span style="color:#64748b;">NISN</span> : <b>' + esc(nisn) + '</b></div>' +
+              '<div><span style="color:#64748b;">Kelas</span> : <b>' + esc(kelas) + '</b></div>' +
               (currentUserIsAlumni ? '<div><span style="color:#64748b;">Status</span> : <b>Alumni</b></div>' : '');
           }
           if (badgeEl && !currentUserIsAlumni && supabaseClient && currentUserId &&
@@ -10084,7 +10118,7 @@
         }
 
         function countStatusPerSesiHtml(tipe, people, statusKey) {
-          if (!sesiList.length) return '-';
+          if (!sesiList.length) return '0';
           return sesiList.map(ses => {
             let n = 0;
             for (let i = 0; i < people.length; i++) {
@@ -10092,7 +10126,7 @@
               if (!ab) continue;
               if (normStatusKey(ab.status) === statusKey) n++;
             }
-            return '<div style="line-height:1.35;">' + (n === 0 ? '-' : n) + '</div>';
+            return '<div style="line-height:1.35;">' + n + '</div>';
           }).join('');
         }
         [
@@ -19330,7 +19364,267 @@ document.getElementById('btnBsContohFormat')?.addEventListener('click', () => {
       }
     });
 
-function initGdriveSettingsPage() {
+// ===== ADMIN: Edit Profil User (kontrol foto semua user) =====
+    let _puUsers = [];
+    let _puTarget = null; // { role, id, nama }
+
+    async function initProfilUserPage() {
+      const grid = document.getElementById('puGrid');
+      if (!grid) return;
+      if (currentRole !== 'admin') {
+        grid.innerHTML = '<div style="grid-column:1/-1;text-align:center;padding:24px;color:#ef4444;">Hanya Admin yang dapat mengakses halaman ini.</div>';
+        return;
+      }
+      grid.innerHTML = '<div style="grid-column:1/-1;text-align:center;padding:24px;color:#94a3b8;">Memuat data user &amp; foto...</div>';
+      try {
+        await loadProfilUserList();
+        renderProfilUserGrid();
+      } catch (e) {
+        console.error(e);
+        grid.innerHTML = '<div style="grid-column:1/-1;text-align:center;padding:24px;color:#ef4444;">Gagal memuat: ' + esc(String(e.message || e)) + '</div>';
+      }
+    }
+
+    async function loadProfilUserList() {
+      _puUsers = [];
+      if (!supabaseClient) {
+        // fallback demo lokal
+        (typeof dataGuru !== 'undefined' ? dataGuru : []).forEach(g => {
+          _puUsers.push({ role: 'guru', id: g.id, nama: g.nama || '-', kode: g.nip || g.pin || '', extra: g.jabatan || '' });
+        });
+        (typeof dataSiswa !== 'undefined' ? dataSiswa : []).forEach(s => {
+          _puUsers.push({ role: 'siswa', id: s.id, nama: s.nama || '-', kode: s.nisn || '', extra: s.kelas || '' });
+        });
+      } else {
+        const [a, g, s] = await Promise.all([
+          supabaseClient.from('admin').select('id, nama, username').order('id'),
+          supabaseClient.from('guru').select('id, nama, nip, pin, jabatan').order('nama'),
+          supabaseClient.from('siswa').select('id, nama, nisn, kelas').order('kelas').order('nama')
+        ]);
+        if (a.error) console.warn('pu admin', a.error);
+        if (g.error) console.warn('pu guru', g.error);
+        if (s.error) console.warn('pu siswa', s.error);
+        (a.data || []).forEach(r => {
+          _puUsers.push({ role: 'admin', id: r.id, nama: r.nama || '-', kode: r.username || '', extra: 'Administrator' });
+        });
+        (g.data || []).forEach(r => {
+          _puUsers.push({ role: 'guru', id: r.id, nama: r.nama || '-', kode: r.nip || r.pin || '', extra: r.jabatan || '' });
+        });
+        (s.data || []).forEach(r => {
+          _puUsers.push({ role: 'siswa', id: r.id, nama: r.nama || '-', kode: r.nisn || '', extra: r.kelas || '' });
+        });
+      }
+
+      // muat map foto dari app_settings (batch)
+      const fotoMap = {};
+      try {
+        if (supabaseClient) {
+          const { data: settings } = await supabaseClient.from('app_settings').select('key, value');
+          (settings || []).forEach(row => {
+            const k = String(row.key || '');
+            if (!k.startsWith('profil_')) return;
+            let v = row.value;
+            if (typeof v === 'string') {
+              try { v = JSON.parse(v); } catch (e) {}
+            }
+            if (k.endsWith('_img') && typeof v === 'string' && v.indexOf('data:image') === 0) {
+              const base = k.slice(0, -4); // drop _img
+              if (!fotoMap[base] || !(typeof fotoMap[base] === 'string' && fotoMap[base].indexOf('data:image') === 0)) {
+                fotoMap[base] = v;
+              }
+            } else if (!k.endsWith('_img')) {
+              let url = null;
+              if (typeof v === 'string' && (v.indexOf('http') === 0 || v.indexOf('data:image') === 0)) url = v;
+              else if (v && typeof v === 'object') url = v.url || (v.id ? ('https://drive.google.com/file/d/' + v.id + '/view') : null) || v.dataUrl || null;
+              if (url && !fotoMap[k]) fotoMap[k] = url;
+            }
+          });
+        }
+      } catch (e) { console.warn('pu settings', e); }
+
+      // localStorage fallback + kolom tabel
+      for (const u of _puUsers) {
+        const key = profilSettingsKey(u.role, u.id);
+        let url = fotoMap[key] || null;
+        if (!url) {
+          try {
+            const localImg = localStorage.getItem('profil_img_' + u.role + '_' + u.id);
+            if (localImg && localImg.indexOf('data:image') === 0) url = localImg;
+          } catch (e) {}
+        }
+        u.fotoUrl = url || null;
+      }
+    }
+
+    function renderProfilUserGrid() {
+      const grid = document.getElementById('puGrid');
+      const info = document.getElementById('puInfo');
+      if (!grid) return;
+      const roleF = (document.getElementById('puFilterRole')?.value || 'all');
+      const q = (document.getElementById('puCari')?.value || '').trim().toLowerCase();
+      const fotoF = (document.getElementById('puFilterFoto')?.value || 'all');
+
+      let rows = _puUsers.slice();
+      if (roleF !== 'all') rows = rows.filter(u => u.role === roleF);
+      if (fotoF === 'ada') rows = rows.filter(u => !!u.fotoUrl);
+      if (fotoF === 'kosong') rows = rows.filter(u => !u.fotoUrl);
+      if (q) {
+        rows = rows.filter(u =>
+          String(u.nama || '').toLowerCase().includes(q) ||
+          String(u.kode || '').toLowerCase().includes(q) ||
+          String(u.extra || '').toLowerCase().includes(q) ||
+          String(u.role || '').toLowerCase().includes(q)
+        );
+      }
+
+      if (info) info.textContent = rows.length + ' user' + (rows.length !== _puUsers.length ? ' (dari ' + _puUsers.length + ')' : '');
+
+      if (!rows.length) {
+        grid.innerHTML = '<div style="grid-column:1/-1;text-align:center;padding:24px;color:#94a3b8;">Tidak ada user sesuai filter</div>';
+        return;
+      }
+
+      const roleLabel = { admin: 'Admin', guru: 'Guru', siswa: 'Siswa' };
+      grid.innerHTML = rows.map(u => {
+        const letter = (u.nama || '?').charAt(0).toUpperCase();
+        const has = !!u.fotoUrl;
+        const badgeCls = 'pu-badge pu-badge-' + u.role;
+        const metaBits = [];
+        if (u.kode) metaBits.push(esc(u.kode));
+        if (u.extra) metaBits.push(esc(u.extra));
+        return '<div class="pu-card' + (has ? ' has-foto' : '') + '" data-role="' + esc(u.role) + '" data-id="' + esc(String(u.id)) + '">' +
+          '<div class="pu-avatar" data-pu-avatar>' + esc(letter) + '</div>' +
+          '<div class="pu-name" title="' + esc(u.nama) + '">' + esc(u.nama) + '</div>' +
+          '<span class="' + badgeCls + '">' + esc(roleLabel[u.role] || u.role) + '</span>' +
+          (metaBits.length ? '<div class="pu-meta">' + metaBits.join(' · ') + '</div>' : '') +
+          '<div class="pu-actions">' +
+            '<button type="button" class="btn btn-outline btn-pu-ganti" data-role="' + esc(u.role) + '" data-id="' + esc(String(u.id)) + '" data-nama="' + esc(u.nama) + '">📷 Ganti</button>' +
+            '<button type="button" class="btn btn-outline btn-pu-hapus" data-role="' + esc(u.role) + '" data-id="' + esc(String(u.id)) + '" data-nama="' + esc(u.nama) + '" style="color:#ef4444;border-color:#fca5a5;"' + (has ? '' : ' disabled') + '>🗑️ Hapus</button>' +
+          '</div></div>';
+      }).join('');
+
+      // isi foto setelah DOM siap
+      rows.forEach((u, idx) => {
+        const card = grid.children[idx];
+        if (!card) return;
+        const av = card.querySelector('[data-pu-avatar]');
+        if (av && u.fotoUrl && typeof setAvatarEl === 'function') {
+          setAvatarEl(av, u.fotoUrl, u.nama || '?');
+        }
+      });
+
+      grid.querySelectorAll('.btn-pu-ganti').forEach(btn => {
+        btn.addEventListener('click', () => {
+          _puTarget = { role: btn.dataset.role, id: btn.dataset.id, nama: btn.dataset.nama };
+          const inp = document.getElementById('puFotoFile');
+          if (inp) { inp.value = ''; inp.click(); }
+        });
+      });
+      grid.querySelectorAll('.btn-pu-hapus').forEach(btn => {
+        btn.addEventListener('click', () => hapusFotoUserAdmin(btn.dataset.role, btn.dataset.id, btn.dataset.nama));
+      });
+    }
+
+    async function hapusFotoUserAdmin(role, userId, nama) {
+      if (currentRole !== 'admin') { alert('Hanya Admin'); return; }
+      if (!(await showConfirm('Hapus foto profil ' + (nama || 'user') + '?', 'Hapus Foto', '🗑️'))) return;
+      try {
+        await saveUserFotoMeta(role, userId, null, null);
+        try { await saveAppSetting(profilSettingsKey(role, userId) + '_img', null); } catch (e) {}
+        try { localStorage.removeItem('profil_img_' + role + '_' + userId); } catch (e) {}
+        // kosongkan key meta
+        try { await saveAppSetting(profilSettingsKey(role, userId), null); } catch (e) {}
+        const u = _puUsers.find(x => String(x.id) === String(userId) && x.role === role);
+        if (u) u.fotoUrl = null;
+        // jika user yang sedang login, update UI
+        if (String(currentUserId) === String(userId) && currentRole === role) {
+          currentUserFoto = null;
+          currentUserFotoId = null;
+          setAvatarEl(document.getElementById('profileBtn'), null, nama || '?');
+          setAvatarEl(document.getElementById('sidebarAvatar'), null, nama || '?');
+          const dash = document.getElementById('dashProfilePhoto');
+          if (dash) setAvatarEl(dash, null, nama || '?');
+          saveSession();
+        }
+        renderProfilUserGrid();
+        alert('Foto ' + (nama || '') + ' dihapus.');
+      } catch (e) {
+        alert('Gagal hapus: ' + (e.message || e));
+      }
+    }
+
+    async function gantiFotoUserAdmin(file, role, userId, nama) {
+      if (currentRole !== 'admin') { alert('Hanya Admin'); return; }
+      if (!file) return;
+      if (!/^image\//i.test(file.type)) { alert('Pilih file gambar'); return; }
+      if (file.size > 5 * 1024 * 1024) { alert('Ukuran foto maksimal 5 MB'); return; }
+      if (typeof uploadJawabanFile !== 'function') { alert('Fungsi upload belum siap'); return; }
+      if (!GDRIVE_UPLOAD_ENDPOINT) {
+        try { await loadGdriveSettingsFromDb(); } catch (e) {}
+      }
+      if (!GDRIVE_UPLOAD_ENDPOINT) {
+        alert('Endpoint Google Drive belum diatur.\nAdmin: Pengaturan → Integrasi GDrive.');
+        return;
+      }
+      const grid = document.getElementById('puGrid');
+      const prevInfo = document.getElementById('puInfo');
+      if (prevInfo) prevInfo.textContent = 'Mengunggah foto ' + (nama || '') + '...';
+      try {
+        let fotoData = null;
+        try { fotoData = await fileToDataUrlResized(file, 256, 0.88, false); } catch (e) {}
+        const isPng = /png/i.test(file.type || '') || /\.png$/i.test(file.name || '');
+        const fname = 'foto_' + role + '_' + userId + '_' + Date.now() + (isPng ? '.png' : '.jpg');
+        const upFile = new File([file], fname, { type: file.type || (isPng ? 'image/png' : 'image/jpeg') });
+        const result = await uploadJawabanFile(upFile, {
+          folderId: GDRIVE_DEFAULT_FOLDER_ID || '',
+          bankId: 'profil',
+          soalId: String(userId || '0'),
+          nisn: String(role + '_' + userId)
+        });
+        const url = result.url || (result.id ? ('https://drive.google.com/file/d/' + result.id + '/view') : null);
+        const displayUrl = fotoData || url;
+        await saveUserFotoMeta(role, userId, url || fotoData, result.id || null);
+        if (fotoData) {
+          try {
+            await saveAppSetting(profilSettingsKey(role, userId) + '_img', fotoData);
+            localStorage.setItem('profil_img_' + role + '_' + userId, fotoData);
+          } catch (e) {}
+        }
+        const u = _puUsers.find(x => String(x.id) === String(userId) && x.role === role);
+        if (u) u.fotoUrl = displayUrl;
+        if (String(currentUserId) === String(userId) && currentRole === role) {
+          currentUserFoto = displayUrl;
+          currentUserFotoId = result.id || null;
+          setAvatarEl(document.getElementById('profileBtn'), displayUrl, nama || '?');
+          setAvatarEl(document.getElementById('sidebarAvatar'), displayUrl, nama || '?');
+          const dash = document.getElementById('dashProfilePhoto');
+          if (dash) setAvatarEl(dash, displayUrl, nama || '?');
+          saveSession();
+        }
+        renderProfilUserGrid();
+        alert('Foto ' + (nama || '') + ' berhasil diperbarui.');
+      } catch (e) {
+        console.error(e);
+        alert('Gagal unggah: ' + (e.message || e));
+        if (prevInfo) prevInfo.textContent = '';
+        renderProfilUserGrid();
+      }
+    }
+
+    document.getElementById('puFotoFile')?.addEventListener('change', function () {
+      const f = this.files && this.files[0];
+      if (!f || !_puTarget) return;
+      const t = _puTarget;
+      _puTarget = null;
+      gantiFotoUserAdmin(f, t.role, t.id, t.nama);
+      this.value = '';
+    });
+    document.getElementById('btnPuRefresh')?.addEventListener('click', () => initProfilUserPage());
+    document.getElementById('puFilterRole')?.addEventListener('change', () => renderProfilUserGrid());
+    document.getElementById('puFilterFoto')?.addEventListener('change', () => renderProfilUserGrid());
+    document.getElementById('puCari')?.addEventListener('input', () => renderProfilUserGrid());
+
+    function initGdriveSettingsPage() {
       const ep = document.getElementById('gdEndpoint');
       const fd = document.getElementById('gdFolderId');
       const st = document.getElementById('gdStatus');
