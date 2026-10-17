@@ -1003,37 +1003,62 @@
       display: block;
     }
 
+    /* Daftar Nilai: kolom dinamis (jenis penilaian bisa bertambah) */
     #page-daftar-nilai .table-wrap {
       overflow-x: auto;
       -webkit-overflow-scrolling: touch;
+      max-width: 100%;
     }
     #page-daftar-nilai #tableDaftarNilai {
-      width: 100%;
-      min-width: 0;
-      table-layout: fixed;
+      width: max-content;
+      min-width: 100%;
+      table-layout: auto;
       font-size: 12px;
+      border-collapse: collapse;
     }
     #page-daftar-nilai #tableDaftarNilai th,
     #page-daftar-nilai #tableDaftarNilai td {
-      padding: 7px 6px;
+      padding: 7px 8px;
       vertical-align: middle;
-      overflow: hidden;
-      text-overflow: ellipsis;
+      white-space: nowrap;
     }
+    /* Kolom identitas tetap ringkas */
     #page-daftar-nilai #tableDaftarNilai th:nth-child(1),
-    #page-daftar-nilai #tableDaftarNilai td:nth-child(1) { width: 36px; text-align: center; }
+    #page-daftar-nilai #tableDaftarNilai td:nth-child(1) {
+      min-width: 36px; width: 36px; text-align: center; position: sticky; left: 0;
+      background: #fff; z-index: 1;
+    }
+    #page-daftar-nilai #tableDaftarNilai thead th:nth-child(1) { background: #f1f5f9; z-index: 2; }
     #page-daftar-nilai #tableDaftarNilai th:nth-child(2),
-    #page-daftar-nilai #tableDaftarNilai td:nth-child(2) { width: 36px; text-align: center; }
+    #page-daftar-nilai #tableDaftarNilai td:nth-child(2) {
+      min-width: 36px; width: 36px; text-align: center;
+    }
     #page-daftar-nilai #tableDaftarNilai th:nth-child(3),
-    #page-daftar-nilai #tableDaftarNilai td:nth-child(3) { width: 110px; white-space: nowrap; }
+    #page-daftar-nilai #tableDaftarNilai td:nth-child(3) {
+      min-width: 100px; white-space: nowrap;
+    }
     #page-daftar-nilai #tableDaftarNilai th:nth-child(4),
     #page-daftar-nilai #tableDaftarNilai td:nth-child(4) {
-      width: auto; white-space: normal; word-break: break-word; line-height: 1.35;
+      min-width: 140px; max-width: 220px;
+      white-space: normal; word-break: break-word; line-height: 1.35;
     }
     #page-daftar-nilai #tableDaftarNilai th:nth-child(5),
-    #page-daftar-nilai #tableDaftarNilai td:nth-child(5) { width: 40px; text-align: center; }
-    #page-daftar-nilai #tableDaftarNilai th:nth-child(6),
-    #page-daftar-nilai #tableDaftarNilai td:nth-child(6) { width: 52px; text-align: center; font-weight: 700; }
+    #page-daftar-nilai #tableDaftarNilai td:nth-child(5) {
+      min-width: 36px; text-align: center;
+    }
+    /* Kolom nilai (ke-6 dst, termasuk NR): dinamis, tidak dipaksa fixed */
+    #page-daftar-nilai #tableDaftarNilai th:nth-child(n+6),
+    #page-daftar-nilai #tableDaftarNilai td:nth-child(n+6) {
+      min-width: 48px;
+      text-align: center;
+      white-space: nowrap;
+      padding: 7px 6px;
+    }
+    #page-daftar-nilai #tableDaftarNilai th:last-child,
+    #page-daftar-nilai #tableDaftarNilai td:last-child {
+      min-width: 52px;
+      font-weight: 700;
+    }
 
     .rekap-filter-row label { flex: 0 0 100px; }
 
@@ -1076,12 +1101,17 @@
     @media (min-width: 768px) {
       /* —— Submenu GURU: form sempit —— */
       #page-input-nilai,
-      #page-daftar-nilai,
       #page-scan-barcode,
       #page-input-izin,
       #page-download-absensi,
       #page-jadwal-mapel {
         max-width: 640px;
+        margin-left: auto;
+        margin-right: auto;
+      }
+      /* Daftar Nilai: lebih lebar agar banyak kolom penilaian muat / scroll nyaman */
+      #page-daftar-nilai {
+        max-width: 960px;
         margin-left: auto;
         margin-right: auto;
       }
@@ -1204,11 +1234,11 @@
     @media (min-width: 1100px) {
       /* Form sempit guru */
       #page-input-nilai,
-      #page-daftar-nilai,
       #page-scan-barcode,
       #page-input-izin,
       #page-download-absensi,
       #page-jadwal-mapel { max-width: 680px; }
+      #page-daftar-nilai { max-width: 1100px; }
       /* Tabel guru */
       #page-rekap-data {
         max-width: 1100px;
@@ -8005,8 +8035,8 @@
         let headerHtml = '<tr>';
         headerHtml += '<th style="width:36px;"><input type="checkbox" id="checkAllDn" title="Pilih semua"></th>';
         headerHtml += '<th>No</th><th>NISN</th><th>Nama</th><th>L/P</th>';
-        cols.forEach(c => { headerHtml += '<th style="text-align:center;">' + c.jenis + c.ke + '</th>'; });
-        headerHtml += '<th style="text-align:center;">NR</th></tr>';
+        cols.forEach(c => { headerHtml += '<th class="dn-score-col" style="text-align:center;" title="' + c.jenis + ' ke-' + c.ke + '">' + c.jenis + c.ke + '</th>'; });
+        headerHtml += '<th class="dn-nr-col" style="text-align:center;" title="Nilai Rata-rata">NR</th></tr>';
         thead.innerHTML = headerHtml;
         document.getElementById('checkAllDn')?.addEventListener('change', function () {
           document.querySelectorAll('.cb-dn-row').forEach(c => { c.checked = this.checked; });
