@@ -9406,37 +9406,38 @@
               '<div><span style="color:#64748b;">NIP / Kode</span> : <b>' + esc(nip) + '</b></div>' +
               '<div><span style="color:#64748b;">Jabatan</span> : <b>' + esc(jabatan) + '</b></div>';
           }
-          // Mapel & kelas diampu
+          // Mapel & kelas diampu (tabel terpisah guru_mapel + guru_kelas)
           if (extraEl && supabaseClient && currentUserId) {
             try {
               await loadMasterMapelKelas();
-              const pairs = (typeof getGuruAmpuPairs === 'function')
-                ? await getGuruAmpuPairs(currentUserId)
-                : [];
-              const byMapel = {};
-              const idToKelas = {};
-              (masterKelas || []).forEach(k => { idToKelas[Number(k.id)] = k.kelas; });
-              const idToMapel = {};
-              (masterMapel || []).forEach(m => {
-                idToMapel[Number(m.id)] = (m.kode ? m.kode + ' – ' : '') + (m.mapel || m.nama || '');
-              });
-              pairs.forEach(p => {
-                const mn = idToMapel[Number(p.mapel_id)] || ('Mapel #' + p.mapel_id);
-                const kn = idToKelas[Number(p.kelas_id)] || '';
-                if (!byMapel[mn]) byMapel[mn] = [];
-                if (kn && !byMapel[mn].includes(kn)) byMapel[mn].push(kn);
-              });
-              const lines = Object.keys(byMapel).sort().map(mn => {
-                const kls = byMapel[mn].sort((a, b) => String(a).localeCompare(String(b), 'id', { numeric: true }));
-                return '<div style="margin-top:4px;"><b style="color:#1e40af;">' + esc(mn) + '</b> → ' +
-                  (kls.length ? esc(kls.join(', ')) : '<span style="color:#94a3b8;">(belum ada kelas)</span>') + '</div>';
-              });
-              if (lines.length) {
-                extraEl.innerHTML = '<div style="font-size:11px;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:.03em;margin-bottom:2px;">Mapel & Kelas diampu</div>' +
-                  lines.join('');
+              const [mids, kids] = await Promise.all([
+                getGuruMapelIds(currentUserId),
+                getGuruKelasIds(currentUserId)
+              ]);
+              const mapelNames = (masterMapel || [])
+                .filter(m => mids.map(Number).includes(Number(m.id)))
+                .map(m => (m.kode ? m.kode + ' – ' : '') + (m.mapel || m.nama || ''))
+                .filter(Boolean);
+              const kelasNames = (masterKelas || [])
+                .filter(k => kids.map(Number).includes(Number(k.id)))
+                .map(k => k.kelas)
+                .filter(Boolean)
+                .sort((a, b) => String(a).localeCompare(String(b), 'id', { numeric: true }));
+              let html = '';
+              if (mapelNames.length || kelasNames.length) {
+                html += '<div style="font-size:11px;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:.03em;margin-bottom:2px;">Diampu</div>';
+                if (mapelNames.length) {
+                  html += '<div style="margin-top:4px;"><span style="color:#64748b;">Mapel</span> : <b style="color:#1e40af;">' +
+                    esc(mapelNames.join(', ')) + '</b></div>';
+                }
+                if (kelasNames.length) {
+                  html += '<div style="margin-top:4px;"><span style="color:#64748b;">Kelas</span> : <b style="color:#1e40af;">' +
+                    esc(kelasNames.join(', ')) + '</b></div>';
+                }
               } else {
-                extraEl.innerHTML = '<div style="color:#94a3b8;font-size:12px;">Belum ada mapel/kelas diampu. Hubungi admin.</div>';
+                html = '<div style="color:#94a3b8;font-size:12px;">Belum ada mapel/kelas diampu. Hubungi admin.</div>';
               }
+              extraEl.innerHTML = html;
             } catch (e) {
               console.warn('dash guru ampua', e);
               extraEl.innerHTML = '';
