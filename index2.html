@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Situs Maintenance</title>
+    <style>
+        /* Mengatur seluruh halaman agar menjadi wadah penengah */
+        html, body {
+            margin: 0;
+            padding: 0;
+            width: 100%;
+            height: 100%;
+            display: flex;
+            justify-content: center; /* Mengetengahkan secara horisontal */
+            align-items: center;     /* Mengetengahkan secara vertikal */
+            background-color: #f5f5f5; /* Warna latar belakang halaman (opsional) */
+        }
+
+        /* Desain kotak spanduk */
+        .maintenance-banner {
+            background-color: #b1d39a; /* Warna hijau muda latar belakang */
+            border: 2px solid #89b370;   /* Garis tepi luar sedikit lebih gelap */
+            border-radius: 12px;        /* Membuat sudut melengkung */
+            padding: 20px 30px;
+            text-align: center;
+            font-family: Arial, sans-serif;
+            font-weight: bold;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+            max-width: 90%;             /* Agar responsif dan pas di layar HP */
+            width: 750px;               /* Lebar maksimal kotak */
+            box-sizing: border-box;
+        }
+
+        .maintenance-text {
+            color: #e60000;             /* Warna teks merah menyala */
+            font-size: 18px;
+            margin-bottom: 8px;
+            display: block;
+            line-height: 1.4;
+        }
+
+        .maintenance-link {
+            color: #0000ff;             /* Warna tautan biru */
+            font-size: 18px;
+            text-decoration: underline; /* Garis bawah pada tautan */
+            word-break: break-all;
+            display: inline-block;
+        }
+
+        .maintenance-link:hover {
+            color: #000099;             /* Warna berubah saat kursor mendekati link */
+        }
+    </style>
+</head>
+<body>
+
+    <div class="maintenance-banner">
+        <span class="maintenance-text">Server sedang maintenance, klik tautan dibawah ini untuk melanjutkan</span>
+        <a class="maintenance-link" href="https://taupikm.github.io/Informasi-Terpadu/" target="_blank">
+            https://taupikm.github.io/Informasi-Terpadu/
+        </a>
+    </div>
+
+</body>
+</html>
