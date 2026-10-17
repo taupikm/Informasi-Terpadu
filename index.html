@@ -4171,50 +4171,95 @@
     }
 
 
+    function extractDriveId(idOrUrl) {
+      if (!idOrUrl) return '';
+      const s = String(idOrUrl).trim();
+      if (!s) return '';
+      if (/^[a-zA-Z0-9_-]{10,}$/.test(s) && !/[\/:]/.test(s)) return s;
+      const m = s.match(/\/d\/([a-zA-Z0-9_-]+)/) ||
+                s.match(/[?&]id=([a-zA-Z0-9_-]+)/) ||
+                s.match(/thumbnail\?id=([a-zA-Z0-9_-]+)/);
+      return m ? m[1] : '';
+    }
+
+    /** URL yang aman untuk <img>: blob/data tetap, Drive pakai beberapa kandidat */
     function gdriveViewUrl(idOrUrl) {
       if (!idOrUrl) return '';
-      const s = String(idOrUrl);
-      if (/^https?:\/\//i.test(s)) {
-        // convert file/d/ID/view → direct-ish preview
-        const m = s.match(/\/d\/([a-zA-Z0-9_-]+)/);
-        if (m) return 'https://drive.google.com/thumbnail?id=' + m[1] + '&sz=w400';
-        return s;
+      const s = String(idOrUrl).trim();
+      if (!s) return '';
+      // preview lokal sebelum upload
+      if (/^(blob:|data:)/i.test(s)) return s;
+      // http(s) non-drive
+      if (/^https?:\/\//i.test(s) && !/drive\.google\.com|googleusercontent\.com/i.test(s)) return s;
+      const id = extractDriveId(s);
+      if (id) return 'https://drive.google.com/thumbnail?id=' + encodeURIComponent(id) + '&sz=w400';
+      return s;
+    }
+
+    function gdriveImgFallbacks(idOrUrl) {
+      const id = extractDriveId(idOrUrl);
+      const list = [];
+      if (id) {
+        list.push('https://drive.google.com/thumbnail?id=' + encodeURIComponent(id) + '&sz=w400');
+        list.push('https://lh3.googleusercontent.com/d/' + encodeURIComponent(id) + '=w400');
+        list.push('https://drive.google.com/uc?export=view&id=' + encodeURIComponent(id));
       }
-      return 'https://drive.google.com/thumbnail?id=' + s + '&sz=w400';
+      const s = String(idOrUrl || '').trim();
+      if (s && /^(blob:|data:|https?:)/i.test(s) && list.indexOf(s) < 0) list.push(s);
+      return list;
+    }
+
+    function setImgWithDriveFallback(el, idOrUrl, fallbackText) {
+      if (!el) return;
+      const fbText = fallbackText == null ? '?' : String(fallbackText);
+      if (!idOrUrl) {
+        el.textContent = fbText;
+        return;
+      }
+      const s = String(idOrUrl);
+      // blob/data: langsung, tanpa fallback drive
+      if (/^(blob:|data:)/i.test(s)) {
+        el.innerHTML = '';
+        const img = document.createElement('img');
+        img.src = s;
+        img.alt = '';
+        img.referrerPolicy = 'no-referrer';
+        img.onerror = function () { el.textContent = fbText; };
+        el.appendChild(img);
+        return;
+      }
+      const candidates = gdriveImgFallbacks(s);
+      if (!candidates.length) {
+        el.textContent = fbText;
+        return;
+      }
+      el.innerHTML = '';
+      const img = document.createElement('img');
+      img.alt = '';
+      img.referrerPolicy = 'no-referrer';
+      let idx = 0;
+      img.src = candidates[0];
+      img.onerror = function () {
+        idx++;
+        if (idx < candidates.length) {
+          img.src = candidates[idx];
+        } else {
+          el.textContent = fbText;
+        }
+      };
+      el.appendChild(img);
     }
 
     function setAvatarEl(el, fotoUrl, letter) {
       if (!el) return;
       const L = (letter || '?').toString().charAt(0).toUpperCase();
-      if (fotoUrl) {
-        const src = gdriveViewUrl(fotoUrl);
-        el.innerHTML = '';
-        const img = document.createElement('img');
-        img.src = src;
-        img.alt = '';
-        img.referrerPolicy = 'no-referrer';
-        img.onerror = function () { el.textContent = L; };
-        el.appendChild(img);
-      } else {
-        el.textContent = L;
-      }
+      setImgWithDriveFallback(el, fotoUrl, L);
     }
 
     function setSchoolLogoDisplay(url) {
       const el = document.querySelector('.topbar-left .logo');
       if (!el) return;
-      if (url) {
-        const src = gdriveViewUrl(url);
-        el.innerHTML = '';
-        const img = document.createElement('img');
-        img.src = src;
-        img.alt = 'Logo';
-        img.referrerPolicy = 'no-referrer';
-        img.onerror = function () { el.textContent = 'SP'; };
-        el.appendChild(img);
-      } else {
-        el.textContent = 'SP';
-      }
+      setImgWithDriveFallback(el, url, 'SP');
     }
 
     function profilSettingsKey(role, userId) {
@@ -4479,33 +4524,13 @@
       const el = document.getElementById('editFotoPreview');
       if (!el) return;
       const L = (letter || (currentUserName || '?')).toString().charAt(0).toUpperCase();
-      if (url) {
-        el.innerHTML = '';
-        const img = document.createElement('img');
-        img.src = gdriveViewUrl(url);
-        img.alt = '';
-        img.referrerPolicy = 'no-referrer';
-        img.onerror = function () { el.textContent = L; };
-        el.appendChild(img);
-      } else {
-        el.textContent = L;
-      }
+      setImgWithDriveFallback(el, url, L);
     }
 
     function fillEditLogoPreview(url) {
       const el = document.getElementById('editLogoPreview');
       if (!el) return;
-      if (url) {
-        el.innerHTML = '';
-        const img = document.createElement('img');
-        img.src = gdriveViewUrl(url);
-        img.alt = 'Logo';
-        img.referrerPolicy = 'no-referrer';
-        img.onerror = function () { el.textContent = 'SP'; };
-        el.appendChild(img);
-      } else {
-        el.textContent = 'SP';
-      }
+      setImgWithDriveFallback(el, url, 'SP');
     }
 
     async function openEditProfilModal() {
@@ -4952,6 +4977,7 @@
           currentUserFoto = url;
           currentUserFotoId = result.id || null;
           await saveUserFotoMeta(currentRole, currentUserId, currentUserFoto, currentUserFotoId);
+          fillEditFotoPreview(currentUserFoto, currentUserName);
           try { URL.revokeObjectURL(_editFotoPending.previewUrl); } catch (e) {}
           _editFotoPending = null;
         } else if (_editFotoCleared) {
@@ -4985,6 +5011,7 @@
             try { localStorage.setItem(LOGO_SETTINGS_KEY, JSON.stringify(payload)); } catch (e) {}
             await saveAppSetting('logo_sekolah', payload);
             setSchoolLogoDisplay(schoolLogoUrl);
+            fillEditLogoPreview(schoolLogoUrl);
             try { URL.revokeObjectURL(_editLogoPending.previewUrl); } catch (e) {}
             _editLogoPending = null;
           } else if (_editLogoCleared) {
