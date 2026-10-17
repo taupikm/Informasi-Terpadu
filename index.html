@@ -3,6 +3,9 @@
 <head>
   <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
+  <meta http-equiv="Pragma" content="no-cache" />
+  <meta http-equiv="Expires" content="0" />
   <title>SMPN PANTANG MUNDUR</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="https://cdn.jsdelivr.net/npm/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
@@ -3108,7 +3111,7 @@
 
   </main>
 <footer class="footer">
-    © 2026 SMPN PANTANG MUNDUR * <span style="opacity:.7">· v2026.10.15r</span>
+    © 2026 SMPN PANTANG MUNDUR * <span style="opacity:.7">· v2026.10.17b</span>
   </footer>
 <div class="modal-overlay" id="modalLogin">
     <div class="modal">
@@ -18292,6 +18295,9 @@ async function initResetPinPage() {
     initFromHash();
     if (currentPage === 'dashboard') loadDashboard();
     setTimeout(() => { try { refreshMenuVisibility(); } catch (e) {} }, 500);
+    // Logo: coba lagi setelah app_settings sempat termuat (penting di HP)
+    setTimeout(() => { try { loadSchoolLogo(); } catch (e) {} }, 800);
+    setTimeout(() => { try { loadSchoolLogo(); } catch (e) {} }, 2500);
 
     rearmTrap();
   </script>
