@@ -6062,9 +6062,15 @@
         if (!lines || lines.length < 2) { alert('File kosong / tidak valid'); return; }
 
         const header = (lines[0] || []).map(h => String(h || '').trim().toLowerCase().replace(/\s+/g, '_'));
+        // Exact match dulu, baru partial — hindari 'kelas' tertangkap sebagai 'ke'
         const findCol = (...names) => {
           for (const n of names) {
-            const i = header.findIndex(h => h === n || h.includes(n));
+            const exact = header.findIndex(h => h === n);
+            if (exact >= 0) return exact;
+          }
+          for (const n of names) {
+            if (n.length < 3) continue; // partial min 3 char (jangan 'ke' match 'kelas')
+            const i = header.findIndex(h => h.includes(n) || n.includes(h));
             if (i >= 0) return i;
           }
           return -1;
@@ -6072,9 +6078,9 @@
         let idxNisn = findCol('nisn', 'nis');
         let idxNama = findCol('nama');
         let idxKelas = findCol('kelas');
-        let idxMapel = findCol('kode_mapel', 'kode mapel', 'mapel', 'kode');
+        let idxMapel = findCol('kode_mapel', 'kode_mapel', 'mapel', 'kode');
         let idxJenis = findCol('jenis', 'jenis_penilaian', 'tipe');
-        let idxKe = findCol('ke', 'ke_', 'penilaian_ke', 'no');
+        let idxKe = findCol('ke', 'penilaian_ke', 'no_ke', 'ke_');
         let idxNilai = findCol('nilai', 'score', 'angka');
 
         // Fallback posisi default: NISN | Nama | Kelas | Kode_Mapel | Jenis | Ke | Nilai
@@ -6084,6 +6090,12 @@
         if (idxJenis < 0) idxJenis = 4;
         if (idxKe < 0) idxKe = 5;
         if (idxNilai < 0) idxNilai = 6;
+
+        // Guard: pastikan idxKe bukan kolom kelas/nisn/nama
+        if (idxKe === idxKelas || idxKe === idxNisn || idxKe === idxNama || idxKe === idxMapel || idxKe === idxNilai) {
+          const exactKe = header.findIndex(h => h === 'ke' || h === 'ke_' || h === 'penilaian_ke');
+          idxKe = exactKe >= 0 ? exactKe : 5;
+        }
 
         // Kumpulkan baris valid
         const rawRows = [];
@@ -6097,7 +6109,9 @@
           const kelas = String(row[idxKelas] != null ? row[idxKelas] : '').trim();
           const mapelTok = String(row[idxMapel] != null ? row[idxMapel] : '').trim();
           const jenis = normJenisNilai(row[idxJenis]);
-          let ke = parseInt(String(row[idxKe] != null ? row[idxKe] : '1').trim(), 10);
+          const keRaw = String(row[idxKe] != null ? row[idxKe] : '1').trim();
+          // tolak nilai seperti '9A'/'7B' (kelas tertukar ke kolom Ke)
+          let ke = /^\d{1,2}$/.test(keRaw) ? parseInt(keRaw, 10) : NaN;
           if (isNaN(ke) || ke < 1) ke = 1;
           if (ke > 50) ke = 50;
           if (!kelas) { skipReasons.noKelas++; continue; }
