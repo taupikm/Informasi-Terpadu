@@ -3111,7 +3111,7 @@
 
   </main>
 <footer class="footer">
-    © 2026 SMPN PANTANG MUNDUR * <span style="opacity:.7">· v2026.10.17b</span>
+    © 2026 SMPN PANTANG MUNDUR * <span style="opacity:.7">· v2026.10.17c</span>
   </footer>
 <div class="modal-overlay" id="modalLogin">
     <div class="modal">
@@ -4221,56 +4221,43 @@
 
     function fileToDataUrlResized(file, maxSide, quality) {
       maxSide = maxSide || 256;
-      quality = quality == null ? 0.88 : quality;
+      quality = quality == null ? 0.85 : quality;
       return new Promise((resolve, reject) => {
         if (!file) return reject(new Error('File kosong'));
-        // SVG: baca sebagai text data url tanpa canvas
-        if (file.type === 'image/svg+xml') {
-          const reader = new FileReader();
-          reader.onload = () => resolve(String(reader.result || ''));
-          reader.onerror = () => reject(reader.error || new Error('Gagal baca SVG'));
-          reader.readAsDataURL(file);
-          return;
-        }
-        const url = URL.createObjectURL(file);
-        const img = new Image();
-        img.onload = () => {
-          try {
-            let w = img.naturalWidth || img.width;
-            let h = img.naturalHeight || img.height;
-            if (!w || !h) throw new Error('Gambar tidak valid');
-            if (w > maxSide || h > maxSide) {
-              if (w >= h) { h = Math.round(h * maxSide / w); w = maxSide; }
-              else { w = Math.round(w * maxSide / h); h = maxSide; }
-            }
-            const canvas = document.createElement('canvas');
-            canvas.width = w;
-            canvas.height = h;
-            const ctx = canvas.getContext('2d');
-            ctx.clearRect(0, 0, w, h);
-            ctx.drawImage(img, 0, 0, w, h);
-            let out = '';
-            try {
-              out = canvas.toDataURL('image/png');
-              // png logo kecil; jika terlalu besar pakai jpeg
-              if (out.length > 180000) {
-                out = canvas.toDataURL('image/jpeg', quality);
-              }
-            } catch (e) {
-              out = canvas.toDataURL('image/jpeg', quality);
-            }
-            URL.revokeObjectURL(url);
-            resolve(out);
-          } catch (e) {
-            try { URL.revokeObjectURL(url); } catch (_) {}
-            reject(e);
+        const reader = new FileReader();
+        reader.onerror = () => reject(reader.error || new Error('Gagal baca file'));
+        reader.onload = () => {
+          const raw = String(reader.result || '');
+          if (file.type === 'image/svg+xml') {
+            resolve(raw);
+            return;
           }
+          const img = new Image();
+          img.onload = () => {
+            try {
+              let w = img.naturalWidth || img.width || 0;
+              let h = img.naturalHeight || img.height || 0;
+              if (!w || !h) throw new Error('Gambar tidak valid');
+              if (w > maxSide || h > maxSide) {
+                if (w >= h) { h = Math.max(1, Math.round(h * maxSide / w)); w = maxSide; }
+                else { w = Math.max(1, Math.round(w * maxSide / h)); h = maxSide; }
+              }
+              const canvas = document.createElement('canvas');
+              canvas.width = w;
+              canvas.height = h;
+              const ctx = canvas.getContext('2d');
+              ctx.clearRect(0, 0, w, h);
+              ctx.drawImage(img, 0, 0, w, h);
+              // JPEG lebih kecil & andalan di HP
+              let out = canvas.toDataURL('image/jpeg', quality);
+              if (!out || out.length < 32) out = canvas.toDataURL('image/png');
+              resolve(out);
+            } catch (e) { reject(e); }
+          };
+          img.onerror = () => reject(new Error('Gagal decode gambar'));
+          img.src = raw;
         };
-        img.onerror = () => {
-          try { URL.revokeObjectURL(url); } catch (_) {}
-          reject(new Error('Gagal memuat gambar untuk preview'));
-        };
-        img.src = url;
+        reader.readAsDataURL(file);
       });
     }
 
@@ -4324,10 +4311,9 @@
     function setSchoolLogoDisplay(url, dataUrl) {
       const el = document.querySelector('.topbar-left .logo') || document.querySelector('.logo');
       if (!el) return;
-      const du = dataUrl || schoolLogoDataUrl || null;
+      const du = (dataUrl || schoolLogoDataUrl || '').toString();
       const u = url || schoolLogoUrl || null;
-      // 1) data URL — paling andalan di HP
-      if (du && String(du).indexOf('data:') === 0) {
+      if (du.indexOf('data:image') === 0) {
         el.innerHTML = '';
         const img = document.createElement('img');
         img.src = du;
@@ -4348,20 +4334,50 @@
       el.textContent = 'SP';
     }
 
+    function persistLogoLocal() {
+      const payload = {
+        url: schoolLogoUrl || null,
+        id: schoolLogoId || null,
+        dataUrl: schoolLogoDataUrl || null
+      };
+      try { localStorage.setItem(LOGO_SETTINGS_KEY, JSON.stringify(payload)); } catch (e) {
+        try {
+          localStorage.setItem(LOGO_SETTINGS_KEY, JSON.stringify({
+            url: schoolLogoUrl || null,
+            id: schoolLogoId || null
+          }));
+        } catch (e2) {}
+        if (schoolLogoDataUrl) {
+          try { localStorage.setItem(LOGO_SETTINGS_KEY + '_img', schoolLogoDataUrl); } catch (e3) {}
+        }
+      }
+      if (schoolLogoDataUrl) {
+        try { localStorage.setItem(LOGO_SETTINGS_KEY + '_img', schoolLogoDataUrl); } catch (e) {}
+      }
+    }
+
     /** Baca logo dari localStorage secara sinkron (sebelum paint) */
     function loadSchoolLogoSync() {
       try {
-        const raw = localStorage.getItem(LOGO_SETTINGS_KEY);
-        if (!raw) return;
-        const o = JSON.parse(raw);
-        if (!o || typeof o !== 'object') return;
-        if (o.dataUrl) schoolLogoDataUrl = o.dataUrl;
-        if (o.url) schoolLogoUrl = o.url;
-        if (o.id) schoolLogoId = o.id;
-        if (schoolLogoDataUrl || schoolLogoUrl) {
-          setSchoolLogoDisplay(schoolLogoUrl, schoolLogoDataUrl);
+        const imgOnly = localStorage.getItem(LOGO_SETTINGS_KEY + '_img');
+        if (imgOnly && imgOnly.indexOf('data:image') === 0) {
+          schoolLogoDataUrl = imgOnly;
         }
       } catch (e) {}
+      try {
+        const raw = localStorage.getItem(LOGO_SETTINGS_KEY);
+        if (raw) {
+          const o = JSON.parse(raw);
+          if (o && typeof o === 'object') {
+            if (o.dataUrl && String(o.dataUrl).indexOf('data:image') === 0) schoolLogoDataUrl = o.dataUrl;
+            if (o.url) schoolLogoUrl = o.url;
+            if (o.id) schoolLogoId = o.id;
+          }
+        }
+      } catch (e) {}
+      if (schoolLogoDataUrl || schoolLogoUrl) {
+        setSchoolLogoDisplay(schoolLogoUrl, schoolLogoDataUrl);
+      }
     }
 
     function profilSettingsKey(role, userId) {
@@ -4407,11 +4423,18 @@
 
     async function loadSchoolLogo() {
       function applyLogoObj(o) {
-        if (!o || typeof o !== 'object') return false;
+        if (!o) return false;
+        // string murni = dataUrl
+        if (typeof o === 'string' && o.indexOf('data:image') === 0) {
+          schoolLogoDataUrl = o;
+          setSchoolLogoDisplay(schoolLogoUrl, schoolLogoDataUrl);
+          return true;
+        }
+        if (typeof o !== 'object') return false;
         if (o.url) schoolLogoUrl = o.url;
         else if (o.id) schoolLogoUrl = 'https://drive.google.com/file/d/' + o.id + '/view';
         if (o.id) schoolLogoId = o.id;
-        if (o.dataUrl && String(o.dataUrl).indexOf('data:') === 0) {
+        if (o.dataUrl && String(o.dataUrl).indexOf('data:image') === 0) {
           schoolLogoDataUrl = o.dataUrl;
         }
         if (schoolLogoDataUrl || schoolLogoUrl) {
@@ -4422,26 +4445,15 @@
       }
       loadSchoolLogoSync();
       try {
-        const v = await loadAppSetting('logo_sekolah');
-        if (v) {
-          applyLogoObj(v);
-          try {
-            localStorage.setItem(LOGO_SETTINGS_KEY, JSON.stringify({
-              url: schoolLogoUrl || null,
-              id: schoolLogoId || null,
-              dataUrl: schoolLogoDataUrl || null
-            }));
-          } catch (e) {
-            // localStorage penuh: simpan tanpa dataUrl
-            try {
-              localStorage.setItem(LOGO_SETTINGS_KEY, JSON.stringify({
-                url: schoolLogoUrl || null,
-                id: schoolLogoId || null
-              }));
-            } catch (e2) {}
-          }
-        }
+        // kunci terpisah untuk gambar (lebih andalan di HP)
+        const img = await loadAppSetting('logo_sekolah_img');
+        if (img) applyLogoObj(img);
       } catch (e) { console.warn(e); }
+      try {
+        const v = await loadAppSetting('logo_sekolah');
+        if (v) applyLogoObj(v);
+      } catch (e) { console.warn(e); }
+      persistLogoLocal();
     }
 
     async function loadUserFotoFromDb(role, userId) {
@@ -5116,42 +5128,66 @@
             }
             const file = _editLogoPending.file;
             const ext = (file.name.split('.').pop() || 'png').toLowerCase();
-            // dataUrl dulu (cepat & andalan di HP), baru upload Drive
+            // WAJIB: buat dataUrl (andalan HP). Tanpa ini logo HP akan SP.
             let dataUrl = null;
             try {
-              // kecil agar muat localStorage HP & cepat load
-              dataUrl = await fileToDataUrlResized(file, 96, 0.82);
+              dataUrl = await fileToDataUrlResized(file, 80, 0.8);
             } catch (e) {
               console.warn('resize logo', e);
             }
-            const upFile = new File([file], 'logo_sekolah_' + Date.now() + '.' + ext, { type: file.type || 'image/png' });
-            const result = await uploadJawabanFile(upFile, {
-              folderId: GDRIVE_DEFAULT_FOLDER_ID || '',
-              bankId: 'logo',
-              soalId: 'sekolah',
-              nisn: 'logo'
-            });
-            schoolLogoUrl = result.url || (result.id ? ('https://drive.google.com/file/d/' + result.id + '/view') : null);
-            schoolLogoId = result.id || null;
-            schoolLogoDataUrl = dataUrl || null;
+            if (!dataUrl || dataUrl.indexOf('data:image') !== 0) {
+              throw new Error('Gagal membuat preview logo. Coba file JPG/PNG lain (lebih kecil).');
+            }
+            schoolLogoDataUrl = dataUrl;
+            // Simpan lokal dulu agar HP/laptop langsung tampil
+            persistLogoLocal();
+            setSchoolLogoDisplay(null, schoolLogoDataUrl);
+            fillEditLogoPreview(schoolLogoDataUrl);
+            // Simpan dataUrl ke DB (kunci khusus, string murni)
+            await saveAppSetting('logo_sekolah_img', dataUrl);
+            // Upload Drive (opsional tapi tetap dicoba)
+            let driveOk = false;
+            try {
+              if (!GDRIVE_UPLOAD_ENDPOINT) {
+                try { await loadGdriveSettingsFromDb(); } catch (e) {}
+              }
+              if (GDRIVE_UPLOAD_ENDPOINT) {
+                const upFile = new File([file], 'logo_sekolah_' + Date.now() + '.' + ext, { type: file.type || 'image/png' });
+                const result = await uploadJawabanFile(upFile, {
+                  folderId: GDRIVE_DEFAULT_FOLDER_ID || '',
+                  bankId: 'logo',
+                  soalId: 'sekolah',
+                  nisn: 'logo'
+                });
+                schoolLogoUrl = result.url || (result.id ? ('https://drive.google.com/file/d/' + result.id + '/view') : null);
+                schoolLogoId = result.id || null;
+                driveOk = true;
+              }
+            } catch (e) {
+              console.warn('Upload logo Drive gagal (dataUrl tetap tersimpan):', e);
+            }
             const payload = {
-              url: schoolLogoUrl,
-              id: schoolLogoId,
+              url: schoolLogoUrl || null,
+              id: schoolLogoId || null,
               dataUrl: schoolLogoDataUrl,
               updated_at: new Date().toISOString()
             };
-            try { localStorage.setItem(LOGO_SETTINGS_KEY, JSON.stringify(payload)); } catch (e) {}
+            persistLogoLocal();
             await saveAppSetting('logo_sekolah', payload);
             setSchoolLogoDisplay(schoolLogoUrl, schoolLogoDataUrl);
-            fillEditLogoPreview(schoolLogoDataUrl || schoolLogoUrl);
             try { URL.revokeObjectURL(_editLogoPending.previewUrl); } catch (e) {}
             _editLogoPending = null;
+            if (!driveOk) {
+              console.warn('Logo tersimpan lokal/DB tanpa Drive');
+            }
           } else if (_editLogoCleared) {
             schoolLogoUrl = null;
             schoolLogoId = null;
             schoolLogoDataUrl = null;
             try { localStorage.removeItem(LOGO_SETTINGS_KEY); } catch (e) {}
+            try { localStorage.removeItem(LOGO_SETTINGS_KEY + '_img'); } catch (e) {}
             await saveAppSetting('logo_sekolah', { url: null, id: null, dataUrl: null });
+            await saveAppSetting('logo_sekolah_img', null);
             setSchoolLogoDisplay(null, null);
             _editLogoCleared = false;
           }
