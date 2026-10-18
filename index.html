@@ -1409,10 +1409,21 @@
       padding-left: 8px;
       padding-right: 8px;
     }
-    body:not(.dash-logged-in) #dashSesiInfo,
-    body:not(.dash-logged-in) #dashRekapWrap,
-    body:not(.dash-logged-in) #dashRekapHiddenMsg { display: none !important; }
+    /* Rekap Kehadiran Guru/Siswa & info sesi tetap tampil untuk tamu di bawah panel publik */
     body.dash-logged-in #dashPublicView { display: none !important; }
+
+    body:not(.dash-logged-in) #dashSesiInfo,
+    body:not(.dash-logged-in) #dashRekapWrap {
+      display: block;
+      width: 100%;
+      max-width: 100%;
+      margin-top: 14px;
+    }
+    body:not(.dash-logged-in) #dashRekapWrap .section-title {
+      text-align: center;
+      font-size: 15px;
+    }
+
     body:not(.dash-logged-in) .dash-top-row {
       display: none !important;
     }
