@@ -186,8 +186,8 @@
       --danger: #ef4444;
       --success: #22c55e;
       --warning: #f59e0b;
-      --topbar-h: 58px;
-      --footer-h: 50px;
+      --topbar-h: 64px;
+      --footer-h: 40px;
     }
 
     * {
@@ -14764,6 +14764,27 @@ document.getElementById('btnBsContohFormat')?.addEventListener('click', () => {
       }
     }
 
+    function guruCanAccessBank(r) {
+      if (!r) return false;
+      if (currentRole === 'admin') return true;
+      if (currentRole !== 'guru' || !currentUserId) return false;
+      const uid = Number(currentUserId);
+      if (r.guru_id != null && Number(r.guru_id) === uid) return true;
+      const nm = String(r.mapel || '').trim().toLowerCase();
+      const mt = window._bsGuruMapelToKelas || window._bsMapelToKelas || {};
+      const allowedM = window._bsGuruAllowedMapel;
+      if (allowedM && allowedM.size && !allowedM.has(nm)) return false;
+      if (!nm) return false;
+      const kls = String(r.kelas || '').split(/[,;|/]/).map(x => x.trim().toLowerCase()).filter(Boolean);
+      if (!kls.length) return false;
+      let setK = mt[nm];
+      if (setK && !(setK instanceof Set)) setK = new Set((setK || []).map(x => String(x).toLowerCase()));
+      if (setK && setK.size) return kls.some(k => setK.has(k));
+      const allK = window._bsGuruAllowedKelas;
+      if (allK && allK.size) return kls.some(k => allK.has(k));
+      return false;
+    }
+
     async function loadBankSoalTable() {
       const tbody = document.getElementById('tbodyBankSoal');
       if (!tbody) return;
@@ -14800,10 +14821,53 @@ document.getElementById('btnBsContohFormat')?.addEventListener('click', () => {
 
       if (currentRole === 'guru' && currentUserId) {
         try {
-          let allowedMapelNames = new Set();
-          let allowedKelas = new Set();
+          // Ampuan: pasangan mapel–kelas (guru_mapel_kelas / fallback guru_mapel × guru_kelas)
+          let allowedMapelNames = new Set(); // lowercased mapel names
+          let allowedKelas = new Set();      // lowercased kelas names
+          // mapel(lower) -> Set of kelas(lower) yang diampu untuk mapel itu
+          let mapelToKelas = {};
           let hasAmpuan = false;
-          if (supabaseClient) {
+
+          if (typeof getGuruAmpuPairs === 'function' && supabaseClient) {
+            const pairs = await getGuruAmpuPairs(currentUserId);
+            const [mpRes, klRes] = await Promise.all([
+              supabaseClient.from('mapel').select('id, mapel, nama, kode'),
+              supabaseClient.from('kelas').select('id, kelas, nama')
+            ]);
+            const idToMapel = {};
+            (mpRes.data || []).forEach(m => {
+              const names = [m.mapel, m.nama, m.kode]
+                .map(x => String(x || '').trim().toLowerCase()).filter(Boolean);
+              idToMapel[Number(m.id)] = names;
+              names.forEach(n => allowedMapelNames.add(n));
+            });
+            // hanya mapel yang ada di pairs
+            const pairMapelIds = new Set(pairs.map(p => Number(p.mapel_id)));
+            allowedMapelNames = new Set();
+            pairMapelIds.forEach(mid => {
+              (idToMapel[mid] || []).forEach(n => allowedMapelNames.add(n));
+            });
+            const idToKelas = {};
+            (klRes.data || []).forEach(k => {
+              const nm = String(k.kelas || k.nama || '').trim().toLowerCase();
+              if (nm) idToKelas[Number(k.id)] = nm;
+            });
+            pairs.forEach(p => {
+              const mid = Number(p.mapel_id);
+              const kn = idToKelas[Number(p.kelas_id)];
+              if (!kn) return;
+              allowedKelas.add(kn);
+              (idToMapel[mid] || []).forEach(mn => {
+                if (!mapelToKelas[mn]) mapelToKelas[mn] = new Set();
+                mapelToKelas[mn].add(kn);
+              });
+            });
+            hasAmpuan = pairs.length > 0;
+            window._bsGuruMapelToKelas = mapelToKelas;
+            window._bsGuruAllowedMapel = allowedMapelNames;
+            window._bsGuruAllowedKelas = allowedKelas;
+          } else if (supabaseClient) {
+            // fallback lama
             const [gm, gk, mp, kl] = await Promise.all([
               supabaseClient.from('guru_mapel').select('mapel_id').eq('guru_id', currentUserId),
               supabaseClient.from('guru_kelas').select('kelas_id').eq('guru_id', currentUserId),
@@ -14822,22 +14886,30 @@ document.getElementById('btnBsContohFormat')?.addEventListener('click', () => {
                 .map(k => String(k.kelas || k.nama || '').trim().toLowerCase())
                 .filter(Boolean)
             );
+            allowedMapelNames.forEach(mn => {
+              mapelToKelas[mn] = new Set(allowedKelas);
+            });
           }
+
           const uid = Number(currentUserId);
           rows = rows.filter(r => {
+            // Bank yang dibuat sendiri selalu tampil
             if (r.guru_id != null && Number(r.guru_id) === uid) return true;
             if (!hasAmpuan) return false;
             const nm = String(r.mapel || '').trim().toLowerCase();
-            if (allowedMapelNames.size && nm && !allowedMapelNames.has(nm)) return false;
-            if (allowedMapelNames.size && !nm) return false;
-            if (allowedKelas.size) {
-              const kls = String(r.kelas || '').split(/[,;|]/).map(x => x.trim().toLowerCase()).filter(Boolean);
-              if (kls.length && !kls.some(k => allowedKelas.has(k))) return false;
-            }
-            return true;
+            if (!nm || !allowedMapelNames.has(nm)) return false;
+            // Kelas bank harus overlap dengan kelas yang diampu untuk mapel tsb
+            const kls = String(r.kelas || '').split(/[,;|/]/).map(x => x.trim().toLowerCase()).filter(Boolean);
+            if (!kls.length) return false;
+            const allowedForMapel = mapelToKelas[nm] || allowedKelas;
+            if (!allowedForMapel || !allowedForMapel.size) return false;
+            return kls.some(k => allowedForMapel.has(k));
           });
         } catch (e) {
           console.warn('filter bank guru', e);
+          // gagal filter → jangan tampilkan semua; batasi ke bank milik sendiri
+          const uid = Number(currentUserId);
+          rows = rows.filter(r => r.guru_id != null && Number(r.guru_id) === uid);
         }
       }
 
@@ -14996,11 +15068,19 @@ document.getElementById('btnBsContohFormat')?.addEventListener('click', () => {
             kelasList = [];
           }
           window._bsMapelToKelas = bsMapelToKelas;
+          window._bsGuruMapelToKelas = bsMapelToKelas;
+          window._bsGuruAllowedMapel = new Set(Object.keys(bsMapelToKelas || {}));
+          window._bsGuruAllowedKelas = new Set(
+            Object.values(bsMapelToKelas || {}).flat().map(x => String(x).toLowerCase())
+          );
         } catch (e) {
           console.warn('Filter ampua guru bank soal', e);
           mapelList = [];
           kelasList = [];
           window._bsMapelToKelas = null;
+          window._bsGuruMapelToKelas = null;
+          window._bsGuruAllowedMapel = new Set();
+          window._bsGuruAllowedKelas = new Set();
         }
       } else {
         window._bsMapelToKelas = null;
@@ -15125,6 +15205,10 @@ document.getElementById('btnBsContohFormat')?.addEventListener('click', () => {
       if (ids.length > 1) { alert('Centang hanya 1 data untuk diedit'); return; }
       const r = dataBankSoal.find(x => String(x.id) === String(ids[0]));
       if (!r) { alert('Data tidak ditemukan. Refresh halaman bank soal.'); return; }
+      if (currentRole === 'guru' && !guruCanAccessBank(r)) {
+        alert('Anda hanya dapat mengelola bank soal mapel & kelas yang diampu.');
+        return;
+      }
       try { await loadPeriodeOptionsBs(); } catch (e) { console.warn(e); }
       try { await fillBsMapelKelas(); } catch (e) { console.warn(e); }
       document.getElementById('modalBsTitle').textContent = 'Edit Bank Soal';
@@ -15190,6 +15274,31 @@ document.getElementById('btnBsContohFormat')?.addEventListener('click', () => {
       }
       if (!payload.kelas) {
         alert('Pilih minimal 1 kelas'); return;
+      }
+      // Guru hanya boleh simpan mapel/kelas yang diampu
+      if (currentRole === 'guru' && currentUserId) {
+        const mn = String(payload.mapel || '').trim().toLowerCase();
+        const allowedM = window._bsGuruAllowedMapel || window._bsGuruMapelToKelas;
+        const mt = window._bsMapelToKelas || window._bsGuruMapelToKelas || {};
+        if (mt && Object.keys(mt).length) {
+          const allowedKelasForMapel = mt[mn] || [];
+          const setK = allowedKelasForMapel instanceof Set
+            ? allowedKelasForMapel
+            : new Set((allowedKelasForMapel || []).map(x => String(x).toLowerCase()));
+          if (!setK.size && !(window._bsGuruAllowedMapel && window._bsGuruAllowedMapel.has(mn))) {
+            alert('Mapel tidak termasuk yang Anda ampu. Hubungi admin.');
+            return;
+          }
+          const picked = String(payload.kelas || '').split(/[,;|/]/).map(x => x.trim().toLowerCase()).filter(Boolean);
+          const bad = picked.filter(k => setK.size && !setK.has(k));
+          if (bad.length) {
+            alert('Kelas tidak diampu untuk mapel ini: ' + bad.join(', '));
+            return;
+          }
+        } else if (window._bsGuruAllowedMapel && window._bsGuruAllowedMapel.size && !window._bsGuruAllowedMapel.has(mn)) {
+          alert('Mapel tidak termasuk yang Anda ampu. Hubungi admin.');
+          return;
+        }
       }
 
       async function saveBankResilient(mode, bankId, body) {
@@ -15269,6 +15378,16 @@ document.getElementById('btnBsContohFormat')?.addEventListener('click', () => {
     document.getElementById('btnBsHapus')?.addEventListener('click', async () => {
       const ids = getCheckedBs();
       if (!ids.length) { alert('Centang data yang ingin dihapus'); return; }
+      if (currentRole === 'guru') {
+        const blocked = ids.filter(id => {
+          const r = dataBankSoal.find(x => String(x.id) === String(id));
+          return r && !guruCanAccessBank(r);
+        });
+        if (blocked.length) {
+          alert('Beberapa bank soal di luar mapel/kelas yang Anda ampu dan tidak dapat dihapus.');
+          return;
+        }
+      }
       if (!(await showConfirm('Hapus ' + ids.length + ' bank soal beserta soalnya?', 'Hapus', '🗑️'))) return;
       try {
         if (supabaseClient) {
@@ -15293,6 +15412,11 @@ document.getElementById('btnBsContohFormat')?.addEventListener('click', () => {
     document.getElementById('btnBsSoal')?.addEventListener('click', async () => {
       const ids = getCheckedBs();
       if (ids.length !== 1) { alert('Centang tepat 1 bank soal untuk kelola soal'); return; }
+      const r0 = dataBankSoal.find(x => String(x.id) === String(ids[0]));
+      if (currentRole === 'guru' && r0 && !guruCanAccessBank(r0)) {
+        alert('Anda hanya dapat mengelola soal untuk mapel & kelas yang diampu.');
+        return;
+      }
       const bid = Number(ids[0]);
       if (!bid || isNaN(bid)) {
         alert('ID bank soal tidak valid. Simpan ulang bank soal di Supabase.');
@@ -16206,6 +16330,11 @@ document.getElementById('btnBsContohFormat')?.addEventListener('click', () => {
     document.getElementById('btnBsHasil')?.addEventListener('click', async () => {
       const ids = getCheckedBs();
       if (ids.length !== 1) { alert('Centang tepat 1 bank soal untuk monitoring'); return; }
+      const rCheck = dataBankSoal.find(x => String(x.id) === String(ids[0]));
+      if (currentRole === 'guru' && rCheck && !guruCanAccessBank(rCheck)) {
+        alert('Anda hanya dapat melihat hasil untuk mapel & kelas yang diampu.');
+        return;
+      }
       setCurrentBankId(ids[0]);
       const r = dataBankSoal.find(x => String(x.id) === String(getCurrentBankId()));
       document.getElementById('bsHasilTitle').textContent = 'Monitoring: ' + (r?.judul || '');
