@@ -888,6 +888,7 @@
       #page-set-naik-lulus,
       #page-set-reset-pin,
       #page-set-profil-user,
+      #page-set-data-sekolah,
       #page-set-gdrive,
       #page-set-backup,
       #page-validasi-lulusan {
@@ -908,6 +909,7 @@
       #page-set-naik-lulus .page-title,
       #page-set-reset-pin .page-title,
       #page-set-profil-user .page-title,
+      #page-set-data-sekolah .page-title,
       #page-set-gdrive .page-title,
       #page-set-backup .page-title {
         text-align: center;
@@ -922,6 +924,7 @@
       #page-set-naik-lulus .card,
       #page-set-reset-pin .card,
       #page-set-profil-user .card,
+      #page-set-data-sekolah .card,
       #page-set-gdrive .card,
       #page-set-backup .card {
         box-shadow: 0 2px 12px rgba(15, 23, 42, 0.06);
@@ -1387,6 +1390,81 @@
     }
     @media (max-width: 767px) {
       body.dash-logged-in .app-shell { display: block; max-width: none; }
+
+    /* ===== Dashboard publik (belum login) ===== */
+    #dashPublicView { display: none; margin-bottom: 12px; }
+    body:not(.dash-logged-in) #dashPublicView { display: block; }
+    body:not(.dash-logged-in) #dashSesiInfo,
+    body:not(.dash-logged-in) #dashRekapWrap,
+    body:not(.dash-logged-in) #dashRekapHiddenMsg { display: none !important; }
+    body.dash-logged-in #dashPublicView { display: none !important; }
+    body:not(.dash-logged-in) .dash-top-row {
+      display: none !important; /* stats dipindah ke panel publik */
+    }
+    .dash-public-grid {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 12px;
+      align-items: start;
+    }
+    @media (min-width: 900px) {
+      .dash-public-grid {
+        grid-template-columns: minmax(200px, 1.1fr) minmax(220px, 1.2fr) minmax(240px, 1.3fr);
+        gap: 14px;
+      }
+    }
+    .dash-public-card {
+      background: #fff;
+      border: 1px solid #e2e8f0;
+      border-radius: 12px;
+      padding: 14px;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+    }
+    .dash-public-logo {
+      width: 96px; height: 96px; margin: 0 auto 12px;
+      display: flex; align-items: center; justify-content: center;
+      overflow: hidden;
+    }
+    .dash-public-logo img {
+      max-width: 100%; max-height: 100%; object-fit: contain;
+    }
+    .dash-public-school-name {
+      text-align: center; font-weight: 800; font-size: 13px;
+      color: #1e40af; margin-bottom: 12px; line-height: 1.3;
+    }
+    .dash-public-meta {
+      font-size: 12px; line-height: 1.65; color: #334155;
+    }
+    .dash-public-meta .row {
+      display: grid; grid-template-columns: 100px 10px 1fr;
+      gap: 2px; margin-bottom: 4px;
+    }
+    .dash-public-meta .lbl { color: #64748b; font-weight: 600; }
+    .dash-public-meta .sep { color: #94a3b8; }
+    .dash-public-meta .val { color: #0f172a; word-break: break-word; }
+    .dash-public-meta .row-block { margin-top: 10px; }
+    .dash-public-meta .row-block .lbl { display: block; margin-bottom: 2px; }
+    .dash-public-org-title {
+      text-align: center; font-weight: 800; font-size: 13px;
+      letter-spacing: 0.3px; margin-bottom: 10px; color: #0f172a;
+    }
+    #tableStrukturOrg {
+      width: 100%; border-collapse: collapse; font-size: 11px;
+    }
+    #tableStrukturOrg th, #tableStrukturOrg td {
+      border: 1px solid #cbd5e1; padding: 5px 6px; vertical-align: top;
+    }
+    #tableStrukturOrg th {
+      background: #f1f5f9; font-weight: 700; text-align: center; color: #334155;
+    }
+    #tableStrukturOrg td:first-child { text-align: center; width: 28px; }
+    .dash-public-hint {
+      font-size: 10px; color: #94a3b8; margin-top: 8px; line-height: 1.35;
+    }
+    /* stats di dalam panel publik */
+    #dashPublicStats .dash-stat-card { margin-bottom: 10px; box-shadow: none; border: 1px solid #e2e8f0; }
+    #dashPublicStats .dash-stat-card:last-child { margin-bottom: 0; }
+
       #dashProfileCard { display: none !important; }
       .dash-top-row { display: block; }
       .dash-stat-grid {
@@ -2186,6 +2264,7 @@
         <button class="menu-item" data-page="set-naik-lulus"><span class="icon">🎓</span> Naik Kelas &amp; Kelulusan</button>
         <button class="menu-item" data-page="set-reset-pin"><span class="icon">🔑</span> Reset PIN</button>
         <button class="menu-item" data-page="set-profil-user"><span class="icon">🖼️</span> Edit Profil User</button>
+        <button class="menu-item" data-page="set-data-sekolah"><span class="icon">🏫</span> Data Sekolah</button>
         <button class="menu-item" data-page="set-gdrive"><span class="icon">☁</span> Integrasi GDrive</button>
         <button class="menu-item" data-page="set-backup"><span class="icon">💾</span> Backup Data</button>
       </div>
@@ -2210,6 +2289,69 @@
   <div class="app-content">
 
 <section class="page active" id="page-dashboard">
+    <!-- Tampilan publik (belum login): identitas sekolah | statistik | struktur organisasi -->
+    <div id="dashPublicView">
+      <div class="dash-public-grid">
+        <div class="dash-public-card" id="dashPublicSchool">
+          <div class="dash-public-logo" id="dashPublicLogo">
+            <span style="font-size:11px;color:#94a3b8;">Logo</span>
+          </div>
+          <div class="dash-public-school-name" id="dashPublicSchoolName">SMP NEGERI 1 SOBANG</div>
+          <div class="dash-public-meta">
+            <div class="row"><span class="lbl">NSS</span><span class="sep">:</span><span class="val" id="dashPubNss">-</span></div>
+            <div class="row"><span class="lbl">NPSN</span><span class="sep">:</span><span class="val" id="dashPubNpsn">-</span></div>
+            <div class="row"><span class="lbl">Tahun Berdiri</span><span class="sep">:</span><span class="val" id="dashPubTahun">-</span></div>
+            <div class="row"><span class="lbl">Alamat</span><span class="sep">:</span><span class="val" id="dashPubAlamat">-</span></div>
+            <div class="row-block">
+              <span class="lbl">Visi</span>
+              <div class="val" id="dashPubVisi" style="white-space:pre-wrap;">-</div>
+            </div>
+            <div class="row-block">
+              <span class="lbl">Motto</span>
+              <div class="val" id="dashPubMotto" style="white-space:pre-wrap;">-</div>
+            </div>
+          </div>
+          <div class="dash-public-hint">Diambil dari pengaturan menu <b>Data Sekolah</b></div>
+        </div>
+        <div class="dash-public-card" id="dashPublicStats">
+          <!-- Statistik diisi lewat JS dari elemen yang sama / mirror -->
+          <div class="card dash-stat-card" style="padding:12px;margin-bottom:10px;">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+              <div style="font-size:13px;font-weight:700;">Statistik Guru</div>
+              <div id="dashTotalGuruPub" style="background:#e0f2fe;color:#0369a1;font-size:12px;font-weight:700;padding:2px 10px;border-radius:8px;">0</div>
+            </div>
+            <div class="dash-stat-grid" id="dashStatGridGuruPub"></div>
+          </div>
+          <div class="card dash-stat-card" style="padding:12px;">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+              <div style="font-size:13px;font-weight:700;">Statistik Siswa</div>
+              <div id="dashTotalSiswaPub" style="background:#e0f2fe;color:#0369a1;font-size:12px;font-weight:700;padding:2px 10px;border-radius:8px;">0</div>
+            </div>
+            <div class="dash-stat-grid" id="dashStatGridSiswaPub"></div>
+          </div>
+        </div>
+        <div class="dash-public-card" id="dashPublicOrg">
+          <div class="dash-public-org-title">STRUKTUR ORGANISASI</div>
+          <div style="overflow-x:auto;">
+            <table id="tableStrukturOrg">
+              <thead>
+                <tr>
+                  <th>No</th>
+                  <th>Nama</th>
+                  <th>Jabatan<br>dlm Struktur</th>
+                  <th>Jabatan<br>Fungsional</th>
+                </tr>
+              </thead>
+              <tbody id="tbodyStrukturOrg">
+                <tr><td colspan="4" style="text-align:center;padding:12px;color:#94a3b8;">Memuat...</td></tr>
+              </tbody>
+            </table>
+          </div>
+          <div class="dash-public-hint">Diambil dari Tabel Data Guru diurutkan berdasarkan id</div>
+        </div>
+      </div>
+    </div>
+
     <!-- Desktop login: profil kiri | statistik kanan. HP: hanya statistik -->
     <div class="dash-top-row">
       <div class="dash-stats-block">
@@ -3704,6 +3846,49 @@
       <input type="file" id="puFotoFile" accept="image/jpeg,image/png,image/webp,image/gif" style="display:none;">
     </section>
 
+    <section class="page" id="page-set-data-sekolah">
+      <div class="page-title">🏫 Data Sekolah</div>
+      <div class="card" style="padding:14px;margin-bottom:12px;">
+        <p style="font-size:12px;color:#64748b;margin:0 0 12px;line-height:1.45;">
+          Data ini ditampilkan di <b>Dashboard</b> saat belum login (tampilan publik).
+          Logo sekolah tetap diatur lewat menu profil / logo yang sudah ada.
+        </p>
+        <div class="form-group">
+          <label>Nama Sekolah</label>
+          <input type="text" id="dsNama" placeholder="SMP NEGERI 1 SOBANG" style="width:100%;padding:8px 10px;border:1px solid #e2e8f0;border-radius:8px;">
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label>NSS</label>
+            <input type="text" id="dsNss" placeholder="NSS" style="width:100%;padding:8px 10px;border:1px solid #e2e8f0;border-radius:8px;">
+          </div>
+          <div class="form-group">
+            <label>NPSN</label>
+            <input type="text" id="dsNpsn" placeholder="NPSN" style="width:100%;padding:8px 10px;border:1px solid #e2e8f0;border-radius:8px;">
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label>Tahun Berdiri</label>
+            <input type="text" id="dsTahun" placeholder="Contoh: 1985" style="width:100%;padding:8px 10px;border:1px solid #e2e8f0;border-radius:8px;">
+          </div>
+          <div class="form-group">
+            <label>Alamat</label>
+            <input type="text" id="dsAlamat" placeholder="Alamat sekolah" style="width:100%;padding:8px 10px;border:1px solid #e2e8f0;border-radius:8px;">
+          </div>
+        </div>
+        <div class="form-group">
+          <label>Visi</label>
+          <textarea id="dsVisi" rows="3" placeholder="Visi sekolah" style="width:100%;padding:8px 10px;border:1px solid #e2e8f0;border-radius:8px;resize:vertical;"></textarea>
+        </div>
+        <div class="form-group">
+          <label>Motto</label>
+          <textarea id="dsMotto" rows="2" placeholder="Motto sekolah" style="width:100%;padding:8px 10px;border:1px solid #e2e8f0;border-radius:8px;resize:vertical;"></textarea>
+        </div>
+        <button type="button" class="btn btn-primary" id="btnSimpanDataSekolah" style="width:100%;margin-top:8px;">💾 Simpan Data Sekolah</button>
+        <div id="dsStatus" style="font-size:12px;color:#64748b;margin-top:8px;"></div>
+      </div>
+    </section>
     <section class="page" id="page-set-gdrive">
       <div class="page-title">☁ Integrasi Google Drive</div>
       
@@ -5004,44 +5189,61 @@
     }
 
     function setSchoolLogoDisplay(url, dataUrl) {
+      const targets = [];
       const el = document.querySelector('.topbar-left .logo') || document.querySelector('.logo');
-      if (!el) return;
+      if (el) targets.push(el);
+      const pub = document.getElementById('dashPublicLogo');
+      if (pub) targets.push(pub);
+      if (!targets.length) return;
       const du = (dataUrl || schoolLogoDataUrl || '').toString();
       const u = url || schoolLogoUrl || null;
+      function fill(target, contentHtmlOrText, isText) {
+        if (isText) { target.textContent = contentHtmlOrText; return; }
+        target.innerHTML = '';
+        target.appendChild(contentHtmlOrText);
+      }
       if (du.indexOf('data:image') === 0) {
-        el.innerHTML = '';
-        const img = document.createElement('img');
-        img.src = du;
-        img.alt = 'Logo';
-        img.decoding = 'async';
-        img.style.cssText = 'width:100%;height:100%;object-fit:contain;display:block;background:transparent;border:none;';
-        img.onerror = function () {
-          if (u) setImgWithDriveFallback(el, u, 'SP');
-          else el.textContent = 'SP';
-        };
-        el.appendChild(img);
+        targets.forEach(target => {
+          const img = document.createElement('img');
+          img.src = du;
+          img.alt = 'Logo';
+          img.decoding = 'async';
+          img.style.cssText = 'width:100%;height:100%;object-fit:contain;display:block;background:transparent;border:none;';
+          img.onerror = function () {
+            if (u) setImgWithDriveFallback(target, u, 'SP');
+            else target.textContent = (target.id === 'dashPublicLogo' ? '' : 'SP') || 'Logo';
+          };
+          target.innerHTML = '';
+          target.appendChild(img);
+        });
         return;
       }
       if (u) {
-        // Logo: contain + transparan (bukan cover seperti foto profil)
-        el.innerHTML = '';
         const candidates = gdriveImgFallbacks(u);
-        if (!candidates.length) { el.textContent = 'SP'; return; }
-        const img = document.createElement('img');
-        img.alt = 'Logo';
-        img.referrerPolicy = 'no-referrer';
-        img.style.cssText = 'width:100%;height:100%;object-fit:contain;display:block;background:transparent;border:none;';
-        let idx = 0;
-        img.src = candidates[0];
-        img.onerror = function () {
-          idx++;
-          if (idx < candidates.length) img.src = candidates[idx];
-          else el.textContent = 'SP';
-        };
-        el.appendChild(img);
+        targets.forEach(target => {
+          target.innerHTML = '';
+          if (!candidates.length) {
+            target.textContent = target.id === 'dashPublicLogo' ? 'Logo' : 'SP';
+            return;
+          }
+          const img = document.createElement('img');
+          img.alt = 'Logo';
+          img.referrerPolicy = 'no-referrer';
+          img.style.cssText = 'width:100%;height:100%;object-fit:contain;display:block;background:transparent;border:none;';
+          let idx = 0;
+          img.src = candidates[0];
+          img.onerror = function () {
+            idx++;
+            if (idx < candidates.length) img.src = candidates[idx];
+            else target.textContent = target.id === 'dashPublicLogo' ? 'Logo' : 'SP';
+          };
+          target.appendChild(img);
+        });
         return;
       }
-      el.textContent = 'SP';
+      targets.forEach(target => {
+        target.textContent = target.id === 'dashPublicLogo' ? 'Logo' : 'SP';
+      });
     }
 
     function persistLogoLocal() {
@@ -6165,6 +6367,7 @@
       if (pageId === 'input-izin') initIzinPage();
       if (pageId === 'rekap-data') initRekapPage();
       if (pageId === 'download-absensi') initDownloadAbsensiPage();
+      if (pageId === 'set-data-sekolah') initDataSekolahPage();
       if (pageId === 'cari-siswa') initCariSiswaPage();
       if (pageId === 'jadwal-mapel') initJadwalMapelPage();
       if (pageId === 'jadwal-kelas') initJadwalKelasSiswaPage();
@@ -10327,6 +10530,9 @@
       try {
         if (isLogged) document.body.classList.add('dash-logged-in');
         else document.body.classList.remove('dash-logged-in');
+        if (!isLogged) {
+          try { refreshPublicDashboard(); } catch (e) {}
+        }
       } catch (e) {}
       if (!isLogged) { card.style.display = 'none'; return; }
       card.style.display = '';
@@ -10514,6 +10720,195 @@
         console.warn('updateDashProfile', e);
       }
     }
+
+
+    /* ===== Data Sekolah + Dashboard publik ===== */
+    const DATA_SEKOLAH_KEY = 'data_sekolah';
+    let _dataSekolah = {
+      nama: 'SMP NEGERI 1 SOBANG',
+      nss: '',
+      npsn: '',
+      tahun_berdiri: '',
+      alamat: '',
+      visi: '',
+      motto: ''
+    };
+
+    async function loadDataSekolah() {
+      try {
+        const v = await loadAppSetting(DATA_SEKOLAH_KEY);
+        if (v && typeof v === 'object') {
+          _dataSekolah = Object.assign({}, _dataSekolah, v);
+        }
+      } catch (e) { console.warn('loadDataSekolah', e); }
+      return _dataSekolah;
+    }
+
+    async function saveDataSekolah(obj) {
+      _dataSekolah = Object.assign({}, _dataSekolah, obj || {});
+      await saveAppSetting(DATA_SEKOLAH_KEY, _dataSekolah);
+      return _dataSekolah;
+    }
+
+    function applyDataSekolahToPublic() {
+      const d = _dataSekolah || {};
+      const set = (id, val) => {
+        const el = document.getElementById(id);
+        if (el) el.textContent = (val != null && String(val).trim() !== '') ? String(val) : '-';
+      };
+      set('dashPublicSchoolName', d.nama || 'SMP NEGERI 1 SOBANG');
+      set('dashPubNss', d.nss);
+      set('dashPubNpsn', d.npsn);
+      set('dashPubTahun', d.tahun_berdiri);
+      set('dashPubAlamat', d.alamat);
+      set('dashPubVisi', d.visi);
+      set('dashPubMotto', d.motto);
+      // logo
+      const logoBox = document.getElementById('dashPublicLogo');
+      if (logoBox) {
+        const src = schoolLogoDataUrl || schoolLogoUrl || null;
+        if (src) {
+          let url = src;
+          if (typeof src === 'string' && src.indexOf('drive.google.com') >= 0) {
+            const m = src.match(/\/d\/([^/]+)/);
+            if (m) url = 'https://drive.google.com/uc?export=view&id=' + m[1];
+          }
+          logoBox.innerHTML = '<img src="' + esc(url) + '" alt="Logo sekolah" onerror="this.parentNode.innerHTML=\'<span style=font-size:11px;color:#94a3b8>Logo</span>\'">';
+        } else {
+          logoBox.innerHTML = '<span style="font-size:11px;color:#94a3b8;">Logo</span>';
+        }
+      }
+    }
+
+    async function loadStrukturOrganisasi() {
+      const tbody = document.getElementById('tbodyStrukturOrg');
+      if (!tbody) return;
+      tbody.innerHTML = '<tr><td colspan="4" style="text-align:center;padding:12px;color:#94a3b8;">Memuat...</td></tr>';
+      let list = [];
+      try {
+        if (supabaseClient) {
+          const { data, error } = await supabaseClient.from('guru')
+            .select('id, nama, jabatan_struktur, jabatan_fungsi, jabatan, status')
+            .order('id', { ascending: true });
+          if (error) throw error;
+          list = data || [];
+        } else if (typeof dataGuru !== 'undefined' && dataGuru.length) {
+          list = dataGuru.slice().sort((a, b) => (Number(a.id) || 0) - (Number(b.id) || 0));
+        } else if (typeof DEMO_GURU !== 'undefined') {
+          list = DEMO_GURU.slice();
+        }
+      } catch (e) {
+        console.warn('loadStrukturOrganisasi', e);
+        tbody.innerHTML = '<tr><td colspan="4" style="text-align:center;padding:12px;color:#ef4444;">Gagal memuat</td></tr>';
+        return;
+      }
+      // tampilkan semua (aktif dulu), urut id
+      list = list.slice().sort((a, b) => (Number(a.id) || 0) - (Number(b.id) || 0));
+      if (!list.length) {
+        tbody.innerHTML = '<tr><td colspan="4" style="text-align:center;padding:12px;color:#94a3b8;">Belum ada data guru</td></tr>';
+        return;
+      }
+      // minimal 12 baris kosong seperti mockup, atau sesuai data
+      const rows = list.map((g, i) => {
+        const js = g.jabatan_struktur || g.jabatan || '';
+        const jf = g.jabatan_fungsi || '';
+        return '<tr>' +
+          '<td>' + (i + 1) + '</td>' +
+          '<td style="text-align:left;">' + esc(g.nama || '') + '</td>' +
+          '<td style="text-align:left;">' + esc(js) + '</td>' +
+          '<td style="text-align:left;">' + esc(jf) + '</td>' +
+          '</tr>';
+      });
+      // pad empty rows to at least 12
+      for (let i = list.length; i < 12; i++) {
+        rows.push('<tr><td>' + (i + 1) + '</td><td></td><td></td><td></td></tr>');
+      }
+      tbody.innerHTML = rows.join('');
+    }
+
+    function syncPublicStatMirrors() {
+      // salin total & isi grid dari statistik login ke panel publik
+      const mapPairs = [
+        ['dashTotalGuru', 'dashTotalGuruPub'],
+        ['dashTotalSiswa', 'dashTotalSiswaPub']
+      ];
+      mapPairs.forEach(([src, dst]) => {
+        const a = document.getElementById(src);
+        const b = document.getElementById(dst);
+        if (a && b) b.textContent = a.textContent;
+      });
+      // mirror status cells: bangun ulang grid sederhana
+      function buildGrid(prefix) {
+        // prefix stGuru / stSiswa
+        const items = [
+          { id: prefix + 'TW', label: 'TW', bg: '#dcfce7', bd: '#86efac', c: '#166534' },
+          { id: prefix + 'TL', label: 'TL', bg: '#fef3c7', bd: '#fcd34d', c: '#a16207' },
+          { id: prefix + 'Sakit', label: 'Sakit', bg: '#f3e8ff', bd: '#d8b4fe', c: '#7e22ce' },
+          { id: prefix + 'Izin', label: 'Izin', bg: '#dbeafe', bd: '#93c5fd', c: '#1d4ed8' },
+          { id: prefix + 'Alpa', label: 'Alpa', bg: '#fee2e2', bd: '#fca5a5', c: '#dc2626' },
+          { id: prefix + 'Bolos', label: 'Bolos', bg: '#fecaca', bd: '#f87171', c: '#991b1b' }
+        ];
+        return items.map(it => {
+          const el = document.getElementById(it.id);
+          const val = el ? el.innerHTML : '-';
+          return '<div class="dash-stat" style="background:' + it.bg + ';border:1px solid ' + it.bd +
+            ';border-radius:8px;padding:8px 2px;">' +
+            '<div style="font-weight:700;color:' + it.c + ';font-size:10px;">' + it.label + '</div>' +
+            '<div style="font-weight:500;margin-top:3px;color:' + it.c + ';font-size:12px;">' + val + '</div>' +
+            '</div>';
+        }).join('');
+      }
+      const g = document.getElementById('dashStatGridGuruPub');
+      const s = document.getElementById('dashStatGridSiswaPub');
+      if (g) g.innerHTML = buildGrid('stGuru');
+      if (s) s.innerHTML = buildGrid('stSiswa');
+    }
+
+    async function refreshPublicDashboard() {
+      try { await loadDataSekolah(); } catch (e) {}
+      applyDataSekolahToPublic();
+      try { await loadStrukturOrganisasi(); } catch (e) {}
+      syncPublicStatMirrors();
+    }
+
+    async function initDataSekolahPage() {
+      if (currentRole !== 'admin') return;
+      await loadDataSekolah();
+      const d = _dataSekolah;
+      const setv = (id, v) => { const el = document.getElementById(id); if (el) el.value = v || ''; };
+      setv('dsNama', d.nama);
+      setv('dsNss', d.nss);
+      setv('dsNpsn', d.npsn);
+      setv('dsTahun', d.tahun_berdiri);
+      setv('dsAlamat', d.alamat);
+      setv('dsVisi', d.visi);
+      setv('dsMotto', d.motto);
+      const st = document.getElementById('dsStatus');
+      if (st) st.textContent = '';
+    }
+
+    document.getElementById('btnSimpanDataSekolah')?.addEventListener('click', async () => {
+      if (currentRole !== 'admin') { alert('Hanya Admin'); return; }
+      const obj = {
+        nama: (document.getElementById('dsNama')?.value || '').trim(),
+        nss: (document.getElementById('dsNss')?.value || '').trim(),
+        npsn: (document.getElementById('dsNpsn')?.value || '').trim(),
+        tahun_berdiri: (document.getElementById('dsTahun')?.value || '').trim(),
+        alamat: (document.getElementById('dsAlamat')?.value || '').trim(),
+        visi: (document.getElementById('dsVisi')?.value || '').trim(),
+        motto: (document.getElementById('dsMotto')?.value || '').trim()
+      };
+      try {
+        await saveDataSekolah(obj);
+        applyDataSekolahToPublic();
+        const st = document.getElementById('dsStatus');
+        if (st) st.innerHTML = '<span style="color:#166534;">✓ Data sekolah disimpan</span>';
+        alert('Data sekolah disimpan.');
+      } catch (e) {
+        alert('Gagal simpan: ' + (e.message || e));
+      }
+    });
+
 
     async function loadDashboard() {
       try { await updateDashProfile(); } catch (e) { console.warn(e); }
@@ -10790,6 +11185,8 @@
         const det = document.getElementById('dashSesiDetail');
         if (det) det.textContent = 'Gagal memuat data';
       }
+      // Panel publik (guest): identitas sekolah + struktur org + mirror statistik
+      try { await refreshPublicDashboard(); } catch (e2) { console.warn(e2); }
     }
 
     let dataSesi = [];
