@@ -547,15 +547,47 @@
       text-transform: uppercase;
       letter-spacing: 0.5px;
     }
+    /* Judul grup Admin & Pengaturan: bisa dibuka/tutup */
+    .menu-group.collapsible > .menu-group-title {
+      cursor: pointer;
+      user-select: none;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      padding: 12px 16px;
+      margin: 4px 8px 2px;
+      border-radius: 8px;
+      background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+      color: #fff;
+      font-size: 12px;
+      letter-spacing: 0.4px;
+    }
+    .menu-group.collapsible > .menu-group-title:hover {
+      filter: brightness(1.05);
+    }
+    .menu-group.collapsible > .menu-group-title .acc-icon {
+      font-size: 11px;
+      opacity: 0.9;
+      transition: transform 0.2s;
+      color: #fff;
+    }
+    .menu-group.collapsible.collapsed > .menu-group-title .acc-icon {
+      transform: rotate(-90deg);
+    }
+    .menu-group.collapsible.collapsed > .menu-item {
+      display: none;
+    }
     .menu-item {
       display: flex;
       align-items: center;
       gap: 12px;
       padding: 12px 16px;
-      color: var(--text);
+      color: var(--primary);
       text-decoration: none;
       font-size: 14px;
-      transition: background 0.15s;
+      font-weight: 600;
+      transition: background 0.15s, color 0.15s;
       cursor: pointer;
       border: none;
       background: none;
@@ -564,18 +596,31 @@
     }
     .menu-item:hover, .menu-item:active {
       background: #eff6ff;
-      color: var(--primary);
+      color: var(--primary-dark);
     }
     .menu-item.active {
       background: #dbeafe;
-      color: var(--primary);
-      font-weight: 600;
+      color: var(--primary-dark);
+      font-weight: 700;
     }
     .menu-item .icon {
       width: 22px;
       text-align: center;
       font-size: 16px;
     }
+    /* Opsi Penilaian Ke yang sudah terisi */
+    #inKe option.in-ke-used {
+      color: #b91c1c;
+      font-weight: 700;
+    }
+    #inKeHint {
+      font-size: 11px;
+      color: #b91c1c;
+      margin-top: 4px;
+      line-height: 1.35;
+      display: none;
+    }
+    #inKeHint.show { display: block; }
     .main {
       padding: 12px;
       min-height: calc(100vh - var(--topbar-h) - var(--footer-h));
@@ -1663,8 +1708,8 @@
       left: 0;
       right: 0;
       height: var(--footer-h);
-      background: #0f172a;
-      color: #94a3b8;
+      background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+      color: rgba(255,255,255,0.92);
       display: flex;
       align-items: center;
       justify-content: center;
@@ -2366,15 +2411,15 @@
         <button class="menu-item" data-page="download-absensi"><span class="icon">⬇️</span> Download Absensi</button>
       </div>
 
-      <div class="menu-group" data-role="admin" style="display:none;">
-        <div class="menu-group-title">Admin</div>
+      <div class="menu-group collapsible" data-role="admin" style="display:none;" data-collapse-key="admin">
+        <div class="menu-group-title">Admin <span class="acc-icon">▼</span></div>
         <button class="menu-item" data-page="jadwal-mapel"><span class="icon">📅</span> Jadwal Mapel</button>
         <button class="menu-item" data-page="data-siswa"><span class="icon">👨‍🎓</span> Data Siswa</button>
         <button class="menu-item" data-page="data-guru"><span class="icon">👨‍🏫</span> Data Guru</button>
         <button class="menu-item" data-page="data-lulusan"><span class="icon">🎓</span> Data Lulusan</button>
       </div>
-      <div class="menu-group" data-role="admin" style="display:none;">
-        <div class="menu-group-title">Pengaturan</div>
+      <div class="menu-group collapsible" data-role="admin" style="display:none;" data-collapse-key="pengaturan">
+        <div class="menu-group-title">Pengaturan <span class="acc-icon">▼</span></div>
         <button class="menu-item" data-page="set-mapel"><span class="icon">📚</span> Mapel</button>
         <button class="menu-item" data-page="set-kelas"><span class="icon">🏫</span> Kelas</button>
         <button class="menu-item" data-page="set-periode"><span class="icon">📅</span> Periode</button>
@@ -3134,17 +3179,20 @@
             <option value="ASAT">ASAT</option>
           </select>
         </div>
-        <div class="rekap-filter-row">
-          <label>Penilaian Ke</label>
-          <select id="inKe">
-            <option value="1">1</option><option value="2">2</option><option value="3">3</option>
-            <option value="4">4</option><option value="5">5</option><option value="6">6</option>
-            <option value="7">7</option><option value="8">8</option><option value="9">9</option>
-            <option value="10">10</option><option value="11">11</option><option value="12">12</option>
-            <option value="13">13</option><option value="14">14</option><option value="15">15</option>
-            <option value="16">16</option><option value="17">17</option><option value="18">18</option>
-            <option value="19">19</option><option value="20">20</option>
-          </select>
+        <div class="rekap-filter-row" style="align-items:flex-start;">
+          <label style="padding-top:10px;">Penilaian Ke</label>
+          <div style="flex:1;min-width:0;">
+            <select id="inKe" style="width:100%;">
+              <option value="1">1</option><option value="2">2</option><option value="3">3</option>
+              <option value="4">4</option><option value="5">5</option><option value="6">6</option>
+              <option value="7">7</option><option value="8">8</option><option value="9">9</option>
+              <option value="10">10</option><option value="11">11</option><option value="12">12</option>
+              <option value="13">13</option><option value="14">14</option><option value="15">15</option>
+              <option value="16">16</option><option value="17">17</option><option value="18">18</option>
+              <option value="19">19</option><option value="20">20</option>
+            </select>
+            <div id="inKeHint"></div>
+          </div>
         </div>
         <div class="rekap-filter-row">
           <label>Mapel</label>
@@ -8082,8 +8130,89 @@
         if (bt) bt.disabled = true;
         if (bi) bi.disabled = true;
         document.getElementById('infoInputNilai').textContent = '';
+        try { await refreshUsedKeOptions(); } catch (e) {}
       }
     }
+
+    let _usedKeByJenis = new Set(); // ke yang sudah ada untuk mapel+kelas+jenis+periode aktif
+
+    async function refreshUsedKeOptions(opts) {
+      opts = opts || {};
+      const autoPickFree = opts.autoPickFree !== false;
+      const mapelId = document.getElementById('inMapel')?.value;
+      const kelas = document.getElementById('inKelas')?.value;
+      const jenis = document.getElementById('inJenis')?.value;
+      const sel = document.getElementById('inKe');
+      const hint = document.getElementById('inKeHint');
+      _usedKeByJenis = new Set();
+      if (!sel) return;
+      [...sel.options].forEach(opt => {
+        opt.classList.remove('in-ke-used');
+        opt.textContent = String(opt.value);
+      });
+      if (hint) { hint.classList.remove('show'); hint.textContent = ''; }
+      if (!mapelId || !kelas || !jenis || !aktifPeriode || !supabaseClient) {
+        updateInKeHint();
+        return;
+      }
+      try {
+        const { data, error } = await supabaseClient
+          .from('nilai')
+          .select('ke')
+          .eq('periode_id', aktifPeriode.id)
+          .eq('mapel_id', Number(mapelId))
+          .eq('kelas', kelas)
+          .eq('jenis', jenis);
+        if (error) throw error;
+        (data || []).forEach(r => {
+          const k = Number(r.ke);
+          if (!isNaN(k) && k > 0) _usedKeByJenis.add(k);
+        });
+        [...sel.options].forEach(opt => {
+          const k = Number(opt.value);
+          if (_usedKeByJenis.has(k)) {
+            opt.classList.add('in-ke-used');
+            opt.textContent = k + ' (sudah ada)';
+          } else {
+            opt.textContent = String(k);
+          }
+        });
+        if (autoPickFree) {
+          const cur = Number(sel.value);
+          if (_usedKeByJenis.has(cur)) {
+            let next = null;
+            for (let i = 1; i <= 20; i++) {
+              if (!_usedKeByJenis.has(i)) { next = i; break; }
+            }
+            if (next != null) sel.value = String(next);
+          }
+        }
+        updateInKeHint();
+      } catch (e) {
+        console.warn('refreshUsedKeOptions', e);
+        updateInKeHint();
+      }
+    }
+
+    function updateInKeHint() {
+      const sel = document.getElementById('inKe');
+      const hint = document.getElementById('inKeHint');
+      if (!sel || !hint) return;
+      const ke = Number(sel.value);
+      const jenis = document.getElementById('inJenis')?.value || '';
+      if (_usedKeByJenis.has(ke)) {
+        hint.textContent = 'Penilaian ke-' + ke + ' untuk ' + jenis + ' sudah ada. Pilih nomor lain agar data terurut, atau lanjut untuk mengedit nilai yang sudah tersimpan.';
+        hint.classList.add('show');
+      } else {
+        hint.textContent = '';
+        hint.classList.remove('show');
+      }
+    }
+
+    document.getElementById('inJenis')?.addEventListener('change', () => { refreshUsedKeOptions(); });
+    document.getElementById('inMapel')?.addEventListener('change', () => { refreshUsedKeOptions(); });
+    document.getElementById('inKelas')?.addEventListener('change', () => { refreshUsedKeOptions(); });
+    document.getElementById('inKe')?.addEventListener('change', () => { updateInKeHint(); });
 
     document.getElementById('btnLoadSiswaNilai').addEventListener('click', async () => {
       const mapelId = document.getElementById('inMapel').value;
@@ -8092,6 +8221,29 @@
       const ke = document.getElementById('inKe').value;
       if (!mapelId || !kelas) { alert('Pilih Mapel dan Kelas'); return; }
       if (!aktifPeriode) { alert('Belum ada periode aktif. Buat periode di database.'); return; }
+
+      await refreshUsedKeOptions({ autoPickFree: false });
+      const keNum = Number(ke);
+      if (_usedKeByJenis.has(keNum)) {
+        const ok = await (typeof showConfirm === 'function'
+          ? showConfirm(
+              'Penilaian ke-' + keNum + ' untuk jenis ' + jenis + ' sudah ada.\n\nLanjut menampilkan/mengedit data yang sudah tersimpan?\n\nSaran: pilih nomor Penilaian Ke yang belum dipakai agar data terurut (1, 2, 3, ...).',
+              'Penilaian Ke sudah ada',
+              '⚠️'
+            )
+          : Promise.resolve(confirm('Penilaian ke-' + keNum + ' untuk ' + jenis + ' sudah ada. Lanjut edit?')));
+        if (!ok) {
+          let next = null;
+          for (let i = 1; i <= 20; i++) {
+            if (!_usedKeByJenis.has(i)) { next = i; break; }
+          }
+          if (next != null) {
+            document.getElementById('inKe').value = String(next);
+            updateInKeHint();
+          }
+          return;
+        }
+      }
 
       const tbody = document.getElementById('tbodyInputNilai');
       tbody.innerHTML = '<tr><td colspan="4" style="text-align:center;padding:24px;color:#94a3b8;">Memuat...</td></tr>';
@@ -8139,7 +8291,7 @@
         document.getElementById('btnSimpanNilai').disabled = false;
         document.getElementById('btnTemplateNilai').disabled = false;
         document.getElementById('btnImportNilai').disabled = false;
-        document.getElementById('infoInputNilai').textContent = siswaNilaiList.length + ' siswa · ' + jenis + ke;
+        document.getElementById('infoInputNilai').textContent = siswaNilaiList.length + ' siswa · ' + jenis + ' ke-' + ke;
       } catch (e) {
         console.error(e);
         alert('Gagal memuat siswa: ' + (e.message || e));
@@ -8184,6 +8336,7 @@
           if (error) throw error;
         }
         alert('Berhasil menyimpan ' + rows.length + ' nilai');
+        try { await refreshUsedKeOptions(); } catch (e) {}
       } catch (e) {
         alert('Gagal simpan: ' + (e.message || e));
       }
@@ -21332,6 +21485,38 @@ async function initResetPinPage() {
         alert('Gagal: ' + (e.message || e));
       }
     });
+
+
+    // ===== Sidebar: Admin & Pengaturan collapsible =====
+    (function initCollapsibleMenuGroups() {
+      function applyStored() {
+        document.querySelectorAll('.menu-group.collapsible').forEach(g => {
+          const key = g.getAttribute('data-collapse-key') || '';
+          let collapsed = false;
+          try {
+            const v = localStorage.getItem('sidebar_collapse_' + key);
+            if (v === '1') collapsed = true;
+            if (v === '0') collapsed = false;
+            if (v == null && key === 'pengaturan') collapsed = true;
+          } catch (e) {}
+          g.classList.toggle('collapsed', collapsed);
+        });
+      }
+      document.querySelectorAll('.menu-group.collapsible > .menu-group-title').forEach(title => {
+        title.addEventListener('click', (e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          const g = title.parentElement;
+          if (!g) return;
+          g.classList.toggle('collapsed');
+          const key = g.getAttribute('data-collapse-key') || '';
+          try {
+            localStorage.setItem('sidebar_collapse_' + key, g.classList.contains('collapsed') ? '1' : '0');
+          } catch (err) {}
+        });
+      });
+      applyStored();
+    })();
 
     (function restoreSession() {
       try { loadSchoolLogoSync(); } catch (e) {}
