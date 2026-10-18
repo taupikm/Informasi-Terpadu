@@ -14969,7 +14969,7 @@ document.getElementById('btnBsContohFormat')?.addEventListener('click', () => {
 
       if (!rows.length) {
         const tip = (currentRole === 'guru')
-          ? 'Belum ada bank soal untuk mapel/kelas yang Anda ampu.<br><span style="font-size:11px;">Pastikan Admin sudah mengatur Mapel & Kelas diampu di Data Guru. Bank yang Anda buat akan tetap muncul di sini.</span>'
+          ? 'Belum ada bank soal untuk Anda.<br><span style="font-size:11px;">1) Admin atur Mapel & Kelas diampu di Data Guru.<br>2) Pastikan kolom <b>guru_id</b> ada di tabel bank_soal (jalankan SQL migrasi).<br>3) Bank lama tanpa guru_id: isi lewat SQL atau buat ulang saat login sebagai guru.</span>'
           : 'Belum ada bank soal';
         tbody.innerHTML = '<tr><td colspan="9" style="text-align:center;padding:16px;color:#94a3b8;">' + tip + '</td></tr>';
         return;
@@ -15400,7 +15400,21 @@ document.getElementById('btnBsContohFormat')?.addEventListener('click', () => {
           if (c) c.value = '';
         } catch (e) {}
         await loadBankSoalTable();
-        alert('Bank soal disimpan');
+        let extra = '';
+        if (currentRole === 'guru' && currentUserId && supabaseClient) {
+          try {
+            const { data: chk } = await supabaseClient.from('bank_soal')
+              .select('id, guru_id').eq('guru_id', Number(currentUserId)).limit(1);
+            if (!chk || !chk.length) {
+              // cek apakah kolom ada: coba select guru_id
+              const { error: colErr } = await supabaseClient.from('bank_soal').select('guru_id').limit(1);
+              if (colErr && /guru_id|column/i.test(String(colErr.message || colErr))) {
+                extra = '\n\n⚠ Kolom guru_id belum ada di tabel bank_soal. Jalankan SQL migrasi agar bank soal terikat ke akun guru.';
+              }
+            }
+          } catch (e) {}
+        }
+        alert('Bank soal disimpan' + extra);
       } catch (e) {
         alert('Gagal simpan: ' + (e.message || e) + '\n\nPastikan SQL bank_soal sudah dijalankan di Supabase.');
       }
