@@ -14821,93 +14821,124 @@ document.getElementById('btnBsContohFormat')?.addEventListener('click', () => {
 
       if (currentRole === 'guru' && currentUserId) {
         try {
-          // Ampuan: pasangan mapel–kelas (guru_mapel_kelas / fallback guru_mapel × guru_kelas)
-          let allowedMapelNames = new Set(); // lowercased mapel names
-          let allowedKelas = new Set();      // lowercased kelas names
-          // mapel(lower) -> Set of kelas(lower) yang diampu untuk mapel itu
-          let mapelToKelas = {};
-          let hasAmpuan = false;
+          const uid = Number(currentUserId);
+          let allowedMapelNames = new Set(); // lower
+          let allowedKelas = new Set();      // lower
+          let mapelToKelas = {};             // mapel lower -> Set kelas lower
+          let hasMapel = false;
+          let hasKelas = false;
 
-          if (typeof getGuruAmpuPairs === 'function' && supabaseClient) {
-            const pairs = await getGuruAmpuPairs(currentUserId);
-            const [mpRes, klRes] = await Promise.all([
+          function normName(s) {
+            return String(s || '').trim().toLowerCase().replace(/\s+/g, ' ');
+          }
+          function mapelMatches(bankMapel, allowedSet) {
+            const nm = normName(bankMapel);
+            if (!nm) return false;
+            if (allowedSet.has(nm)) return true;
+            // longgar: partial match (e.g. "Matematika" vs "Matematika Wajib")
+            for (const a of allowedSet) {
+              if (!a) continue;
+              if (nm === a || nm.includes(a) || a.includes(nm)) return true;
+            }
+            return false;
+          }
+
+          if (supabaseClient) {
+            const [mpRes, klRes, gmRes, gkRes] = await Promise.all([
               supabaseClient.from('mapel').select('id, mapel, nama, kode'),
-              supabaseClient.from('kelas').select('id, kelas, nama')
+              supabaseClient.from('kelas').select('id, kelas, nama'),
+              supabaseClient.from('guru_mapel').select('mapel_id').eq('guru_id', currentUserId),
+              supabaseClient.from('guru_kelas').select('kelas_id').eq('guru_id', currentUserId)
             ]);
-            const idToMapel = {};
+            const idToMapelNames = {};
             (mpRes.data || []).forEach(m => {
-              const names = [m.mapel, m.nama, m.kode]
-                .map(x => String(x || '').trim().toLowerCase()).filter(Boolean);
-              idToMapel[Number(m.id)] = names;
-              names.forEach(n => allowedMapelNames.add(n));
-            });
-            // hanya mapel yang ada di pairs
-            const pairMapelIds = new Set(pairs.map(p => Number(p.mapel_id)));
-            allowedMapelNames = new Set();
-            pairMapelIds.forEach(mid => {
-              (idToMapel[mid] || []).forEach(n => allowedMapelNames.add(n));
+              const names = [m.mapel, m.nama, m.kode].map(normName).filter(Boolean);
+              idToMapelNames[Number(m.id)] = names;
             });
             const idToKelas = {};
             (klRes.data || []).forEach(k => {
-              const nm = String(k.kelas || k.nama || '').trim().toLowerCase();
+              const nm = normName(k.kelas || k.nama);
               if (nm) idToKelas[Number(k.id)] = nm;
             });
-            pairs.forEach(p => {
-              const mid = Number(p.mapel_id);
-              const kn = idToKelas[Number(p.kelas_id)];
-              if (!kn) return;
-              allowedKelas.add(kn);
-              (idToMapel[mid] || []).forEach(mn => {
-                if (!mapelToKelas[mn]) mapelToKelas[mn] = new Set();
-                mapelToKelas[mn].add(kn);
+
+            // 1) pasangan spesifik jika ada
+            let pairs = [];
+            if (typeof getGuruAmpuPairs === 'function') {
+              try { pairs = await getGuruAmpuPairs(currentUserId) || []; } catch (e) { pairs = []; }
+            }
+            if (pairs.length) {
+              pairs.forEach(p => {
+                const mid = Number(p.mapel_id);
+                const kn = idToKelas[Number(p.kelas_id)];
+                (idToMapelNames[mid] || []).forEach(mn => {
+                  allowedMapelNames.add(mn);
+                  if (kn) {
+                    if (!mapelToKelas[mn]) mapelToKelas[mn] = new Set();
+                    mapelToKelas[mn].add(kn);
+                    allowedKelas.add(kn);
+                  }
+                });
               });
+            }
+
+            // 2) fallback daftar mapel / kelas terpisah
+            const mapelIds = new Set((gmRes.data || []).map(r => Number(r.mapel_id)));
+            const kelasIds = new Set((gkRes.data || []).map(r => Number(r.kelas_id)));
+            mapelIds.forEach(mid => {
+              (idToMapelNames[mid] || []).forEach(mn => allowedMapelNames.add(mn));
             });
-            hasAmpuan = pairs.length > 0;
+            kelasIds.forEach(kid => {
+              const kn = idToKelas[kid];
+              if (kn) allowedKelas.add(kn);
+            });
+            // jika ada mapel tapi belum ada pasangan kelas per mapel → izinkan semua kelas ampuan
+            if (allowedMapelNames.size && !Object.keys(mapelToKelas).length && allowedKelas.size) {
+              allowedMapelNames.forEach(mn => {
+                mapelToKelas[mn] = new Set(allowedKelas);
+              });
+            }
+            // jika hanya mapel (tanpa kelas) → jangan filter kelas
+            hasMapel = allowedMapelNames.size > 0;
+            hasKelas = allowedKelas.size > 0;
+
             window._bsGuruMapelToKelas = mapelToKelas;
             window._bsGuruAllowedMapel = allowedMapelNames;
             window._bsGuruAllowedKelas = allowedKelas;
-          } else if (supabaseClient) {
-            // fallback lama
-            const [gm, gk, mp, kl] = await Promise.all([
-              supabaseClient.from('guru_mapel').select('mapel_id').eq('guru_id', currentUserId),
-              supabaseClient.from('guru_kelas').select('kelas_id').eq('guru_id', currentUserId),
-              supabaseClient.from('mapel').select('id, mapel, nama, kode'),
-              supabaseClient.from('kelas').select('id, kelas, nama')
-            ]);
-            const mapelIds = new Set((gm.data || []).map(r => Number(r.mapel_id)));
-            const kelasIds = new Set((gk.data || []).map(r => Number(r.kelas_id)));
-            hasAmpuan = mapelIds.size > 0 || kelasIds.size > 0;
-            allowedMapelNames = new Set(
-              (mp.data || []).filter(m => mapelIds.has(Number(m.id)))
-                .flatMap(m => [m.mapel, m.nama, m.kode].map(x => String(x || '').trim().toLowerCase()).filter(Boolean))
-            );
-            allowedKelas = new Set(
-              (kl.data || []).filter(k => kelasIds.has(Number(k.id)))
-                .map(k => String(k.kelas || k.nama || '').trim().toLowerCase())
-                .filter(Boolean)
-            );
-            allowedMapelNames.forEach(mn => {
-              mapelToKelas[mn] = new Set(allowedKelas);
-            });
           }
 
-          const uid = Number(currentUserId);
           rows = rows.filter(r => {
-            // Bank yang dibuat sendiri selalu tampil
+            // Bank milik sendiri selalu tampil
             if (r.guru_id != null && Number(r.guru_id) === uid) return true;
-            if (!hasAmpuan) return false;
-            const nm = String(r.mapel || '').trim().toLowerCase();
-            if (!nm || !allowedMapelNames.has(nm)) return false;
-            // Kelas bank harus overlap dengan kelas yang diampu untuk mapel tsb
-            const kls = String(r.kelas || '').split(/[,;|/]/).map(x => x.trim().toLowerCase()).filter(Boolean);
-            if (!kls.length) return false;
-            const allowedForMapel = mapelToKelas[nm] || allowedKelas;
-            if (!allowedForMapel || !allowedForMapel.size) return false;
-            return kls.some(k => allowedForMapel.has(k));
+
+            // Tanpa data ampuan sama sekali → jangan tampilkan bank orang lain
+            if (!hasMapel && !hasKelas) return false;
+
+            const nm = normName(r.mapel);
+            if (hasMapel && !mapelMatches(nm, allowedMapelNames)) return false;
+
+            // Filter kelas hanya jika guru punya daftar kelas ampuan
+            if (hasKelas) {
+              const kls = String(r.kelas || '').split(/[,;|/]/).map(normName).filter(Boolean);
+              if (!kls.length) return false;
+              // prioritas: kelas per mapel
+              let setK = null;
+              if (nm && mapelToKelas[nm]) setK = mapelToKelas[nm];
+              else {
+                // coba partial key
+                for (const [mk, ks] of Object.entries(mapelToKelas)) {
+                  if (nm === mk || nm.includes(mk) || mk.includes(nm)) {
+                    setK = ks;
+                    break;
+                  }
+                }
+              }
+              if (!setK || !setK.size) setK = allowedKelas;
+              if (!kls.some(k => setK.has(k))) return false;
+            }
+            return true;
           });
         } catch (e) {
           console.warn('filter bank guru', e);
-          // gagal filter → jangan tampilkan semua; batasi ke bank milik sendiri
           const uid = Number(currentUserId);
           rows = rows.filter(r => r.guru_id != null && Number(r.guru_id) === uid);
         }
