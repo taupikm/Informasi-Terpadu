@@ -3153,6 +3153,7 @@
         <p style="font-size:11px;color:#64748b;margin:10px 0 0;line-height:1.4;">
           Kolom tanggal hari Minggu &amp; hari libur berwarna <span style="color:#dc2626;font-weight:700;">merah</span> (menyesuaikan jumlah baris).
           TW/TL = tanda centang (✓). Sakit/Izin/Alpa/Bolos = huruf S / I / A / B.
+          Data diambil dari tabel <b>absensi</b> dan <b>absensi_historis</b> (sama seperti Rekap Data Absensi).
         </p>
       </div>
       <div class="card" style="padding:0;overflow:auto;max-height:70vh;" id="dlAbsPreviewCard">
@@ -11950,15 +11951,43 @@
     async function dlFetchAbsensiMonth(y, m, tipe) {
       const start = dlDateStr(y, m, 1);
       const end = dlDateStr(y, m, dlDaysInMonth(y, m));
+      // Sama seperti rekap: ambil dari absensi + absensi_historis, dedupe per hari/sesi
+      if (typeof fetchAbsensiRange === 'function') {
+        const rows = await fetchAbsensiRange(start, end, tipe ? { tipe: tipe } : {});
+        return rows || [];
+      }
+      // Fallback manual jika fetchAbsensiRange belum tersedia
       let rows = [];
       if (supabaseClient) {
-        let q = supabaseClient.from('absensi')
-          .select('id, tanggal, tipe, ref_id, kode, nama, status, jam_scan, sesi_id, sesi_nama')
-          .gte('tanggal', start).lte('tanggal', end);
-        if (tipe) q = q.eq('tipe', tipe);
-        const { data, error } = await q;
-        if (error) throw error;
-        rows = data || [];
+        const tables = ['absensi', 'absensi_historis'];
+        for (const table of tables) {
+          try {
+            let q = supabaseClient.from(table)
+              .select('id, tanggal, tipe, ref_id, kode, nama, status, jam_scan, sesi_id, sesi_nama, sesi_urutan')
+              .gte('tanggal', start).lte('tanggal', end);
+            if (tipe) q = q.eq('tipe', tipe);
+            const { data, error } = await q;
+            if (error) {
+              if (table === 'absensi_historis') continue;
+              throw error;
+            }
+            rows = rows.concat(data || []);
+          } catch (e) {
+            if (table === 'absensi') throw e;
+            console.warn('[dlFetchAbsensiMonth]', table, e);
+          }
+        }
+      } else {
+        try {
+          const a = JSON.parse(localStorage.getItem('absensi') || '[]');
+          const h = JSON.parse(localStorage.getItem('absensi_historis') || '[]');
+          rows = [...a, ...h].filter(r => {
+            const t = String(r.tanggal || '').slice(0, 10);
+            if (t < start || t > end) return false;
+            if (tipe && r.tipe && r.tipe !== tipe) return false;
+            return true;
+          });
+        } catch (e) { rows = []; }
       }
       return rows;
     }
@@ -11972,6 +12001,10 @@
           if (error) throw error;
           list = (data || []).filter(g => !g.status || String(g.status).toLowerCase() === 'aktif');
           list.sort((a, b) => Number(a.id) - Number(b.id));
+        } else if (typeof dataGuru !== 'undefined' && dataGuru && dataGuru.length) {
+          list = dataGuru.filter(g => !g.status || String(g.status).toLowerCase() === 'aktif');
+        } else if (typeof DEMO_GURU !== 'undefined') {
+          list = DEMO_GURU.slice();
         }
         return list.map(g => ({
           id: g.id,
@@ -11979,7 +12012,7 @@
           lp: g.lp || '',
           nisn: g.nip || '',
           pangkat: g.pangkat_gol || '',
-          kode: null
+          kode: g.nip || g.pin || null
         }));
       }
       let list = [];
@@ -11992,6 +12025,12 @@
           const st = String(s.status || 'Aktif').toLowerCase();
           return st === 'aktif' || st === '';
         });
+      } else if (typeof dataSiswa !== 'undefined' && dataSiswa && dataSiswa.length) {
+        list = dataSiswa.filter(s => {
+          if (kelas && String(s.kelas || '') !== String(kelas)) return false;
+          const st = String(s.status || 'Aktif').toLowerCase();
+          return st === 'aktif' || st === '';
+        });
       }
       return list.map(s => ({
         id: s.id,
@@ -11999,16 +12038,37 @@
         lp: s.lp || '',
         nisn: s.nisn || '',
         pangkat: '',
+        kode: s.nisn || null,
         kelas: s.kelas || kelas
       }));
     }
 
     function dlBuildDayMap(absRows, people) {
+      // Index people by id, nip/nisn (kode), dan nama agar cocok dengan data historis
       const byPerson = {};
-      people.forEach(p => { byPerson[String(p.id)] = {}; });
+      const idByKode = {};
+      const idByNama = {};
+      people.forEach(p => {
+        const id = String(p.id);
+        byPerson[id] = {};
+        const kode = String(p.nisn || p.kode || '').trim();
+        if (kode) idByKode[kode] = id;
+        const nm = String(p.nama || '').trim().toLowerCase();
+        if (nm) idByNama[nm] = id;
+      });
       absRows.forEach(r => {
-        const key = String(r.ref_id || '');
-        if (!byPerson[key]) byPerson[key] = {};
+        let key = null;
+        if (r.ref_id != null && r.ref_id !== '' && byPerson[String(r.ref_id)]) {
+          key = String(r.ref_id);
+        } else {
+          const kode = String(r.kode || '').trim();
+          if (kode && idByKode[kode]) key = idByKode[kode];
+          else {
+            const nm = String(r.nama || '').trim().toLowerCase();
+            if (nm && idByNama[nm]) key = idByNama[nm];
+          }
+        }
+        if (!key || !byPerson[key]) return;
         const tgl = String(r.tanggal || '').slice(0, 10);
         if (!tgl) return;
         if (!byPerson[key][tgl]) byPerson[key][tgl] = [];
@@ -12065,8 +12125,18 @@
         dlFetchAbsensiMonth(tahun, bulan, tipeDb)
       ]);
 
+      // Filter longgar: biarkan dlBuildDayMap mencocokkan via ref_id / kode (NIP/NISN) / nama
       const idSet = new Set(people.map(p => String(p.id)));
-      const absFiltered = absRows.filter(r => idSet.has(String(r.ref_id)));
+      const kodeSet = new Set(people.map(p => String(p.nisn || p.kode || '').trim()).filter(Boolean));
+      const namaSet = new Set(people.map(p => String(p.nama || '').trim().toLowerCase()).filter(Boolean));
+      const absFiltered = absRows.filter(r => {
+        if (r.ref_id != null && r.ref_id !== '' && idSet.has(String(r.ref_id))) return true;
+        const kode = String(r.kode || '').trim();
+        if (kode && kodeSet.has(kode)) return true;
+        const nm = String(r.nama || '').trim().toLowerCase();
+        if (nm && namaSet.has(nm)) return true;
+        return false;
+      });
       const byPerson = dlBuildDayMap(absFiltered, people);
 
       const daily = {};
