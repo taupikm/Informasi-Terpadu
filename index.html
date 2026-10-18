@@ -2496,7 +2496,7 @@
             <tr>
               <th style="background:#1a56db;color:#fff;">No</th>
               <th style="background:#1a56db;color:#fff;">Mata Pelajaran</th>
-              <th style="background:#1a56db;color:#fff;text-align:center;">RNH</th>
+              <th style="background:#1a56db;color:#fff;text-align:center;">NRH</th>
               <th style="background:#1a56db;color:#fff;text-align:center;">NR</th>
             </tr>
           </thead>
@@ -8852,37 +8852,30 @@
       return '<span style="color:' + color + ';font-weight:700;">' + t + '</span>';
     }
 
+    // NRH = rerata semua NH* & TGS*; kolom ujian ringkas = PTS/ASAS/ASAJ/ASAT;
+    // NR = 60% NRH + 40% rerata (PTS, ASAS, ASAJ, ASAT) bila ada; jika belum ada → NR = NRH
+    const NS_UJIAN_JENIS = ['PTS', 'ASAS', 'ASAJ', 'ASAT'];
     function agregasiNilaiMapel(nilaiRowsSiswa, totalAssessKeys) {
       const byJenis = {};
       (nilaiRowsSiswa || []).forEach(n => {
         const j = String(n.jenis || '').toUpperCase();
         if (!byJenis[j]) byJenis[j] = [];
-        byJenis[j].push({ ke: Number(n.ke) || 1, nilai: Number(n.nilai) });
+        const num = Number(n.nilai);
+        if (isNaN(num)) return;
+        byJenis[j].push({ ke: Number(n.ke) || 1, nilai: num });
       });
 
+      // NRH dari NH + TGS (semua ke)
+      const harianVals = [];
+      (byJenis.NH || []).forEach(x => harianVals.push(x.nilai));
+      (byJenis.TGS || []).forEach(x => harianVals.push(x.nilai));
       let rnh = null;
-      if (byJenis.NH && byJenis.NH.length) {
-        const s = byJenis.NH.reduce((a, x) => a + x.nilai, 0);
-        rnh = s / byJenis.NH.length;
+      if (harianVals.length) {
+        rnh = harianVals.reduce((a, v) => a + v, 0) / harianVals.length;
       }
 
-      const orderJenis = ['TGS', 'PTS', 'PAS', 'PAT', 'ASAS', 'ASAJ', 'ASAT'];
       const otherCols = [];
-      const jenisSet = new Set();
-      (totalAssessKeys || []).forEach(k => {
-        const j = k.split('|')[0];
-        if (j && j !== 'NH') jenisSet.add(j);
-      });
-      Object.keys(byJenis).forEach(j => { if (j !== 'NH') jenisSet.add(j); });
-      const jenisList = [...jenisSet].sort((a, b) => {
-        const ia = orderJenis.indexOf(a);
-        const ib = orderJenis.indexOf(b);
-        if (ia < 0 && ib < 0) return a.localeCompare(b);
-        if (ia < 0) return 1;
-        if (ib < 0) return -1;
-        return ia - ib;
-      });
-      jenisList.forEach(j => {
+      NS_UJIAN_JENIS.forEach(j => {
         const arr = byJenis[j] || [];
         let val = null;
         if (arr.length) {
@@ -8891,23 +8884,22 @@
         otherCols.push({ jenis: j, nilai: val });
       });
 
+      // NR: 60% NRH + 40% rerata ujian (PTS/ASAS/ASAJ/ASAT) yang sudah ada
       let nr = null;
-      const keys = totalAssessKeys || [];
-      if (keys.length) {
-        const map = {};
-        (nilaiRowsSiswa || []).forEach(n => {
-          const k = String(n.jenis || '').toUpperCase() + '|' + (Number(n.ke) || 1);
-          map[k] = Number(n.nilai);
-        });
-        let sum = 0;
-        keys.forEach(k => {
-          const v = map[k];
-          sum += (v != null && !isNaN(v)) ? v : 0;
-        });
-        nr = sum / keys.length;
-      } else if (nilaiRowsSiswa && nilaiRowsSiswa.length) {
-        const s = nilaiRowsSiswa.reduce((a, n) => a + Number(n.nilai), 0);
-        nr = s / nilaiRowsSiswa.length;
+      const ujianVals = [];
+      NS_UJIAN_JENIS.forEach(j => {
+        const arr = byJenis[j] || [];
+        if (arr.length) {
+          ujianVals.push(arr.reduce((a, x) => a + x.nilai, 0) / arr.length);
+        }
+      });
+      if (rnh != null && ujianVals.length) {
+        const avgUjian = ujianVals.reduce((a, v) => a + v, 0) / ujianVals.length;
+        nr = (0.6 * rnh) + (0.4 * avgUjian);
+      } else if (rnh != null) {
+        nr = rnh;
+      } else if (ujianVals.length) {
+        nr = ujianVals.reduce((a, v) => a + v, 0) / ujianVals.length;
       }
 
       return { rnh, otherCols, nr };
@@ -9154,7 +9146,12 @@
       if (!tbody) return;
       opts = opts || {};
 
-      await loadAktifPeriode();
+      // paralel: periode + (mapel jika belum cache) — kurangi waktu tunggu
+      const needMapel = !(typeof masterMapel !== 'undefined' && masterMapel && masterMapel.length);
+      await Promise.all([
+        loadAktifPeriode(),
+        needMapel ? loadMasterMapelKelas() : Promise.resolve()
+      ]);
       const label = aktifPeriode
         ? (aktifPeriode.tahun_ajaran + ' || ' + aktifPeriode.semester)
         : 'Belum ada periode aktif';
@@ -9188,6 +9185,13 @@
       if (elKelas) elKelas.textContent = siswa ? (siswa.kelas || '-') : '-';
 
       if (!siswa || !siswa.id) {
+        if (thead) {
+          thead.innerHTML = '<tr>' +
+            '<th style="background:#1a56db;color:#fff;">No</th>' +
+            '<th style="background:#1a56db;color:#fff;">Mata Pelajaran</th>' +
+            '<th style="background:#1a56db;color:#fff;text-align:center;">NRH</th>' +
+            '<th style="background:#1a56db;color:#fff;text-align:center;">NR</th></tr>';
+        }
         if (currentRole === 'admin') {
           tbody.innerHTML = '<tr><td colspan="4" style="text-align:center;padding:24px;color:#94a3b8;">Masukkan NISN atau Nama siswa lalu Cek Nilai</td></tr>';
         } else {
@@ -9203,39 +9207,20 @@
       tbody.innerHTML = '<tr><td colspan="4" style="text-align:center;padding:24px;color:#94a3b8;">Memuat nilai...</td></tr>';
 
       try {
-        await loadMasterMapelKelas();
+        if (!(masterMapel && masterMapel.length)) await loadMasterMapelKelas();
         const mapelList = masterMapel.slice();
 
+        // Hanya ambil nilai siswa ini (tanpa query seluruh kelas) → lebih cepat
         let nilaiSaya = [];
-        let nilaiKelasAll = [];
         if (supabaseClient) {
           const { data, error } = await supabaseClient
             .from('nilai')
-            .select('siswa_id, mapel_id, kelas, jenis, ke, nilai')
+            .select('mapel_id, jenis, ke, nilai')
             .eq('periode_id', aktifPeriode.id)
             .eq('siswa_id', siswa.id);
           if (error) throw error;
           nilaiSaya = data || [];
-
-          const kelasSiswa = siswa.kelas || currentUserKelas || '';
-          if (kelasSiswa) {
-            const { data: dk } = await supabaseClient
-              .from('nilai')
-              .select('mapel_id, jenis, ke')
-              .eq('periode_id', aktifPeriode.id)
-              .eq('kelas', kelasSiswa);
-            nilaiKelasAll = dk || [];
-          } else {
-            nilaiKelasAll = nilaiSaya.map(n => ({ mapel_id: n.mapel_id, jenis: n.jenis, ke: n.ke }));
-          }
         }
-
-        const assessByMapel = {};
-        nilaiKelasAll.forEach(n => {
-          const mid = n.mapel_id;
-          if (!assessByMapel[mid]) assessByMapel[mid] = new Set();
-          assessByMapel[mid].add(String(n.jenis || '').toUpperCase() + '|' + (Number(n.ke) || 1));
-        });
 
         const byMapel = {};
         nilaiSaya.forEach(n => {
@@ -9243,48 +9228,33 @@
           byMapel[n.mapel_id].push(n);
         });
 
-        const allOtherJenis = new Set();
-        Object.values(assessByMapel).forEach(set => {
-          set.forEach(k => {
-            const j = k.split('|')[0];
-            if (j && j !== 'NH') allOtherJenis.add(j);
-          });
+        // Kolom ujian yang ditampilkan hanya jika ada nilainya (minimal di satu mapel)
+        const presentUjian = new Set();
+        nilaiSaya.forEach(n => {
+          const j = String(n.jenis || '').toUpperCase();
+          if (NS_UJIAN_JENIS.indexOf(j) >= 0) presentUjian.add(j);
         });
-        Object.values(byMapel).forEach(rows => {
-          rows.forEach(n => {
-            const j = String(n.jenis || '').toUpperCase();
-            if (j && j !== 'NH') allOtherJenis.add(j);
-          });
-        });
-        const orderJenis = ['TGS', 'PTS', 'PAS', 'PAT', 'ASAS', 'ASAJ', 'ASAT'];
-        const otherJenisList = [...allOtherJenis].sort((a, b) => {
-          const ia = orderJenis.indexOf(a);
-          const ib = orderJenis.indexOf(b);
-          if (ia < 0 && ib < 0) return a.localeCompare(b);
-          if (ia < 0) return 1;
-          if (ib < 0) return -1;
-          return ia - ib;
-        });
+        const otherJenisList = NS_UJIAN_JENIS.filter(j => presentUjian.has(j));
 
         let h = '<tr>';
         h += '<th style="background:#1a56db;color:#fff;">No</th>';
         h += '<th style="background:#1a56db;color:#fff;">Mata Pelajaran</th>';
-        h += '<th style="background:#1a56db;color:#fff;text-align:center;">RNH</th>';
+        h += '<th style="background:#1a56db;color:#fff;text-align:center;">NRH</th>';
         otherJenisList.forEach(j => {
           h += '<th style="background:#1a56db;color:#fff;text-align:center;">' + j + '</th>';
         });
         h += '<th style="background:#1a56db;color:#fff;text-align:center;">NR</th></tr>';
         if (thead) thead.innerHTML = h;
 
+        const colCount = 3 + otherJenisList.length + 1;
         if (!mapelList.length) {
-          tbody.innerHTML = '<tr><td colspan="' + (3 + otherJenisList.length + 1) + '" style="text-align:center;padding:24px;color:#94a3b8;">Belum ada data mapel</td></tr>';
+          tbody.innerHTML = '<tr><td colspan="' + colCount + '" style="text-align:center;padding:24px;color:#94a3b8;">Belum ada data mapel</td></tr>';
           return;
         }
 
         tbody.innerHTML = mapelList.map((m, i) => {
           const rows = byMapel[m.id] || [];
-          const keys = assessByMapel[m.id] ? [...assessByMapel[m.id]] : [];
-          const agg = agregasiNilaiMapel(rows, keys);
+          const agg = agregasiNilaiMapel(rows);
 
           const ocMap = {};
           (agg.otherCols || []).forEach(c => { ocMap[c.jenis] = c.nilai; });
