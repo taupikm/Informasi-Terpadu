@@ -186,8 +186,8 @@
       --danger: #ef4444;
       --success: #22c55e;
       --warning: #f59e0b;
-      --topbar-h: 56px;
-      --footer-h: 46px;
+      --topbar-h: 64px;
+      --footer-h: 40px;
     }
 
     * {
@@ -4712,6 +4712,7 @@
               <option value="ASAS">ASAS</option>
               <option value="ASAJ">ASAJ</option>
               <option value="ASAT">ASAT</option>
+              <option value="Ujian">Ujian</option>
             </select>
           </div>
           <div class="form-group">
@@ -10695,20 +10696,64 @@
           let jabatanFung = '-';
           if (supabaseClient && currentUserId) {
             try {
-              const { data } = await supabaseClient.from('guru').select('nama, nip, pin, jabatan_struktur, jabatan_fungsi, jabatan').eq('id', currentUserId).maybeSingle();
+              let data = null, error = null;
+              // Coba kolom baru dulu
+              ({ data, error } = await supabaseClient.from('guru')
+                .select('nama, nip, pin, jabatan_struktur, jabatan_fungsi, jabatan, pangkat_gol')
+                .eq('id', currentUserId).maybeSingle());
+              if (error) {
+                // Skema lama: hanya jabatan
+                ({ data, error } = await supabaseClient.from('guru')
+                  .select('nama, nip, pin, jabatan, pangkat_gol')
+                  .eq('id', currentUserId).maybeSingle());
+              }
+              if (error) {
+                ({ data, error } = await supabaseClient.from('guru')
+                  .select('*')
+                  .eq('id', currentUserId).maybeSingle());
+              }
               if (data) {
                 if (data.nama && nameEl) nameEl.textContent = data.nama;
                 nip = data.nip || data.pin || nip;
-                jabatanStr = data.jabatan_struktur || data.jabatan || '-';
-                jabatanFung = data.jabatan_fungsi || '-';
+                jabatanStr = data.jabatan_struktur || data.jabatan || '';
+                jabatanFung = data.jabatan_fungsi || '';
+                // Jika masih digabung di kolom jabatan lama (mis. "Kurikulum & Guru Mapel")
+                if (!data.jabatan_struktur && !data.jabatan_fungsi && data.jabatan) {
+                  const raw = String(data.jabatan).trim();
+                  const parts = raw.split(/\s*[&|/]\s*/).map(s => s.trim()).filter(Boolean);
+                  if (parts.length >= 2) {
+                    // heuristik: yang mengandung "Guru" → fungsional, sisanya struktural
+                    const fung = parts.filter(p => /guru/i.test(p));
+                    const stru = parts.filter(p => !/guru/i.test(p));
+                    if (stru.length) jabatanStr = stru.join(' / ');
+                    if (fung.length) jabatanFung = fung.join(' / ');
+                    else if (!jabatanFung && parts.length) {
+                      jabatanStr = parts[0];
+                      jabatanFung = parts.slice(1).join(' / ');
+                    }
+                  } else {
+                    jabatanStr = raw;
+                  }
+                }
+              }
+            } catch (e) { console.warn('dash guru meta', e); }
+          }
+          // Fallback dari cache dataGuru di memori
+          if ((jabatanStr === '-' || jabatanStr === '') || (jabatanFung === '-' || jabatanFung === '')) {
+            try {
+              const g = (typeof dataGuru !== 'undefined' ? dataGuru : []).find(x => String(x.id) === String(currentUserId));
+              if (g) {
+                if (!jabatanStr || jabatanStr === '-') jabatanStr = g.jabatan_struktur || g.jabatan || jabatanStr;
+                if (!jabatanFung || jabatanFung === '-') jabatanFung = g.jabatan_fungsi || jabatanFung;
+                if (!nip || nip === '-') nip = g.nip || g.pin || nip;
               }
             } catch (e) {}
           }
           if (metaEl) {
             metaEl.innerHTML =
-              '<div><span style="color:#64748b;">NIP / Kode</span> : <b>' + esc(nip) + '</b></div>' +
-              '<div><span style="color:#64748b;">Jabatan Struktural</span> : <b>' + esc(jabatanStr) + '</b></div>' +
-              '<div><span style="color:#64748b;">Jabatan Fungsional</span> : <b>' + esc(jabatanFung) + '</b></div>';
+              '<div><span style="color:#64748b;">NIP / Kode</span> : <b>' + esc(nip || '-') + '</b></div>' +
+              '<div><span style="color:#64748b;">Jabatan Struktural</span> : <b>' + esc(jabatanStr || '-') + '</b></div>' +
+              '<div><span style="color:#64748b;">Jabatan Fungsional</span> : <b>' + esc(jabatanFung || '-') + '</b></div>';
           }
           if (extraEl && supabaseClient && currentUserId) {
             try {
