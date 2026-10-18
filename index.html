@@ -1398,19 +1398,47 @@
       }
     }
 
-    /* ===== Dashboard publik (belum login) ===== */
+    /* ===== Dashboard publik =====
+       - Tamu (semua ukuran): layout publik
+       - Login + HP (max 767px): tetap layout publik
+       - Login + desktop: layout lama (statistik + profil)
+    */
     #dashPublicView { display: none; margin-bottom: 12px; width: 100%; }
+
+    /* Default: tampilkan untuk tamu */
     body:not(.dash-logged-in) #dashPublicView { display: block; }
-    body:not(.dash-logged-in) #page-dashboard {
-      max-width: 1280px !important;
-      width: 100%;
-      margin-left: auto;
-      margin-right: auto;
-      padding-left: 8px;
-      padding-right: 8px;
+    body:not(.dash-logged-in) .dash-top-row { display: none !important; }
+
+    /* Desktop login: sembunyikan publik, pakai layout lama */
+    @media (min-width: 768px) {
+      body.dash-logged-in #dashPublicView { display: none !important; }
+      body.dash-logged-in .dash-top-row { display: block; }
+      body:not(.dash-logged-in) #page-dashboard {
+        max-width: 1280px !important;
+        width: 100%;
+        margin-left: auto;
+        margin-right: auto;
+        padding-left: 8px;
+        padding-right: 8px;
+      }
     }
-    /* Rekap Kehadiran Guru/Siswa & info sesi tetap tampil untuk tamu di bawah panel publik */
-    body.dash-logged-in #dashPublicView { display: none !important; }
+    @media (min-width: 1200px) {
+      body:not(.dash-logged-in) #page-dashboard {
+        max-width: 1400px !important;
+      }
+    }
+
+    /* HP: SELALU layout publik (tamu maupun login) */
+    @media (max-width: 767px) {
+      #dashPublicView { display: block !important; }
+      .dash-top-row { display: none !important; }
+      #page-dashboard {
+        max-width: none !important;
+        width: 100%;
+        margin-left: 0;
+        margin-right: 0;
+      }
+    }
 
     body:not(.dash-logged-in) #dashSesiInfo,
     body:not(.dash-logged-in) #dashRekapWrap {
@@ -1423,10 +1451,16 @@
       text-align: center;
       font-size: 15px;
     }
-
-    body:not(.dash-logged-in) .dash-top-row {
-      display: none !important;
+    /* HP login: rekap juga di bawah panel publik */
+    @media (max-width: 767px) {
+      body.dash-logged-in #dashSesiInfo,
+      body.dash-logged-in #dashRekapWrap {
+        display: block;
+        width: 100%;
+        margin-top: 12px;
+      }
     }
+
     .dash-public-grid {
       display: grid;
       grid-template-columns: 1fr;
@@ -1435,50 +1469,49 @@
       width: 100%;
     }
     @media (min-width: 900px) {
-      .dash-public-grid {
+      body:not(.dash-logged-in) .dash-public-grid {
         grid-template-columns: minmax(280px, 1.15fr) minmax(300px, 1.15fr) minmax(340px, 1.4fr);
         gap: 18px;
       }
-      .dash-public-card { padding: 18px 20px; }
-      .dash-public-logo {
+      body:not(.dash-logged-in) .dash-public-card { padding: 18px 20px; }
+      body:not(.dash-logged-in) .dash-public-logo {
         width: 120px !important;
         height: 120px !important;
         max-width: 120px !important;
         max-height: 120px !important;
       }
-      .dash-public-logo img {
+      body:not(.dash-logged-in) .dash-public-logo img {
         max-width: 120px !important;
         max-height: 120px !important;
       }
-      .dash-public-school-name { font-size: 16px; margin-bottom: 14px; }
-      .dash-public-meta { font-size: 13.5px; line-height: 1.7; }
-      .dash-public-meta .row { grid-template-columns: 130px 14px 1fr; margin-bottom: 6px; }
-      .dash-public-org-title { font-size: 15px; margin-bottom: 12px; }
-      #tableStrukturOrg { font-size: 13px; }
-      #tableStrukturOrg th, #tableStrukturOrg td { padding: 8px 10px; }
-      #dashPublicStats .dash-stat-card { padding: 14px !important; }
-      #dashPublicStats .dash-stat-grid { gap: 8px; }
-      #dashPublicStats .dash-stat { padding: 10px 6px !important; }
-      #dashPublicStats .dash-stat > div:first-child { font-size: 12px !important; }
-      #dashPublicStats .dash-stat > div:last-child { font-size: 14px !important; }
-      #dashTotalGuruPub, #dashTotalSiswaPub { font-size: 13px !important; padding: 3px 12px !important; }
-      .dash-public-hint { font-size: 11px; }
+      body:not(.dash-logged-in) .dash-public-school-name { font-size: 16px; margin-bottom: 14px; }
+      body:not(.dash-logged-in) .dash-public-meta { font-size: 13.5px; line-height: 1.7; }
+      body:not(.dash-logged-in) .dash-public-meta .row { grid-template-columns: 130px 14px 1fr; margin-bottom: 6px; }
+      body:not(.dash-logged-in) .dash-public-org-title { font-size: 15px; margin-bottom: 12px; }
+      body:not(.dash-logged-in) #tableStrukturOrg { font-size: 13px; }
+      body:not(.dash-logged-in) #tableStrukturOrg th,
+      body:not(.dash-logged-in) #tableStrukturOrg td { padding: 8px 10px; }
+      body:not(.dash-logged-in) #dashPublicStats .dash-stat-card { padding: 14px !important; }
+      body:not(.dash-logged-in) #dashPublicStats .dash-stat-grid { gap: 8px; }
+      body:not(.dash-logged-in) #dashPublicStats .dash-stat { padding: 10px 6px !important; }
+      body:not(.dash-logged-in) #dashPublicStats .dash-stat > div:first-child { font-size: 12px !important; }
+      body:not(.dash-logged-in) #dashPublicStats .dash-stat > div:last-child { font-size: 14px !important; }
+      body:not(.dash-logged-in) #dashTotalGuruPub,
+      body:not(.dash-logged-in) #dashTotalSiswaPub { font-size: 13px !important; padding: 3px 12px !important; }
+      body:not(.dash-logged-in) .dash-public-hint { font-size: 11px; }
     }
     @media (min-width: 1200px) {
-      body:not(.dash-logged-in) #page-dashboard {
-        max-width: 1400px !important;
-      }
-      .dash-public-grid {
+      body:not(.dash-logged-in) .dash-public-grid {
         grid-template-columns: minmax(300px, 1.1fr) minmax(320px, 1.15fr) minmax(380px, 1.45fr);
         gap: 22px;
       }
-      .dash-public-logo {
+      body:not(.dash-logged-in) .dash-public-logo {
         width: 140px !important;
         height: 140px !important;
         max-width: 140px !important;
         max-height: 140px !important;
       }
-      .dash-public-logo img {
+      body:not(.dash-logged-in) .dash-public-logo img {
         max-width: 140px !important;
         max-height: 140px !important;
       }
@@ -10617,9 +10650,8 @@
       try {
         if (isLogged) document.body.classList.add('dash-logged-in');
         else document.body.classList.remove('dash-logged-in');
-        if (!isLogged) {
-          try { refreshPublicDashboard(); } catch (e) {}
-        }
+        // Data panel publik selalu diisi (dipakai di HP meskipun sudah login)
+        try { refreshPublicDashboard(); } catch (e) {}
       } catch (e) {}
       if (!isLogged) { card.style.display = 'none'; return; }
       card.style.display = '';
