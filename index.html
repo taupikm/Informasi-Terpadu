@@ -3259,7 +3259,8 @@
               <th>Nama</th>
               <th>L/P</th>
               <th>NIP</th>
-              <th>Jabatan</th>
+              <th>Jabatan Struktural</th>
+              <th>Jabatan Fungsional</th>
               <th>Pangkat/Gol</th>
               <th>Status</th>
               <th>No HP</th>
@@ -3267,7 +3268,7 @@
             </tr>
           </thead>
           <tbody id="tbodyGuru">
-            <tr><td colspan="10" style="text-align:center;padding:24px;color:#94a3b8;">Memuat data...</td></tr>
+            <tr><td colspan="11" style="text-align:center;padding:24px;color:#94a3b8;">Memuat data...</td></tr>
           </tbody>
         </table>
       </div>
@@ -3982,19 +3983,25 @@
         </div>
         <div class="form-row">
           <div class="form-group">
-            <label>Jabatan</label>
-            <input type="text" id="guruJabatan" placeholder="Contoh: Guru Matematika">
+            <label>Jabatan Struktural</label>
+            <input type="text" id="guruJabatanStruktur" placeholder="Contoh: Humas, Kurikulum, Bendahara">
           </div>
           <div class="form-group">
-            <label>Pangkat / Gol</label>
-            <input type="text" id="guruPangkat" placeholder="Contoh: Penata / III-c">
+            <label>Jabatan Fungsional</label>
+            <input type="text" id="guruJabatanFungsi" placeholder="Contoh: Guru Mapel">
           </div>
         </div>
         <div class="form-row">
           <div class="form-group">
+            <label>Pangkat / Gol</label>
+            <input type="text" id="guruPangkat" placeholder="Contoh: Penata / III-c">
+          </div>
+          <div class="form-group">
             <label>Mulai Kerja</label>
             <input type="date" id="guruMulaiKerja">
           </div>
+        </div>
+        <div class="form-row">
           <div class="form-group">
             <label>Status</label>
             <select id="guruStatus">
@@ -4004,10 +4011,10 @@
               <option>Nonaktif</option>
             </select>
           </div>
-        </div>
-        <div class="form-group">
-          <label>No HP</label>
-          <input type="tel" id="guruHp" inputmode="numeric" placeholder="08xxxxxxxxxx">
+          <div class="form-group">
+            <label>No HP</label>
+            <input type="tel" id="guruHp" inputmode="numeric" placeholder="08xxxxxxxxxx">
+          </div>
         </div>
         <div class="form-group">
           <label>Mapel &amp; Kelas yang diampu</label>
@@ -6229,9 +6236,9 @@
       { id: 3, nama: 'Rizki Maulana', lp: 'L', nisn: '0123456781', kelas: '8A', tmp_lahir: 'Bogor', tgl_lahir: '2011-03-10', status: 'Aktif', no_hp: '083333333333', alamat: 'Jl. Kenanga 3', nama_ayah: 'Agus Maulana', nama_ibu: 'Dewi Lestari' }
     ];
     const DEMO_GURU = [
-      { id: 1, duk: 1, nama: 'Budi Santoso, S.Pd', lp: 'L', nip: '196505121990031001', jabatan: 'Guru Matematika', pangkat_gol: 'Pembina / IV-a', status: 'Aktif', no_hp: '081234567890', pin: '123456', mulai_kerja: '1990-03-01' },
-      { id: 2, duk: 2, nama: 'Siti Aminah, S.Pd', lp: 'P', nip: '197208151995032002', jabatan: 'Guru Bahasa Indo', pangkat_gol: 'Penata / III-c', status: 'Aktif', no_hp: '081298765432', pin: '111111', mulai_kerja: '1995-03-01' },
-      { id: 3, duk: 3, nama: 'Ahmad Fauzi, M.Pd', lp: 'L', nip: '198003102008011003', jabatan: 'Guru IPA', pangkat_gol: 'Penata Muda / III-a', status: 'Aktif', no_hp: '082112345678', pin: '222222', mulai_kerja: '2008-01-01' }
+      { id: 1, duk: 1, nama: 'Budi Santoso, S.Pd', lp: 'L', nip: '196505121990031001', jabatan_struktur: 'Humas', jabatan_fungsi: 'Guru Mapel', pangkat_gol: 'Pembina / IV-a', status: 'Aktif', no_hp: '081234567890', pin: '123456', mulai_kerja: '1990-03-01' },
+      { id: 2, duk: 2, nama: 'Siti Aminah, S.Pd', lp: 'P', nip: '197208151995032002', jabatan_struktur: 'Kurikulum', jabatan_fungsi: 'Guru Mapel', pangkat_gol: 'Penata / III-c', status: 'Aktif', no_hp: '081298765432', pin: '111111', mulai_kerja: '1995-03-01' },
+      { id: 3, duk: 3, nama: 'Ahmad Fauzi, M.Pd', lp: 'L', nip: '198003102008011003', jabatan_struktur: null, jabatan_fungsi: 'Guru Mapel', pangkat_gol: 'Penata Muda / III-a', status: 'Aktif', no_hp: '082112345678', pin: '222222', mulai_kerja: '2008-01-01' }
     ];
 
     function sortSiswaList(arr) {
@@ -6350,7 +6357,7 @@
 
     async function loadGuru() {
       const tbody = document.getElementById('tbodyGuru');
-      tbody.innerHTML = '<tr><td colspan="10" style="text-align:center;padding:24px;color:#94a3b8;">Memuat data...</td></tr>';
+      tbody.innerHTML = '<tr><td colspan="11" style="text-align:center;padding:24px;color:#94a3b8;">Memuat data...</td></tr>';
       try {
         if (supabaseClient) {
           let data = null, error = null;
@@ -6375,7 +6382,7 @@
       document.getElementById('infoGuru').textContent = dataGuru.length + ' data';
       document.getElementById('checkAllGuru').checked = false;
       if (!dataGuru.length) {
-        tbody.innerHTML = '<tr><td colspan="10" style="text-align:center;padding:24px;color:#94a3b8;">Belum ada data</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="11" style="text-align:center;padding:24px;color:#94a3b8;">Belum ada data</td></tr>';
         return;
       }
       tbody.innerHTML = dataGuru.map((g, i) => `
@@ -6385,7 +6392,8 @@
           <td>${esc(g.nama)}</td>
           <td>${g.lp || ''}</td>
           <td>${g.nip || ''}</td>
-          <td>${g.jabatan || ''}</td>
+          <td>${esc(g.jabatan_struktur || g.jabatan || '')}</td>
+          <td>${esc(g.jabatan_fungsi || '')}</td>
           <td>${g.pangkat_gol || ''}</td>
           <td>${g.status || ''}</td>
           <td>${g.no_hp || ''}</td>
@@ -6552,8 +6560,9 @@
       guru: {
         title: 'Import Data Guru',
         filename: 'contoh_guru.xlsx',
-        headers: ['nama','lp','nip','jabatan','pangkat_gol','mulai_kerja','status','no_hp','pin'],
-        sample: ['Budi Santoso','L','196505121990031001','Guru Matematika','Pembina / IV-a','1990-03-01','Aktif','081234567890','123456']
+        headers: ['nama','lp','nip','jabatan_struktur','jabatan_fungsi','pangkat_gol','mulai_kerja','status','no_hp','pin'],
+        sample: ['Budi Santoso','L','196505121990031001','Humas','Guru Mapel','Pembina / IV-a','1990-03-01','Aktif','081234567890','123456'],
+        desc: 'Kolom: nama*, lp, nip, jabatan_struktur (Jabatan Struktural), jabatan_fungsi (Jabatan Fungsional), pangkat_gol, mulai_kerja (YYYY-MM-DD), status, no_hp, pin*. PIN wajib.'
       },
       lulusan: {
         title: 'Import Data Lulusan',
@@ -6669,7 +6678,9 @@
         tgl_mulai_sekolah: 'mulai_sekolah', tanggal_mulai_sekolah: 'mulai_sekolah', mulai: 'mulai_sekolah',
         status_siswa: 'status', ayah: 'nama_ayah', ibu: 'nama_ibu', hp: 'no_hp', telepon: 'no_hp', nohp: 'no_hp',
         statusawal: 'status_awal', asal: 'asal_sekolah', sekolah_asal: 'asal_sekolah',
-        foto: 'foto_url', url_foto: 'foto_url', photourl: 'foto_url', fotoid: 'foto_id'
+        foto: 'foto_url', url_foto: 'foto_url', photourl: 'foto_url', fotoid: 'foto_id',
+        jabatan: 'jabatan_struktur', jabatanstruktural: 'jabatan_struktur', struktural: 'jabatan_struktur',
+        jabatanfungsional: 'jabatan_fungsi', fungsional: 'jabatan_fungsi', pangkat: 'pangkat_gol', gol: 'pangkat_gol'
       };
       Object.keys(aliases).forEach(a => {
         if (map[a] != null && map[aliases[a]] == null) map[aliases[a]] = map[a];
@@ -7025,7 +7036,7 @@
     document.getElementById('btnTambahGuru').addEventListener('click', async () => {
       document.getElementById('modalGuruTitle').textContent = 'Tambah Guru';
       document.getElementById('guruId').value = '';
-      ['guruNama','guruPin','guruNip','guruJabatan','guruPangkat','guruMulaiKerja','guruHp'].forEach(id => document.getElementById(id).value = '');
+      ['guruNama','guruPin','guruNip','guruJabatanStruktur','guruJabatanFungsi','guruPangkat','guruMulaiKerja','guruHp'].forEach(id => document.getElementById(id).value = '');
       document.getElementById('guruLp').value = 'L';
       document.getElementById('guruStatus').value = 'Aktif';
       await loadMasterMapelKelas();
@@ -7045,7 +7056,8 @@
       document.getElementById('guruLp').value = g.lp || 'L';
       document.getElementById('guruPin').value = g.pin || '';
       document.getElementById('guruNip').value = g.nip || '';
-      document.getElementById('guruJabatan').value = g.jabatan || '';
+      document.getElementById('guruJabatanStruktur').value = g.jabatan_struktur || g.jabatan || '';
+      document.getElementById('guruJabatanFungsi').value = g.jabatan_fungsi || '';
       document.getElementById('guruPangkat').value = g.pangkat_gol || '';
       document.getElementById('guruMulaiKerja').value = g.mulai_kerja || '';
       document.getElementById('guruStatus').value = g.status || 'Aktif';
@@ -7069,7 +7081,8 @@
         lp: document.getElementById('guruLp').value,
         pin: document.getElementById('guruPin').value.trim(),
         nip: document.getElementById('guruNip').value.trim() || null,
-        jabatan: document.getElementById('guruJabatan').value.trim() || null,
+        jabatan_struktur: document.getElementById('guruJabatanStruktur').value.trim() || null,
+        jabatan_fungsi: document.getElementById('guruJabatanFungsi').value.trim() || null,
         pangkat_gol: document.getElementById('guruPangkat').value.trim() || null,
         mulai_kerja: document.getElementById('guruMulaiKerja').value || null,
         status: document.getElementById('guruStatus').value,
@@ -7130,21 +7143,58 @@
     async function handleImportGuru(file) {
       const lines = await bacaFileSpreadsheet(file);
       if (lines.length < 2) { alert('File kosong / tidak valid'); return; }
+      const headerRow = lines[0] || [];
+      const idx = buildHeaderIndex(headerRow);
+      const hasHeader = idx.nama != null || idx.pin != null;
       const rows = [];
       for (let i = 1; i < lines.length; i++) {
         const c = (lines[i] || []).map(cellStr);
-        const nama = emptyToNull(c[0]);
-        const pin = emptyToNull(c[8]);
+        let nama, lp, nip, jabatan_struktur, jabatan_fungsi, pangkat_gol, mulai_kerja, status, no_hp, pin;
+        if (hasHeader) {
+          nama = emptyToNull(cellByHeader(c, idx, 'nama'));
+          lp = normLP(cellByHeader(c, idx, 'lp') || '');
+          nip = emptyToNull(cellByHeader(c, idx, 'nip'));
+          jabatan_struktur = emptyToNull(cellByHeader(c, idx, 'jabatan_struktur') || cellByHeader(c, idx, 'jabatan'));
+          jabatan_fungsi = emptyToNull(cellByHeader(c, idx, 'jabatan_fungsi'));
+          pangkat_gol = emptyToNull(cellByHeader(c, idx, 'pangkat_gol'));
+          mulai_kerja = emptyToNull(cellByHeader(c, idx, 'mulai_kerja'));
+          status = emptyToNull(cellByHeader(c, idx, 'status')) || 'Aktif';
+          no_hp = emptyToNull(cellByHeader(c, idx, 'no_hp'));
+          pin = emptyToNull(cellByHeader(c, idx, 'pin'));
+        } else {
+          // urutan lama (9 kolom) atau baru (10 kolom): deteksi by length
+          nama = emptyToNull(c[0]);
+          lp = normLP(c[1]);
+          nip = emptyToNull(c[2]);
+          if (c.length >= 10) {
+            jabatan_struktur = emptyToNull(c[3]);
+            jabatan_fungsi = emptyToNull(c[4]);
+            pangkat_gol = emptyToNull(c[5]);
+            mulai_kerja = emptyToNull(c[6]);
+            status = emptyToNull(c[7]) || 'Aktif';
+            no_hp = emptyToNull(c[8]);
+            pin = emptyToNull(c[9]);
+          } else {
+            jabatan_struktur = emptyToNull(c[3]);
+            jabatan_fungsi = null;
+            pangkat_gol = emptyToNull(c[4]);
+            mulai_kerja = emptyToNull(c[5]);
+            status = emptyToNull(c[6]) || 'Aktif';
+            no_hp = emptyToNull(c[7]);
+            pin = emptyToNull(c[8]);
+          }
+        }
         if (!nama || !pin) continue;
         rows.push({
           nama: nama,
-          lp: normLP(c[1]),
-          nip: emptyToNull(c[2]),
-          jabatan: emptyToNull(c[3]),
-          pangkat_gol: emptyToNull(c[4]),
-          mulai_kerja: emptyToNull(c[5]),
-          status: emptyToNull(c[6]) || 'Aktif',
-          no_hp: emptyToNull(c[7]),
+          lp: lp,
+          nip: nip,
+          jabatan_struktur: jabatan_struktur,
+          jabatan_fungsi: jabatan_fungsi,
+          pangkat_gol: pangkat_gol,
+          mulai_kerja: mulai_kerja,
+          status: status,
+          no_hp: no_hp,
           pin: pin
         });
       }
@@ -10316,21 +10366,24 @@
           }
         } else if (currentRole === 'guru') {
           let nip = currentUserKode || '-';
-          let jabatan = '-';
+          let jabatanStr = '-';
+          let jabatanFung = '-';
           if (supabaseClient && currentUserId) {
             try {
-              const { data } = await supabaseClient.from('guru').select('nama, nip, pin, jabatan').eq('id', currentUserId).maybeSingle();
+              const { data } = await supabaseClient.from('guru').select('nama, nip, pin, jabatan_struktur, jabatan_fungsi, jabatan').eq('id', currentUserId).maybeSingle();
               if (data) {
                 if (data.nama && nameEl) nameEl.textContent = data.nama;
                 nip = data.nip || data.pin || nip;
-                jabatan = data.jabatan || '-';
+                jabatanStr = data.jabatan_struktur || data.jabatan || '-';
+                jabatanFung = data.jabatan_fungsi || '-';
               }
             } catch (e) {}
           }
           if (metaEl) {
             metaEl.innerHTML =
               '<div><span style="color:#64748b;">NIP / Kode</span> : <b>' + esc(nip) + '</b></div>' +
-              '<div><span style="color:#64748b;">Jabatan</span> : <b>' + esc(jabatan) + '</b></div>';
+              '<div><span style="color:#64748b;">Jabatan Struktural</span> : <b>' + esc(jabatanStr) + '</b></div>' +
+              '<div><span style="color:#64748b;">Jabatan Fungsional</span> : <b>' + esc(jabatanFung) + '</b></div>';
           }
           if (extraEl && supabaseClient && currentUserId) {
             try {
@@ -19910,7 +19963,7 @@ document.getElementById('btnBsContohFormat')?.addEventListener('click', () => {
       if (!supabaseClient) {
         // fallback demo lokal
         (typeof dataGuru !== 'undefined' ? dataGuru : []).forEach(g => {
-          _puUsers.push({ role: 'guru', id: g.id, nama: g.nama || '-', kode: g.nip || g.pin || '', extra: g.jabatan || '' });
+          _puUsers.push({ role: 'guru', id: g.id, nama: g.nama || '-', kode: g.nip || g.pin || '', extra: [g.jabatan_struktur || g.jabatan, g.jabatan_fungsi].filter(Boolean).join(' · ') || '' });
         });
         (typeof dataSiswa !== 'undefined' ? dataSiswa : []).forEach(s => {
           _puUsers.push({ role: 'siswa', id: s.id, nama: s.nama || '-', kode: s.nisn || '', extra: s.kelas || '' });
@@ -19918,7 +19971,7 @@ document.getElementById('btnBsContohFormat')?.addEventListener('click', () => {
       } else {
         const [a, g, s] = await Promise.all([
           supabaseClient.from('admin').select('id, nama, username').order('id'),
-          supabaseClient.from('guru').select('id, nama, nip, pin, jabatan').order('nama'),
+          supabaseClient.from('guru').select('id, nama, nip, pin, jabatan_struktur, jabatan_fungsi, jabatan').order('nama'),
           supabaseClient.from('siswa').select('id, nama, nisn, kelas').order('kelas').order('nama')
         ]);
         if (a.error) console.warn('pu admin', a.error);
@@ -19928,7 +19981,7 @@ document.getElementById('btnBsContohFormat')?.addEventListener('click', () => {
           _puUsers.push({ role: 'admin', id: r.id, nama: r.nama || '-', kode: r.username || '', extra: 'Administrator' });
         });
         (g.data || []).forEach(r => {
-          _puUsers.push({ role: 'guru', id: r.id, nama: r.nama || '-', kode: r.nip || r.pin || '', extra: r.jabatan || '' });
+          _puUsers.push({ role: 'guru', id: r.id, nama: r.nama || '-', kode: r.nip || r.pin || '', extra: [r.jabatan_struktur || r.jabatan, r.jabatan_fungsi].filter(Boolean).join(' · ') || '' });
         });
         (s.data || []).forEach(r => {
           _puUsers.push({ role: 'siswa', id: r.id, nama: r.nama || '-', kode: r.nisn || '', extra: r.kelas || '' });
