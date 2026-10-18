@@ -2413,7 +2413,6 @@
 
       <div class="menu-group collapsible" data-role="admin" style="display:none;" data-collapse-key="admin">
         <div class="menu-group-title">Admin <span class="acc-icon">▼</span></div>
-        <button class="menu-item" data-page="jadwal-mapel"><span class="icon">📅</span> Jadwal Mapel</button>
         <button class="menu-item" data-page="data-siswa"><span class="icon">👨‍🎓</span> Data Siswa</button>
         <button class="menu-item" data-page="data-guru"><span class="icon">👨‍🏫</span> Data Guru</button>
         <button class="menu-item" data-page="data-lulusan"><span class="icon">🎓</span> Data Lulusan</button>
@@ -9378,10 +9377,37 @@
       return '<span style="color:' + color + ';font-weight:700;">' + t + '</span>';
     }
 
-    // NRH = rerata semua NH* & TGS*; kolom ujian ringkas = PTS/ASAS/ASAJ/ASAT;
-    // NR = 60% NRH + 40% rerata (PTS, ASAS, ASAJ, ASAT) bila ada; jika belum ada → NR = NRH
+    // NRH = rerata semua NH* & TGS*
+    // Komponen ujian untuk NR (bobot tetap 60:40; nilai kosong dihitung 0):
+    //   Semester Ganjil (semua kelas): PTS + ASAS
+    //   Semester Genap kelas 9: PTS + ASAJ
+    //   Semester Genap kelas 7/8: PTS + ASAT
+    // Contoh: hanya NRH=80 → NR = 80×60% = 48
     const NS_UJIAN_JENIS = ['PTS', 'ASAS', 'ASAJ', 'ASAT'];
-    function agregasiNilaiMapel(nilaiRowsSiswa, totalAssessKeys) {
+
+    function getUjianJenisUntukNR(kelas, semester) {
+      const sem = String(semester || (aktifPeriode && aktifPeriode.semester) || '').toLowerCase();
+      const tingkat = (typeof tingkatDariKelas === 'function')
+        ? String(tingkatDariKelas(kelas) || '')
+        : String(kelas || '').replace(/[^0-9]/g, '').charAt(0);
+      if (sem.indexOf('ganjil') >= 0) {
+        return ['PTS', 'ASAS'];
+      }
+      // Genap / default
+      if (tingkat === '9') return ['PTS', 'ASAJ'];
+      return ['PTS', 'ASAT'];
+    }
+
+    function nilaiRerataJenis(byJenis, jenis) {
+      const arr = byJenis[jenis] || [];
+      if (!arr.length) return null;
+      return arr.reduce((a, x) => a + x.nilai, 0) / arr.length;
+    }
+
+    function agregasiNilaiMapel(nilaiRowsSiswa, opts) {
+      opts = opts || {};
+      const kelas = opts.kelas || '';
+      const semester = opts.semester || (aktifPeriode && aktifPeriode.semester) || '';
       const byJenis = {};
       (nilaiRowsSiswa || []).forEach(n => {
         const j = String(n.jenis || '').toUpperCase();
@@ -9400,35 +9426,30 @@
         rnh = harianVals.reduce((a, v) => a + v, 0) / harianVals.length;
       }
 
+      // Kolom tampilan: semua jenis ujian yang mungkin
       const otherCols = [];
       NS_UJIAN_JENIS.forEach(j => {
-        const arr = byJenis[j] || [];
-        let val = null;
-        if (arr.length) {
-          val = arr.reduce((a, x) => a + x.nilai, 0) / arr.length;
-        }
-        otherCols.push({ jenis: j, nilai: val });
+        otherCols.push({ jenis: j, nilai: nilaiRerataJenis(byJenis, j) });
       });
 
-      // NR: 60% NRH + 40% rerata ujian (PTS/ASAS/ASAJ/ASAT) yang sudah ada
-      let nr = null;
-      const ujianVals = [];
-      NS_UJIAN_JENIS.forEach(j => {
-        const arr = byJenis[j] || [];
-        if (arr.length) {
-          ujianVals.push(arr.reduce((a, x) => a + x.nilai, 0) / arr.length);
-        }
+      // Komponen ujian yang dipakai untuk NR (tergantung semester & kelas)
+      const ujianUntukNR = getUjianJenisUntukNR(kelas, semester);
+      const ujianParts = ujianUntukNR.map(j => {
+        const v = nilaiRerataJenis(byJenis, j);
+        return v == null ? 0 : v; // nilai kosong dihitung 0, bobot tetap 60:40
       });
-      if (rnh != null && ujianVals.length) {
-        const avgUjian = ujianVals.reduce((a, v) => a + v, 0) / ujianVals.length;
-        nr = (0.6 * rnh) + (0.4 * avgUjian);
-      } else if (rnh != null) {
-        nr = rnh;
-      } else if (ujianVals.length) {
-        nr = ujianVals.reduce((a, v) => a + v, 0) / ujianVals.length;
+      const avgUjian = ujianParts.length
+        ? ujianParts.reduce((a, v) => a + v, 0) / ujianParts.length
+        : 0;
+
+      let nr = null;
+      const hasAny = (rnh != null) || ujianUntukNR.some(j => nilaiRerataJenis(byJenis, j) != null);
+      if (hasAny) {
+        // Selalu 60% NRH + 40% rerata komponen ujian (yang kosong = 0)
+        nr = (0.6 * (rnh != null ? rnh : 0)) + (0.4 * avgUjian);
       }
 
-      return { rnh, otherCols, nr };
+      return { rnh, otherCols, nr, ujianUntukNR };
     }
 
     async function searchSiswaSuggest(q, limit) {
@@ -9778,9 +9799,13 @@
           return;
         }
 
+        const kelasSiswa = siswa.kelas || '';
         tbody.innerHTML = mapelList.map((m, i) => {
           const rows = byMapel[m.id] || [];
-          const agg = agregasiNilaiMapel(rows);
+          const agg = agregasiNilaiMapel(rows, {
+            kelas: kelasSiswa,
+            semester: aktifPeriode ? aktifPeriode.semester : ''
+          });
 
           const ocMap = {};
           (agg.otherCols || []).forEach(c => { ocMap[c.jenis] = c.nilai; });
