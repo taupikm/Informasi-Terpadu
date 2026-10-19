@@ -12066,7 +12066,7 @@
         // jangan reset lastScanTime ke 0 — biarkan cooldown 2 dtk tetap berlaku
         lastScanCode = '';
         resumeScanCamera();
-      }, ok ? 700 : 1100);
+      }, ok ? 550 : 900);
     }
 
     function scheduleLoadScanLog() {
@@ -12266,16 +12266,21 @@
           ket + ' · ' + now.toLocaleTimeString('id-ID'));
         try { prependScanLogRow(row); } catch (e) {}
         scheduleLoadScanLog();
-        // cek kesehatan video tiap beberapa scan — restart hanya jika blank/freeze
+        // cek kesehatan video jarang (tiap 15 scan) — hanya pulihkan play(), hindari restart penuh
         _scanSuccessCount = (_scanSuccessCount || 0) + 1;
-        if (_scanSuccessCount >= 8) {
+        if (_scanSuccessCount >= 15) {
           _scanSuccessCount = 0;
           setTimeout(() => {
             try {
-              if (!isScanVideoHealthy()) softRestartKamera();
-              else { lastScanCode = ''; lastScanTime = 0; }
+              const v = document.querySelector('#qrReader video');
+              if (v && v.paused) {
+                const p = v.play();
+                if (p && typeof p.catch === 'function') p.catch(() => {});
+              } else if (!isScanVideoHealthy()) {
+                softRestartKamera();
+              }
             } catch (e) {}
-          }, 600);
+          }, 200);
         }
       } catch (e) {
         console.error(e);
@@ -12298,12 +12303,22 @@
     let _scanSuccessCount = 0;
     let _softRestarting = false;
     const _scanPersonCache = new Map();
-    /** Jeda antar scan (ms) — maksimal 2 detik agar antrian tidak dobel, tetap cepat */
-    const SCAN_COOLDOWN_MS = 2000;
+    /** Jeda antar scan (ms) — cukup cegah dobel, tetap cepat (~1,2 dtk) */
+    const SCAN_COOLDOWN_MS = 1200;
     let _liburScanCache = { date: '', value: null };
 
     function resumeScanCamera() {
       _scanBusy = false;
+      try {
+        // utamakan play() pada elemen video — hindari blank dari pause/resume library
+        const v = document.querySelector('#qrReader video');
+        if (v) {
+          if (v.paused) {
+            const p = v.play();
+            if (p && typeof p.catch === 'function') p.catch(() => {});
+          }
+        }
+      } catch (e) {}
       try {
         if (html5QrCode && kameraAktif && typeof html5QrCode.resume === 'function') {
           html5QrCode.resume();
@@ -12418,28 +12433,37 @@
       if (_softRestarting || !kameraAktif) return;
       _softRestarting = true;
       try {
-        // jika video masih hidup, cukup reset state — hindari blank screen
-        if (isScanVideoHealthy()) {
-          lastScanCode = '';
-          lastScanTime = 0;
-          _scanBusy = false;
-          return;
+        const v = document.querySelector('#qrReader video');
+        // 1) coba pulihkan stream tanpa stop/start (hindari blank)
+        if (v) {
+          try {
+            if (v.paused) {
+              const p = v.play();
+              if (p && typeof p.catch === 'function') await p.catch(() => {});
+            }
+          } catch (e) {}
+          // tunggu sebentar, cek apakah sudah sehat
+          await new Promise(r => setTimeout(r, 80));
+          if (isScanVideoHealthy()) {
+            lastScanCode = '';
+            _scanBusy = false;
+            return;
+          }
         }
-        await startScanEngine();
+        // 2) hanya restart penuh jika video hilang / stream mati
+        if (!v || !v.srcObject) {
+          await startScanEngine();
+        } else {
+          // stream masih ada tapi "sakit" — coba play saja, jangan stop
+          lastScanCode = '';
+          _scanBusy = false;
+          try { resumeScanCamera(); } catch (e) {}
+        }
       } catch (e) {
         console.warn('softRestartKamera', e);
-        try {
-          await new Promise(r => setTimeout(r, 500));
-          await startScanEngine();
-        } catch (e2) {
-          console.warn('softRestart retry gagal', e2);
-          // biarkan user buka ulang manual
-          try {
-            document.getElementById('btnBukaKamera').style.display = 'block';
-            document.getElementById('btnTutupKamera').style.display = 'none';
-          } catch (e3) {}
-          kameraAktif = false;
-        }
+        // jangan auto-restart berulang agar tidak blank berkepanjangan
+        lastScanCode = '';
+        _scanBusy = false;
       } finally {
         _softRestarting = false;
       }
@@ -12452,36 +12476,37 @@
         const code = String(decodedText || '').trim();
         if (!code) return;
         if (_scanBusy) return;
-        // Jeda antar scan (scan ke-1 → ke-2) maksimal 2 detik — cegah dobel, antrian tetap lancar
+        // Jeda antar scan ~1,2 dtk — cegah dobel, antrian tetap cepat
         if (lastScanTime && (now - lastScanTime) < SCAN_COOLDOWN_MS) return;
 
         lastScanCode = code;
         lastScanTime = now;
         _scanBusy = true;
-        try { if (navigator.vibrate) navigator.vibrate(35); } catch (e) {}
+        try { if (navigator.vibrate) navigator.vibrate(30); } catch (e) {}
 
-        // pause sejenak agar frame tidak membanjiri callback saat proses DB
-        try {
-          if (html5QrCode && typeof html5QrCode.pause === 'function') {
-            html5QrCode.pause(true);
-          }
-        } catch (e) {}
+        // JANGAN pause kamera — pause() sering bikin blank di Chrome Android
+        // Cukup abaikan callback lewat _scanBusy + cooldown
 
         prosesScan(code)
           .catch(e => console.error('prosesScan', e))
           .finally(() => {
-            // buka lagi setelah sisa cooldown (total gap ≤ 2 detik dari lastScanTime)
             const elapsed = Date.now() - lastScanTime;
             const wait = Math.max(0, Math.min(SCAN_COOLDOWN_MS, SCAN_COOLDOWN_MS - elapsed));
             setTimeout(() => {
               _scanBusy = false;
-              resumeScanCamera();
+              // pastikan video tetap play (tanpa stop/start)
+              try {
+                const v = document.querySelector('#qrReader video');
+                if (v && v.paused) {
+                  const p = v.play();
+                  if (p && typeof p.catch === 'function') p.catch(() => {});
+                }
+              } catch (e) {}
             }, wait);
           });
       } catch (e) {
         console.error('onScanSuccessFast', e);
         _scanBusy = false;
-        try { resumeScanCamera(); } catch (e2) {}
       }
     }
 
