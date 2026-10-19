@@ -42,6 +42,11 @@
     .bs-mini-editor .ql-editor { min-height: 56px; padding: 8px; font-size: 13px; }
     .bs-mini-editor .ql-editor.ql-blank::before { font-style: normal; font-size: 12px; }
 
+    /* Editor jawaban esai (ujian siswa) — lebih tinggi dari opsi mini */
+    #tuEsaiEditor.bs-mini-editor { margin-top: 0; }
+    #tuEsaiEditor.bs-mini-editor .ql-container.ql-snow { min-height: 110px; }
+    #tuEsaiEditor.bs-mini-editor .ql-editor { min-height: 110px; font-size: 14px; line-height: 1.5; }
+
     .eq-tabs { display:flex; flex-wrap:wrap; gap:4px; margin-bottom:10px; }
     .eq-tab {
       border:1px solid #e2e8f0; background:#f8fafc; border-radius:6px;
@@ -14796,8 +14801,9 @@
         html += '<div class="form-group" style="margin-top:10px;"><input type="text" id="tuIsian" value="' +
           esc(ans || '') + '" placeholder="Tulis jawaban singkat" style="width:100%;padding:10px;border:1px solid #e2e8f0;border-radius:8px;"></div>';
       } else if (jenis === 'Esai') {
-        html += '<div class="form-group" style="margin-top:10px;"><textarea id="tuEsai" rows="5" placeholder="Tulis jawaban esai..." style="width:100%;padding:10px;border:1px solid #e2e8f0;border-radius:8px;">' +
-          esc(ans || '') + '</textarea></div>';
+        html += '<div class="form-group" style="margin-top:10px;">' +
+          '<label style="font-size:12px;font-weight:600;color:#334155;margin-bottom:6px;display:block;">Jawaban esai</label>' +
+          '<div id="tuEsaiEditor" class="bs-mini-editor" style="min-height:120px;"></div></div>';
       } else if (jenis === 'Menjodohkan') {
         html += '<div class="form-group" style="margin-top:10px;"><textarea id="tuEsai" rows="4" placeholder="Tulis pasangan, contoh: 1-b, 2-d, 3-a" style="width:100%;padding:10px;border:1px solid #e2e8f0;border-radius:8px;">' +
           esc(ans || '') + '</textarea></div>';
@@ -14844,8 +14850,60 @@
       });
       const isian = document.getElementById('tuIsian');
       if (isian) isian.addEventListener('input', () => { _tuAnswers[s.id] = isian.value; refreshTuSubmitBtn(); });
-      const esai = document.getElementById('tuEsai');
-      if (esai) esai.addEventListener('input', () => { _tuAnswers[s.id] = esai.value; refreshTuSubmitBtn(); });
+
+      // Jawaban esai: editor Quill seperti kotak opsi / tulis soal
+      if (jenis === 'Esai') {
+        try { if (window._tuEsaiQuill) { window._tuEsaiQuill = null; } } catch (e) {}
+        const mount = document.getElementById('tuEsaiEditor');
+        if (mount) {
+          if (typeof Quill !== 'undefined') {
+            mount.innerHTML = '';
+            const target = document.createElement('div');
+            mount.appendChild(target);
+            const q = new Quill(target, {
+              theme: 'snow',
+              placeholder: 'Tulis jawaban esai...',
+              modules: {
+                toolbar: [
+                  ['bold', 'italic', { script: 'sub' }, { script: 'super' }],
+                  [{ color: [] }],
+                  [{ list: 'ordered' }, { list: 'bullet' }],
+                  ['clean']
+                ]
+              }
+            });
+            const container = mount.querySelector('.ql-container');
+            if (container) container.style.minHeight = '110px';
+            const editor = mount.querySelector('.ql-editor');
+            if (editor) editor.style.minHeight = '110px';
+            // restore jawaban sebelumnya (boleh HTML atau plain text)
+            const prev = ans || '';
+            if (prev) {
+              if (/<[a-z][\s\S]*>/i.test(String(prev))) {
+                q.root.innerHTML = String(prev);
+              } else {
+                q.setText(String(prev));
+              }
+            }
+            q.on('text-change', () => {
+              const html = q.root.innerHTML || '';
+              const plain = (q.getText() || '').replace(/\u00a0/g, ' ').trim();
+              _tuAnswers[s.id] = plain ? html : '';
+              refreshTuSubmitBtn();
+            });
+            window._tuEsaiQuill = q;
+          } else {
+            // fallback textarea jika Quill belum termuat
+            mount.innerHTML = '<textarea id="tuEsai" rows="5" placeholder="Tulis jawaban esai..." style="width:100%;padding:10px;border:1px solid #e2e8f0;border-radius:8px;min-height:110px;">' +
+              esc(ans || '') + '</textarea>';
+            const esai = document.getElementById('tuEsai');
+            if (esai) esai.addEventListener('input', () => { _tuAnswers[s.id] = esai.value; refreshTuSubmitBtn(); });
+          }
+        }
+      } else {
+        const esai = document.getElementById('tuEsai');
+        if (esai) esai.addEventListener('input', () => { _tuAnswers[s.id] = esai.value; refreshTuSubmitBtn(); });
+      }
 
       const fileInp = document.getElementById('tuFileInput');
       if (fileInp) {
@@ -14923,6 +14981,11 @@
       if (typeof a === 'object' && !Array.isArray(a)) {
         return !!(a.name || a.url || a.id);
       }
+      // HTML kosong dari Quill (mis. <p><br></p>) dianggap belum dijawab
+      if (typeof a === 'string') {
+        const plain = a.replace(/<[^>]+>/g, '').replace(/&nbsp;/gi, ' ').replace(/\u00a0/g, ' ').trim();
+        if (!plain) return false;
+      }
       return true;
     }
 
@@ -14982,8 +15045,15 @@
       if (cbs && cbs.length) _tuAnswers[s.id] = [...cbs].map(c => c.value);
       const isian = document.getElementById('tuIsian');
       if (isian) _tuAnswers[s.id] = isian.value;
-      const esai = document.getElementById('tuEsai');
-      if (esai) _tuAnswers[s.id] = esai.value;
+      // Esai: prioritaskan Quill, fallback textarea (Menjodohkan / tanpa Quill)
+      if (window._tuEsaiQuill && document.getElementById('tuEsaiEditor')) {
+        const q = window._tuEsaiQuill;
+        const plain = (q.getText() || '').replace(/\u00a0/g, ' ').trim();
+        _tuAnswers[s.id] = plain ? (q.root.innerHTML || '') : '';
+      } else {
+        const esai = document.getElementById('tuEsai');
+        if (esai) _tuAnswers[s.id] = esai.value;
+      }
     }
 
     document.getElementById('btnTuPrev')?.addEventListener('click', () => {
@@ -17663,7 +17733,15 @@ document.getElementById('btnBsContohFormat')?.addEventListener('click', () => {
             }
             jawHtml += '</div>';
           } else if (jw != null && jw !== '') {
-            jawHtml = esc(String(jw));
+            const jwStr = String(jw);
+            // Jawaban esai dari Quill: tampilkan HTML (formatting bold/list dll.)
+            if (/<[a-z][\s\S]*>/i.test(jwStr)) {
+              const rendered = (typeof renderMathInHtml === 'function') ? renderMathInHtml(jwStr) : jwStr;
+              jawHtml = '<div class="bs-soal-card-body" style="margin-top:2px;padding:8px;background:#f8fafc;border-radius:8px;border:1px solid #e2e8f0;">' +
+                rendered + '</div>';
+            } else {
+              jawHtml = esc(jwStr);
+            }
           }
           html += '<div style="margin-top:4px;"><b>Jawaban:</b> ' + jawHtml + '</div>';
           if (d.kunci) {
