@@ -3780,6 +3780,45 @@
             </table>
           </div>
 
+          <div class="card" id="cardHapusDataSesi" style="margin-bottom:16px;padding:14px;border:1px solid #fecaca;background:#fff7f7;">
+            <div style="font-size:13px;font-weight:700;color:#991b1b;margin-bottom:4px;">🗑️ Hapus Data Absensi per Sesi</div>
+            <p style="font-size:12px;color:#64748b;line-height:1.45;margin-bottom:12px;">
+              Menghapus <b>semua data absensi</b> (semua user) pada sesi &amp; rentang tanggal yang dipilih.
+              Dipakai jika sesi gagal (listrik padam, sinyal hilang, error aplikasi) agar bisa diulang.
+              <b>Pengaturan sesi (jam) tidak dihapus</b> — hanya data scan di tabel absensi.
+            </p>
+            <div class="rekap-filter-row">
+              <label>Dari Tanggal</label>
+              <input type="date" id="hapusSesiDari">
+            </div>
+            <div class="rekap-filter-row">
+              <label>Sampai Tanggal</label>
+              <input type="date" id="hapusSesiSampai">
+            </div>
+            <div class="rekap-filter-row">
+              <label>Sesi</label>
+              <select id="hapusSesiPilih">
+                <option value="">- Pilih Sesi -</option>
+              </select>
+            </div>
+            <div class="rekap-filter-row">
+              <label>Tipe</label>
+              <select id="hapusSesiTipe">
+                <option value="">Semua (Siswa + Guru)</option>
+                <option value="siswa">Siswa saja</option>
+                <option value="guru">Guru saja</option>
+              </select>
+            </div>
+            <div id="hapusSesiInfo" style="font-size:12px;color:#475569;background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;padding:10px;margin-bottom:10px;line-height:1.45;">
+              Pilih rentang tanggal &amp; sesi, lalu cek jumlah data.
+            </div>
+            <div style="display:flex;flex-wrap:wrap;gap:8px;">
+              <button type="button" class="btn btn-outline" id="btnCekDataSesi" style="flex:1;min-width:120px;">🔍 Cek Jumlah Data</button>
+              <button type="button" class="btn btn-outline" id="btnHapusDataSesi" style="flex:1;min-width:120px;color:#ef4444;border-color:#fca5a5;">🗑️ Hapus Data</button>
+            </div>
+            <div id="hapusSesiStatus" style="font-size:11px;color:#64748b;margin-top:8px;text-align:center;"></div>
+          </div>
+
           <div style="font-size:13px;font-weight:700;margin-bottom:8px;">Hari Libur</div>
             <div class="toolbar">
             <button class="btn btn-primary" id="btnTambahLibur">+ Tambah</button>
@@ -12560,6 +12599,7 @@
       document.getElementById('checkAllSesi').checked = false;
       if (!dataSesiTbl.length) {
         tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;padding:16px;color:#94a3b8;">Belum ada sesi</td></tr>';
+        try { fillHapusSesiSelect(); } catch (e) {}
         return;
       }
       tbody.innerHTML = dataSesiTbl.map((s, i) => `
@@ -12573,6 +12613,7 @@
           <td>${String(s.jam_akhir||'-').slice(0,5)}</td>
           <td>${s.aktif ? '<span class="badge-aktif">Aktif</span>' : '<span class="badge-nonaktif">Tidak</span>'}</td>
         </tr>`).join('');
+      try { fillHapusSesiSelect(); } catch (e) {}
     }
 
     document.getElementById('checkAllSesi')?.addEventListener('change', function () {
@@ -12655,6 +12696,164 @@
         await loadSesiTable();
         alert('Sesi dihapus');
       } catch (e) { alert('Gagal: ' + (e.message || e)); }
+    });
+
+    // ===== Hapus data absensi per sesi (rentang tanggal) =====
+    let _hapusSesiPreview = null;
+
+    function fillHapusSesiSelect() {
+      const sel = document.getElementById('hapusSesiPilih');
+      if (!sel) return;
+      const cur = sel.value;
+      const list = (dataSesiTbl || []).slice().sort((a, b) => (a.urutan || 0) - (b.urutan || 0));
+      sel.innerHTML = '<option value="">- Pilih Sesi -</option>' +
+        list.map(s => {
+          const t1 = String(s.jam_mulai || '').slice(0, 5);
+          const t2 = String(s.jam_akhir || '').slice(0, 5);
+          return '<option value="' + s.id + '">' +
+            esc(s.nama || ('Sesi ' + s.urutan)) +
+            (t1 ? ' (' + t1 + '–' + t2 + ')' : '') +
+            '</option>';
+        }).join('');
+      if (cur) sel.value = cur;
+      const today = (typeof todayLocal === 'function') ? todayLocal() : '';
+      const d1 = document.getElementById('hapusSesiDari');
+      const d2 = document.getElementById('hapusSesiSampai');
+      if (d1 && !d1.value && today) d1.value = today;
+      if (d2 && !d2.value && today) d2.value = today;
+    }
+
+    function buildHapusSesiQuery() {
+      const dari = (document.getElementById('hapusSesiDari')?.value || '').slice(0, 10);
+      const sampai = (document.getElementById('hapusSesiSampai')?.value || '').slice(0, 10);
+      const sesiId = document.getElementById('hapusSesiPilih')?.value || '';
+      const tipe = document.getElementById('hapusSesiTipe')?.value || '';
+      const sesiOpt = document.getElementById('hapusSesiPilih')?.selectedOptions?.[0];
+      const sesiNama = sesiOpt ? sesiOpt.textContent.trim() : '';
+      return { dari, sampai, sesiId, tipe, sesiNama };
+    }
+
+    async function countAbsensiSesi(params) {
+      if (!supabaseClient) return 0;
+      let q = supabaseClient.from('absensi').select('id', { count: 'exact', head: true })
+        .eq('sesi_id', Number(params.sesiId))
+        .gte('tanggal', params.dari)
+        .lte('tanggal', params.sampai);
+      if (params.tipe) q = q.eq('tipe', params.tipe);
+      const { count, error } = await q;
+      if (error) throw error;
+      return count || 0;
+    }
+
+    async function deleteAbsensiSesi(params) {
+      if (!supabaseClient) throw new Error('Supabase belum terhubung');
+      let totalDeleted = 0;
+      const pageSize = 500;
+      for (;;) {
+        let q = supabaseClient.from('absensi').select('id')
+          .eq('sesi_id', Number(params.sesiId))
+          .gte('tanggal', params.dari)
+          .lte('tanggal', params.sampai)
+          .limit(pageSize);
+        if (params.tipe) q = q.eq('tipe', params.tipe);
+        const { data, error } = await q;
+        if (error) throw error;
+        if (!data || !data.length) break;
+        const ids = data.map(r => r.id);
+        const { data: delData, error: delErr } = await supabaseClient
+          .from('absensi').delete().in('id', ids).select('id');
+        if (delErr) throw delErr;
+        totalDeleted += (delData || []).length || ids.length;
+        if (data.length < pageSize) break;
+        await new Promise(r => setTimeout(r, 0));
+      }
+      try {
+        let qh = supabaseClient.from('absensi_historis').delete()
+          .eq('sesi_id', Number(params.sesiId))
+          .gte('tanggal', params.dari)
+          .lte('tanggal', params.sampai);
+        if (params.tipe) qh = qh.eq('tipe', params.tipe);
+        await qh;
+      } catch (e) { /* historis opsional */ }
+      return totalDeleted;
+    }
+
+    document.getElementById('btnCekDataSesi')?.addEventListener('click', async () => {
+      if (currentRole !== 'admin') { alert('Hanya Admin'); return; }
+      const p = buildHapusSesiQuery();
+      const info = document.getElementById('hapusSesiInfo');
+      const st = document.getElementById('hapusSesiStatus');
+      if (!p.dari || !p.sampai) { alert('Isi rentang tanggal'); return; }
+      if (p.dari > p.sampai) { alert('Tanggal "Dari" tidak boleh setelah "Sampai"'); return; }
+      if (!p.sesiId) { alert('Pilih sesi'); return; }
+      if (!supabaseClient) { alert('Supabase belum terhubung'); return; }
+      if (st) st.textContent = 'Menghitung...';
+      try {
+        const n = await countAbsensiSesi(p);
+        _hapusSesiPreview = { count: n, ...p };
+        const tipeLbl = p.tipe === 'siswa' ? 'siswa' : (p.tipe === 'guru' ? 'guru' : 'semua user');
+        if (info) {
+          info.innerHTML = n === 0
+            ? '<span style="color:#64748b;">Tidak ada data absensi untuk <b>' + esc(p.sesiNama) + '</b> pada ' +
+              esc(p.dari) + ' s/d ' + esc(p.sampai) + ' (' + tipeLbl + ').</span>'
+            : '<span style="color:#b91c1c;font-weight:700;">' + n + ' baris</span> absensi akan dihapus:<br>' +
+              'Sesi: <b>' + esc(p.sesiNama) + '</b><br>' +
+              'Tanggal: <b>' + esc(p.dari) + '</b> s/d <b>' + esc(p.sampai) + '</b><br>' +
+              'Tipe: <b>' + tipeLbl + '</b>';
+        }
+        if (st) st.textContent = n ? 'Siap dihapus. Klik "Hapus Data" untuk konfirmasi.' : 'Tidak ada data.';
+      } catch (e) {
+        if (info) info.innerHTML = '<span style="color:#b91c1c;">Gagal cek: ' + esc(String(e.message || e)) + '</span>';
+        if (st) st.textContent = '';
+        _hapusSesiPreview = null;
+      }
+    });
+
+    document.getElementById('btnHapusDataSesi')?.addEventListener('click', async () => {
+      if (currentRole !== 'admin') { alert('Hanya Admin'); return; }
+      const p = buildHapusSesiQuery();
+      if (!p.dari || !p.sampai) { alert('Isi rentang tanggal'); return; }
+      if (p.dari > p.sampai) { alert('Tanggal "Dari" tidak boleh setelah "Sampai"'); return; }
+      if (!p.sesiId) { alert('Pilih sesi'); return; }
+      if (!supabaseClient) { alert('Supabase belum terhubung'); return; }
+
+      const st = document.getElementById('hapusSesiStatus');
+      const info = document.getElementById('hapusSesiInfo');
+      try {
+        const n = await countAbsensiSesi(p);
+        if (!n) {
+          alert('Tidak ada data absensi yang cocok untuk dihapus.');
+          if (info) info.innerHTML = '<span style="color:#64748b;">0 data.</span>';
+          return;
+        }
+        const tipeLbl = p.tipe === 'siswa' ? 'siswa' : (p.tipe === 'guru' ? 'guru' : 'semua user');
+        const ok = await (typeof showConfirm === 'function'
+          ? showConfirm(
+              'HAPUS PERMANEN ' + n + ' baris absensi?\n\n' +
+              'Sesi: ' + p.sesiNama + '\n' +
+              'Tanggal: ' + p.dari + ' s/d ' + p.sampai + '\n' +
+              'Tipe: ' + tipeLbl + '\n\n' +
+              'Data semua user pada sesi ini akan hilang dan tidak bisa dikembalikan.',
+              'Hapus Data Sesi',
+              '🗑️'
+            )
+          : Promise.resolve(confirm('Hapus ' + n + ' baris absensi sesi ini?')));
+        if (!ok) return;
+
+        if (st) st.textContent = 'Menghapus ' + n + ' baris...';
+        const deleted = await deleteAbsensiSesi(p);
+        _hapusSesiPreview = null;
+        if (info) {
+          info.innerHTML = '<span style="color:#166534;font-weight:700;">✓ Berhasil menghapus ' + deleted +
+            ' baris absensi</span> untuk sesi <b>' + esc(p.sesiNama) + '</b> (' + esc(p.dari) + ' s/d ' + esc(p.sampai) + ').';
+        }
+        if (st) st.innerHTML = '<span style="color:#166534;">Selesai. Sesi bisa dijalankan ulang.</span>';
+        alert('Berhasil menghapus ' + deleted + ' data absensi.\nSesi: ' + p.sesiNama);
+      } catch (e) {
+        console.error(e);
+        if (st) st.innerHTML = '<span style="color:#b91c1c;">Gagal: ' + esc(String(e.message || e)) + '</span>';
+        alert('Gagal hapus: ' + (e.message || e) + '\n\nPastikan policy DELETE pada tabel absensi aktif di Supabase.');
+      }
     });
 
     async function loadLiburTable() {
