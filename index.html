@@ -3648,6 +3648,47 @@
               </tbody>
             </table>
       </div>
+
+      <div class="card" id="cardBobotNR" style="margin-top:14px;padding:14px;">
+        <div style="font-size:14px;font-weight:700;color:#0f172a;margin-bottom:4px;">⚖️ Pengaturan Bobot NR</div>
+        <p style="font-size:12px;color:#64748b;line-height:1.45;margin-bottom:12px;">
+          Bobot dipakai di <b>Lihat Nilai Saya</b>. Nilai kosong dihitung 0, total bobot yang aktif jadi acuan (dinamis).
+          Contoh default: NRH 60 + PTS 40 → jika hanya NRH=80 maka NR = 48.
+        </p>
+        <div class="form-row" style="margin-bottom:8px;">
+          <div class="form-group" style="margin-bottom:8px;">
+            <label>Bobot NRH (%) — NH + TGS</label>
+            <input type="number" id="bobotNrh" min="0" max="100" step="1" value="60">
+          </div>
+          <div class="form-group" style="margin-bottom:8px;">
+            <label>Bobot PTS (%)</label>
+            <input type="number" id="bobotPts" min="0" max="100" step="1" value="40">
+          </div>
+        </div>
+        <div class="form-row" style="margin-bottom:8px;">
+          <div class="form-group" style="margin-bottom:8px;">
+            <label>Bobot ASAS (%) — Semester Ganjil</label>
+            <input type="number" id="bobotAsas" min="0" max="100" step="1" value="0">
+          </div>
+          <div class="form-group" style="margin-bottom:8px;">
+            <label>Bobot ASAJ (%) — Kelas 9 Genap</label>
+            <input type="number" id="bobotAsaj" min="0" max="100" step="1" value="0">
+          </div>
+        </div>
+        <div class="form-row" style="margin-bottom:8px;">
+          <div class="form-group" style="margin-bottom:8px;">
+            <label>Bobot ASAT (%) — Kelas 7/8 Genap</label>
+            <input type="number" id="bobotAsat" min="0" max="100" step="1" value="0">
+          </div>
+          <div class="form-group" style="margin-bottom:8px;">
+            <label>Total bobot aktif</label>
+            <div id="bobotNrTotal" style="padding:11px 12px;background:#f1f5f9;border-radius:8px;font-weight:700;color:#1e40af;">100%</div>
+          </div>
+        </div>
+        <div id="bobotNrPreview" style="font-size:12px;color:#475569;background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;padding:10px;line-height:1.5;margin-bottom:10px;"></div>
+        <button type="button" class="btn btn-primary" id="btnSimpanBobotNR" style="width:100%;">💾 Simpan Bobot NR</button>
+        <div id="bobotNrStatus" style="font-size:11px;color:#64748b;margin-top:8px;text-align:center;"></div>
+      </div>
     </section>
 <section class="page" id="page-set-kelas">
       <div class="page-title">🏫 Kelas</div>
@@ -9377,25 +9418,47 @@
       return '<span style="color:' + color + ';font-weight:700;">' + t + '</span>';
     }
 
-    // NRH = rerata semua NH* & TGS*
-    // Komponen ujian untuk NR (bobot tetap 60:40; nilai kosong dihitung 0):
-    //   Semester Ganjil (semua kelas): PTS + ASAS
-    //   Semester Genap kelas 9: PTS + ASAJ
-    //   Semester Genap kelas 7/8: PTS + ASAT
-    // Contoh: hanya NRH=80 → NR = 80×60% = 48
+    // NR dinamis dari pengaturan bobot (menu Mapel → Pengaturan Bobot NR)
+    // Default: NRH 60 + PTS 40. ASAS/ASAJ/ASAT opsional (0 = tidak dihitung).
+    // Nilai kosong dihitung 0; pembagi = jumlah bobot komponen yang aktif (>0).
     const NS_UJIAN_JENIS = ['PTS', 'ASAS', 'ASAJ', 'ASAT'];
+    const BOBOT_NR_DEFAULT = { nrh: 60, pts: 40, asas: 0, asaj: 0, asat: 0 };
+    let _bobotNR = Object.assign({}, BOBOT_NR_DEFAULT);
 
-    function getUjianJenisUntukNR(kelas, semester) {
+    function normalizeBobotNR(raw) {
+      const d = Object.assign({}, BOBOT_NR_DEFAULT);
+      if (!raw || typeof raw !== 'object') return d;
+      ['nrh', 'pts', 'asas', 'asaj', 'asat'].forEach(k => {
+        const n = Number(raw[k]);
+        if (!isNaN(n) && n >= 0) d[k] = n;
+      });
+      return d;
+    }
+
+    async function loadBobotNRSettings() {
+      try {
+        const v = await loadAppSetting('bobot_nr');
+        _bobotNR = normalizeBobotNR(v);
+      } catch (e) {
+        console.warn('loadBobotNRSettings', e);
+        _bobotNR = Object.assign({}, BOBOT_NR_DEFAULT);
+      }
+      return _bobotNR;
+    }
+
+    function getBobotNR() {
+      return _bobotNR || BOBOT_NR_DEFAULT;
+    }
+
+    /** Jenis ujian akhir yang berlaku: ASAS (ganjil) / ASAJ (9 genap) / ASAT (7-8 genap) */
+    function getJenisUjianAkhir(kelas, semester) {
       const sem = String(semester || (aktifPeriode && aktifPeriode.semester) || '').toLowerCase();
       const tingkat = (typeof tingkatDariKelas === 'function')
         ? String(tingkatDariKelas(kelas) || '')
         : String(kelas || '').replace(/[^0-9]/g, '').charAt(0);
-      if (sem.indexOf('ganjil') >= 0) {
-        return ['PTS', 'ASAS'];
-      }
-      // Genap / default
-      if (tingkat === '9') return ['PTS', 'ASAJ'];
-      return ['PTS', 'ASAT'];
+      if (sem.indexOf('ganjil') >= 0) return 'ASAS';
+      if (tingkat === '9') return 'ASAJ';
+      return 'ASAT';
     }
 
     function nilaiRerataJenis(byJenis, jenis) {
@@ -9408,6 +9471,7 @@
       opts = opts || {};
       const kelas = opts.kelas || '';
       const semester = opts.semester || (aktifPeriode && aktifPeriode.semester) || '';
+      const bobot = getBobotNR();
       const byJenis = {};
       (nilaiRowsSiswa || []).forEach(n => {
         const j = String(n.jenis || '').toUpperCase();
@@ -9426,30 +9490,41 @@
         rnh = harianVals.reduce((a, v) => a + v, 0) / harianVals.length;
       }
 
-      // Kolom tampilan: semua jenis ujian yang mungkin
       const otherCols = [];
       NS_UJIAN_JENIS.forEach(j => {
         otherCols.push({ jenis: j, nilai: nilaiRerataJenis(byJenis, j) });
       });
 
-      // Komponen ujian yang dipakai untuk NR (tergantung semester & kelas)
-      const ujianUntukNR = getUjianJenisUntukNR(kelas, semester);
-      const ujianParts = ujianUntukNR.map(j => {
-        const v = nilaiRerataJenis(byJenis, j);
-        return v == null ? 0 : v; // nilai kosong dihitung 0, bobot tetap 60:40
-      });
-      const avgUjian = ujianParts.length
-        ? ujianParts.reduce((a, v) => a + v, 0) / ujianParts.length
-        : 0;
+      const ptsVal = nilaiRerataJenis(byJenis, 'PTS');
+      const akhirJenis = getJenisUjianAkhir(kelas, semester);
+      const akhirVal = nilaiRerataJenis(byJenis, akhirJenis);
+      const wAkhirKey = akhirJenis === 'ASAS' ? 'asas' : (akhirJenis === 'ASAJ' ? 'asaj' : 'asat');
 
-      let nr = null;
-      const hasAny = (rnh != null) || ujianUntukNR.some(j => nilaiRerataJenis(byJenis, j) != null);
-      if (hasAny) {
-        // Selalu 60% NRH + 40% rerata komponen ujian (yang kosong = 0)
-        nr = (0.6 * (rnh != null ? rnh : 0)) + (0.4 * avgUjian);
+      // Komponen berbobot: hanya yang bobot > 0
+      const parts = [];
+      if (Number(bobot.nrh) > 0) parts.push({ key: 'NRH', w: Number(bobot.nrh), v: rnh });
+      if (Number(bobot.pts) > 0) parts.push({ key: 'PTS', w: Number(bobot.pts), v: ptsVal });
+      if (Number(bobot[wAkhirKey]) > 0) {
+        parts.push({ key: akhirJenis, w: Number(bobot[wAkhirKey]), v: akhirVal });
       }
 
-      return { rnh, otherCols, nr, ujianUntukNR };
+      let nr = null;
+      const hasAnyNilai = parts.some(p => p.v != null);
+      const totalW = parts.reduce((a, p) => a + p.w, 0);
+      if (hasAnyNilai && totalW > 0) {
+        // nilai kosong = 0; pembagi = total bobot aktif (rasio tetap)
+        const weighted = parts.reduce((a, p) => a + p.w * (p.v != null ? p.v : 0), 0);
+        nr = weighted / totalW;
+      }
+
+      return {
+        rnh,
+        otherCols,
+        nr,
+        ujianUntukNR: parts.map(p => p.key),
+        bobotUsed: parts.map(p => ({ key: p.key, w: p.w, v: p.v })),
+        akhirJenis
+      };
     }
 
     async function searchSiswaSuggest(q, limit) {
@@ -9693,11 +9768,12 @@
       if (!tbody) return;
       opts = opts || {};
 
-      // paralel: periode + (mapel jika belum cache) — kurangi waktu tunggu
+      // paralel: periode + mapel + bobot NR
       const needMapel = !(typeof masterMapel !== 'undefined' && masterMapel && masterMapel.length);
       await Promise.all([
         loadAktifPeriode(),
-        needMapel ? loadMasterMapelKelas() : Promise.resolve()
+        needMapel ? loadMasterMapelKelas() : Promise.resolve(),
+        typeof loadBobotNRSettings === 'function' ? loadBobotNRSettings() : Promise.resolve()
       ]);
       const label = aktifPeriode
         ? (aktifPeriode.tahun_ajaran + ' || ' + aktifPeriode.semester)
@@ -9877,12 +9953,88 @@
           if (error) throw error;
           dataMapel = data || [];
         } else {
-          await loadMasterMapelKelas();
           dataMapel = masterMapel.slice();
         }
       } catch (e) { console.error(e); dataMapel = []; }
       renderMapelTable();
+      try { await fillBobotNRForm(); } catch (e) { console.warn(e); }
     }
+
+    function updateBobotNRPreview() {
+      const nrh = Number(document.getElementById('bobotNrh')?.value) || 0;
+      const pts = Number(document.getElementById('bobotPts')?.value) || 0;
+      const asas = Number(document.getElementById('bobotAsas')?.value) || 0;
+      const asaj = Number(document.getElementById('bobotAsaj')?.value) || 0;
+      const asat = Number(document.getElementById('bobotAsat')?.value) || 0;
+      const totalEl = document.getElementById('bobotNrTotal');
+      const prev = document.getElementById('bobotNrPreview');
+      const bits = [];
+      if (nrh > 0) bits.push('NRH ' + nrh + '%');
+      if (pts > 0) bits.push('PTS ' + pts + '%');
+      const totalGanjil = nrh + pts + asas;
+      const totalGenap9 = nrh + pts + asaj;
+      const totalGenap78 = nrh + pts + asat;
+      if (totalEl) totalEl.textContent = 'Ganjil: ' + totalGanjil + '% · Genap 9: ' + totalGenap9 + '% · Genap 7/8: ' + totalGenap78 + '%';
+      if (prev) {
+        prev.innerHTML =
+          '<b>Semester Ganjil:</b> ' + (nrh > 0 ? 'NRH×' + nrh : '') + (pts > 0 ? (nrh > 0 ? ' + ' : '') + 'PTS×' + pts : '') + (asas > 0 ? ' + ASAS×' + asas : '') +
+          (totalGanjil > 0 ? ' → ÷' + totalGanjil : ' (tidak ada bobot)') + '<br>' +
+          '<b>Genap kelas 9:</b> ' + (nrh > 0 ? 'NRH×' + nrh : '') + (pts > 0 ? (nrh > 0 ? ' + ' : '') + 'PTS×' + pts : '') + (asaj > 0 ? ' + ASAJ×' + asaj : '') +
+          (totalGenap9 > 0 ? ' → ÷' + totalGenap9 : '') + '<br>' +
+          '<b>Genap kelas 7/8:</b> ' + (nrh > 0 ? 'NRH×' + nrh : '') + (pts > 0 ? (nrh > 0 ? ' + ' : '') + 'PTS×' + pts : '') + (asat > 0 ? ' + ASAT×' + asat : '') +
+          (totalGenap78 > 0 ? ' → ÷' + totalGenap78 : '') + '<br>' +
+          '<span style="color:#64748b;">Contoh: NRH=80, PTS/ujian kosong → NR = 80×' + nrh + '/' + (totalGanjil || 1) + ' = ' +
+          (totalGanjil ? Math.round(80 * nrh / totalGanjil * 10) / 10 : '-') + '</span>';
+      }
+    }
+
+    async function fillBobotNRForm() {
+      await loadBobotNRSettings();
+      const b = getBobotNR();
+      const set = (id, v) => { const el = document.getElementById(id); if (el) el.value = v; };
+      set('bobotNrh', b.nrh);
+      set('bobotPts', b.pts);
+      set('bobotAsas', b.asas);
+      set('bobotAsaj', b.asaj);
+      set('bobotAsat', b.asat);
+      updateBobotNRPreview();
+      const st = document.getElementById('bobotNrStatus');
+      if (st) st.textContent = 'Bobot aktif dimuat dari pengaturan.';
+    }
+
+    ['bobotNrh', 'bobotPts', 'bobotAsas', 'bobotAsaj', 'bobotAsat'].forEach(id => {
+      document.getElementById(id)?.addEventListener('input', updateBobotNRPreview);
+    });
+
+    document.getElementById('btnSimpanBobotNR')?.addEventListener('click', async () => {
+      if (currentRole !== 'admin') { alert('Hanya Admin yang dapat mengubah bobot NR'); return; }
+      const payload = {
+        nrh: Number(document.getElementById('bobotNrh')?.value) || 0,
+        pts: Number(document.getElementById('bobotPts')?.value) || 0,
+        asas: Number(document.getElementById('bobotAsas')?.value) || 0,
+        asaj: Number(document.getElementById('bobotAsaj')?.value) || 0,
+        asat: Number(document.getElementById('bobotAsat')?.value) || 0
+      };
+      if (payload.nrh < 0 || payload.pts < 0 || payload.asas < 0 || payload.asaj < 0 || payload.asat < 0) {
+        alert('Bobot tidak boleh negatif');
+        return;
+      }
+      const totalMin = payload.nrh + payload.pts;
+      if (totalMin <= 0 && payload.asas <= 0 && payload.asaj <= 0 && payload.asat <= 0) {
+        alert('Minimal satu bobot harus lebih dari 0');
+        return;
+      }
+      try {
+        await saveAppSetting('bobot_nr', payload);
+        _bobotNR = normalizeBobotNR(payload);
+        updateBobotNRPreview();
+        const st = document.getElementById('bobotNrStatus');
+        if (st) st.innerHTML = '<span style="color:#166534;">✓ Bobot NR disimpan. Berlaku di Lihat Nilai Saya.</span>';
+        alert('Bobot NR berhasil disimpan.\n\nNRH: ' + payload.nrh + '% · PTS: ' + payload.pts + '%\nASAS: ' + payload.asas + '% · ASAJ: ' + payload.asaj + '% · ASAT: ' + payload.asat + '%');
+      } catch (e) {
+        alert('Gagal simpan bobot: ' + (e.message || e));
+      }
+    });
     function renderMapelTable() {
       const tbody = document.getElementById('tbodyMapel');
       document.getElementById('infoMapel').textContent = dataMapel.length + ' data';
