@@ -2992,7 +2992,15 @@
         </div>
       </div>
 
-      <div class="section-title">Riwayat Scan Hari Ini</div>
+      <div class="section-title" id="titleScanLog">Riwayat Scan</div>
+      <div class="card" style="padding:10px 12px;margin-bottom:10px;">
+        <div class="rekap-filter-row" style="margin-bottom:0;">
+          <label>Tanggal</label>
+          <input type="date" id="scanLogTanggal" style="flex:1;">
+          <button type="button" class="btn btn-primary" id="btnLoadScanLog" style="width:auto;padding:8px 14px;white-space:nowrap;">🔍 Tampilkan</button>
+        </div>
+        <div id="scanLogFilterHint" style="font-size:11px;color:#64748b;margin-top:6px;">Default: hari ini. Pilih tanggal lain untuk melihat riwayat sebelumnya.</div>
+      </div>
       <div class="table-wrap">
         <table>
           <thead>
@@ -11655,15 +11663,24 @@
 
         if (supabaseClient) {
           try {
-            const [ab, g, s] = await withTimeout(Promise.all([
-              supabaseClient.from('absensi').select('id, tipe, ref_id, kode, nama, status, sesi_id, sesi_nama, sesi_urutan, jam_scan, tanggal').eq('tanggal', today),
+            let abRes = await withTimeout(
+              supabaseClient.from('absensi').select('id, tipe, ref_id, kode, nama, status, sesi_id, sesi_nama, sesi_urutan, jam_scan, tanggal, petugas_nama, petugas_kode, petugas_role').eq('tanggal', today),
+              15000, 'absensi'
+            );
+            if (abRes.error && /petugas_|column|schema/i.test(String(abRes.error.message || ''))) {
+              abRes = await withTimeout(
+                supabaseClient.from('absensi').select('id, tipe, ref_id, kode, nama, status, sesi_id, sesi_nama, sesi_urutan, jam_scan, tanggal').eq('tanggal', today),
+                15000, 'absensi-fallback'
+              );
+            }
+            const [g, s] = await withTimeout(Promise.all([
               supabaseClient.from('guru').select('id, nama').order('id'),
               supabaseClient.from('siswa').select('id, nama, kelas').order('kelas').order('nama')
-            ]), 20000, 'dashboard');
-            if (ab.error) console.warn('absensi', ab.error);
+            ]), 20000, 'guru-siswa');
+            if (abRes.error) console.warn('absensi', abRes.error);
             if (g.error) console.warn('guru', g.error);
             if (s.error) console.warn('siswa', s.error);
-            absRows = ab.data || [];
+            absRows = abRes.data || [];
             guruList = sortGuruList(g.data || []);
             siswaList = sortSiswaList(s.data || []);
           } catch (netErr) {
@@ -11762,9 +11779,19 @@
           if (!ab) return '<td style="text-align:center;color:#cbd5e1;font-size:10px;">–</td>';
           const jam = fmtJam(ab.jam_scan);
           const jamShort = jam ? jam.slice(0, 5) : '';
+          // Admin: tampilkan siapa yang men-scan (petugas)
+          let petugasHtml = '';
+          if (currentRole === 'admin') {
+            const p = ab.petugas_nama || ab.scanned_by || '';
+            if (p && !ab._virtual) {
+              petugasHtml = '<div style="font-size:8px;color:#6366f1;line-height:1.2;margin-top:1px;max-width:70px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="' +
+                esc(p) + '">👤 ' + esc(p) + '</div>';
+            }
+          }
           return '<td style="text-align:center;line-height:1.25;">' +
             badgeStatusDash(ab.status) +
             (jamShort ? '<div style="font-size:9px;color:#64748b;">' + jamShort + '</div>' : '') +
+            petugasHtml +
             '</td>';
         }
 
@@ -12268,10 +12295,40 @@
       tbody.insertBefore(tr, tbody.firstChild);
     }
 
+    function getScanLogTanggal() {
+      const el = document.getElementById('scanLogTanggal');
+      const v = el && el.value ? String(el.value).slice(0, 10) : '';
+      if (v) return v;
+      return (typeof todayLocal === 'function') ? todayLocal() : '';
+    }
+
+    function updateScanLogTitle(tgl) {
+      const title = document.getElementById('titleScanLog');
+      if (!title) return;
+      const today = (typeof todayLocal === 'function') ? todayLocal() : '';
+      if (!tgl || tgl === today) {
+        title.textContent = 'Riwayat Scan Hari Ini';
+      } else {
+        try {
+          const d = new Date(tgl + 'T12:00:00');
+          const label = d.toLocaleDateString('id-ID', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
+          title.textContent = 'Riwayat Scan — ' + label;
+        } catch (e) {
+          title.textContent = 'Riwayat Scan — ' + tgl;
+        }
+      }
+    }
+
     async function loadScanLog() {
       const tbody = document.getElementById('tbodyScanLog');
       if (!tbody) return;
-      const today = todayLocal();
+      // set default tanggal input
+      const tglEl = document.getElementById('scanLogTanggal');
+      if (tglEl && !tglEl.value) {
+        try { tglEl.value = todayLocal(); } catch (e) {}
+      }
+      const tgl = getScanLogTanggal();
+      updateScanLogTitle(tgl);
       updateScanLogHeader();
       const colSpan = isScanLogAdminView() ? 6 : 5;
       try {
@@ -12280,10 +12337,10 @@
           let q = supabaseClient
             .from('absensi')
             .select('*')
-            .eq('tanggal', today)
+            .eq('tanggal', tgl)
             .order('jam_scan', { ascending: false })
-            .limit(80);
-          // guru: hanya riwayat scan siswa (bukan absensi guru lain)
+            .limit(150);
+          // guru: hanya riwayat scan siswa
           if (currentRole === 'guru') {
             q = q.eq('tipe', 'siswa');
           }
@@ -12292,7 +12349,7 @@
           rows = data || [];
         }
         if (!rows.length) {
-          tbody.innerHTML = '<tr><td colspan="' + colSpan + '" style="text-align:center;padding:16px;color:#94a3b8;">Belum ada scan</td></tr>';
+          tbody.innerHTML = '<tr><td colspan="' + colSpan + '" style="text-align:center;padding:16px;color:#94a3b8;">Belum ada scan pada tanggal ini</td></tr>';
           return;
         }
         tbody.innerHTML = rows.map(r => '<tr>' + scanLogRowHtml(r) + '</tr>').join('');
@@ -12301,6 +12358,13 @@
         tbody.innerHTML = '<tr><td colspan="' + colSpan + '" style="text-align:center;padding:16px;color:#94a3b8;">Gagal memuat log</td></tr>';
       }
     }
+
+    document.getElementById('btnLoadScanLog')?.addEventListener('click', () => {
+      loadScanLog().catch(e => console.error(e));
+    });
+    document.getElementById('scanLogTanggal')?.addEventListener('change', () => {
+      loadScanLog().catch(e => console.error(e));
+    });
 
     async function prosesScan(kode, fromFingerprint) {
       // cache libur per hari — hindari query berulang tiap scan
