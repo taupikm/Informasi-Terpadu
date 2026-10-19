@@ -1738,7 +1738,7 @@
     #qrReaderWrap {
       display: none;
       margin-top: 12px;
-      max-width: min(96vw, 420px);
+      max-width: min(96vw, 480px);
       margin-left: auto;
       margin-right: auto;
     }
@@ -1746,8 +1746,8 @@
     #qrReaderShell {
       position: relative;
       width: 100%;
-      height: min(42vh, 300px);
-      min-height: 240px;
+      height: min(48vh, 360px);
+      min-height: 260px;
       border-radius: 14px;
       overflow: hidden;
       background: #0f172a;
@@ -12295,14 +12295,15 @@
     const SCAN_BUSY_PAD_MS = 280;
 
     function buildScanQrConfig() {
-      const shell = document.getElementById('qrReaderShell');
-      const shellW = (shell && shell.clientWidth) ? shell.clientWidth : Math.min(window.innerWidth - 24, 400);
-      const shellH = (shell && shell.clientHeight) ? shell.clientHeight : 280;
-      const boxW = Math.max(200, Math.min(shellW - 12, Math.floor(shellW * 0.92)));
-      const boxH = Math.max(140, Math.floor(shellH * 0.68));
+      // Area scan lebar (hampir full frame) + resolusi tinggi → barcode 1×1 cm dari ~20 cm lebih terbaca
       const cfg = {
-        fps: 15,
-        qrbox: { width: boxW, height: boxH },
+        fps: 20,
+        // qrbox dinamis: ~95% lebar × ~80% tinggi viewfinder
+        qrbox: function (viewW, viewH) {
+          const w = Math.max(250, Math.floor(viewW * 0.95));
+          const h = Math.max(180, Math.floor(viewH * 0.80));
+          return { width: Math.min(w, viewW), height: Math.min(h, viewH) };
+        },
         aspectRatio: 1.333,
         disableFlip: false
       };
@@ -12323,6 +12324,17 @@
       return cfg;
     }
 
+    /** Constraint kamera: resolusi tinggi + fokus kontinu (penting untuk kode kecil jarak jauh) */
+    function buildCameraConstraints() {
+      return {
+        facingMode: 'environment',
+        width: { ideal: 1920, min: 1280 },
+        height: { ideal: 1080, min: 720 },
+        // advanced focus — diabaikan browser yang tidak mendukung
+        advanced: [{ focusMode: 'continuous' }]
+      };
+    }
+
     async function stopScanEngine() {
       if (!html5QrCode) return;
       try { await html5QrCode.stop(); } catch (e) {}
@@ -12341,36 +12353,50 @@
       html5QrCode = new Html5Qrcode('qrReader', { verbose: false });
       const config = buildScanQrConfig();
 
-      // Prefer advanced constraints; fallback ke facingMode sederhana
       const tryStart = async (cameraIdOrConfig, cfg) => {
         await html5QrCode.start(cameraIdOrConfig, cfg, onScanSuccessFast, () => {});
       };
 
+      // 1) resolusi tinggi + fokus kontinu
       try {
-        await tryStart({ facingMode: 'environment' }, config);
+        await tryStart(buildCameraConstraints(), config);
       } catch (err1) {
+        // 2) tanpa advanced focus
         try {
-          // fallback ringan tanpa formatsToSupport
-          const light = {
-            fps: 12,
-            qrbox: config.qrbox,
-            aspectRatio: 1.333,
-            experimentalFeatures: { useBarCodeDetectorIfSupported: true }
-          };
-          await tryStart({ facingMode: 'environment' }, light);
-        } catch (err2) {
-          // last resort: daftar kamera & pilih yang back
+          await tryStart({
+            facingMode: 'environment',
+            width: { ideal: 1920 },
+            height: { ideal: 1080 }
+          }, config);
+        } catch (err1b) {
+          // 3) facingMode saja + config penuh
           try {
-            const cams = await Html5Qrcode.getCameras();
-            if (!cams || !cams.length) throw err2 || err1;
-            const back = cams.find(c => /back|rear|environment|belakang/i.test(c.label || '')) || cams[cams.length - 1];
-            await tryStart(back.id, {
-              fps: 12,
-              qrbox: config.qrbox,
-              experimentalFeatures: { useBarCodeDetectorIfSupported: true }
-            });
-          } catch (err3) {
-            throw err3 || err2 || err1;
+            await tryStart({ facingMode: 'environment' }, config);
+          } catch (err2) {
+            // 4) fallback ringan
+            try {
+              const light = {
+                fps: 15,
+                qrbox: config.qrbox,
+                aspectRatio: 1.333,
+                experimentalFeatures: { useBarCodeDetectorIfSupported: true }
+              };
+              await tryStart({ facingMode: 'environment' }, light);
+            } catch (err3) {
+              // 5) pilih kamera belakang manual
+              try {
+                const cams = await Html5Qrcode.getCameras();
+                if (!cams || !cams.length) throw err3 || err2 || err1;
+                const back = cams.find(c => /back|rear|environment|belakang/i.test(c.label || '')) || cams[cams.length - 1];
+                await tryStart(back.id, {
+                  fps: 15,
+                  qrbox: config.qrbox,
+                  experimentalFeatures: { useBarCodeDetectorIfSupported: true }
+                });
+              } catch (err4) {
+                throw err4 || err3 || err2 || err1;
+              }
+            }
           }
         }
       }
@@ -12380,7 +12406,7 @@
       lastScanTime = 0;
       _scanBusy = false;
 
-      // pastikan video play (beberapa browser start paused)
+      // pastikan video play + coba apply focus constraints ke track aktif
       setTimeout(() => {
         try {
           const v = document.querySelector('#qrReader video');
@@ -12391,9 +12417,29 @@
               const p = v.play();
               if (p && typeof p.catch === 'function') p.catch(() => {});
             }
+            // continuous focus pada track kamera (Samsung/Oppo/Realme/Redmi)
+            try {
+              const stream = v.srcObject;
+              const track = stream && stream.getVideoTracks && stream.getVideoTracks()[0];
+              if (track && track.getCapabilities) {
+                const caps = track.getCapabilities();
+                const advanced = [];
+                if (caps.focusMode && caps.focusMode.indexOf('continuous') >= 0) {
+                  advanced.push({ focusMode: 'continuous' });
+                }
+                if (caps.zoom && typeof caps.zoom.max === 'number' && caps.zoom.max >= 1.5) {
+                  // zoom ringan membantu kode kecil tanpa harus dekat
+                  const z = Math.min(1.6, caps.zoom.max);
+                  advanced.push({ zoom: z });
+                }
+                if (advanced.length) {
+                  track.applyConstraints({ advanced: advanced }).catch(() => {});
+                }
+              }
+            } catch (e) {}
           }
         } catch (e) {}
-      }, 200);
+      }, 250);
     }
 
     function onScanSuccessFast(decodedText) {
