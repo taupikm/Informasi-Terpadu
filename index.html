@@ -2996,7 +2996,7 @@
       <div class="table-wrap">
         <table>
           <thead>
-            <tr>
+            <tr id="theadScanLog">
               <th>Jam</th>
               <th>Nama</th>
               <th>Tipe</th>
@@ -12202,57 +12202,103 @@
       }, 1200);
     }
 
+    function formatJamScan(jam) {
+      if (!jam) return '-';
+      try {
+        // "HH:MM:SS" atau "HH:MM" lokal
+        if (/^\d{1,2}:\d{2}/.test(String(jam))) return String(jam).slice(0, 8);
+        const d = new Date(jam);
+        if (!isNaN(d.getTime())) {
+          return d.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+        }
+      } catch (e) {}
+      return '-';
+    }
+
+    function scanLogBadge(status) {
+      const s = String(status || '');
+      if (s === 'TW') return '<span class="badge-status badge-hadir">TW</span>';
+      if (s === 'TL') return '<span class="badge-status badge-izin">TL</span>';
+      if (/izin/i.test(s)) return '<span class="badge-status badge-izin">Izin</span>';
+      if (/sakit/i.test(s)) return '<span class="badge-status" style="background:#f3e8ff;color:#7e22ce;">Sakit</span>';
+      if (/alpa|a\b/i.test(s)) return '<span class="badge-status badge-alpa">Alpa</span>';
+      if (/bolos|b\b/i.test(s)) return '<span class="badge-status" style="background:#fecaca;color:#991b1b;">Bolos</span>';
+      return esc(s || '-');
+    }
+
+    function isScanLogAdminView() {
+      return currentRole === 'admin';
+    }
+
+    function updateScanLogHeader() {
+      const thead = document.getElementById('theadScanLog');
+      if (!thead) return;
+      if (isScanLogAdminView()) {
+        thead.innerHTML = '<th>Jam</th><th>Nama</th><th>Tipe</th><th>Sesi</th><th>Status</th><th>Discan oleh</th>';
+      } else {
+        thead.innerHTML = '<th>Jam</th><th>Nama</th><th>Tipe</th><th>Sesi</th><th>Status</th>';
+      }
+    }
+
+    function scanLogRowHtml(r) {
+      const jam = formatJamScan(r.jam_scan);
+      const badge = scanLogBadge(r.status);
+      let html = '<td>' + jam + '</td>' +
+        '<td>' + esc(r.nama || '') + '</td>' +
+        '<td>' + esc(r.tipe || '') + '</td>' +
+        '<td>' + esc(r.sesi_nama || '-') + '</td>' +
+        '<td>' + badge + '</td>';
+      if (isScanLogAdminView()) {
+        const petugas = r.petugas_nama || r.scanned_by || '';
+        html += '<td>' + (petugas ? esc(petugas) : '<span style="color:#94a3b8;">—</span>') + '</td>';
+      }
+      return html;
+    }
+
     function prependScanLogRow(r) {
       const tbody = document.getElementById('tbodyScanLog');
       if (!tbody) return;
+      // guru hanya boleh lihat scan siswa
+      if (currentRole === 'guru' && String(r.tipe || '').toLowerCase() !== 'siswa') return;
       const empty = tbody.querySelector('td[colspan]');
       if (empty) tbody.innerHTML = '';
-      const jam = r.jam_scan ? new Date(r.jam_scan).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit', second: '2-digit' }) : '-';
-      let badge = esc(String(r.status || ''));
-      if (r.status === 'TW') badge = '<span class="badge-status badge-hadir">TW</span>';
-      else if (r.status === 'TL') badge = '<span class="badge-status badge-izin">TL</span>';
+      updateScanLogHeader();
       const tr = document.createElement('tr');
-      tr.innerHTML = '<td>' + jam + '</td><td>' + esc(r.nama || '') + '</td><td>' + esc(r.tipe || '') + '</td><td>' + esc(r.sesi_nama || '-') + '</td><td>' + badge + '</td>';
+      tr.innerHTML = scanLogRowHtml(r);
       tbody.insertBefore(tr, tbody.firstChild);
     }
 
     async function loadScanLog() {
       const tbody = document.getElementById('tbodyScanLog');
+      if (!tbody) return;
       const today = todayLocal();
+      updateScanLogHeader();
+      const colSpan = isScanLogAdminView() ? 6 : 5;
       try {
         let rows = [];
         if (supabaseClient) {
-          const { data, error } = await supabaseClient
+          let q = supabaseClient
             .from('absensi')
             .select('*')
             .eq('tanggal', today)
             .order('jam_scan', { ascending: false })
-            .limit(50);
+            .limit(80);
+          // guru: hanya riwayat scan siswa (bukan absensi guru lain)
+          if (currentRole === 'guru') {
+            q = q.eq('tipe', 'siswa');
+          }
+          const { data, error } = await q;
           if (error) throw error;
           rows = data || [];
         }
         if (!rows.length) {
-          tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;padding:16px;color:#94a3b8;">Belum ada scan hari ini</td></tr>';
+          tbody.innerHTML = '<tr><td colspan="' + colSpan + '" style="text-align:center;padding:16px;color:#94a3b8;">Belum ada scan</td></tr>';
           return;
         }
-        tbody.innerHTML = rows.map(r => {
-          const jam = r.jam_scan ? new Date(r.jam_scan).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit', second: '2-digit' }) : '-';
-          let badge = r.status;
-          if (r.status === 'TW') badge = '<span class="badge-status badge-hadir">TW</span>';
-          else if (r.status === 'TL') badge = '<span class="badge-status badge-izin">TL</span>';
-          else if (r.status === 'A') badge = '<span class="badge-status badge-alpha">A</span>';
-          else if (r.status === 'B') badge = '<span class="badge-status badge-sakit">B</span>';
-          return `<tr>
-            <td>${jam}</td>
-            <td>${esc(r.nama)}</td>
-            <td>${r.tipe}</td>
-            <td>${r.sesi_nama || '-'}</td>
-            <td>${badge}</td>
-          </tr>`;
-        }).join('');
+        tbody.innerHTML = rows.map(r => '<tr>' + scanLogRowHtml(r) + '</tr>').join('');
       } catch (e) {
         console.error(e);
-        tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;padding:16px;color:#94a3b8;">Gagal memuat log</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="' + colSpan + '" style="text-align:center;padding:16px;color:#94a3b8;">Gagal memuat log</td></tr>';
       }
     }
 
@@ -12373,11 +12419,23 @@
           nama: person.nama,
           jam_scan: now.toISOString(),
           status: status,
-          keterangan: ket
+          keterangan: ket,
+          // siapa yang melakukan scan (untuk kolom admin)
+          petugas_nama: currentUserName || null,
+          petugas_kode: currentUserKode || null,
+          petugas_role: currentRole || null
         };
 
         if (supabaseClient) {
-          const { error } = await supabaseClient.from('absensi').insert([row]);
+          let { error } = await supabaseClient.from('absensi').insert([row]);
+          // jika kolom petugas belum ada di DB, simpan tanpa kolom tersebut
+          if (error && /petugas_|column|schema/i.test(String(error.message || ''))) {
+            const fallback = Object.assign({}, row);
+            delete fallback.petugas_nama;
+            delete fallback.petugas_kode;
+            delete fallback.petugas_role;
+            ({ error } = await supabaseClient.from('absensi').insert([fallback]));
+          }
           if (error) {
             if (error.code === '23505') {
               tampilHasil(false, person.nama, 'Scan Ditolak', 'Kamu sudah scan sesi ini');
