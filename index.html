@@ -12059,14 +12059,14 @@
       document.getElementById('scanHasilStatus').style.color = ok ? '#166534' : '#991b1b';
       document.getElementById('scanHasilKet').textContent = ket || '';
       openModal('modalScanHasil');
-      // auto-tutup cepat agar antrian scan tidak macet
+      // auto-tutup cepat (≤ cooldown 2 dtk) agar antrian scan tidak macet
       if (_scanHasilTimer) clearTimeout(_scanHasilTimer);
       _scanHasilTimer = setTimeout(() => {
         try { closeModal('modalScanHasil'); } catch (e) {}
+        // jangan reset lastScanTime ke 0 — biarkan cooldown 2 dtk tetap berlaku
         lastScanCode = '';
-        lastScanTime = 0;
         resumeScanCamera();
-      }, ok ? 900 : 1400);
+      }, ok ? 700 : 1100);
     }
 
     function scheduleLoadScanLog() {
@@ -12131,7 +12131,15 @@
     }
 
     async function prosesScan(kode, fromFingerprint) {
-      const _liburScan = await isHariLiburHariIni();
+      // cache libur per hari — hindari query berulang tiap scan
+      const _todayLibur = (typeof todayLocal === 'function') ? todayLocal() : '';
+      let _liburScan = null;
+      if (_liburScanCache.date === _todayLibur) {
+        _liburScan = _liburScanCache.value;
+      } else {
+        _liburScan = await isHariLiburHariIni();
+        _liburScanCache = { date: _todayLibur, value: _liburScan };
+      }
       if (_liburScan) {
         tampilHasil(false, '', 'Hari Libur', (_liburScan.keterangan || 'Hari ini libur') + ' — absensi tidak dicatat');
         return;
@@ -12277,9 +12285,8 @@
 
     document.getElementById('btnScanHasilOk').addEventListener('click', () => {
       closeModal('modalScanHasil');
-      // izinkan scan berikutnya segera setelah popup ditutup
       lastScanCode = '';
-      lastScanTime = 0;
+      // lastScanTime tetap — jeda max 2 dtk antar scan tetap dihormati
       resumeScanCamera();
     });
 
@@ -12291,6 +12298,9 @@
     let _scanSuccessCount = 0;
     let _softRestarting = false;
     const _scanPersonCache = new Map();
+    /** Jeda antar scan (ms) — maksimal 2 detik agar antrian tidak dobel, tetap cepat */
+    const SCAN_COOLDOWN_MS = 2000;
+    let _liburScanCache = { date: '', value: null };
 
     function resumeScanCamera() {
       _scanBusy = false;
@@ -12309,13 +12319,33 @@
       const boxW = Math.max(220, Math.min(shellW - 8, Math.floor(shellW * 0.94)));
       const boxH = Math.max(150, Math.floor(shellH * 0.70));
       const cfg = {
-        fps: 20,
+        fps: 30,
         qrbox: { width: boxW, height: boxH },
         aspectRatio: 1.333,
-        disableFlip: false
+        disableFlip: false,
+        // resolusi ideal: cukup tajam untuk QR, tidak terlalu berat di HP
+        videoConstraints: {
+          facingMode: 'environment',
+          width: { ideal: 1280 },
+          height: { ideal: 720 }
+        }
       };
       try {
         cfg.experimentalFeatures = { useBarCodeDetectorIfSupported: true };
+      } catch (e) {}
+      // batasi format → deteksi lebih cepat (QR + barcode umum kartu siswa)
+      try {
+        if (typeof Html5QrcodeSupportedFormats !== 'undefined') {
+          cfg.formatsToSupport = [
+            Html5QrcodeSupportedFormats.QR_CODE,
+            Html5QrcodeSupportedFormats.CODE_128,
+            Html5QrcodeSupportedFormats.CODE_39,
+            Html5QrcodeSupportedFormats.EAN_13,
+            Html5QrcodeSupportedFormats.EAN_8,
+            Html5QrcodeSupportedFormats.UPC_A,
+            Html5QrcodeSupportedFormats.UPC_E
+          ];
+        }
       } catch (e) {}
       return cfg;
     }
@@ -12332,25 +12362,32 @@
     async function startScanEngine() {
       if (typeof Html5Qrcode === 'undefined') throw new Error('Library scanner belum termuat');
       await stopScanEngine();
-      // beri waktu browser melepaskan track kamera (penting di HP Chrome)
-      await new Promise(r => setTimeout(r, 350));
+      // jeda singkat agar track kamera dilepas (cukup 120ms, sebelumnya 350ms)
+      await new Promise(r => setTimeout(r, 120));
       const readerEl = document.getElementById('qrReader');
       if (readerEl) readerEl.innerHTML = '';
       html5QrCode = new Html5Qrcode('qrReader');
       const config = buildScanQrConfig();
+      const cameraConfig = { facingMode: 'environment' };
       try {
         await html5QrCode.start(
-          { facingMode: 'environment' },
+          cameraConfig,
           config,
           onScanSuccessFast,
           () => {}
         );
       } catch (err) {
-        // fallback tanpa object facingMode
+        // fallback: config lebih ringan
         try {
+          const lightCfg = {
+            fps: 24,
+            qrbox: config.qrbox,
+            aspectRatio: 1.333,
+            experimentalFeatures: { useBarCodeDetectorIfSupported: true }
+          };
           await html5QrCode.start(
-            { facingMode: 'environment' },
-            { fps: 18, qrbox: config.qrbox, aspectRatio: 1.333 },
+            cameraConfig,
+            lightCfg,
             onScanSuccessFast,
             () => {}
           );
@@ -12414,23 +12451,37 @@
         const now = Date.now();
         const code = String(decodedText || '').trim();
         if (!code) return;
-        // debounce singkat agar barcode sama tidak dobel, tetap responsif
-        if (code === lastScanCode && (now - lastScanTime) < 900) return;
         if (_scanBusy) return;
+        // Jeda antar scan (scan ke-1 → ke-2) maksimal 2 detik — cegah dobel, antrian tetap lancar
+        if (lastScanTime && (now - lastScanTime) < SCAN_COOLDOWN_MS) return;
 
         lastScanCode = code;
         lastScanTime = now;
         _scanBusy = true;
-        try { if (navigator.vibrate) navigator.vibrate(40); } catch (e) {}
+        try { if (navigator.vibrate) navigator.vibrate(35); } catch (e) {}
+
+        // pause sejenak agar frame tidak membanjiri callback saat proses DB
+        try {
+          if (html5QrCode && typeof html5QrCode.pause === 'function') {
+            html5QrCode.pause(true);
+          }
+        } catch (e) {}
 
         prosesScan(code)
           .catch(e => console.error('prosesScan', e))
           .finally(() => {
-            setTimeout(() => { _scanBusy = false; }, 350);
+            // buka lagi setelah sisa cooldown (total gap ≤ 2 detik dari lastScanTime)
+            const elapsed = Date.now() - lastScanTime;
+            const wait = Math.max(0, Math.min(SCAN_COOLDOWN_MS, SCAN_COOLDOWN_MS - elapsed));
+            setTimeout(() => {
+              _scanBusy = false;
+              resumeScanCamera();
+            }, wait);
           });
       } catch (e) {
         console.error('onScanSuccessFast', e);
         _scanBusy = false;
+        try { resumeScanCamera(); } catch (e2) {}
       }
     }
 
