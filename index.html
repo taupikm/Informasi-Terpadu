@@ -1168,7 +1168,48 @@
     .dash-top-row { display: block; }
     .app-shell { display: block; width: 100%; }
     .app-content { min-width: 0; width: 100%; }
-    .dash-profile-card { display: none; margin-bottom: 12px; }
+    .dash-side-panel {
+      display: none;
+      flex-direction: column;
+      gap: 12px;
+      min-width: 0;
+    }
+    .dash-school-card {
+      background: #fff;
+      border: 1px solid #e2e8f0;
+      border-radius: 14px;
+      padding: 14px 12px;
+      box-shadow: 0 2px 12px rgba(15, 23, 42, 0.06);
+      text-align: center;
+    }
+    .dash-school-logo {
+      width: 72px; height: 72px; margin: 0 auto 8px;
+      display: flex; align-items: center; justify-content: center;
+      overflow: hidden; flex-shrink: 0;
+    }
+    .dash-school-logo img {
+      width: 100%; height: 100%; object-fit: contain; display: block;
+    }
+    .dash-school-name {
+      font-size: 13px; font-weight: 800; color: #1e40af;
+      line-height: 1.3; margin-bottom: 10px;
+    }
+    .dash-school-meta {
+      font-size: 11.5px; line-height: 1.55; color: #334155; text-align: left;
+    }
+    .dash-school-meta .row {
+      display: grid; grid-template-columns: 88px 10px 1fr;
+      gap: 2px; margin-bottom: 3px; align-items: start;
+    }
+    .dash-school-meta .lbl { color: #64748b; font-weight: 600; }
+    .dash-school-meta .sep { color: #94a3b8; }
+    .dash-school-meta .val { color: #0f172a; word-break: break-word; }
+    .dash-school-meta .row-block { margin-top: 8px; }
+    .dash-school-meta .row-block .lbl { display: block; margin-bottom: 2px; }
+    .dash-school-hint {
+      font-size: 10px; color: #94a3b8; margin-top: 8px; line-height: 1.35; text-align: left;
+    }
+    .dash-profile-card { display: none; margin-bottom: 0; }
     .dash-profile-inner {
       display: flex; flex-direction: column; align-items: center; text-align: center;
       gap: 10px; padding: 16px; background: #fff; border-radius: 14px;
@@ -1362,12 +1403,19 @@
         margin-left: auto;
         margin-right: auto;
       }
-      body.dash-logged-in #dashProfileCard {
-        display: block !important;
-        margin-bottom: 0;
+      body.dash-logged-in .dash-side-panel {
+        display: flex !important;
         position: sticky;
         top: calc(var(--topbar-h, 64px) + 8px);
         align-self: start;
+        max-height: calc(100vh - var(--topbar-h, 64px) - var(--footer-h, 46px) - 16px);
+        overflow-y: auto;
+        -webkit-overflow-scrolling: touch;
+        padding-right: 2px;
+      }
+      body.dash-logged-in #dashProfileCard {
+        display: block !important;
+        margin-bottom: 0;
       }
       body.dash-logged-in .dash-profile-inner {
         flex-direction: column;
@@ -1377,10 +1425,10 @@
         padding: 18px 16px;
       }
       body.dash-logged-in .dash-profile-photo {
-        width: 96px; height: 96px; font-size: 32px;
+        width: 88px; height: 88px; font-size: 30px;
       }
       body.dash-logged-in .dash-profile-info { width: 100%; min-width: 0; }
-      body.dash-logged-in .dash-profile-name { font-size: 16px; }
+      body.dash-logged-in .dash-profile-name { font-size: 15px; }
       body.dash-logged-in .dash-profile-meta,
       body.dash-logged-in .dash-profile-extra { text-align: left; }
       body.dash-logged-in .app-content { min-width: 0; }
@@ -1428,13 +1476,14 @@
       #page-dashboard { max-width: 780px; }
       body.dash-logged-in .app-shell {
         max-width: 1200px;
-        grid-template-columns: minmax(260px, 320px) 1fr;
+        grid-template-columns: minmax(260px, 300px) 1fr;
         gap: 16px;
       }
       body.dash-logged-in #page-dashboard { max-width: none; }
     }
     @media (max-width: 767px) {
       body.dash-logged-in .app-shell { display: block; max-width: none; }
+      body.dash-logged-in .dash-side-panel { display: none !important; }
       #dashProfileCard { display: none !important; }
       .dash-top-row { display: block; }
       .dash-stat-grid {
@@ -2437,15 +2486,40 @@
 <main class="main">
   <!-- Profil global (semua halaman saat login, desktop) -->
   <div class="app-shell">
-      <div id="dashProfileCard" class="dash-profile-card" style="display:none;">
-        <div class="dash-profile-inner">
-          <div class="dash-profile-photo" id="dashProfilePhoto">?</div>
-          <div class="dash-profile-info">
-            <div class="dash-profile-name" id="dashProfileName">-</div>
-            <div class="dash-profile-role" id="dashProfileRole">-</div>
-            <div class="dash-profile-meta" id="dashProfileMeta"></div>
-            <div class="dash-profile-extra" id="dashProfileExtra"></div>
-            <div class="dash-profile-badge" id="dashProfileBadge" style="display:none;"></div>
+      <div class="dash-side-panel" id="dashSidePanel">
+        <!-- Kartu informasi sekolah (desktop, saat login) -->
+        <div class="dash-school-card" id="dashSchoolCard">
+          <div class="dash-school-logo" id="dashSideLogo">
+            <span style="font-size:11px;color:#94a3b8;">Logo</span>
+          </div>
+          <div class="dash-school-name" id="dashSideSchoolName">SMP NEGERI 1 SOBANG</div>
+          <div class="dash-school-meta">
+            <div class="row"><span class="lbl">NSS</span><span class="sep">:</span><span class="val" id="dashSideNss">-</span></div>
+            <div class="row"><span class="lbl">NPSN</span><span class="sep">:</span><span class="val" id="dashSideNpsn">-</span></div>
+            <div class="row"><span class="lbl">Tahun</span><span class="sep">:</span><span class="val" id="dashSideTahun">-</span></div>
+            <div class="row"><span class="lbl">Alamat</span><span class="sep">:</span><span class="val" id="dashSideAlamat">-</span></div>
+            <div class="row-block">
+              <span class="lbl">Visi</span>
+              <div class="val" id="dashSideVisi" style="white-space:pre-wrap;">-</div>
+            </div>
+            <div class="row-block">
+              <span class="lbl">Motto</span>
+              <div class="val" id="dashSideMotto" style="white-space:pre-wrap;">-</div>
+            </div>
+          </div>
+          <div class="dash-school-hint">Dari menu <b>Data Sekolah</b></div>
+        </div>
+        <!-- Kartu profil user -->
+        <div id="dashProfileCard" class="dash-profile-card" style="display:none;">
+          <div class="dash-profile-inner">
+            <div class="dash-profile-photo" id="dashProfilePhoto">?</div>
+            <div class="dash-profile-info">
+              <div class="dash-profile-name" id="dashProfileName">-</div>
+              <div class="dash-profile-role" id="dashProfileRole">-</div>
+              <div class="dash-profile-meta" id="dashProfileMeta"></div>
+              <div class="dash-profile-extra" id="dashProfileExtra"></div>
+              <div class="dash-profile-badge" id="dashProfileBadge" style="display:none;"></div>
+            </div>
           </div>
         </div>
       </div>
@@ -3188,7 +3262,7 @@
               <option value="10">10</option><option value="11">11</option><option value="12">12</option>
               <option value="13">13</option><option value="14">14</option><option value="15">15</option>
               <option value="16">16</option><option value="17">17</option><option value="18">18</option>
-              <option value="19">19</option><option value="20">20</option><option value="21">21</option>
+              <option value="19">19</option><option value="20">20</option>
             </select>
             <div id="inKeHint"></div>
           </div>
@@ -11012,6 +11086,12 @@
     });
 
     async function updateDashProfile() {
+      try {
+        if (typeof loadDataSekolah === 'function') {
+          await loadDataSekolah();
+          if (typeof applyDataSekolahToPublic === 'function') applyDataSekolahToPublic();
+        }
+      } catch (e) {}
       const card = document.getElementById('dashProfileCard');
       if (!card) return;
       const isLogged = currentRole && currentRole !== 'guest';
@@ -11294,9 +11374,17 @@
       set('dashPubAlamat', d.alamat);
       set('dashPubVisi', d.visi);
       set('dashPubMotto', d.motto);
-      // logo
-      const logoBox = document.getElementById('dashPublicLogo');
-      if (logoBox) {
+      // kartu samping (login desktop)
+      set('dashSideSchoolName', d.nama || 'SMP NEGERI 1 SOBANG');
+      set('dashSideNss', d.nss);
+      set('dashSideNpsn', d.npsn);
+      set('dashSideTahun', d.tahun_berdiri);
+      set('dashSideAlamat', d.alamat);
+      set('dashSideVisi', d.visi);
+      set('dashSideMotto', d.motto);
+
+      const fillLogo = (logoBox) => {
+        if (!logoBox) return;
         const src = schoolLogoDataUrl || schoolLogoUrl || null;
         if (src) {
           let url = src;
@@ -11308,7 +11396,9 @@
         } else {
           logoBox.innerHTML = '<span style="font-size:11px;color:#94a3b8;">Logo</span>';
         }
-      }
+      };
+      fillLogo(document.getElementById('dashPublicLogo'));
+      fillLogo(document.getElementById('dashSideLogo'));
     }
 
     async function loadStrukturOrganisasi() {
