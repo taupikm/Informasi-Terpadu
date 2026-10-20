@@ -6704,6 +6704,13 @@
 
       currentPage = pageId;
       closeSidebar();
+      // Hentikan auto-refresh monitoring jika keluar dari halaman
+      if (pageId !== 'bank-soal-hasil' && typeof stopMonRealtime === 'function') {
+        try { stopMonRealtime(); } catch (e) {}
+      }
+      if (pageId === 'bank-soal-hasil' && typeof startMonRealtime === 'function') {
+        try { startMonRealtime(); } catch (e) {}
+      }
       window.scrollTo(0, 0);
 
       const hash = '#' + pageId;
@@ -17920,9 +17927,11 @@ document.getElementById('btnBsContohFormat')?.addEventListener('click', () => {
       if (mk) mk.value = '';
       showPage('bank-soal-hasil', true);
       await loadBsHasilTable();
+      startMonRealtime();
     });
 
     document.getElementById('btnBsHasilKembali')?.addEventListener('click', () => {
+      stopMonRealtime();
       showPage('kelola-tugas', true);
     });
 
@@ -17964,25 +17973,79 @@ document.getElementById('btnBsContohFormat')?.addEventListener('click', () => {
     }
 
     let _monMaxSkor = null;
+    let _monPollTimer = null;
+    let _monTickTimer = null;
+    let _monLoading = false;
+    const MON_POLL_MS = 5000;
+    const MON_TICK_MS = 1000;
 
-    async function loadBsHasilTable() {
+    function stopMonRealtime() {
+      if (_monPollTimer) { clearInterval(_monPollTimer); _monPollTimer = null; }
+      if (_monTickTimer) { clearInterval(_monTickTimer); _monTickTimer = null; }
+    }
+
+    function startMonRealtime() {
+      stopMonRealtime();
+      _monTickTimer = setInterval(() => {
+        try {
+          const page = document.getElementById('page-bank-soal-hasil');
+          if (!page || !page.classList.contains('active')) return;
+          document.querySelectorAll('#tbodyBsHasil tr[data-id]').forEach(tr => {
+            const id = tr.getAttribute('data-id');
+            const r = (dataMonHasil || []).find(x => String(x.id) === String(id));
+            if (!r) return;
+            const st = String(r.status || '').toLowerCase();
+            if (st !== 'sedang') return;
+            const td = tr.querySelector('td.mon-sisa');
+            if (td) td.textContent = monSisaWaktu(r);
+            if (r.deadline_at && new Date(r.deadline_at).getTime() <= Date.now()) {
+              const tdSt = tr.querySelector('td.mon-status');
+              if (tdSt) tdSt.innerHTML = monStatusLabel('timeout');
+            }
+          });
+        } catch (e) {}
+      }, MON_TICK_MS);
+      _monPollTimer = setInterval(() => {
+        try {
+          const page = document.getElementById('page-bank-soal-hasil');
+          if (!page || !page.classList.contains('active')) {
+            stopMonRealtime();
+            return;
+          }
+          if (document.hidden) return;
+          loadBsHasilTable({ silent: true });
+        } catch (e) {}
+      }, MON_POLL_MS);
+    }
+
+    async function loadBsHasilTable(opts) {
+      const silent = !!(opts && opts.silent);
       const tbody = document.getElementById('tbodyBsHasil');
       const bankId = getCurrentBankId();
       if (!tbody || !bankId) return;
+      if (_monLoading) return;
+      _monLoading = true;
 
-      _monMaxSkor = null;
-      try {
-        if (supabaseClient) {
-          const { data: items } = await supabaseClient.from('bank_soal_item').select('skor').eq('bank_id', bankId);
-          if (items && items.length) {
-            _monMaxSkor = items.reduce((a, x) => a + (Number(x.skor) || 1), 0);
+      const checkedIds = silent
+        ? new Set([...document.querySelectorAll('#tbodyBsHasil .cb-mon:checked')].map(c => String(c.value)))
+        : new Set();
+      const scrollParent = tbody.closest('.table-wrap') || tbody.parentElement;
+      const scrollTop = silent && scrollParent ? scrollParent.scrollTop : 0;
+
+      if (_monMaxSkor == null) {
+        try {
+          if (supabaseClient) {
+            const { data: items } = await supabaseClient.from('bank_soal_item').select('skor').eq('bank_id', bankId);
+            if (items && items.length) {
+              _monMaxSkor = items.reduce((a, x) => a + (Number(x.skor) || 1), 0);
+            }
+          } else {
+            const items = JSON.parse(localStorage.getItem('bank_soal_item') || '[]')
+              .filter(x => Number(x.bank_id) === Number(bankId));
+            if (items.length) _monMaxSkor = items.reduce((a, x) => a + (Number(x.skor) || 1), 0);
           }
-        } else {
-          const items = JSON.parse(localStorage.getItem('bank_soal_item') || '[]')
-            .filter(x => Number(x.bank_id) === Number(bankId));
-          if (items.length) _monMaxSkor = items.reduce((a, x) => a + (Number(x.skor) || 1), 0);
-        }
-      } catch (e) {}
+        } catch (e) {}
+      }
 
       let rows = [];
       try {
@@ -18075,10 +18138,17 @@ document.getElementById('btnBsContohFormat')?.addEventListener('click', () => {
       });
 
       const info = document.getElementById('infoMon');
-      if (info) info.textContent = dataMonHasil.length + ' data';
+      if (info) {
+        info.textContent = dataMonHasil.length + ' data · live';
+        info.title = 'Diperbarui otomatis setiap 5 detik (sisa waktu tiap 1 detik)';
+      }
 
       if (!dataMonHasil.length) {
         tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;padding:16px;color:#94a3b8;">Belum ada data monitoring</td></tr>';
+        if (document.getElementById('page-bank-soal-hasil')?.classList.contains('active') && !_monPollTimer) {
+          startMonRealtime();
+        }
+        _monLoading = false;
         return;
       }
       tbody.innerHTML = dataMonHasil.map((r, i) => {
@@ -18086,21 +18156,33 @@ document.getElementById('btnBsContohFormat')?.addEventListener('click', () => {
         const skorTxt = r.skor != null
           ? ('<b>' + r.skor + '</b>' + (maxS != null ? ' / ' + maxS : ''))
           : '-';
+        const checked = checkedIds.has(String(r.id)) ? ' checked' : '';
         return '<tr data-id="' + r.id + '">' +
-          '<td><input type="checkbox" class="cb-mon" value="' + r.id + '"></td>' +
+          '<td><input type="checkbox" class="cb-mon" value="' + r.id + '"' + checked + '></td>' +
           '<td>' + (i + 1) + '</td>' +
           '<td>' + esc(r.nisn || '-') + '</td>' +
           '<td>' + esc(r.nama || '-') + '</td>' +
           '<td>' + esc(r.kelas || '-') + '</td>' +
           '<td style="white-space:nowrap;">' + skorTxt + '</td>' +
-          '<td>' + monStatusLabel(r.status) + '</td>' +
-          '<td style="font-size:12px;white-space:nowrap;">' + monSisaWaktu(r) + '</td></tr>';
+          '<td class="mon-status">' + monStatusLabel(r.status) + '</td>' +
+          '<td class="mon-sisa" style="font-size:12px;white-space:nowrap;">' + monSisaWaktu(r) + '</td></tr>';
       }).join('');
+
+      if (silent && scrollParent) {
+        try { scrollParent.scrollTop = scrollTop; } catch (e) {}
+      }
+      if (document.getElementById('page-bank-soal-hasil')?.classList.contains('active') && !_monPollTimer) {
+        startMonRealtime();
+      }
+      _monLoading = false;
     }
 
     document.getElementById('monKelas')?.addEventListener('change', () => loadBsHasilTable());
     document.getElementById('monStatus')?.addEventListener('change', () => loadBsHasilTable());
-    document.getElementById('btnMonRefresh')?.addEventListener('click', () => loadBsHasilTable());
+    document.getElementById('btnMonRefresh')?.addEventListener('click', () => {
+      _monLoading = false;
+      loadBsHasilTable({ silent: false });
+    });
     document.getElementById('checkAllMon')?.addEventListener('change', function () {
       document.querySelectorAll('#tbodyBsHasil .cb-mon').forEach(c => { c.checked = this.checked; });
     });
