@@ -12645,6 +12645,7 @@
     let lastScanCode = '';
     let lastScanTime = 0;
     let _scanBusy = false;
+    let _cameraBusy = false; // cegah buka/tutup bersamaan / start dobel
     let _scanSuccessCount = 0;
     const _scanPersonCache = new Map();
     let _liburScanCache = { date: '', value: null };
@@ -12701,70 +12702,102 @@
     }
 
     async function stopScanEngine() {
-      if (!html5QrCode) return;
-      try { await html5QrCode.stop(); } catch (e) {}
-      try { html5QrCode.clear(); } catch (e) {}
+      const inst = html5QrCode;
       html5QrCode = null;
+      if (!inst) {
+        const readerEl = document.getElementById('qrReader');
+        if (readerEl) readerEl.innerHTML = '';
+        return;
+      }
+      try {
+        // getState: 1=NOT_STARTED, 2=SCANNING, 3=PAUSED — stop hanya jika scanning/paused
+        const st = (typeof inst.getState === 'function') ? inst.getState() : 2;
+        if (st === 2 || st === 3) {
+          await inst.stop();
+        }
+      } catch (e) {
+        // abaikan "already stopped" / transition errors
+      }
+      try { inst.clear(); } catch (e) {}
       const readerEl = document.getElementById('qrReader');
       if (readerEl) readerEl.innerHTML = '';
+      // beri waktu browser lepaskan stream sebelum start ulang
+      await new Promise(r => setTimeout(r, 150));
     }
 
     async function startScanEngine() {
       if (typeof Html5Qrcode === 'undefined') throw new Error('Library scanner belum termuat');
       await stopScanEngine();
-      await new Promise(r => setTimeout(r, 100));
-      const readerEl = document.getElementById('qrReader');
-      if (readerEl) readerEl.innerHTML = '';
-      html5QrCode = new Html5Qrcode('qrReader', { verbose: false });
-      const config = buildScanQrConfig();
 
-      const tryStart = async (cameraIdOrConfig, cfg) => {
-        await html5QrCode.start(cameraIdOrConfig, cfg, onScanSuccessFast, () => {});
+      const config = buildScanQrConfig();
+      const lightConfig = {
+        fps: 15,
+        qrbox: config.qrbox,
+        aspectRatio: 1.333,
+        experimentalFeatures: { useBarCodeDetectorIfSupported: true }
       };
 
-      // 1) resolusi tinggi + fokus kontinu
-      try {
-        await tryStart(buildCameraConstraints(), config);
-      } catch (err1) {
-        // 2) tanpa advanced focus
+      // Setiap percobaan: instance BARU (hindari "already under transition")
+      async function tryStartFresh(cameraIdOrConfig, cfg) {
+        await stopScanEngine();
+        const readerEl = document.getElementById('qrReader');
+        if (readerEl) readerEl.innerHTML = '';
+        html5QrCode = new Html5Qrcode('qrReader', { verbose: false });
         try {
-          await tryStart({
-            facingMode: 'environment',
-            width: { ideal: 1920 },
-            height: { ideal: 1080 }
-          }, config);
-        } catch (err1b) {
-          // 3) facingMode saja + config penuh
+          await html5QrCode.start(cameraIdOrConfig, cfg, onScanSuccessFast, () => {});
+          return true;
+        } catch (e) {
+          // bersihkan instance gagal sebelum percobaan berikutnya
           try {
-            await tryStart({ facingMode: 'environment' }, config);
-          } catch (err2) {
-            // 4) fallback ringan
-            try {
-              const light = {
-                fps: 15,
-                qrbox: config.qrbox,
-                aspectRatio: 1.333,
-                experimentalFeatures: { useBarCodeDetectorIfSupported: true }
-              };
-              await tryStart({ facingMode: 'environment' }, light);
-            } catch (err3) {
-              // 5) pilih kamera belakang manual
-              try {
-                const cams = await Html5Qrcode.getCameras();
-                if (!cams || !cams.length) throw err3 || err2 || err1;
-                const back = cams.find(c => /back|rear|environment|belakang/i.test(c.label || '')) || cams[cams.length - 1];
-                await tryStart(back.id, {
-                  fps: 15,
-                  qrbox: config.qrbox,
-                  experimentalFeatures: { useBarCodeDetectorIfSupported: true }
-                });
-              } catch (err4) {
-                throw err4 || err3 || err2 || err1;
-              }
-            }
-          }
+            const st = (typeof html5QrCode.getState === 'function') ? html5QrCode.getState() : 0;
+            if (st === 2 || st === 3) await html5QrCode.stop();
+          } catch (e2) {}
+          try { html5QrCode.clear(); } catch (e2) {}
+          html5QrCode = null;
+          const el = document.getElementById('qrReader');
+          if (el) el.innerHTML = '';
+          await new Promise(r => setTimeout(r, 120));
+          throw e;
         }
       }
+
+      let lastErr = null;
+      const attempts = [
+        // 1) resolusi tinggi + fokus kontinu
+        async () => tryStartFresh(buildCameraConstraints(), config),
+        // 2) tanpa advanced focus
+        async () => tryStartFresh({
+          facingMode: 'environment',
+          width: { ideal: 1920 },
+          height: { ideal: 1080 }
+        }, config),
+        // 3) facingMode saja + config penuh
+        async () => tryStartFresh({ facingMode: 'environment' }, config),
+        // 4) config ringan
+        async () => tryStartFresh({ facingMode: 'environment' }, lightConfig),
+        // 5) pilih kamera belakang manual
+        async () => {
+          const cams = await Html5Qrcode.getCameras();
+          if (!cams || !cams.length) throw new Error('Tidak ada kamera terdeteksi');
+          const back = cams.find(c => /back|rear|environment|belakang/i.test(c.label || '')) || cams[cams.length - 1];
+          return tryStartFresh(back.id, lightConfig);
+        },
+        // 6) kamera depan sebagai opsi terakhir
+        async () => tryStartFresh({ facingMode: 'user' }, lightConfig)
+      ];
+
+      let ok = false;
+      for (const attempt of attempts) {
+        try {
+          await attempt();
+          ok = true;
+          break;
+        } catch (e) {
+          lastErr = e;
+          console.warn('startScan attempt failed:', e && (e.message || e));
+        }
+      }
+      if (!ok) throw lastErr || new Error('Gagal memulai kamera');
 
       kameraAktif = true;
       lastScanCode = '';
@@ -12782,7 +12815,6 @@
               const p = v.play();
               if (p && typeof p.catch === 'function') p.catch(() => {});
             }
-            // continuous focus pada track kamera (Samsung/Oppo/Realme/Redmi)
             try {
               const stream = v.srcObject;
               const track = stream && stream.getVideoTracks && stream.getVideoTracks()[0];
@@ -12793,7 +12825,6 @@
                   advanced.push({ focusMode: 'continuous' });
                 }
                 if (caps.zoom && typeof caps.zoom.max === 'number' && caps.zoom.max >= 1.5) {
-                  // zoom ringan membantu kode kecil tanpa harus dekat
                   const z = Math.min(1.6, caps.zoom.max);
                   advanced.push({ zoom: z });
                 }
@@ -12834,48 +12865,61 @@
     }
 
     async function bukaKamera() {
-      if (kameraAktif) return;
-      await loadSesi();
-      sesiAktif = getSesiAktifSekarang();
-      if (!sesiAktif) {
-        alert('Kamera terkunci.\nSaat ini di luar jam sesi aktif.\nScan hanya bisa dilakukan selama jam sesi.');
-        return;
-      }
-      const libur = await isHariLiburHariIni();
-      if (libur) {
-        alert('Hari libur — kamera scanner nonaktif.\n' + (libur.keterangan || ''));
-        return;
-      }
-      const wrap = document.getElementById('qrReaderWrap');
-      wrap.style.display = 'block';
-      wrap.classList.add('is-open');
-      document.getElementById('btnBukaKamera').style.display = 'none';
-      document.getElementById('btnTutupKamera').style.display = 'block';
-
-      _scanBusy = false;
-      lastScanCode = '';
-      lastScanTime = 0;
-      _scanSuccessCount = 0;
-
+      if (kameraAktif || _cameraBusy) return;
+      _cameraBusy = true;
       try {
+        await loadSesi();
+        sesiAktif = getSesiAktifSekarang();
+        if (!sesiAktif) {
+          alert('Kamera terkunci.\nSaat ini di luar jam sesi aktif.\nScan hanya bisa dilakukan selama jam sesi.');
+          return;
+        }
+        const libur = await isHariLiburHariIni();
+        if (libur) {
+          alert('Hari libur — kamera scanner nonaktif.\n' + (libur.keterangan || ''));
+          return;
+        }
+        const wrap = document.getElementById('qrReaderWrap');
+        if (wrap) {
+          wrap.style.display = 'block';
+          wrap.classList.add('is-open');
+        }
+        const btnOpen = document.getElementById('btnBukaKamera');
+        const btnClose = document.getElementById('btnTutupKamera');
+        if (btnOpen) btnOpen.style.display = 'none';
+        if (btnClose) btnClose.style.display = 'block';
+
+        _scanBusy = false;
+        lastScanCode = '';
+        lastScanTime = 0;
+        _scanSuccessCount = 0;
+
         if (typeof Html5Qrcode === 'undefined') {
           alert('Library scanner belum termuat. Cek koneksi internet.');
-          tutupKamera();
+          await tutupKamera();
           return;
         }
         await startScanEngine();
       } catch (err) {
         console.error(err);
-        alert('Gagal membuka kamera.\n\nPastikan:\n• Izin kamera diizinkan di browser\n• Situs memakai HTTPS\n\nError: ' + (err.message || err));
-        tutupKamera();
+        const msg = String((err && err.message) || err || '');
+        // Pesan lebih spesifik untuk error state Html5Qrcode
+        let extra = '';
+        if (/already under transition|Cannot transition/i.test(msg)) {
+          extra = '\n\nScanner masih sibuk. Tutup kamera, tunggu 1–2 detik, lalu buka lagi.';
+        }
+        alert('Gagal membuka kamera.\n\nPastikan:\n• Izin kamera diizinkan di browser\n• Situs memakai HTTPS' + extra + '\n\nError: ' + msg);
+        try { await tutupKamera(); } catch (e) {}
+      } finally {
+        _cameraBusy = false;
       }
     }
     async function tutupKamera() {
+      if (_cameraBusy && !kameraAktif) {
+        // sedang proses buka yang gagal — biarkan finally melepaskan lock
+      }
       try {
-        if (html5QrCode && kameraAktif) {
-          await html5QrCode.stop();
-          html5QrCode.clear();
-        }
+        await stopScanEngine();
       } catch (e) {
         console.warn('Stop camera:', e);
       }
@@ -12883,8 +12927,10 @@
       kameraAktif = false;
       const _qw = document.getElementById('qrReaderWrap');
       if (_qw) { _qw.style.display = 'none'; _qw.classList.remove('is-open'); }
-      document.getElementById('btnBukaKamera').style.display = 'block';
-      document.getElementById('btnTutupKamera').style.display = 'none';
+      const btnOpen = document.getElementById('btnBukaKamera');
+      const btnClose = document.getElementById('btnTutupKamera');
+      if (btnOpen) btnOpen.style.display = 'block';
+      if (btnClose) btnClose.style.display = 'none';
       const reader = document.getElementById('qrReader');
       if (reader) reader.innerHTML = '';
     }
@@ -14876,7 +14922,6 @@
             if (container) container.style.minHeight = '110px';
             const editor = mount.querySelector('.ql-editor');
             if (editor) editor.style.minHeight = '110px';
-            // restore jawaban sebelumnya (boleh HTML atau plain text)
             const prev = ans || '';
             if (prev) {
               if (/<[a-z][\s\S]*>/i.test(String(prev))) {
@@ -14893,7 +14938,6 @@
             });
             window._tuEsaiQuill = q;
           } else {
-            // fallback textarea jika Quill belum termuat
             mount.innerHTML = '<textarea id="tuEsai" rows="5" placeholder="Tulis jawaban esai..." style="width:100%;padding:10px;border:1px solid #e2e8f0;border-radius:8px;min-height:110px;">' +
               esc(ans || '') + '</textarea>';
             const esai = document.getElementById('tuEsai');
@@ -14981,7 +15025,6 @@
       if (typeof a === 'object' && !Array.isArray(a)) {
         return !!(a.name || a.url || a.id);
       }
-      // HTML kosong dari Quill (mis. <p><br></p>) dianggap belum dijawab
       if (typeof a === 'string') {
         const plain = a.replace(/<[^>]+>/g, '').replace(/&nbsp;/gi, ' ').replace(/\u00a0/g, ' ').trim();
         if (!plain) return false;
@@ -15045,7 +15088,6 @@
       if (cbs && cbs.length) _tuAnswers[s.id] = [...cbs].map(c => c.value);
       const isian = document.getElementById('tuIsian');
       if (isian) _tuAnswers[s.id] = isian.value;
-      // Esai: prioritaskan Quill, fallback textarea (Menjodohkan / tanpa Quill)
       if (window._tuEsaiQuill && document.getElementById('tuEsaiEditor')) {
         const q = window._tuEsaiQuill;
         const plain = (q.getText() || '').replace(/\u00a0/g, ' ').trim();
@@ -17734,7 +17776,6 @@ document.getElementById('btnBsContohFormat')?.addEventListener('click', () => {
             jawHtml += '</div>';
           } else if (jw != null && jw !== '') {
             const jwStr = String(jw);
-            // Jawaban esai dari Quill: tampilkan HTML (formatting bold/list dll.)
             if (/<[a-z][\s\S]*>/i.test(jwStr)) {
               const rendered = (typeof renderMathInHtml === 'function') ? renderMathInHtml(jwStr) : jwStr;
               jawHtml = '<div class="bs-soal-card-body" style="margin-top:2px;padding:8px;background:#f8fafc;border-radius:8px;border:1px solid #e2e8f0;">' +
