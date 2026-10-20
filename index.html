@@ -784,7 +784,7 @@
       overflow: hidden;
       text-overflow: ellipsis;
     }
-    /* Rekap dashboard: tabel di tengah, melebar otomatis saat kolom bertambah */
+    /* Rekap dashboard: scroll kiri-kanan jika sempit, No jelas */
     #page-dashboard #dashRekapWrap {
       width: 100%;
     }
@@ -794,16 +794,17 @@
     #page-dashboard .table-wrap {
       overflow-x: auto;
       -webkit-overflow-scrolling: touch;
-      display: flex;
-      justify-content: center;
       width: 100%;
+      max-width: 100%;
+      display: block;
+      scrollbar-width: thin;
     }
     #page-dashboard .table-wrap table {
       width: max-content;
       max-width: none;
-      min-width: 0;
-      margin-left: auto;
-      margin-right: auto;
+      min-width: 100%;
+      margin-left: 0;
+      margin-right: 0;
       table-layout: auto;
       font-size: 11px;
       border-collapse: collapse;
@@ -818,11 +819,41 @@
     }
     #page-dashboard .table-wrap th:first-child,
     #page-dashboard .table-wrap td:first-child {
-      width: 28px;
-      min-width: 28px;
+      width: 36px;
+      min-width: 36px;
+      max-width: 44px;
       text-align: center;
-      padding-left: 4px;
-      padding-right: 4px;
+      font-weight: 700;
+      color: #334155;
+      padding-left: 6px;
+      padding-right: 6px;
+      position: sticky;
+      left: 0;
+      background: #fff;
+      z-index: 2;
+      box-shadow: 2px 0 4px rgba(0,0,0,0.04);
+    }
+    #page-dashboard .table-wrap thead th:first-child {
+      background: #f8fafc;
+      z-index: 3;
+    }
+    /* Riwayat Scan: scroll horizontal + No */
+    #page-scan-barcode .table-wrap {
+      overflow-x: auto;
+      -webkit-overflow-scrolling: touch;
+      scrollbar-width: thin;
+      max-width: 100%;
+    }
+    #page-scan-barcode .table-wrap table {
+      min-width: 520px;
+      width: 100%;
+    }
+    #theadScanLog th:first-child,
+    #tbodyScanLog td:first-child {
+      text-align: center;
+      font-weight: 700;
+      width: 36px;
+      min-width: 36px;
     }
     #page-dashboard .table-wrap th:nth-child(2),
     #page-dashboard .table-wrap td:nth-child(2) {
@@ -3016,6 +3047,7 @@
         <table>
           <thead>
             <tr id="theadScanLog">
+              <th style="width:36px;text-align:center;">No</th>
               <th>Jam</th>
               <th>Nama</th>
               <th>Tipe</th>
@@ -3024,7 +3056,7 @@
             </tr>
           </thead>
           <tbody id="tbodyScanLog">
-            <tr><td colspan="5" style="text-align:center;padding:16px;color:#94a3b8;">Belum ada scan</td></tr>
+            <tr><td colspan="6" style="text-align:center;padding:16px;color:#94a3b8;">Belum ada scan</td></tr>
           </tbody>
         </table>
       </div>
@@ -11810,7 +11842,7 @@
         }
         function buildHead(withKelas) {
           let h = '<tr>';
-          h += '<th style="width:28px;font-size:10px;text-align:center;">No</th>';
+          h += '<th style="width:36px;min-width:36px;font-size:11px;text-align:center;font-weight:700;">No</th>';
           h += '<th style="width:168px;font-size:10px;text-align:left;">Nama</th>';
           if (withKelas) h += '<th style="width:52px;font-size:10px;text-align:center;">Kls</th>';
           sesiList.forEach((s, idx) => {
@@ -11849,7 +11881,7 @@
           } else {
             tbG.innerHTML = guruList.map((g, i) => {
               const cells = sesiList.map(ses => cellSesi(resolveAbsensiFast('guru', g.id, ses))).join('');
-              return '<tr><td style="font-size:11px;text-align:center;">' + (i + 1) +
+              return '<tr><td style="font-size:12px;text-align:center;font-weight:700;color:#334155;">' + (i + 1) +
                 '</td><td style="font-size:11px;overflow:hidden;text-overflow:ellipsis;" title="' + esc(g.nama) + '">' +
                 esc(g.nama) + '</td>' + cells + '</tr>';
             }).join('');
@@ -11868,7 +11900,7 @@
                 const s = siswaList[idx];
                 const cells = sesiList.map(ses => cellSesi(resolveAbsensiFast('siswa', s.id, ses))).join('');
                 parts.push(
-                  '<tr><td style="font-size:11px;text-align:center;">' + (idx + 1) +
+                  '<tr><td style="font-size:12px;text-align:center;font-weight:700;color:#334155;">' + (idx + 1) +
                   '</td><td style="font-size:11px;overflow:hidden;text-overflow:ellipsis;" title="' + esc(s.nama) + '">' +
                   esc(s.nama) + '</td><td style="font-size:10px;text-align:center;">' +
                   esc(s.kelas || '–') + '</td>' + cells + '</tr>'
@@ -12311,9 +12343,9 @@
       const thead = document.getElementById('theadScanLog');
       if (!thead) return;
       if (isScanLogAdminView()) {
-        thead.innerHTML = '<th>Jam</th><th>Nama</th><th>Tipe</th><th>Kelas</th><th>Status</th><th>Discan oleh</th>';
+        thead.innerHTML = '<th style="text-align:center;width:36px;">No</th><th>Jam</th><th>Nama</th><th>Tipe</th><th>Kelas</th><th>Status</th><th>Discan oleh</th>';
       } else {
-        thead.innerHTML = '<th>Jam</th><th>Nama</th><th>Tipe</th><th>Kelas</th><th>Status</th>';
+        thead.innerHTML = '<th style="text-align:center;width:36px;">No</th><th>Jam</th><th>Nama</th><th>Tipe</th><th>Kelas</th><th>Status</th>';
       }
     }
 
@@ -12329,11 +12361,15 @@
       return '—';
     }
 
-    function scanLogRowHtml(r) {
+    function scanLogRowHtml(r, no) {
       const jam = formatJamScan(r.jam_scan);
       const badge = scanLogBadge(r.status);
       const kelas = scanLogKelasOf(r);
-      let html = '<td>' + jam + '</td>' +
+      const noCell = (no != null)
+        ? '<td style="text-align:center;font-weight:700;">' + no + '</td>'
+        : '<td style="text-align:center;font-weight:700;">–</td>';
+      let html = noCell +
+        '<td>' + jam + '</td>' +
         '<td>' + esc(r.nama || '') + '</td>' +
         '<td>' + esc(r.tipe || '') + '</td>' +
         '<td>' + esc(kelas) + '</td>' +
@@ -12343,6 +12379,28 @@
         html += '<td>' + (petugas ? esc(petugas) : '<span style="color:#94a3b8;">—</span>') + '</td>';
       }
       return html;
+    }
+
+    /** Urut: Kelas → Nama → Jam (naik). Guru (tanpa kelas) di atas. */
+    function sortScanLogRows(rows) {
+      return (rows || []).slice().sort((a, b) => {
+        const ta = String(a.tipe || '').toLowerCase();
+        const tb = String(b.tipe || '').toLowerCase();
+        // guru dulu, lalu siswa
+        if (ta !== tb) {
+          if (ta === 'guru') return -1;
+          if (tb === 'guru') return 1;
+        }
+        const ka = scanLogKelasOf(a);
+        const kb = scanLogKelasOf(b);
+        const kaN = (ka === '—' || !ka) ? '' : ka;
+        const kbN = (kb === '—' || !kb) ? '' : kb;
+        if (kaN !== kbN) return kaN.localeCompare(kbN, 'id', { numeric: true, sensitivity: 'base' });
+        const na = String(a.nama || '');
+        const nb = String(b.nama || '');
+        if (na !== nb) return na.localeCompare(nb, 'id', { sensitivity: 'base' });
+        return String(a.jam_scan || '').localeCompare(String(b.jam_scan || ''));
+      });
     }
 
     function prependScanLogRow(r) {
@@ -12446,7 +12504,7 @@
       updateScanLogHeader();
       await buildScanLogSesiSwitch();
       await ensureScanLogKelasMap();
-      const colSpan = isScanLogAdminView() ? 6 : 5;
+      const colSpan = isScanLogAdminView() ? 7 : 6;
       try {
         let rows = [];
         if (supabaseClient) {
@@ -12454,8 +12512,8 @@
             .from('absensi')
             .select('*')
             .eq('tanggal', tgl)
-            .order('jam_scan', { ascending: false })
-            .limit(300);
+            .order('jam_scan', { ascending: true })
+            .limit(500);
           if (currentRole === 'guru') {
             q = q.eq('tipe', 'siswa');
           }
@@ -12470,7 +12528,8 @@
           tbody.innerHTML = '<tr><td colspan="' + colSpan + '" style="text-align:center;padding:16px;color:#94a3b8;">Belum ada data pada filter ini</td></tr>';
           return;
         }
-        tbody.innerHTML = rows.map(r => '<tr>' + scanLogRowHtml(r) + '</tr>').join('');
+        rows = sortScanLogRows(rows);
+        tbody.innerHTML = rows.map((r, i) => '<tr>' + scanLogRowHtml(r, i + 1) + '</tr>').join('');
       } catch (e) {
         console.error(e);
         tbody.innerHTML = '<tr><td colspan="' + colSpan + '" style="text-align:center;padding:16px;color:#94a3b8;">Gagal memuat log</td></tr>';
