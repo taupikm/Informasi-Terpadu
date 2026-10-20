@@ -2996,7 +2996,7 @@
             </div>
           </div>
           <p style="font-size:11px;color:#64748b;text-align:center;margin-top:6px;line-height:1.4;">
-            Jarak ±15–25 cm · jika blur tekan <b>Fokus</b> atau ketuk layar · jangan terlalu dekat
+            Arahkan barcode ke bingkai · jarak ±15–30 cm · jika blur tekan <b>Fokus</b> / ketuk layar
           </p>
         </div>
       </div>
@@ -12665,13 +12665,12 @@
     const SCAN_BUSY_PAD_MS = 280;
 
     function buildScanQrConfig() {
-      // Area deteksi hampir full + fps tinggi → barcode kecil lebih cepat terbaca
+      // Pola index1 (handal): area lebar + fps 20 + BarcodeDetector native
       const cfg = {
-        fps: 30,
+        fps: 20,
         qrbox: function (viewW, viewH) {
-          // hampir full frame — jangan terlalu kecil agar kode dari jarak jauh masih masuk ROI
-          const w = Math.max(280, Math.floor(viewW * 0.98));
-          const h = Math.max(220, Math.floor(viewH * 0.92));
+          const w = Math.max(250, Math.floor(viewW * 0.95));
+          const h = Math.max(180, Math.floor(viewH * 0.80));
           return { width: Math.min(w, viewW), height: Math.min(h, viewH) };
         },
         aspectRatio: 1.333,
@@ -12694,16 +12693,13 @@
       return cfg;
     }
 
-    /**
-     * Constraint kamera — resolusi SEDANG dulu (1280) agar AF lebih tajam di
-     * Realme / Xiaomi / Oppo / Samsung. 1920 sering soft-focus di HP mid-range.
-     * JANGAN set zoom di constraints awal (penyebab blur utama).
-     */
+    /** Constraint kamera: resolusi tinggi + fokus kontinu (pola index1 yang handal) */
     function buildCameraConstraints() {
       return {
-        facingMode: { ideal: 'environment' },
-        width: { ideal: 1280, min: 640 },
-        height: { ideal: 720, min: 480 }
+        facingMode: 'environment',
+        width: { ideal: 1920, min: 1280 },
+        height: { ideal: 1080, min: 720 },
+        advanced: [{ focusMode: 'continuous' }]
       };
     }
 
@@ -12715,74 +12711,54 @@
       _videoTrack = null;
     }
 
-    function trackFocusModes(caps) {
-      if (!caps || !caps.focusMode) return [];
-      return Array.isArray(caps.focusMode) ? caps.focusMode.slice() : [caps.focusMode];
-    }
-
     /**
-     * Fokus yang aman lintas merek:
-     * - Zoom SELALU 1x (zoom digital = blur di Realme/MIUI/ColorOS)
-     * - Pulse single-shot lalu continuous (cara AF yang paling stabil di Android)
-     * - Titik fokus tengah
+     * Fokus ala index1: continuous + zoom ringan opsional.
+     * Tidak ada pulse single-shot berkala (itu yang bikin blur di Realme/Xiaomi/Oppo).
      */
     async function applyBestFocus(track, opts) {
       if (!track || track.readyState === 'ended') return;
       opts = opts || {};
-      const forceShot = !!opts.forceShot;
       try {
         const caps = (typeof track.getCapabilities === 'function') ? track.getCapabilities() : {};
-        const modes = trackFocusModes(caps);
+        const advanced = [];
+        const modes = caps.focusMode
+          ? (Array.isArray(caps.focusMode) ? caps.focusMode : [caps.focusMode])
+          : [];
 
-        // 1) Pastikan zoom = 1 (reset jika pernah digeser)
-        try {
-          if (caps.zoom && typeof caps.zoom.min === 'number') {
-            await track.applyConstraints({ advanced: [{ zoom: caps.zoom.min }] });
-          }
-        } catch (e) {}
-
-        // 2) Titik fokus tengah + single-shot (kunci tajam di banyak chipset)
-        const hasSingle = modes.indexOf('single-shot') >= 0 || modes.indexOf('manual') >= 0;
-        const hasCont = modes.indexOf('continuous') >= 0;
-
-        if (forceShot || hasSingle) {
-          const shot = [];
-          if (modes.indexOf('single-shot') >= 0) shot.push({ focusMode: 'single-shot' });
-          else if (modes.indexOf('manual') >= 0) shot.push({ focusMode: 'manual' });
-          if (caps.pointsOfInterest) shot.push({ pointsOfInterest: [{ x: 0.5, y: 0.5 }] });
-          if (shot.length) {
-            try { await track.applyConstraints({ advanced: shot }); } catch (e) {}
-          }
-          // beri waktu lensa bergerak
-          await new Promise(r => setTimeout(r, forceShot ? 350 : 220));
+        if (opts.forceShot && modes.indexOf('single-shot') >= 0) {
+          advanced.push({ focusMode: 'single-shot' });
+          if (caps.pointsOfInterest) advanced.push({ pointsOfInterest: [{ x: 0.5, y: 0.5 }] });
+          try { await track.applyConstraints({ advanced: advanced }); } catch (e) {}
+          await new Promise(r => setTimeout(r, 300));
+          advanced.length = 0;
         }
 
-        // 3) Kunci continuous supaya tidak "mengambang"
-        if (hasCont) {
-          try {
-            await track.applyConstraints({ focusMode: 'continuous' });
-          } catch (e) {
-            try {
-              await track.applyConstraints({ advanced: [{ focusMode: 'continuous' }] });
-            } catch (e2) {}
-          }
-          if (caps.pointsOfInterest) {
-            try {
-              await track.applyConstraints({ advanced: [{ pointsOfInterest: [{ x: 0.5, y: 0.5 }] }] });
-            } catch (e) {}
-          }
-        } else if (!hasSingle && modes.length) {
-          // fallback mode apa pun yang tersedia
-          try {
-            await track.applyConstraints({ advanced: [{ focusMode: modes[0] }] });
-          } catch (e) {}
+        if (modes.indexOf('continuous') >= 0) {
+          advanced.push({ focusMode: 'continuous' });
+        } else if (modes.indexOf('single-shot') >= 0) {
+          advanced.push({ focusMode: 'single-shot' });
+        }
+        if (caps.pointsOfInterest) {
+          advanced.push({ pointsOfInterest: [{ x: 0.5, y: 0.5 }] });
+        }
+        // Zoom ringan seperti index1 — bantu barcode kecil dari jarak
+        // Hanya jika user tidak mematikan (opts.noZoom)
+        if (!opts.noZoom && caps.zoom && typeof caps.zoom.max === 'number' && caps.zoom.max >= 1.5) {
+          const z = Math.min(1.6, caps.zoom.max);
+          advanced.push({ zoom: z });
+        }
+        if (advanced.length) {
+          try { await track.applyConstraints({ advanced: advanced }); } catch (e) {}
+        }
+        // root-level continuous (Chrome Android)
+        if (modes.indexOf('continuous') >= 0) {
+          try { await track.applyConstraints({ focusMode: 'continuous' }); } catch (e) {}
         }
       } catch (e) {
         console.warn('applyBestFocus', e);
       }
     }
 
-    /** Fokus ulang manual (tombol / ketuk) */
     async function refocusCamera() {
       if (!_videoTrack || _videoTrack.readyState !== 'live') {
         const v = document.querySelector('#qrReader video');
@@ -12791,17 +12767,11 @@
       }
       if (!_videoTrack) return;
       const btn = document.getElementById('btnFokusKamera');
-      if (btn) {
-        btn.disabled = true;
-        btn.textContent = '⏳ Fokus...';
-      }
+      if (btn) { btn.disabled = true; btn.textContent = '⏳ Fokus...'; }
       try {
         await applyBestFocus(_videoTrack, { forceShot: true });
       } finally {
-        if (btn) {
-          btn.disabled = false;
-          btn.textContent = '🎯 Fokus';
-        }
+        if (btn) { btn.disabled = false; btn.textContent = '🎯 Fokus'; }
       }
     }
 
@@ -12812,26 +12782,11 @@
       let lastTap = 0;
       const handler = async (ev) => {
         const now = Date.now();
-        if (now - lastTap < 500) return; // debounce
+        if (now - lastTap < 600) return;
         lastTap = now;
         try {
           if (!track || track.readyState !== 'live') return;
-          const caps = (typeof track.getCapabilities === 'function') ? track.getCapabilities() : {};
-          const rect = videoEl.getBoundingClientRect();
-          const t = (ev.changedTouches && ev.changedTouches[0]) || (ev.touches && ev.touches[0]) || ev;
-          const x = Math.min(1, Math.max(0, (t.clientX - rect.left) / rect.width));
-          const y = Math.min(1, Math.max(0, (t.clientY - rect.top) / rect.height));
-          const modes = trackFocusModes(caps);
-          const advanced = [];
-          if (modes.indexOf('single-shot') >= 0) advanced.push({ focusMode: 'single-shot' });
-          else if (modes.indexOf('continuous') >= 0) advanced.push({ focusMode: 'continuous' });
-          if (caps.pointsOfInterest) advanced.push({ pointsOfInterest: [{ x: x, y: y }] });
-          // pastikan tidak ada zoom
-          if (caps.zoom && typeof caps.zoom.min === 'number') advanced.push({ zoom: caps.zoom.min });
-          if (advanced.length) {
-            try { await track.applyConstraints({ advanced: advanced }); } catch (e) {}
-            setTimeout(() => { applyBestFocus(track).catch(() => {}); }, 400);
-          }
+          await applyBestFocus(track, { forceShot: true });
         } catch (e) {}
       };
       videoEl.addEventListener('click', handler);
@@ -12900,33 +12855,32 @@
       }
 
       let lastErr = null;
+      // Urutan sama index1 (handal) + tryStartFresh (aman dari state transition)
       const attempts = [
-        // 1) 1280×720 — paling tajam di Realme/Xiaomi/Oppo/Samsung mid-range
+        // 1) resolusi tinggi + fokus kontinu
         async () => tryStartFresh(buildCameraConstraints(), config),
-        // 2) 1280 eksplisit string facingMode
-        async () => tryStartFresh({
-          facingMode: 'environment',
-          width: { ideal: 1280 },
-          height: { ideal: 720 }
-        }, config),
-        // 3) facingMode saja
-        async () => tryStartFresh({ facingMode: 'environment' }, config),
-        // 4) config ringan (fps lebih rendah, hemat)
-        async () => tryStartFresh({ facingMode: 'environment' }, lightConfig),
-        // 5) 1920 hanya jika perangkat mendukung (opsional, setelah yang tajam)
+        // 2) tanpa advanced focus
         async () => tryStartFresh({
           facingMode: 'environment',
           width: { ideal: 1920 },
           height: { ideal: 1080 }
         }, config),
-        // 6) pilih kamera belakang manual
+        // 3) facingMode saja + config penuh
+        async () => tryStartFresh({ facingMode: 'environment' }, config),
+        // 4) config ringan
+        async () => tryStartFresh({ facingMode: 'environment' }, lightConfig),
+        // 5) pilih kamera belakang manual
         async () => {
           const cams = await Html5Qrcode.getCameras();
           if (!cams || !cams.length) throw new Error('Tidak ada kamera terdeteksi');
           const back = cams.find(c => /back|rear|environment|belakang/i.test(c.label || '')) || cams[cams.length - 1];
-          return tryStartFresh(back.id, lightConfig);
+          return tryStartFresh(back.id, {
+            fps: 15,
+            qrbox: config.qrbox,
+            experimentalFeatures: { useBarCodeDetectorIfSupported: true }
+          });
         },
-        // 7) kamera depan terakhir
+        // 6) kamera depan terakhir
         async () => tryStartFresh({ facingMode: 'user' }, lightConfig)
       ];
 
@@ -12949,7 +12903,8 @@
       _scanBusy = false;
       clearFocusHelpers();
 
-      // video play + fokus tajam (tanpa zoom) + tombol/ketuk fokus
+      // Fokus ala index1: sekali setelah stream siap (continuous + zoom ringan)
+      // Tidak di-pulse berkala — pulse single-shot membuat blur di banyak HP Android
       const setupFocus = () => {
         try {
           const v = document.querySelector('#qrReader video');
@@ -12964,23 +12919,15 @@
           const track = stream && stream.getVideoTracks && stream.getVideoTracks()[0];
           if (!track) return false;
           _videoTrack = track;
-          // force single-shot dulu agar tajam di Realme/Xiaomi/Oppo
-          applyBestFocus(track, { forceShot: true }).catch(() => {});
+          applyBestFocus(track).catch(() => {});
           wireTapToFocus(v, track);
-          // tiap 3 dtk: pulse fokus ulang (AF Android sering "mengambang")
-          if (_focusIv) { try { clearInterval(_focusIv); } catch (e) {} }
-          _focusIv = setInterval(() => {
-            if (!kameraAktif || !_videoTrack || _videoTrack.readyState !== 'live') return;
-            applyBestFocus(_videoTrack, { forceShot: true }).catch(() => {});
-          }, 3000);
           return true;
         } catch (e) {
           return false;
         }
       };
-      setTimeout(() => { if (!setupFocus()) setTimeout(setupFocus, 400); }, 180);
-      setTimeout(setupFocus, 700);
-      setTimeout(() => { applyBestFocus(_videoTrack, { forceShot: true }).catch(() => {}); }, 1400);
+      setTimeout(() => { if (!setupFocus()) setTimeout(setupFocus, 400); }, 250);
+      setTimeout(setupFocus, 800);
     }
 
     function onScanSuccessFast(decodedText) {
