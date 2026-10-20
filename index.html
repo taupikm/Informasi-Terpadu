@@ -12657,27 +12657,27 @@
     /**
      * Scanner kontinu (pola stabil untuk antrian absensi):
      * - Kamera TIDAK di-pause / stop antar scan
-     * - Debounce kode yang SAMA ±1,2 dtk
-     * - Kode BERBEDA boleh segera setelah proses DB selesai (~0,3 dtk)
+     * - Debounce kode yang SAMA ±0,7 dtk
+     * - Kode BERBEDA boleh segera setelah proses DB selesai (~0,1 dtk)
      * - Native BarcodeDetector bila tersedia
      */
-    const SCAN_SAME_CODE_MS = 1200;
-    const SCAN_BUSY_PAD_MS = 280;
+    // Debounce lebih ketat → antrian scan lebih cepat (kode beda hampir instan)
+    const SCAN_SAME_CODE_MS = 700;
+    const SCAN_BUSY_PAD_MS = 100;
 
     /**
-     * Pola scanner PORTAL LAMA (handal di Realme/Xiaomi/Oppo/Samsung):
-     * - Constraint kamera HANYA facingMode environment (biarkan HP atur resolusi + AF)
-     * - fps tinggi (30–60)
-     * - qrbox kotak tetap
-     * - JANGAN applyConstraints zoom/focusMode setelah start (bikin blur)
+     * Pola portal lama + optimasi kecepatan:
+     * - facingMode saja (AF native)
+     * - fps 60
+     * - qrbox lebih besar agar barcode lebih cepat masuk frame
      */
     function buildScanQrConfig() {
       const cfg = {
-        fps: 30,
+        fps: 60,
         qrbox: function (viewW, viewH) {
-          // kotak fokus di tengah (~70% sisi pendek), mirip qrbox 220 di portal lama
-          const side = Math.floor(Math.min(viewW, viewH) * 0.72);
-          const s = Math.max(180, Math.min(side, 320));
+          // ~82% sisi pendek — lebih mudah & cepat tangkap barcode
+          const side = Math.floor(Math.min(viewW, viewH) * 0.82);
+          const s = Math.max(200, Math.min(side, 380));
           return { width: s, height: s };
         },
         aspectRatio: 1.0,
@@ -12796,7 +12796,7 @@
 
       const config = buildScanQrConfig();
       const lightConfig = {
-        fps: 15,
+        fps: 30,
         qrbox: config.qrbox,
         aspectRatio: 1.333,
         experimentalFeatures: { useBarCodeDetectorIfSupported: true }
@@ -12896,7 +12896,7 @@
         const code = String(decodedText || '').trim();
         if (!code) return;
         const now = Date.now();
-        // Abaikan kode yang sama dalam 1,2 dtk (cegah dobel)
+        // Abaikan kode yang sama dalam ~0,7 dtk (cegah dobel)
         if (code === lastScanCode && (now - lastScanTime) < SCAN_SAME_CODE_MS) return;
 
         lastScanCode = code;
