@@ -3614,9 +3614,9 @@
       }
       .dl-abs-sheet col.dl-c-no,
       .dl-abs-sheet col.dl-c-lp,
-      .dl-abs-sheet col.dl-c-day { width: 3mm; }
-      .dl-abs-sheet col.dl-c-nisn,
-      .dl-abs-sheet col.dl-c-pangkat { width: 20mm; }
+      .dl-abs-sheet col.dl-c-day { width: 4mm; }
+      .dl-abs-sheet col.dl-c-nisn { width: 20mm; }
+      .dl-abs-sheet col.dl-c-pangkat { width: 30mm; }
       .dl-abs-sheet col.dl-c-nama { width: 40mm; }
       .dl-abs-sheet col.dl-c-pct { width: 12mm; }
       .dl-abs-sheet col.dl-c-letter { width: 4mm; }
@@ -13925,7 +13925,15 @@
         html += '</tbody></table></div>';
       }
 
-      return { html, aoa, filename, jenis, peopleCount: people.length };
+      return {
+        html, aoa, filename, jenis,
+        peopleCount: people.length,
+        daysInfo: daysInfo,
+        bulanLabel: bulanLabel,
+        periodeLabel: periodeLabel,
+        kelas: kelas || '',
+        nDays: nDays
+      };
     }
 
     document.getElementById('btnDlAbsPreview')?.addEventListener('click', async () => {
@@ -13951,13 +13959,225 @@
       }
     });
 
-    document.getElementById('btnDlAbsExcel')?.addEventListener('click', () => {
+    /** mm → lebar kolom Excel (perkiraan karakter) */
+    function dlMmToWch(mm) {
+      // pixels ≈ mm * 3.78; excel wch ≈ (px - 5) / 7
+      const px = mm * 3.779527559;
+      return Math.max(1.5, Math.round(((px - 5) / 7) * 100) / 100);
+    }
+
+    function ensureExcelJS() {
+      return new Promise((resolve, reject) => {
+        if (typeof ExcelJS !== 'undefined') { resolve(ExcelJS); return; }
+        const s = document.createElement('script');
+        s.src = 'https://cdn.jsdelivr.net/npm/exceljs@4.4.0/dist/exceljs.min.js';
+        s.onload = () => {
+          if (typeof ExcelJS !== 'undefined') resolve(ExcelJS);
+          else reject(new Error('ExcelJS gagal dimuat'));
+        };
+        s.onerror = () => reject(new Error('Gagal memuat ExcelJS (cek internet)'));
+        document.head.appendChild(s);
+      });
+    }
+
+    /**
+     * Ekspor Excel mirip preview:
+     * - Lebar kolom: No/L-P/tgl=4mm, Nama=40mm, NISN=20mm, Pangkat=30mm
+     * - Kolom hari libur/Minggu: latar merah (vertikal penuh)
+     * - Header biru, border, judul
+     */
+    async function dlExportExcelStyled() {
       if (!_dlAbsLast || !_dlAbsLast.aoa) { alert('Preview dulu'); return; }
-      if (typeof XLSX === 'undefined') { alert('Library Excel belum termuat'); return; }
-      const ws = XLSX.utils.aoa_to_sheet(_dlAbsLast.aoa);
-      const wb = XLSX.utils.book_new();
-      XLSX.utils.book_append_sheet(wb, ws, 'Absensi');
-      XLSX.writeFile(wb, _dlAbsLast.filename || 'absensi.xlsx');
+      const btn = document.getElementById('btnDlAbsExcel');
+      const prevLabel = btn ? btn.textContent : '';
+      if (btn) { btn.disabled = true; btn.textContent = '⏳ Excel...'; }
+      try {
+        const ExcelJSLib = await ensureExcelJS();
+        const wb = new ExcelJSLib.Workbook();
+        wb.creator = 'SMPN 1 Sobang';
+        const ws = wb.addWorksheet('Absensi', {
+          views: [{ state: 'frozen', ySplit: 4, xSplit: 0 }]
+        });
+
+        const jenis = _dlAbsLast.jenis || 'guru';
+        const daysInfo = _dlAbsLast.daysInfo || [];
+        const aoa = _dlAbsLast.aoa || [];
+        const nDays = daysInfo.length || (_dlAbsLast.nDays || 0);
+
+        // ---- Judul ----
+        let title = 'DAFTAR HADIR GURU';
+        if (jenis === 'siswa1') title = 'DAFTAR HADIR SISWA';
+        if (jenis === 'siswa2') title = 'DAFTAR HADIR SISWA (REKAP)';
+        const colCount = (aoa[0] && aoa[0].length) ? aoa[0].length : 10;
+
+        ws.mergeCells(1, 1, 1, colCount);
+        const cTitle = ws.getCell(1, 1);
+        cTitle.value = title;
+        cTitle.font = { bold: true, size: 14, name: 'Arial', color: { argb: 'FF0F172A' } };
+        cTitle.alignment = { horizontal: 'center', vertical: 'middle' };
+
+        ws.mergeCells(2, 1, 2, colCount);
+        const cSub = ws.getCell(2, 1);
+        cSub.value = _dlAbsLast.periodeLabel || '';
+        cSub.font = { bold: true, size: 11, name: 'Arial' };
+        cSub.alignment = { horizontal: 'center', vertical: 'middle' };
+
+        let meta = 'Bulan : ' + (_dlAbsLast.bulanLabel || '');
+        if (jenis !== 'guru' && _dlAbsLast.kelas) meta = 'Kelas : ' + _dlAbsLast.kelas + '    ' + meta;
+        ws.mergeCells(3, 1, 3, colCount);
+        const cMeta = ws.getCell(3, 1);
+        cMeta.value = meta;
+        cMeta.font = { size: 10, name: 'Arial' };
+        cMeta.alignment = { horizontal: 'left', vertical: 'middle' };
+
+        // ---- Lebar kolom (mm → wch) ----
+        const wNo = dlMmToWch(4);
+        const wLP = dlMmToWch(4);
+        const wDay = dlMmToWch(4);
+        const wNama = dlMmToWch(40);
+        const wNisn = dlMmToWch(20);
+        const wPangkat = dlMmToWch(30);
+        const wLetter = dlMmToWch(4);
+        const wPct = dlMmToWch(12);
+        const wNaik = dlMmToWch(18);
+
+        const cols = [];
+        if (jenis === 'guru') {
+          cols.push({ width: wNo });      // No
+          cols.push({ width: wNama });    // Nama
+          cols.push({ width: wLP });      // L/P
+          cols.push({ width: wPangkat }); // Pangkat
+          for (let i = 0; i < nDays; i++) cols.push({ width: wDay });
+          cols.push({ width: wLetter }, { width: wLetter }, { width: wLetter }, { width: wLetter });
+          cols.push({ width: wPct });
+        } else if (jenis === 'siswa1') {
+          cols.push({ width: wNo });
+          cols.push({ width: wNisn });
+          cols.push({ width: wNama });
+          cols.push({ width: wLP });
+          for (let i = 0; i < nDays; i++) cols.push({ width: wDay });
+          cols.push({ width: wLetter }, { width: wLetter }, { width: wLetter }, { width: wLetter }, { width: wLetter });
+        } else {
+          // siswa2 rekap
+          cols.push({ width: wNo }, { width: wNisn }, { width: wNama }, { width: wLP });
+          for (let i = 0; i < 6; i++) cols.push({ width: wLetter });
+          cols.push({ width: wPct }, { width: wNaik });
+        }
+        ws.columns = cols;
+
+        // Index kolom hari (0-based dalam baris header aoa)
+        let dayStartCol = 0; // 1-based excel col of first day
+        if (jenis === 'guru') dayStartCol = 5; // No,Nama,LP,Pangkat, then days
+        else if (jenis === 'siswa1') dayStartCol = 5; // No,NISN,Nama,LP, then days
+        else dayStartCol = 0; // no day cols
+
+        const liburColSet = new Set(); // 1-based excel columns
+        if (dayStartCol && daysInfo.length) {
+          daysInfo.forEach((di, i) => {
+            if (di.libur) liburColSet.add(dayStartCol + i);
+          });
+        }
+
+        const borderThin = {
+          top: { style: 'thin', color: { argb: 'FF1E3A8A' } },
+          left: { style: 'thin', color: { argb: 'FF1E3A8A' } },
+          bottom: { style: 'thin', color: { argb: 'FF1E3A8A' } },
+          right: { style: 'thin', color: { argb: 'FF1E3A8A' } }
+        };
+        const fillHeader = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF1D4ED8' } };
+        const fillLibur = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFECACA' } };
+        const fontHeader = { bold: true, size: 8, name: 'Arial', color: { argb: 'FFFFFFFF' } };
+        const fontLibur = { size: 8, name: 'Arial', color: { argb: 'FF7F1D1D' }, bold: true };
+        const fontCell = { size: 8, name: 'Arial', color: { argb: 'FF0F172A' } };
+        const alignC = { horizontal: 'center', vertical: 'middle', wrapText: true };
+        const alignL = { horizontal: 'left', vertical: 'middle', wrapText: true };
+
+        // Nama column index (1-based)
+        let namaCol = 2;
+        if (jenis === 'siswa1' || jenis === 'siswa2') namaCol = 3;
+
+        // ---- Data rows (header + body from aoa) ----
+        const headerRowIdx = 4;
+        aoa.forEach((row, ri) => {
+          const excelRow = headerRowIdx + ri;
+          const isHeader = ri === 0;
+          row.forEach((val, ci) => {
+            const cell = ws.getCell(excelRow, ci + 1);
+            cell.value = (val === '' || val == null) ? '' : val;
+            cell.border = borderThin;
+            cell.alignment = (ci + 1 === namaCol && !isHeader) ? alignL : alignC;
+            cell.font = isHeader ? fontHeader : fontCell;
+            if (isHeader) {
+              cell.fill = fillHeader;
+            }
+            // Kolom libur: merah vertikal (header + semua baris)
+            if (liburColSet.has(ci + 1)) {
+              cell.fill = isHeader
+                ? { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFDC2626' } }
+                : fillLibur;
+              if (isHeader) {
+                cell.font = { bold: true, size: 8, name: 'Arial', color: { argb: 'FFFFFFFF' } };
+              } else {
+                cell.font = fontLibur;
+              }
+            }
+          });
+          ws.getRow(excelRow).height = isHeader ? 16 : 14;
+        });
+
+        // Row heights for title
+        ws.getRow(1).height = 20;
+        ws.getRow(2).height = 16;
+        ws.getRow(3).height = 14;
+
+        const buf = await wb.xlsx.writeBuffer();
+        const blob = new Blob([buf], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+        const a = document.createElement('a');
+        a.href = URL.createObjectURL(blob);
+        a.download = _dlAbsLast.filename || 'absensi.xlsx';
+        document.body.appendChild(a);
+        a.click();
+        setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 1500);
+      } catch (e) {
+        console.error(e);
+        // Fallback: SheetJS tanpa style (masih ada lebar kolom)
+        try {
+          if (typeof XLSX === 'undefined') throw e;
+          const aoa = _dlAbsLast.aoa;
+          const ws = XLSX.utils.aoa_to_sheet(aoa);
+          const nDays = (_dlAbsLast.daysInfo || []).length;
+          const jenis = _dlAbsLast.jenis || 'guru';
+          const wNo = dlMmToWch(4), wLP = dlMmToWch(4), wDay = dlMmToWch(4);
+          const wNama = dlMmToWch(40), wNisn = dlMmToWch(20), wPangkat = dlMmToWch(30);
+          const cols = [];
+          if (jenis === 'guru') {
+            cols.push({ wch: wNo }, { wch: wNama }, { wch: wLP }, { wch: wPangkat });
+            for (let i = 0; i < nDays; i++) cols.push({ wch: wDay });
+            cols.push({ wch: 3 }, { wch: 3 }, { wch: 3 }, { wch: 3 }, { wch: 7 });
+          } else if (jenis === 'siswa1') {
+            cols.push({ wch: wNo }, { wch: wNisn }, { wch: wNama }, { wch: wLP });
+            for (let i = 0; i < nDays; i++) cols.push({ wch: wDay });
+            cols.push({ wch: 3 }, { wch: 3 }, { wch: 3 }, { wch: 3 }, { wch: 3 });
+          } else {
+            cols.push({ wch: wNo }, { wch: wNisn }, { wch: wNama }, { wch: wLP });
+            for (let i = 0; i < 6; i++) cols.push({ wch: 3 });
+            cols.push({ wch: 7 }, { wch: 10 });
+          }
+          ws['!cols'] = cols;
+          const wb = XLSX.utils.book_new();
+          XLSX.utils.book_append_sheet(wb, ws, 'Absensi');
+          XLSX.writeFile(wb, _dlAbsLast.filename || 'absensi.xlsx');
+          alert('Excel diunduh (mode dasar). Warna libur memerlukan koneksi untuk library ExcelJS.\n' + (e.message || ''));
+        } catch (e2) {
+          alert('Gagal unduh Excel: ' + (e.message || e));
+        }
+      } finally {
+        if (btn) { btn.disabled = false; btn.textContent = prevLabel || '📥 Excel'; }
+      }
+    }
+
+    document.getElementById('btnDlAbsExcel')?.addEventListener('click', () => {
+      dlExportExcelStyled().catch(e => console.error(e));
     });
 
     document.getElementById('btnDlAbsPrint')?.addEventListener('click', () => {
