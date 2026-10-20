@@ -18797,6 +18797,8 @@ document.getElementById('btnBsContohFormat')?.addEventListener('click', () => {
       if (st === 'TW' || st === 'H') s += 3;
       else if (st === 'TL') s += 2;
       else if (st === 'SAKIT' || st === 'S' || st === 'IZIN' || st === 'I') s += 1;
+      else if (st === 'B' || st === 'BOLOS') s += 1;
+      else if (st === 'A' || st === 'ALPA' || st === 'ALPHA') s += 0;
       return s;
     }
 
@@ -18919,8 +18921,12 @@ document.getElementById('btnBsContohFormat')?.addEventListener('click', () => {
       function rowKey(r) {
         const tgl = String(r.tanggal || '').slice(0, 10);
         const person = (r.tipe || '') + ':' + (r.ref_id != null && r.ref_id !== '' ? r.ref_id : (r.kode || r.nama || ''));
-        const sk = normalizeSesiKey(r);
-        if (sk == null) return null;
+        let sk = normalizeSesiKey(r);
+        // Jangan buang baris tanpa sesi (sering status B/A historis) — pakai id baris
+        if (sk == null) {
+          if (r.id != null) sk = 'row:' + r.id;
+          else sk = 'st:' + String(r.status || '') + ':' + String(r.jam_scan || '');
+        }
         return tgl + '||' + person + '||' + sk;
       }
       [...(a || []), ...(h || [])].forEach(r => {
@@ -20134,6 +20140,80 @@ document.getElementById('btnBsContohFormat')?.addEventListener('click', () => {
       }
     });
 
+    /**
+     * Bangun daftar kolom sesi dari data absensi + historis (bukan setting master).
+     * Kunci stabil: u1, u2, u3... berdasarkan sesi_urutan / angka di nama.
+     */
+    function buildSesiListFromRows(rows) {
+      function urFromSesiName(nm) {
+        const s = String(nm || '').trim().toLowerCase().replace(/\s+/g, '');
+        if (!s) return null;
+        let m = s.match(/sesi?(\d+)/);
+        if (m) return Number(m[1]);
+        m = s.match(/^s(\d+)$/);
+        if (m) return Number(m[1]);
+        return null;
+      }
+      function metaFromRow(r) {
+        let ur = r.sesi_urutan != null && r.sesi_urutan !== '' ? Number(r.sesi_urutan) : null;
+        if (ur == null || isNaN(ur)) ur = urFromSesiName(r.sesi_nama);
+        const nm = String(r.sesi_nama || '').trim() || (ur != null ? ('Sesi ' + ur) : '');
+        const sid = r.sesi_id != null && r.sesi_id !== '' ? r.sesi_id : null;
+        let colKey = null;
+        if (ur != null && !isNaN(ur) && ur > 0) colKey = 'u' + ur;
+        else if (nm) {
+          const n = nm.toLowerCase().replace(/\s+/g, '');
+          // status terlanjur di sesi_nama → abaikan
+          if (n && n !== 'sakit' && n !== 'izin' && n !== 'alpa' && n !== 'bolos' && n !== 'tw' && n !== 'tl')
+            colKey = 'n' + n;
+        }
+        if (!colKey && sid != null) colKey = 'id' + sid;
+        return { urutan: ur, nama: nm || ('Sesi ' + (ur || '?')), id: sid, colKey: colKey };
+      }
+      const byKey = new Map();
+      (rows || []).forEach(r => {
+        const meta = metaFromRow(r);
+        if (!meta.colKey) return;
+        if (!byKey.has(meta.colKey)) {
+          byKey.set(meta.colKey, {
+            colKey: meta.colKey,
+            id: meta.id,
+            nama: meta.nama,
+            urutan: meta.urutan != null && !isNaN(meta.urutan) ? meta.urutan : 999,
+            _fromData: true
+          });
+        } else {
+          const ex = byKey.get(meta.colKey);
+          if (meta.id != null && (ex.id == null || String(ex.id).indexOf('x') === 0)) ex.id = meta.id;
+          if (meta.nama && (!ex.nama || /Sesi \?/.test(ex.nama))) ex.nama = meta.nama;
+          if (meta.urutan != null && !isNaN(meta.urutan) && (ex.urutan == null || ex.urutan >= 999))
+            ex.urutan = meta.urutan;
+        }
+      });
+      const list = [...byKey.values()].sort((a, b) => {
+        const ua = a.urutan != null ? a.urutan : 999;
+        const ub = b.urutan != null ? b.urutan : 999;
+        if (ua !== ub) return ua - ub;
+        return String(a.nama || '').localeCompare(String(b.nama || ''), 'id');
+      });
+      return { list: list, metaFromRow: metaFromRow };
+    }
+
+    /** Skor baris absensi untuk dedupe: prioritaskan data scan, jangan buang Bolos jika itu satu-satunya di sesi itu */
+    function absensiCellScore(x) {
+      if (!x) return -1;
+      const st = String(x.status || '').toUpperCase();
+      let s = 0;
+      if (x.jam_scan) s += 4;
+      if (x.id) s += 1;
+      if (st === 'TW' || st === 'H') s += 3;
+      else if (st === 'TL') s += 2;
+      else if (st === 'SAKIT' || st === 'S' || st === 'IZIN' || st === 'I') s += 1;
+      else if (st === 'B' || st === 'BOLOS') s += 1; // setara absen bermakna
+      else if (st === 'A' || st === 'ALPA' || st === 'ALPHA') s += 0;
+      return s;
+    }
+
     async function loadCariSiswaRekap() {
       const q = (document.getElementById('cariSiswaQ')?.value || '').trim();
       let dari = document.getElementById('cariSiswaDari')?.value || '';
@@ -20176,10 +20256,12 @@ document.getElementById('btnBsContohFormat')?.addEventListener('click', () => {
       tbody.innerHTML = '<tr><td colspan="10" style="text-align:center;padding:16px;color:#94a3b8;">Memuat...</td></tr>';
       try {
         await loadSesi();
-        const sesiList = (dataSesi || []).filter(s => s.aktif !== false)
-          .sort((a, b) => (a.urutan || 0) - (b.urutan || 0));
 
-        let rows = await fetchAbsensiRange(dari, sampai, { tipe: 'siswa', namaIlike: q });
+        // Ambil dari absensi + historis (sama seperti Edit Absensi / Rekap)
+        const fetchFilter = { tipe: 'siswa' };
+        if (/^\d{5,}$/.test(q)) fetchFilter.kode = q;
+        else fetchFilter.namaIlike = q;
+        let rows = await fetchAbsensiRange(dari, sampai, fetchFilter);
         const ql = q.toLowerCase();
         rows = rows.filter(r => {
           const n = String(r.nama || '').toLowerCase();
@@ -20224,6 +20306,14 @@ document.getElementById('btnBsContohFormat')?.addEventListener('click', () => {
           return;
         }
 
+        // Kolom sesi dari data real (sama logika Edit Absensi)
+        const built = buildSesiListFromRows(rows);
+        const sesiList = built.list.length ? built.list : [
+          { colKey: 'u1', urutan: 1, nama: 'Sesi 1' },
+          { colKey: 'u2', urutan: 2, nama: 'Sesi 2' },
+          { colKey: 'u3', urutan: 3, nama: 'Sesi 3' }
+        ];
+
         const byDayPerson = {};
         rows.forEach(r => {
           const tgl = String(r.tanggal).slice(0, 10);
@@ -20240,9 +20330,12 @@ document.getElementById('btnBsContohFormat')?.addEventListener('click', () => {
           if (!byDayPerson[key].kelas && (r.kelas || r.kelas_nama)) {
             byDayPerson[key].kelas = r.kelas || r.kelas_nama;
           }
-          const sid = r.sesi_id != null ? String(r.sesi_id) : String(r.sesi_urutan || r.sesi_nama || '');
-          byDayPerson[key].sesi[sid] = r;
-          if (r.sesi_urutan != null) byDayPerson[key].sesi['u' + r.sesi_urutan] = r;
+          const meta = built.metaFromRow(r);
+          if (!meta.colKey) return;
+          const prev = byDayPerson[key].sesi[meta.colKey];
+          if (!prev || absensiCellScore(r) >= absensiCellScore(prev)) {
+            byDayPerson[key].sesi[meta.colKey] = r;
+          }
         });
 
         const list = Object.values(byDayPerson).sort((a, b) =>
@@ -20251,27 +20344,31 @@ document.getElementById('btnBsContohFormat')?.addEventListener('click', () => {
 
         let head = '<tr><th>No</th><th>Tanggal</th><th>NISN</th><th>Nama</th><th>Kelas</th>';
         sesiList.forEach((s, i) => {
-          head += '<th>S' + (s.urutan || (i + 1)) + '</th>';
+          const label = 'S' + (s.urutan != null && s.urutan < 900 ? s.urutan : (i + 1));
+          head += '<th title="' + esc(s.nama || label) + '">' + label + '</th>';
         });
         head += '</tr>';
         thead.innerHTML = head;
 
+        let nIsi = 0;
         tbody.innerHTML = list.map((row, i) => {
           let html = '<tr><td>' + (i + 1) + '</td>' +
             '<td style="white-space:nowrap;font-size:12px;">' + row.tanggal + '</td>' +
             '<td>' + esc(row.kode || '-') + '</td>' +
             '<td>' + esc(row.nama || '-') + '</td>' +
             '<td>' + esc(row.kelas || '-') + '</td>';
-          sesiList.forEach((s, si) => {
-            const cell = row.sesi[String(s.id)] || row.sesi['u' + s.urutan] ||
-              row.sesi[String(s.urutan)] || row.sesi[s.nama] || null;
+          sesiList.forEach((s) => {
+            const cell = row.sesi[s.colKey] || null;
+            if (cell) nIsi++;
             const st = cell ? (cell.status || '-') : '-';
             const jam = cell && cell.jam_scan ? String(cell.jam_scan).slice(0, 5) : '';
             let color = '#64748b';
-            if (st === 'TW' || st === 'H') color = '#16a34a';
-            else if (st === 'TL') color = '#f59e0b';
-            else if (st === 'A' || st === 'B') color = '#ef4444';
-            else if (st === 'Izin' || st === 'Sakit') color = '#2563eb';
+            const su = String(st).toUpperCase();
+            if (su === 'TW' || su === 'H') color = '#16a34a';
+            else if (su === 'TL') color = '#f59e0b';
+            else if (su === 'A' || su === 'B' || su === 'ALPA' || su === 'BOLOS') color = '#ef4444';
+            else if (/izin/i.test(st)) color = '#2563eb';
+            else if (/sakit/i.test(st)) color = '#7e22ce';
             html += '<td style="text-align:center;font-size:11px;color:' + color + ';font-weight:600;">' +
               esc(st) + (jam ? '<div style="font-weight:400;color:#94a3b8;">' + jam + '</div>' : '') + '</td>';
           });
@@ -20279,8 +20376,8 @@ document.getElementById('btnBsContohFormat')?.addEventListener('click', () => {
           return html;
         }).join('');
 
-        info.textContent = list.length + ' baris · ' + q + ' · ' + dari + ' s/d ' + sampai +
-          ' (absensi + historis)';
+        info.textContent = list.length + ' baris · ' + sesiList.length + ' sesi · ' + nIsi + ' data sesi · ' +
+          q + ' · ' + dari + ' s/d ' + sampai + ' (absensi + historis)';
       } catch (e) {
         console.error(e);
         tbody.innerHTML = '<tr><td colspan="10" style="color:#ef4444;padding:16px;">Gagal: ' + esc(e.message || e) + '</td></tr>';
@@ -20690,64 +20787,15 @@ document.getElementById('btnBsContohFormat')?.addEventListener('click', () => {
           rows = rows.filter(r => r.tipe === tipe);
         }
 
-        // Kolom sesi dari DATA REAL: absensi + absensi_historis (bukan hanya setting Sesi)
+        // Kolom sesi dari DATA REAL (shared helper) — absensi + historis
         {
-          function urFromSesiName(nm) {
-            const s = String(nm || '').trim().toLowerCase().replace(/\s+/g, '');
-            if (!s) return null;
-            let m = s.match(/sesi?(\d+)/);
-            if (m) return Number(m[1]);
-            m = s.match(/^s(\d+)$/);
-            if (m) return Number(m[1]);
-            return null;
-          }
-          function metaFromRow(r) {
-            let ur = r.sesi_urutan != null && r.sesi_urutan !== '' ? Number(r.sesi_urutan) : null;
-            if (ur == null || isNaN(ur)) ur = urFromSesiName(r.sesi_nama);
-            const nm = String(r.sesi_nama || '').trim() || (ur != null ? ('Sesi ' + ur) : '');
-            const sid = r.sesi_id != null && r.sesi_id !== '' ? r.sesi_id : null;
-            // Kunci kolom: prioritaskan urutan agar S1/S2/S3/S4 stabil lintas sesi_id historis
-            let colKey;
-            if (ur != null && !isNaN(ur) && ur > 0) colKey = 'u' + ur;
-            else if (nm) colKey = 'n' + nm.toLowerCase().replace(/\s+/g, '');
-            else if (sid != null) colKey = 'id' + sid;
-            else colKey = null;
-            return { urutan: ur, nama: nm || ('Sesi ' + (ur || '?')), id: sid, colKey: colKey };
-          }
-          const byKey = new Map();
-          (rows || []).forEach(r => {
-            const meta = metaFromRow(r);
-            if (!meta.colKey) return;
-            if (!byKey.has(meta.colKey)) {
-              byKey.set(meta.colKey, {
-                colKey: meta.colKey,
-                id: meta.id,
-                nama: meta.nama,
-                urutan: meta.urutan != null && !isNaN(meta.urutan) ? meta.urutan : 999,
-                _fromData: true
-              });
-            } else {
-              const ex = byKey.get(meta.colKey);
-              if (meta.id != null && (ex.id == null || String(ex.id).indexOf('x') === 0)) ex.id = meta.id;
-              if (meta.nama && (!ex.nama || ex.nama.indexOf('Sesi ?') >= 0)) ex.nama = meta.nama;
-              if (meta.urutan != null && !isNaN(meta.urutan) && (ex.urutan == null || ex.urutan >= 999))
-                ex.urutan = meta.urutan;
-            }
-          });
-          rekapSesiList = [...byKey.values()].sort((a, b) => {
-            const ua = a.urutan != null ? a.urutan : 999;
-            const ub = b.urutan != null ? b.urutan : 999;
-            if (ua !== ub) return ua - ub;
-            return String(a.nama || '').localeCompare(String(b.nama || ''), 'id');
-          });
-          // Jika tidak ada data sesi sama sekali, fallback singkat
-          if (!rekapSesiList.length) {
-            rekapSesiList = [
-              { id: 1, nama: 'Sesi 1', urutan: 1, colKey: 'u1' },
-              { id: 2, nama: 'Sesi 2', urutan: 2, colKey: 'u2' },
-              { id: 3, nama: 'Sesi 3', urutan: 3, colKey: 'u3' }
-            ];
-          }
+          const built = buildSesiListFromRows(rows);
+          rekapSesiList = built.list.length ? built.list : [
+            { id: 1, nama: 'Sesi 1', urutan: 1, colKey: 'u1' },
+            { id: 2, nama: 'Sesi 2', urutan: 2, colKey: 'u2' },
+            { id: 3, nama: 'Sesi 3', urutan: 3, colKey: 'u3' }
+          ];
+          window._rekapMetaFromRow = built.metaFromRow;
           let h2 = '<tr>';
           h2 += '<th><input type="checkbox" id="checkAllRekap"></th>';
           h2 += '<th>No</th><th>NISN/NIP</th><th>Nama</th>';
@@ -20782,34 +20830,33 @@ document.getElementById('btnBsContohFormat')?.addEventListener('click', () => {
           if (r.id && !item.ids.includes(r.id)) item.ids.push(r.id);
           if (r.kode && !item.kode) item.kode = r.kode;
           if (r.nama && !item.nama) item.nama = r.nama;
-          // Map baris absensi / historis ke kolom sesi
-          let matched = false;
-          const score = (x) => (x && x.jam_scan ? 2 : 0) + (x && x.id ? 1 : 0) +
-            (['TW', 'TL', 'H'].includes(String(x && x.status || '').toUpperCase()) ? 1 : 0);
-          rekapSesiList.forEach(s => {
-            if (!matchSesi(r, s)) return;
-            matched = true;
-            const ck = s.colKey || String(s.id);
-            const prev = item.sesi[ck];
-            if (!prev || score(r) >= score(prev)) item.sesi[ck] = r;
-          });
-          if (!matched && rekapSesiList.length) {
-            const sk = (typeof normalizeSesiKey === 'function') ? normalizeSesiKey(r) : null;
-            let target = null;
-            if (sk && sk.indexOf('u:') === 0) {
-              const ur = Number(sk.slice(2));
-              target = rekapSesiList.find(s => Number(s.urutan) === ur);
+
+          // 1) Langsung lewat colKey dari data (sama dengan Cari Data Siswa)
+          const metaFn = window._rekapMetaFromRow || (typeof buildSesiListFromRows === 'function'
+            ? buildSesiListFromRows([r]).metaFromRow : null);
+          let placed = false;
+          if (metaFn) {
+            const meta = metaFn(r);
+            if (meta && meta.colKey) {
+              const target = rekapSesiList.find(s => s.colKey === meta.colKey) ||
+                rekapSesiList.find(s => Number(s.urutan) === Number(meta.urutan));
+              if (target) {
+                const ck = target.colKey || String(target.id);
+                const prev = item.sesi[ck];
+                if (!prev || absensiCellScore(r) >= absensiCellScore(prev)) item.sesi[ck] = r;
+                placed = true;
+              }
             }
-            if (!target && sk && sk.indexOf('n:') === 0) {
-              const nm = sk.slice(2);
-              target = rekapSesiList.find(s =>
-                String(s.nama || '').trim().toLowerCase().replace(/\s+/g, '') === nm);
-            }
-            if (!target && rekapSesiList.length === 1) target = rekapSesiList[0];
-            if (target) {
-              const ck = target.colKey || String(target.id);
-              if (!item.sesi[ck]) item.sesi[ck] = r;
-            }
+          }
+          // 2) Fallback matchSesi
+          if (!placed) {
+            rekapSesiList.forEach(s => {
+              if (!matchSesi(r, s)) return;
+              const ck = s.colKey || String(s.id);
+              const prev = item.sesi[ck];
+              if (!prev || absensiCellScore(r) >= absensiCellScore(prev)) item.sesi[ck] = r;
+              placed = true;
+            });
           }
         });
 
