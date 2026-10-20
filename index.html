@@ -1800,8 +1800,8 @@
     #qrReaderShell {
       position: relative;
       width: 100%;
-      height: min(48vh, 360px);
-      min-height: 260px;
+      height: min(58vh, 440px);
+      min-height: 300px;
       border-radius: 14px;
       overflow: hidden;
       background: #0f172a;
@@ -1819,21 +1819,22 @@
     #qrReader canvas {
       width: 100% !important;
       height: 100% !important;
+      /* contain = jangan crop tengah (detail barcode tetap utuh) */
       object-fit: cover !important;
       border-radius: 0 !important;
     }
-    /* bingkai fokus: lebih lebar kiri-kanan, tinggi tetap */
+    /* bingkai fokus: hampir full agar deteksi luas */
     #qrFocusFrame {
       pointer-events: none;
       position: absolute;
-      left: 4%;
-      right: 4%;
-      top: 14%;
-      bottom: 14%;
+      left: 3%;
+      right: 3%;
+      top: 8%;
+      bottom: 8%;
       z-index: 5;
       border: 2.5px solid #ffffff;
       border-radius: 10px;
-      box-shadow: 0 0 0 9999px rgba(0,0,0,0.32);
+      box-shadow: 0 0 0 9999px rgba(0,0,0,0.22);
     }
     #qrFocusFrame::before,
     #qrFocusFrame::after,
@@ -2993,7 +2994,7 @@
               <span class="qr-corner-br"></span>
             </div>
           </div>
-          <p style="font-size:11px;color:#64748b;text-align:center;margin-top:6px;">Arahkan barcode / QR code ke dalam bingkai putih</p>
+          <p style="font-size:11px;color:#64748b;text-align:center;margin-top:6px;">Arahkan barcode ke bingkai · ketuk layar untuk fokus ulang · jarak ideal ±15–30 cm</p>
         </div>
       </div>
 
@@ -12661,13 +12662,13 @@
     const SCAN_BUSY_PAD_MS = 280;
 
     function buildScanQrConfig() {
-      // Area scan lebar (hampir full frame) + resolusi tinggi → barcode 1×1 cm dari ~20 cm lebih terbaca
+      // Area deteksi hampir full + fps tinggi → barcode kecil lebih cepat terbaca
       const cfg = {
-        fps: 20,
-        // qrbox dinamis: ~95% lebar × ~80% tinggi viewfinder
+        fps: 30,
         qrbox: function (viewW, viewH) {
-          const w = Math.max(250, Math.floor(viewW * 0.95));
-          const h = Math.max(180, Math.floor(viewH * 0.80));
+          // hampir full frame — jangan terlalu kecil agar kode dari jarak jauh masih masuk ROI
+          const w = Math.max(280, Math.floor(viewW * 0.98));
+          const h = Math.max(220, Math.floor(viewH * 0.92));
           return { width: Math.min(w, viewW), height: Math.min(h, viewH) };
         },
         aspectRatio: 1.333,
@@ -12690,15 +12691,106 @@
       return cfg;
     }
 
-    /** Constraint kamera: resolusi tinggi + fokus kontinu (penting untuk kode kecil jarak jauh) */
+    /** Constraint kamera: resolusi tinggi + fokus kontinu (barcode kecil jarak jauh) */
     function buildCameraConstraints() {
+      // Jangan pakai advanced di level constraints awal — banyak browser Android menolak
+      // lalu gagal start. Fokus kontinu diterapkan setelah stream aktif.
       return {
-        facingMode: 'environment',
+        facingMode: { ideal: 'environment' },
         width: { ideal: 1920, min: 1280 },
         height: { ideal: 1080, min: 720 },
-        // advanced focus — diabaikan browser yang tidak mendukung
-        advanced: [{ focusMode: 'continuous' }]
+        // beberapa browser menghormati focusMode di root constraints
+        focusMode: { ideal: 'continuous' }
       };
+    }
+
+    let _focusIv = null;
+    let _videoTrack = null;
+
+    function clearFocusHelpers() {
+      if (_focusIv) { try { clearInterval(_focusIv); } catch (e) {} _focusIv = null; }
+      _videoTrack = null;
+    }
+
+    /** Terapkan fokus kontinu + zoom ringan + titik fokus tengah */
+    async function applyBestFocus(track, opts) {
+      if (!track) return;
+      opts = opts || {};
+      const wantZoom = opts.zoom !== false;
+      try {
+        const caps = (typeof track.getCapabilities === 'function') ? track.getCapabilities() : {};
+        const advanced = [];
+
+        if (caps.focusMode) {
+          const modes = Array.isArray(caps.focusMode) ? caps.focusMode : [caps.focusMode];
+          if (modes.indexOf('continuous') >= 0) advanced.push({ focusMode: 'continuous' });
+          else if (modes.indexOf('single-shot') >= 0) advanced.push({ focusMode: 'single-shot' });
+        }
+        // titik fokus di tengah bingkai (bantu AF)
+        if (caps.pointsOfInterest) {
+          advanced.push({ pointsOfInterest: [{ x: 0.5, y: 0.5 }] });
+        }
+        // zoom ringan: barcode kecil di kejauhan jadi lebih besar di sensor
+        if (wantZoom && caps.zoom && typeof caps.zoom.max === 'number') {
+          const zMin = typeof caps.zoom.min === 'number' ? caps.zoom.min : 1;
+          const zMax = caps.zoom.max;
+          // ~1.4x jika tersedia — cukup bantu tanpa blur berlebih
+          const z = Math.min(Math.max(1.35, zMin), Math.min(1.8, zMax));
+          if (z > zMin + 0.05) advanced.push({ zoom: z });
+        }
+        // exposure compensation sedikit (+ ) untuk kode gelap
+        if (caps.exposureCompensation && typeof caps.exposureCompensation.max === 'number') {
+          const mid = Math.min(0.5, caps.exposureCompensation.max);
+          if (mid > 0) advanced.push({ exposureCompensation: mid });
+        }
+
+        // coba root-level dulu (Chrome Android baru)
+        try {
+          const root = {};
+          if (caps.focusMode && (Array.isArray(caps.focusMode) ? caps.focusMode : [caps.focusMode]).indexOf('continuous') >= 0) {
+            root.focusMode = 'continuous';
+          }
+          if (Object.keys(root).length) {
+            await track.applyConstraints(root);
+          }
+        } catch (e) {}
+
+        if (advanced.length) {
+          await track.applyConstraints({ advanced: advanced });
+        }
+      } catch (e) {
+        console.warn('applyBestFocus', e);
+      }
+    }
+
+    function wireTapToFocus(videoEl, track) {
+      if (!videoEl || videoEl.dataset.focusTap === '1') return;
+      videoEl.dataset.focusTap = '1';
+      videoEl.style.touchAction = 'manipulation';
+      const handler = async (ev) => {
+        try {
+          if (!track || track.readyState !== 'live') return;
+          const caps = (typeof track.getCapabilities === 'function') ? track.getCapabilities() : {};
+          const rect = videoEl.getBoundingClientRect();
+          const t = (ev.touches && ev.touches[0]) || ev;
+          const x = Math.min(1, Math.max(0, (t.clientX - rect.left) / rect.width));
+          const y = Math.min(1, Math.max(0, (t.clientY - rect.top) / rect.height));
+          const advanced = [];
+          if (caps.focusMode) {
+            const modes = Array.isArray(caps.focusMode) ? caps.focusMode : [caps.focusMode];
+            if (modes.indexOf('single-shot') >= 0) advanced.push({ focusMode: 'single-shot' });
+            else if (modes.indexOf('continuous') >= 0) advanced.push({ focusMode: 'continuous' });
+          }
+          if (caps.pointsOfInterest) advanced.push({ pointsOfInterest: [{ x: x, y: y }] });
+          if (advanced.length) {
+            await track.applyConstraints({ advanced: advanced });
+            // kembalikan ke continuous setelah single-shot
+            setTimeout(() => { applyBestFocus(track, { zoom: false }).catch(() => {}); }, 600);
+          }
+        } catch (e) {}
+      };
+      videoEl.addEventListener('click', handler);
+      videoEl.addEventListener('touchend', handler, { passive: true });
     }
 
     async function stopScanEngine() {
@@ -12719,6 +12811,7 @@
         // abaikan "already stopped" / transition errors
       }
       try { inst.clear(); } catch (e) {}
+      clearFocusHelpers();
       const readerEl = document.getElementById('qrReader');
       if (readerEl) readerEl.innerHTML = '';
       // beri waktu browser lepaskan stream sebelum start ulang
@@ -12803,39 +12896,38 @@
       lastScanCode = '';
       lastScanTime = 0;
       _scanBusy = false;
+      clearFocusHelpers();
 
-      // pastikan video play + coba apply focus constraints ke track aktif
-      setTimeout(() => {
+      // pastikan video play + fokus kontinu + zoom ringan + tap-to-focus
+      const setupFocus = () => {
         try {
           const v = document.querySelector('#qrReader video');
-          if (v) {
-            v.setAttribute('playsinline', 'true');
-            v.setAttribute('muted', 'true');
-            if (v.paused) {
-              const p = v.play();
-              if (p && typeof p.catch === 'function') p.catch(() => {});
-            }
-            try {
-              const stream = v.srcObject;
-              const track = stream && stream.getVideoTracks && stream.getVideoTracks()[0];
-              if (track && track.getCapabilities) {
-                const caps = track.getCapabilities();
-                const advanced = [];
-                if (caps.focusMode && caps.focusMode.indexOf('continuous') >= 0) {
-                  advanced.push({ focusMode: 'continuous' });
-                }
-                if (caps.zoom && typeof caps.zoom.max === 'number' && caps.zoom.max >= 1.5) {
-                  const z = Math.min(1.6, caps.zoom.max);
-                  advanced.push({ zoom: z });
-                }
-                if (advanced.length) {
-                  track.applyConstraints({ advanced: advanced }).catch(() => {});
-                }
-              }
-            } catch (e) {}
+          if (!v) return false;
+          v.setAttribute('playsinline', 'true');
+          v.setAttribute('muted', 'true');
+          if (v.paused) {
+            const p = v.play();
+            if (p && typeof p.catch === 'function') p.catch(() => {});
           }
-        } catch (e) {}
-      }, 250);
+          const stream = v.srcObject;
+          const track = stream && stream.getVideoTracks && stream.getVideoTracks()[0];
+          if (!track) return false;
+          _videoTrack = track;
+          applyBestFocus(track).catch(() => {});
+          wireTapToFocus(v, track);
+          // beberapa HP Android melepaskan continuous AF — re-apply berkala
+          _focusIv = setInterval(() => {
+            if (!kameraAktif || !_videoTrack || _videoTrack.readyState !== 'live') return;
+            applyBestFocus(_videoTrack, { zoom: false }).catch(() => {});
+          }, 2500);
+          return true;
+        } catch (e) {
+          return false;
+        }
+      };
+      // coba segera, lalu retry (stream kadang belum siap)
+      setTimeout(() => { if (!setupFocus()) setTimeout(setupFocus, 400); }, 200);
+      setTimeout(setupFocus, 900);
     }
 
     function onScanSuccessFast(decodedText) {
