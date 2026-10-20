@@ -13667,13 +13667,16 @@
     }
 
     function dlBuildDayMap(absRows, people) {
-      // Index people by id, nip/nisn (kode), dan nama agar cocok dengan data historis
+      // byPerson[id][tgl] = [status, ...]  → untuk Harian (1 hari = 1 status terbaik)
+      // byPersonSesi[id][tgl][sesiKey] = status → untuk Rekap (per sesi)
       const byPerson = {};
+      const byPersonSesi = {};
       const idByKode = {};
       const idByNama = {};
       people.forEach(p => {
         const id = String(p.id);
         byPerson[id] = {};
+        byPersonSesi[id] = {};
         const kode = String(p.nisn || p.kode || '').trim();
         if (kode) idByKode[kode] = id;
         const nm = String(p.nama || '').trim().toLowerCase();
@@ -13696,11 +13699,30 @@
         if (!tgl) return;
         if (!byPerson[key][tgl]) byPerson[key][tgl] = [];
         byPerson[key][tgl].push(r.status);
+
+        // Index per sesi (untuk rekap)
+        const sesiKey = (r.sesi_id != null && r.sesi_id !== '')
+          ? ('id:' + r.sesi_id)
+          : (r.sesi_urutan != null ? ('u:' + r.sesi_urutan)
+            : (r.sesi_nama ? ('n:' + String(r.sesi_nama).trim().toLowerCase()) : 'x'));
+        if (!byPersonSesi[key][tgl]) byPersonSesi[key][tgl] = {};
+        const prev = byPersonSesi[key][tgl][sesiKey];
+        const cur = dlNormStatus(r.status);
+        // jika bentrok di sesi yang sama, ambil yang lebih baik (TW > TL > S > I > A > B)
+        if (!prev) byPersonSesi[key][tgl][sesiKey] = cur;
+        else {
+          const rank = { TW: 1, TL: 2, S: 3, I: 4, A: 5, B: 6 };
+          if ((rank[cur] || 50) < (rank[prev] || 50)) byPersonSesi[key][tgl][sesiKey] = cur;
+        }
       });
-      return byPerson;
+      return { byPerson: byPerson, byPersonSesi: byPersonSesi };
     }
 
-    function dlCountStats(dayStatuses, daysInfo) {
+    /**
+     * Harian: 1 hari = 1 hitungan (meski 3 sesi Alpa → A = 1).
+     * Hari libur/Minggu diabaikan. Hari efektif tanpa data dihitung A.
+     */
+    function dlCountStatsHarian(dayStatuses, daysInfo) {
       const c = { TW: 0, TL: 0, S: 0, I: 0, A: 0, B: 0 };
       let efektif = 0;
       daysInfo.forEach(di => {
@@ -13712,7 +13734,67 @@
         else if (st === 'S') c.S++;
         else if (st === 'I') c.I++;
         else if (st === 'B') c.B++;
-        else c.A++;
+        else c.A++; // kosong / tidak absen → Alpa 1 hari
+      });
+      const skor = c.TW * 1 + c.TL * 0.8 + c.S * 0.75 + c.I * 0.5;
+      const persen = efektif > 0 ? Math.round((skor / efektif) * 1000) / 10 : 0;
+      const jml = c.TW + c.TL + c.S + c.I + c.A + c.B;
+      return { c, persen, jml, efektif };
+    }
+
+    /** Alias lama → harian */
+    function dlCountStats(dayStatuses, daysInfo) {
+      return dlCountStatsHarian(dayStatuses, daysInfo);
+    }
+
+    /**
+     * Rekap: hitung PER SESI.
+     * Misal 1 hari × 3 sesi Alpa → A = 3.
+     * sesiList = daftar sesi aktif; jika kosong, hitung dari data yang ada saja.
+     */
+    function dlCountStatsSesi(personSesiMap, daysInfo, sesiList) {
+      const c = { TW: 0, TL: 0, S: 0, I: 0, A: 0, B: 0 };
+      let efektif = 0;
+      const sesiKeys = (sesiList || []).map(s => {
+        if (s && s.id != null) return 'id:' + s.id;
+        if (s && s.urutan != null) return 'u:' + s.urutan;
+        if (s && s.nama) return 'n:' + String(s.nama).trim().toLowerCase();
+        return null;
+      }).filter(Boolean);
+
+      daysInfo.forEach(di => {
+        if (di.libur) return;
+        const dayMap = (personSesiMap && personSesiMap[di.date]) || {};
+        if (sesiKeys.length) {
+          sesiKeys.forEach(sk => {
+            efektif++;
+            const st = dayMap[sk] || 'A';
+            if (st === 'TW') c.TW++;
+            else if (st === 'TL') c.TL++;
+            else if (st === 'S') c.S++;
+            else if (st === 'I') c.I++;
+            else if (st === 'B') c.B++;
+            else c.A++;
+          });
+        } else {
+          // fallback: hitung setiap sesi yang tercatat hari itu; jika kosong → 1 A
+          const keys = Object.keys(dayMap);
+          if (!keys.length) {
+            efektif++;
+            c.A++;
+          } else {
+            keys.forEach(sk => {
+              efektif++;
+              const st = dayMap[sk] || 'A';
+              if (st === 'TW') c.TW++;
+              else if (st === 'TL') c.TL++;
+              else if (st === 'S') c.S++;
+              else if (st === 'I') c.I++;
+              else if (st === 'B') c.B++;
+              else c.A++;
+            });
+          }
+        }
       });
       const skor = c.TW * 1 + c.TL * 0.8 + c.S * 0.75 + c.I * 0.5;
       const persen = efektif > 0 ? Math.round((skor / efektif) * 1000) / 10 : 0;
@@ -13760,8 +13842,11 @@
         if (nm && namaSet.has(nm)) return true;
         return false;
       });
-      const byPerson = dlBuildDayMap(absFiltered, people);
+      const mapped = dlBuildDayMap(absFiltered, people);
+      const byPerson = mapped.byPerson || mapped;
+      const byPersonSesi = mapped.byPersonSesi || {};
 
+      // Status harian: 1 hari = 1 status terbaik (TW > TL > S > I > A > B)
       const daily = {};
       people.forEach(p => {
         const key = String(p.id);
@@ -13771,6 +13856,21 @@
           daily[key][di.date] = dlBestStatus(arr);
         });
       });
+
+      // Daftar sesi aktif untuk perhitungan rekap per-sesi
+      let sesiListDl = [];
+      try {
+        if (typeof dataSesi !== 'undefined' && dataSesi && dataSesi.length) {
+          sesiListDl = dataSesi.filter(s => s.aktif !== false)
+            .slice()
+            .sort((a, b) => (a.urutan || 0) - (b.urutan || 0));
+        }
+      } catch (e) {}
+      if (!sesiListDl.length) {
+        try {
+          if (typeof loadSesi === 'function') { /* may already be loaded */ }
+        } catch (e) {}
+      }
 
       let minHadir = 80;
       try {
@@ -13904,7 +14004,8 @@
         aoa.push(['No', 'NISN', 'Nama', 'L/P', 'TW', 'TL', 'S', 'I', 'A', 'B', '% Hadir', 'Naik/Lulus']);
 
         people.forEach((p, i) => {
-          const stats = dlCountStats(daily[String(p.id)] || {}, daysInfo);
+          // Rekap: hitung PER SESI (3 sesi Alpa dalam 1 hari = A +3)
+          const stats = dlCountStatsSesi(byPersonSesi[String(p.id)] || {}, daysInfo, sesiListDl);
           const ok = stats.persen >= minHadir;
           const label = ok ? 'Memenuhi' : 'Tidak Memenuhi';
           html += '<tr>';
