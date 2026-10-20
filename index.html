@@ -10762,12 +10762,39 @@
 
     function matchSesi(record, ses) {
       if (!record || !ses) return false;
-      if (record.sesi_id != null && ses.id != null && String(ses.id).indexOf('x') !== 0 && Number(record.sesi_id) === Number(ses.id)) return true;
-      if (record.sesi_urutan != null && ses.urutan != null && Number(record.sesi_urutan) === Number(ses.urutan)) return true;
-      if (record.sesi_nama && ses.nama) {
-        const a = String(record.sesi_nama).trim().toLowerCase().replace(/\s+/g, '');
-        const b = String(ses.nama).trim().toLowerCase().replace(/\s+/g, '');
-        if (a && b && a === b) return true;
+      // 1) sesi_id sama (abaikan id sintetis 'x...')
+      if (record.sesi_id != null && ses.id != null && String(ses.id).indexOf('x') !== 0 &&
+          Number(record.sesi_id) === Number(ses.id)) return true;
+      // 2) urutan sama
+      if (record.sesi_urutan != null && ses.urutan != null &&
+          Number(record.sesi_urutan) === Number(ses.urutan)) return true;
+      // 3) nama sama (normalisasi spasi)
+      const na = String(record.sesi_nama || '').trim().toLowerCase().replace(/\s+/g, '');
+      const nb = String(ses.nama || '').trim().toLowerCase().replace(/\s+/g, '');
+      if (na && nb && na === nb) return true;
+      // 4) ekstrak angka dari nama: "Sesi 1" / "Sesi1" / "S1" ↔ urutan
+      function urFromName(nm) {
+        const s = String(nm || '').trim().toLowerCase().replace(/\s+/g, '');
+        if (!s) return null;
+        let m = s.match(/sesi?(\d+)/);
+        if (m) return Number(m[1]);
+        m = s.match(/^s(\d+)$/);
+        if (m) return Number(m[1]);
+        return null;
+      }
+      const urRec = record.sesi_urutan != null && record.sesi_urutan !== ''
+        ? Number(record.sesi_urutan) : urFromName(record.sesi_nama);
+      const urSes = ses.urutan != null ? Number(ses.urutan) : urFromName(ses.nama);
+      if (urRec != null && !isNaN(urRec) && urSes != null && !isNaN(urSes) && urRec === urSes) return true;
+      // 5) colKey master vs normalizeSesiKey data (historis)
+      if (ses.colKey && typeof normalizeSesiKey === 'function') {
+        const sk = normalizeSesiKey(record);
+        if (sk) {
+          if (ses.colKey === sk) return true;
+          if (sk.indexOf('u:') === 0 && ses.colKey === ('u' + sk.slice(2))) return true;
+          if (sk.indexOf('n:') === 0 && ses.colKey === ('n' + sk.slice(2))) return true;
+          if (sk.indexOf('id:') === 0 && ses.colKey === ('id' + sk.slice(3))) return true;
+        }
       }
       return false;
     }
@@ -13914,7 +13941,7 @@
         aoa.push(headAoa);
 
         people.forEach((p, i) => {
-          const stats = dlCountStats(daily[String(p.id)] || {}, daysInfo);
+          const stats = dlCountStatsHarian(daily[String(p.id)] || {}, daysInfo); // WAJIB per-hari, bukan per-sesi
           const namaCell = esc(p.nama) + (p.nisn ? '<br><span style="font-size:9px;color:#475569;">NIP ' + esc(p.nisn) + '</span>' : '');
           html += '<tr>';
           html += '<td>' + (i + 1) + '</td>';
@@ -20679,10 +20706,10 @@ document.getElementById('btnBsContohFormat')?.addEventListener('click', () => {
           rows = rows.filter(r => r.tipe === tipe);
         }
 
-        // Kolom sesi DINAMIS: urutan 1,2,3,4... dari master + data aktual
-        // (tidak terbatas hanya sesi aktif di tabel master)
+        // Kolom sesi: utamakan master aktif; data absensi/historis di-map ke kolom itu
+        // (hindari kolom dobel karena sesi_id historis ≠ id master)
         {
-          const byUrutan = new Map(); // key = urutan number atau nama normalisasi
+          const byUrutan = new Map();
           function colKeyFrom(ur, nm, sid) {
             if (ur != null && !isNaN(ur)) return 'u' + Number(ur);
             const n = String(nm || '').trim().toLowerCase().replace(/\s+/g, '');
@@ -20690,6 +20717,7 @@ document.getElementById('btnBsContohFormat')?.addEventListener('click', () => {
             if (sid != null && sid !== '') return 'id' + sid;
             return 'x' + Math.random().toString(36).slice(2, 8);
           }
+          // Master sesi aktif dulu
           (rekapSesiList || []).forEach(s => {
             const ur = s.urutan != null ? Number(s.urutan) : null;
             const ck = colKeyFrom(ur, s.nama, s.id);
@@ -20701,27 +20729,28 @@ document.getElementById('btnBsContohFormat')?.addEventListener('click', () => {
               _fromData: false
             });
           });
+          // Tambah sesi dari data HANYA jika urutan/nama belum ada di master
           (rows || []).forEach(r => {
-            const ur = r.sesi_urutan != null && r.sesi_urutan !== '' ? Number(r.sesi_urutan) : null;
-            const sid = r.sesi_id != null && r.sesi_id !== '' ? r.sesi_id : null;
-            const nm = String(r.sesi_nama || '').trim() || (ur != null ? ('Sesi ' + ur) : 'Sesi');
-            const ck = colKeyFrom(ur, nm, sid);
-            if (byUrutan.has(ck)) {
-              const ex = byUrutan.get(ck);
-              if (!ex.nama && nm) ex.nama = nm;
-              if (ex.id == null && sid != null) ex.id = sid;
-              return;
-            }
-            // juga cek apakah sudah ada yang matchSesi (hindari duplikat Sesi2 vs Sesi 2 beda key)
             let dup = null;
             for (const s of byUrutan.values()) {
               if (matchSesi(r, s)) { dup = s; break; }
             }
-            if (dup) return;
+            if (dup) {
+              // perbarui id/nama master jika kosong
+              if (r.sesi_id != null && (dup.id == null || String(dup.id).indexOf('x') === 0))
+                dup.id = r.sesi_id;
+              return;
+            }
+            const ur = r.sesi_urutan != null && r.sesi_urutan !== '' ? Number(r.sesi_urutan) : null;
+            const sid = r.sesi_id != null && r.sesi_id !== '' ? r.sesi_id : null;
+            const nm = String(r.sesi_nama || '').trim() || (ur != null ? ('Sesi ' + ur) : '');
+            if (!nm && ur == null && sid == null) return;
+            const ck = colKeyFrom(ur, nm, sid);
+            if (byUrutan.has(ck)) return;
             byUrutan.set(ck, {
               colKey: ck,
               id: sid != null ? sid : ck,
-              nama: nm,
+              nama: nm || ('Sesi ' + (ur || '?')),
               urutan: ur != null && !isNaN(ur) ? ur : (byUrutan.size + 1),
               _fromData: true
             });
@@ -20754,7 +20783,7 @@ document.getElementById('btnBsContohFormat')?.addEventListener('click', () => {
           if (!map.has(key)) {
             map.set(key, {
               ids: [],
-              tanggal: r.tanggal,
+              tanggal: String(r.tanggal || '').slice(0, 10),
               tipe: r.tipe,
               ref_id: rid,
               kode: r.kode || '',
@@ -20764,15 +20793,37 @@ document.getElementById('btnBsContohFormat')?.addEventListener('click', () => {
           }
           const item = map.get(key);
           if (r.id && !item.ids.includes(r.id)) item.ids.push(r.id);
-          // isi ke kolom sesi dinamis via colKey
+          if (r.kode && !item.kode) item.kode = r.kode;
+          if (r.nama && !item.nama) item.nama = r.nama;
+          // Map baris absensi / historis ke kolom sesi
+          let matched = false;
+          const score = (x) => (x && x.jam_scan ? 2 : 0) + (x && x.id ? 1 : 0) +
+            (['TW', 'TL', 'H'].includes(String(x && x.status || '').toUpperCase()) ? 1 : 0);
           rekapSesiList.forEach(s => {
             if (!matchSesi(r, s)) return;
+            matched = true;
             const ck = s.colKey || String(s.id);
             const prev = item.sesi[ck];
-            if (!prev || (r.jam_scan && !prev.jam_scan) || (r.id && !prev.id)) {
-              item.sesi[ck] = r;
-            }
+            if (!prev || score(r) >= score(prev)) item.sesi[ck] = r;
           });
+          if (!matched && rekapSesiList.length) {
+            const sk = (typeof normalizeSesiKey === 'function') ? normalizeSesiKey(r) : null;
+            let target = null;
+            if (sk && sk.indexOf('u:') === 0) {
+              const ur = Number(sk.slice(2));
+              target = rekapSesiList.find(s => Number(s.urutan) === ur);
+            }
+            if (!target && sk && sk.indexOf('n:') === 0) {
+              const nm = sk.slice(2);
+              target = rekapSesiList.find(s =>
+                String(s.nama || '').trim().toLowerCase().replace(/\s+/g, '') === nm);
+            }
+            if (!target && rekapSesiList.length === 1) target = rekapSesiList[0];
+            if (target) {
+              const ck = target.colKey || String(target.id);
+              if (!item.sesi[ck]) item.sesi[ck] = r;
+            }
+          }
         });
 
         try {
