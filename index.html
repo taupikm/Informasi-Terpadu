@@ -2982,9 +2982,10 @@
               style="flex:1;padding:10px;border:none;font-weight:700;font-size:13px;cursor:pointer;background:#1e40af;color:white;">Guru</button>
           </div>
         </div>
-<div style="display:flex;gap:8px;margin-top:12px;">
-          <button class="btn btn-primary" id="btnBukaKamera" style="flex:1;">📷 Buka Kamera</button>
-          <button class="btn btn-outline" id="btnTutupKamera" style="flex:1;display:none;">✕ Tutup Kamera</button>
+<div style="display:flex;gap:8px;margin-top:12px;flex-wrap:wrap;">
+          <button class="btn btn-primary" id="btnBukaKamera" style="flex:1;min-width:120px;">📷 Buka Kamera</button>
+          <button class="btn btn-outline" id="btnFokusKamera" style="flex:1;min-width:100px;display:none;">🎯 Fokus</button>
+          <button class="btn btn-outline" id="btnTutupKamera" style="flex:1;min-width:100px;display:none;">✕ Tutup</button>
         </div>
 <div id="qrReaderWrap" style="display:none;">
           <div id="qrReaderShell">
@@ -2994,7 +2995,9 @@
               <span class="qr-corner-br"></span>
             </div>
           </div>
-          <p style="font-size:11px;color:#64748b;text-align:center;margin-top:6px;">Arahkan barcode ke bingkai · ketuk layar untuk fokus ulang · jarak ideal ±15–30 cm</p>
+          <p style="font-size:11px;color:#64748b;text-align:center;margin-top:6px;line-height:1.4;">
+            Arahkan barcode ke bingkai · jarak ±15–30 cm · jika blur tekan <b>Fokus</b> / ketuk layar
+          </p>
         </div>
       </div>
 
@@ -12661,17 +12664,23 @@
     const SCAN_SAME_CODE_MS = 1200;
     const SCAN_BUSY_PAD_MS = 280;
 
+    /**
+     * Pola scanner PORTAL LAMA (handal di Realme/Xiaomi/Oppo/Samsung):
+     * - Constraint kamera HANYA facingMode environment (biarkan HP atur resolusi + AF)
+     * - fps tinggi (30–60)
+     * - qrbox kotak tetap
+     * - JANGAN applyConstraints zoom/focusMode setelah start (bikin blur)
+     */
     function buildScanQrConfig() {
-      // Area deteksi hampir full + fps tinggi → barcode kecil lebih cepat terbaca
       const cfg = {
         fps: 30,
         qrbox: function (viewW, viewH) {
-          // hampir full frame — jangan terlalu kecil agar kode dari jarak jauh masih masuk ROI
-          const w = Math.max(280, Math.floor(viewW * 0.98));
-          const h = Math.max(220, Math.floor(viewH * 0.92));
-          return { width: Math.min(w, viewW), height: Math.min(h, viewH) };
+          // kotak fokus di tengah (~70% sisi pendek), mirip qrbox 220 di portal lama
+          const side = Math.floor(Math.min(viewW, viewH) * 0.72);
+          const s = Math.max(180, Math.min(side, 320));
+          return { width: s, height: s };
         },
-        aspectRatio: 1.333,
+        aspectRatio: 1.0,
         disableFlip: false
       };
       try {
@@ -12679,6 +12688,7 @@
       } catch (e) {}
       try {
         if (typeof Html5QrcodeSupportedFormats !== 'undefined') {
+          // portal lama: QR saja; aplikasi ini juga butuh barcode kartu siswa
           cfg.formatsToSupport = [
             Html5QrcodeSupportedFormats.QR_CODE,
             Html5QrcodeSupportedFormats.CODE_128,
@@ -12691,17 +12701,9 @@
       return cfg;
     }
 
-    /** Constraint kamera: resolusi tinggi + fokus kontinu (barcode kecil jarak jauh) */
+    /** Constraint minimal — kunci keandalan di banyak merek HP */
     function buildCameraConstraints() {
-      // Jangan pakai advanced di level constraints awal — banyak browser Android menolak
-      // lalu gagal start. Fokus kontinu diterapkan setelah stream aktif.
-      return {
-        facingMode: { ideal: 'environment' },
-        width: { ideal: 1920, min: 1280 },
-        height: { ideal: 1080, min: 720 },
-        // beberapa browser menghormati focusMode di root constraints
-        focusMode: { ideal: 'continuous' }
-      };
+      return { facingMode: 'environment' };
     }
 
     let _focusIv = null;
@@ -12712,54 +12714,39 @@
       _videoTrack = null;
     }
 
-    /** Terapkan fokus kontinu + zoom ringan + titik fokus tengah */
+    /** Hanya untuk tombol Fokus manual — tidak dipanggil otomatis berkala */
     async function applyBestFocus(track, opts) {
-      if (!track) return;
-      opts = opts || {};
-      const wantZoom = opts.zoom !== false;
+      if (!track || track.readyState === 'ended') return;
       try {
         const caps = (typeof track.getCapabilities === 'function') ? track.getCapabilities() : {};
+        const modes = caps.focusMode
+          ? (Array.isArray(caps.focusMode) ? caps.focusMode : [caps.focusMode])
+          : [];
         const advanced = [];
-
-        if (caps.focusMode) {
-          const modes = Array.isArray(caps.focusMode) ? caps.focusMode : [caps.focusMode];
-          if (modes.indexOf('continuous') >= 0) advanced.push({ focusMode: 'continuous' });
-          else if (modes.indexOf('single-shot') >= 0) advanced.push({ focusMode: 'single-shot' });
-        }
-        // titik fokus di tengah bingkai (bantu AF)
-        if (caps.pointsOfInterest) {
-          advanced.push({ pointsOfInterest: [{ x: 0.5, y: 0.5 }] });
-        }
-        // zoom ringan: barcode kecil di kejauhan jadi lebih besar di sensor
-        if (wantZoom && caps.zoom && typeof caps.zoom.max === 'number') {
-          const zMin = typeof caps.zoom.min === 'number' ? caps.zoom.min : 1;
-          const zMax = caps.zoom.max;
-          // ~1.4x jika tersedia — cukup bantu tanpa blur berlebih
-          const z = Math.min(Math.max(1.35, zMin), Math.min(1.8, zMax));
-          if (z > zMin + 0.05) advanced.push({ zoom: z });
-        }
-        // exposure compensation sedikit (+ ) untuk kode gelap
-        if (caps.exposureCompensation && typeof caps.exposureCompensation.max === 'number') {
-          const mid = Math.min(0.5, caps.exposureCompensation.max);
-          if (mid > 0) advanced.push({ exposureCompensation: mid });
-        }
-
-        // coba root-level dulu (Chrome Android baru)
-        try {
-          const root = {};
-          if (caps.focusMode && (Array.isArray(caps.focusMode) ? caps.focusMode : [caps.focusMode]).indexOf('continuous') >= 0) {
-            root.focusMode = 'continuous';
-          }
-          if (Object.keys(root).length) {
-            await track.applyConstraints(root);
-          }
-        } catch (e) {}
-
+        if (modes.indexOf('single-shot') >= 0) advanced.push({ focusMode: 'single-shot' });
+        else if (modes.indexOf('continuous') >= 0) advanced.push({ focusMode: 'continuous' });
+        if (caps.pointsOfInterest) advanced.push({ pointsOfInterest: [{ x: 0.5, y: 0.5 }] });
         if (advanced.length) {
-          await track.applyConstraints({ advanced: advanced });
+          try { await track.applyConstraints({ advanced: advanced }); } catch (e) {}
         }
       } catch (e) {
         console.warn('applyBestFocus', e);
+      }
+    }
+
+    async function refocusCamera() {
+      if (!_videoTrack || _videoTrack.readyState !== 'live') {
+        const v = document.querySelector('#qrReader video');
+        const stream = v && v.srcObject;
+        _videoTrack = stream && stream.getVideoTracks && stream.getVideoTracks()[0];
+      }
+      if (!_videoTrack) return;
+      const btn = document.getElementById('btnFokusKamera');
+      if (btn) { btn.disabled = true; btn.textContent = '⏳ Fokus...'; }
+      try {
+        await applyBestFocus(_videoTrack, { forceShot: true });
+      } finally {
+        if (btn) { btn.disabled = false; btn.textContent = '🎯 Fokus'; }
       }
     }
 
@@ -12767,27 +12754,12 @@
       if (!videoEl || videoEl.dataset.focusTap === '1') return;
       videoEl.dataset.focusTap = '1';
       videoEl.style.touchAction = 'manipulation';
-      const handler = async (ev) => {
-        try {
-          if (!track || track.readyState !== 'live') return;
-          const caps = (typeof track.getCapabilities === 'function') ? track.getCapabilities() : {};
-          const rect = videoEl.getBoundingClientRect();
-          const t = (ev.touches && ev.touches[0]) || ev;
-          const x = Math.min(1, Math.max(0, (t.clientX - rect.left) / rect.width));
-          const y = Math.min(1, Math.max(0, (t.clientY - rect.top) / rect.height));
-          const advanced = [];
-          if (caps.focusMode) {
-            const modes = Array.isArray(caps.focusMode) ? caps.focusMode : [caps.focusMode];
-            if (modes.indexOf('single-shot') >= 0) advanced.push({ focusMode: 'single-shot' });
-            else if (modes.indexOf('continuous') >= 0) advanced.push({ focusMode: 'continuous' });
-          }
-          if (caps.pointsOfInterest) advanced.push({ pointsOfInterest: [{ x: x, y: y }] });
-          if (advanced.length) {
-            await track.applyConstraints({ advanced: advanced });
-            // kembalikan ke continuous setelah single-shot
-            setTimeout(() => { applyBestFocus(track, { zoom: false }).catch(() => {}); }, 600);
-          }
-        } catch (e) {}
+      let lastTap = 0;
+      const handler = async () => {
+        const now = Date.now();
+        if (now - lastTap < 600) return;
+        lastTap = now;
+        try { await applyBestFocus(track); } catch (e) {}
       };
       videoEl.addEventListener('click', handler);
       videoEl.addEventListener('touchend', handler, { passive: true });
@@ -12855,27 +12827,23 @@
       }
 
       let lastErr = null;
+      // Urutan ala portal lama: facingMode SAJA dulu (paling handal multi-merek)
+      const configHiFps = Object.assign({}, config, { fps: 60 });
       const attempts = [
-        // 1) resolusi tinggi + fokus kontinu
-        async () => tryStartFresh(buildCameraConstraints(), config),
-        // 2) tanpa advanced focus
-        async () => tryStartFresh({
-          facingMode: 'environment',
-          width: { ideal: 1920 },
-          height: { ideal: 1080 }
-        }, config),
-        // 3) facingMode saja + config penuh
+        // 1) seperti portal: hanya environment + fps tinggi
+        async () => tryStartFresh({ facingMode: 'environment' }, configHiFps),
+        // 2) fps 30 + config penuh
         async () => tryStartFresh({ facingMode: 'environment' }, config),
-        // 4) config ringan
+        // 3) config ringan
         async () => tryStartFresh({ facingMode: 'environment' }, lightConfig),
-        // 5) pilih kamera belakang manual
+        // 4) pilih kamera belakang manual
         async () => {
           const cams = await Html5Qrcode.getCameras();
           if (!cams || !cams.length) throw new Error('Tidak ada kamera terdeteksi');
           const back = cams.find(c => /back|rear|environment|belakang/i.test(c.label || '')) || cams[cams.length - 1];
-          return tryStartFresh(back.id, lightConfig);
+          return tryStartFresh(back.id, configHiFps);
         },
-        // 6) kamera depan sebagai opsi terakhir
+        // 5) kamera depan terakhir
         async () => tryStartFresh({ facingMode: 'user' }, lightConfig)
       ];
 
@@ -12898,7 +12866,7 @@
       _scanBusy = false;
       clearFocusHelpers();
 
-      // pastikan video play + fokus kontinu + zoom ringan + tap-to-focus
+      // Portal lama: biarkan AF native HP — jangan applyConstraints otomatis
       const setupFocus = () => {
         try {
           const v = document.querySelector('#qrReader video');
@@ -12911,23 +12879,15 @@
           }
           const stream = v.srcObject;
           const track = stream && stream.getVideoTracks && stream.getVideoTracks()[0];
-          if (!track) return false;
-          _videoTrack = track;
-          applyBestFocus(track).catch(() => {});
-          wireTapToFocus(v, track);
-          // beberapa HP Android melepaskan continuous AF — re-apply berkala
-          _focusIv = setInterval(() => {
-            if (!kameraAktif || !_videoTrack || _videoTrack.readyState !== 'live') return;
-            applyBestFocus(_videoTrack, { zoom: false }).catch(() => {});
-          }, 2500);
-          return true;
+          if (track) _videoTrack = track;
+          if (v && track) wireTapToFocus(v, track);
+          return !!v;
         } catch (e) {
           return false;
         }
       };
-      // coba segera, lalu retry (stream kadang belum siap)
-      setTimeout(() => { if (!setupFocus()) setTimeout(setupFocus, 400); }, 200);
-      setTimeout(setupFocus, 900);
+      setTimeout(() => { if (!setupFocus()) setTimeout(setupFocus, 400); }, 250);
+      setTimeout(setupFocus, 700);
     }
 
     function onScanSuccessFast(decodedText) {
@@ -12978,8 +12938,10 @@
         }
         const btnOpen = document.getElementById('btnBukaKamera');
         const btnClose = document.getElementById('btnTutupKamera');
+        const btnFocus = document.getElementById('btnFokusKamera');
         if (btnOpen) btnOpen.style.display = 'none';
         if (btnClose) btnClose.style.display = 'block';
+        if (btnFocus) btnFocus.style.display = 'block';
 
         _scanBusy = false;
         lastScanCode = '';
@@ -13021,14 +12983,19 @@
       if (_qw) { _qw.style.display = 'none'; _qw.classList.remove('is-open'); }
       const btnOpen = document.getElementById('btnBukaKamera');
       const btnClose = document.getElementById('btnTutupKamera');
+      const btnFocus = document.getElementById('btnFokusKamera');
       if (btnOpen) btnOpen.style.display = 'block';
       if (btnClose) btnClose.style.display = 'none';
+      if (btnFocus) btnFocus.style.display = 'none';
       const reader = document.getElementById('qrReader');
       if (reader) reader.innerHTML = '';
     }
 
     document.getElementById('btnBukaKamera').addEventListener('click', bukaKamera);
     document.getElementById('btnTutupKamera').addEventListener('click', tutupKamera);
+    document.getElementById('btnFokusKamera')?.addEventListener('click', () => {
+      refocusCamera().catch(() => {});
+    });
 
     const _origShowPage = showPage;
     document.querySelectorAll('.menu-item').forEach(item => {
