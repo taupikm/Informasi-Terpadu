@@ -2698,8 +2698,12 @@
     </div><!-- /.dash-top-row -->
 
     <div id="dashSesiInfo" style="background:#e0f7fa;border:1px solid #67e8f9;border-radius:12px;padding:12px 14px;text-align:center;margin-bottom:12px;">
-      <div style="font-size:12px;font-weight:600;color:#0e7490;">Informasi Sesi</div>
+      <div style="display:flex;align-items:center;justify-content:center;gap:10px;flex-wrap:wrap;">
+        <div style="font-size:12px;font-weight:600;color:#0e7490;">Informasi Sesi</div>
+        <button type="button" class="btn btn-outline" id="btnDashRefresh" title="Muat ulang data dashboard" style="padding:4px 10px;font-size:11px;border-color:#67e8f9;color:#0e7490;background:#fff;">↻ Refresh</button>
+      </div>
       <div id="dashSesiDetail" style="font-size:13px;font-weight:700;color:#155e75;margin-top:4px;">Memuat...</div>
+      <div style="font-size:10px;color:#64748b;margin-top:4px;">Data tidak real-time — tekan Refresh untuk memperbarui</div>
     </div>
     <div id="dashRekapWrap">
       <div class="section-title">Rekap Kehadiran Guru</div>
@@ -11665,7 +11669,10 @@
     });
 
 
-    async function loadDashboard() {
+    async function loadDashboard(opts) {
+      opts = opts || {};
+      // materialize hanya saat refresh manual — bukan otomatis/real-time
+      const doMaterialize = !!opts.materialize;
       try { await updateDashProfile(); } catch (e) { console.warn(e); }
 
       const tbG = document.getElementById('tbodyDashGuru');
@@ -11677,10 +11684,10 @@
         await loadLiburMap();
         const today = todayLocal();
         const liburHariIni = isTanggalLibur(today);
-        if (!liburHariIni) {
-          Promise.resolve()
-            .then(() => materializeAbsensiForDate(today))
-            .catch(e => console.warn('materialize', e));
+        if (doMaterialize && !liburHariIni) {
+          try {
+            await materializeAbsensiForDate(today, true);
+          } catch (e) { console.warn('materialize', e); }
         }
         const sesiList = (typeof dataSesi !== 'undefined' && dataSesi ? dataSesi : [])
           .filter(s => s.aktif !== false)
@@ -11962,6 +11969,16 @@
       // Panel publik (guest): identitas sekolah + struktur org + mirror statistik
       try { await refreshPublicDashboard(); } catch (e2) { console.warn(e2); }
     }
+
+    document.getElementById('btnDashRefresh')?.addEventListener('click', async () => {
+      const btn = document.getElementById('btnDashRefresh');
+      if (btn) { btn.disabled = true; btn.textContent = '↻ Memuat...'; }
+      try {
+        await loadDashboard({ materialize: true });
+      } finally {
+        if (btn) { btn.disabled = false; btn.textContent = '↻ Refresh'; }
+      }
+    });
 
     let dataSesi = [];
     let sesiAktif = null;
@@ -15469,13 +15486,17 @@
             return;
           }
           if (st) st.textContent = 'Mengunggah ' + f.name + '...';
+          showUploadProgress('Mengunggah jawaban', 'Menyiapkan file ' + (f.name || '') + '...', 8);
           try {
             const prevAns = _tuAnswers[s.id];
             const oldId = extractGdriveFileId(prevAns);
             if (oldId) {
               if (st) st.textContent = 'Mengganti file (menghapus unggahan lama)...';
+              setUploadProgress(15, 'Menghapus unggahan lama...');
               await deleteGdriveFile(oldId);
             }
+            setUploadProgress(25, 'Mengunggah ke Google Drive / penyimpanan...');
+            startFakeUploadProgress(25, 88, Math.min(18000, 4000 + Math.round((f.size || 0) / 500)));
             const result = await uploadJawabanFile(f, {
               folderId: s.opsi_c || GDRIVE_DEFAULT_FOLDER_ID || '',
               bankId: _tuBankId,
@@ -15484,6 +15505,9 @@
               nisn: currentUserKode,
               replaceFileId: oldId || null
             });
+            if (_upProgTimer) { clearInterval(_upProgTimer); _upProgTimer = null; }
+            setUploadProgress(100, 'Selesai');
+            await new Promise(r => setTimeout(r, 250));
             _tuAnswers[s.id] = result;
             if (st) st.innerHTML = '<span style="color:#166534;">✓ ' +
               (oldId ? 'File diganti: ' : 'Terunggah: ') + esc(result.name) +
@@ -15494,6 +15518,8 @@
           } catch (err) {
             console.error(err);
             if (st) st.innerHTML = '<span style="color:#b91c1c;">Gagal unggah: ' + esc(String(err.message || err)) + '</span>';
+          } finally {
+            hideUploadProgress();
           }
         });
       }
@@ -20199,15 +20225,21 @@ document.getElementById('btnBsContohFormat')?.addEventListener('click', () => {
       if (st) st.innerHTML = '<span style="color:#0369a1;">Mengunggah ke Google Drive...</span>';
       const btn = document.getElementById('btnJmKelasUpload');
       if (btn) btn.disabled = true;
+      showUploadProgress('Mengunggah jadwal kelas', 'Menyiapkan file ' + (file.name || '') + '...', 8);
       try {
+        setUploadProgress(15, 'Menghapus jadwal kelas lama (jika ada)...');
         await deleteJadwalByKelas(kelas);
+        setUploadProgress(25, 'Mengunggah ke Google Drive...');
+        startFakeUploadProgress(25, 85, Math.min(15000, 4000 + Math.round((file.size || 0) / 600)));
         const up = await uploadJawabanFile(file, {
           folderId: GDRIVE_DEFAULT_FOLDER_ID || '',
           bankId: 'jadwal-kelas',
           soalId: 'kelas',
           nisn: String(kelas).replace(/\s+/g, '')
         });
+        if (_upProgTimer) { clearInterval(_upProgTimer); _upProgTimer = null; }
         if (!up || (!up.url && !up.id)) throw new Error('Upload gagal');
+        setUploadProgress(90, 'Menyimpan data jadwal...');
         const row = {
           guru_id: null,
           guru_nama: null,
@@ -20222,6 +20254,8 @@ document.getElementById('btnBsContohFormat')?.addEventListener('click', () => {
           created_at: new Date().toISOString()
         };
         await insertJadwalMapel(row);
+        setUploadProgress(100, 'Selesai');
+        await new Promise(r => setTimeout(r, 280));
         if (st) st.innerHTML = '<span style="color:#16a34a;">✓ Jadwal kelas <b>' + esc(kelas) + '</b> tersimpan.</span>';
         if (fileInput) fileInput.value = '';
         const jEl = document.getElementById('jmKelasJudul');
@@ -20232,6 +20266,7 @@ document.getElementById('btnBsContohFormat')?.addEventListener('click', () => {
         if (st) st.innerHTML = '<span style="color:#ef4444;">Gagal: ' + esc(String(e.message || e)) + '</span>';
         alert('Gagal upload: ' + (e.message || e));
       } finally {
+        hideUploadProgress();
         if (btn) btn.disabled = false;
       }
     });
@@ -20270,18 +20305,23 @@ document.getElementById('btnBsContohFormat')?.addEventListener('click', () => {
       if (st) st.innerHTML = '<span style="color:#0369a1;">Mengunggah ke Google Drive (jadwal lama diganti)...</span>';
       const btn = document.getElementById('btnJmUpload');
       if (btn) btn.disabled = true;
+      showUploadProgress('Mengunggah jadwal mapel', 'Menyiapkan file ' + (file.name || '') + ' untuk ' + guruNama + '...', 8);
       try {
-        // hapus jadwal lama guru ini dulu
+        setUploadProgress(15, 'Menghapus jadwal lama guru...');
         await deleteJadwalByGuruId(guruId);
 
+        setUploadProgress(25, 'Mengunggah ke Google Drive...');
+        startFakeUploadProgress(25, 85, Math.min(15000, 4000 + Math.round((file.size || 0) / 600)));
         const up = await uploadJawabanFile(file, {
           folderId: GDRIVE_DEFAULT_FOLDER_ID || '',
           bankId: 'jadwal',
           soalId: 'guru',
           nisn: String(guruId)
         });
+        if (_upProgTimer) { clearInterval(_upProgTimer); _upProgTimer = null; }
         if (!up || (!up.url && !up.id)) throw new Error('Upload gagal (tidak ada URL/ID)');
 
+        setUploadProgress(90, 'Menyimpan data jadwal...');
         const row = {
           guru_id: Number(guruId),
           guru_nama: guruNama,
@@ -20295,6 +20335,8 @@ document.getElementById('btnBsContohFormat')?.addEventListener('click', () => {
           created_at: new Date().toISOString()
         };
         await insertJadwalMapel(row);
+        setUploadProgress(100, 'Selesai');
+        await new Promise(r => setTimeout(r, 280));
         if (st) st.innerHTML = '<span style="color:#16a34a;">✓ Jadwal untuk <b>' + esc(guruNama) + '</b> berhasil disimpan.</span>';
         if (fileInput) fileInput.value = '';
         const jEl = document.getElementById('jmJudul');
@@ -20305,6 +20347,7 @@ document.getElementById('btnBsContohFormat')?.addEventListener('click', () => {
         if (st) st.innerHTML = '<span style="color:#ef4444;">Gagal: ' + esc(String(e.message || e)) + '</span>';
         alert('Gagal upload: ' + (e.message || e));
       } finally {
+        hideUploadProgress();
         if (btn) btn.disabled = false;
       }
     });
