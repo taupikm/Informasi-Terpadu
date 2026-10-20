@@ -3609,12 +3609,13 @@
       .dl-abs-sheet .dl-meta { font-size: 11px; margin-bottom: 6px; }
       .dl-abs-sheet .dl-meta div { margin: 2px 0; }
       .dl-abs-sheet table {
-        border-collapse: collapse; font-size: 8px; table-layout: fixed;
+        border-collapse: collapse; font-size: 11px; font-family: Arial, Helvetica, sans-serif;
+        table-layout: fixed;
         width: auto !important; max-width: none !important;
       }
       .dl-abs-sheet col.dl-c-no,
       .dl-abs-sheet col.dl-c-lp,
-      .dl-abs-sheet col.dl-c-day { width: 4mm; }
+      .dl-abs-sheet col.dl-c-day { width: 7mm; }
       .dl-abs-sheet col.dl-c-nisn { width: 20mm; }
       .dl-abs-sheet col.dl-c-pangkat { width: 30mm; }
       .dl-abs-sheet col.dl-c-nama { width: 40mm; }
@@ -3626,9 +3627,9 @@
         overflow: hidden; white-space: nowrap; box-sizing: border-box;
         line-height: 1.15;
       }
-      .dl-abs-sheet th { background: #1d4ed8; color: #fff; font-weight: 700; font-size: 7.5px; }
+      .dl-abs-sheet th { background: #1d4ed8; color: #fff; font-weight: 700; font-size: 10px; }
       .dl-abs-sheet td.dl-nama {
-        text-align: left; padding-left: 2px; font-size: 8px; line-height: 1.2;
+        text-align: left; padding-left: 2px; font-size: 11px; line-height: 1.25;
         white-space: normal; word-break: break-word;
       }
       .dl-abs-sheet td.dl-libur, .dl-abs-sheet th.dl-libur { background: #fecaca !important; color: #7f1d1d !important; }
@@ -13820,7 +13821,7 @@
           html += '<td class="dl-nama">' + namaCell + '</td>';
           html += '<td>' + esc(p.lp || '') + '</td>';
           html += '<td style="font-size:9px;">' + esc(p.pangkat || '') + '</td>';
-          const rowA = [i + 1, p.nama + (p.nisn ? ' | NIP ' + p.nisn : ''), p.lp || '', p.pangkat || ''];
+          const rowA = [i + 1, p.nama + (p.nisn ? '\nNIP ' + p.nisn : ''), p.lp || '', p.pangkat || ''];
           daysInfo.forEach(di => {
             const st = (daily[String(p.id)] || {})[di.date] || '';
             const mark = di.libur ? '' : dlCellMark(st);
@@ -14031,13 +14032,14 @@
         cMeta.alignment = { horizontal: 'left', vertical: 'middle' };
 
         // ---- Lebar kolom (mm → wch) ----
-        const wNo = dlMmToWch(4);
-        const wLP = dlMmToWch(4);
-        const wDay = dlMmToWch(4);
+        // Lebar kolom diperlebar agar No / L/P / tanggal mudah dibaca
+        const wNo = dlMmToWch(8);
+        const wLP = dlMmToWch(8);
+        const wDay = dlMmToWch(7);
         const wNama = dlMmToWch(40);
         const wNisn = dlMmToWch(20);
         const wPangkat = dlMmToWch(30);
-        const wLetter = dlMmToWch(4);
+        const wLetter = dlMmToWch(6);
         const wPct = dlMmToWch(12);
         const wNaik = dlMmToWch(18);
 
@@ -14086,9 +14088,10 @@
         };
         const fillHeader = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF1D4ED8' } };
         const fillLibur = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFECACA' } };
-        const fontHeader = { bold: true, size: 8, name: 'Arial', color: { argb: 'FFFFFFFF' } };
-        const fontLibur = { size: 8, name: 'Arial', color: { argb: 'FF7F1D1D' }, bold: true };
-        const fontCell = { size: 8, name: 'Arial', color: { argb: 'FF0F172A' } };
+        const fontHeader = { bold: true, size: 11, name: 'Arial', color: { argb: 'FFFFFFFF' } };
+        const fontLibur = { size: 11, name: 'Arial', color: { argb: 'FF7F1D1D' }, bold: true };
+        const fontCell = { size: 11, name: 'Arial', color: { argb: 'FF0F172A' } };
+        const fontNip = { size: 9, name: 'Arial', color: { argb: 'FF475569' } };
         const alignC = { horizontal: 'center', vertical: 'middle', wrapText: true };
         const alignL = { horizontal: 'left', vertical: 'middle', wrapText: true };
 
@@ -14101,12 +14104,33 @@
         aoa.forEach((row, ri) => {
           const excelRow = headerRowIdx + ri;
           const isHeader = ri === 0;
+          let hasWrapNama = false;
           row.forEach((val, ci) => {
             const cell = ws.getCell(excelRow, ci + 1);
-            cell.value = (val === '' || val == null) ? '' : val;
+            const isNama = (ci + 1 === namaCol && !isHeader);
+            // Nama + NIP: wrap text (baris 1 nama, baris 2 NIP) — tanpa tanda |
+            if (isNama && typeof val === 'string' && val.indexOf('\n') >= 0) {
+              const parts = val.split('\n');
+              const nama = parts[0] || '';
+              const nipLine = parts.slice(1).join(' ').trim();
+              if (nipLine) {
+                cell.value = {
+                  richText: [
+                    { text: nama + '\n', font: { size: 11, name: 'Arial', color: { argb: 'FF0F172A' } } },
+                    { text: nipLine, font: fontNip }
+                  ]
+                };
+              } else {
+                cell.value = nama;
+                cell.font = fontCell;
+              }
+              hasWrapNama = true;
+            } else {
+              cell.value = (val === '' || val == null) ? '' : val;
+              cell.font = isHeader ? fontHeader : fontCell;
+            }
             cell.border = borderThin;
-            cell.alignment = (ci + 1 === namaCol && !isHeader) ? alignL : alignC;
-            cell.font = isHeader ? fontHeader : fontCell;
+            cell.alignment = isNama ? alignL : alignC;
             if (isHeader) {
               cell.fill = fillHeader;
             }
@@ -14116,13 +14140,16 @@
                 ? { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFDC2626' } }
                 : fillLibur;
               if (isHeader) {
-                cell.font = { bold: true, size: 8, name: 'Arial', color: { argb: 'FFFFFFFF' } };
-              } else {
+                cell.font = { bold: true, size: 11, name: 'Arial', color: { argb: 'FFFFFFFF' } };
+              } else if (!isNama) {
                 cell.font = fontLibur;
               }
             }
           });
-          ws.getRow(excelRow).height = isHeader ? 16 : 14;
+          // Baris dengan Nama+NIP lebih tinggi agar wrap terlihat
+          if (isHeader) ws.getRow(excelRow).height = 18;
+          else if (hasWrapNama) ws.getRow(excelRow).height = 28;
+          else ws.getRow(excelRow).height = 16;
         });
 
         // Row heights for title
@@ -14147,7 +14174,7 @@
           const ws = XLSX.utils.aoa_to_sheet(aoa);
           const nDays = (_dlAbsLast.daysInfo || []).length;
           const jenis = _dlAbsLast.jenis || 'guru';
-          const wNo = dlMmToWch(4), wLP = dlMmToWch(4), wDay = dlMmToWch(4);
+          const wNo = dlMmToWch(8), wLP = dlMmToWch(8), wDay = dlMmToWch(7);
           const wNama = dlMmToWch(40), wNisn = dlMmToWch(20), wPangkat = dlMmToWch(30);
           const cols = [];
           if (jenis === 'guru') {
