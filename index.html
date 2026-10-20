@@ -20854,9 +20854,25 @@ document.getElementById('btnBsContohFormat')?.addEventListener('click', () => {
           return;
         }
 
-        document.getElementById('infoRekap').textContent = dataRekap.length + ' baris';
-        const iv = document.getElementById('infoRekapView');
-        if (iv) iv.textContent = dataRekap.length + ' baris';
+        {
+          const nBaris = dataRekap.length;
+          const nSesi = (rekapSesiList || []).length;
+          // Hitung total isian sesi (bukan kosong) di hasil pencarian
+          let nIsi = 0;
+          dataRekap.forEach(row => {
+            (rekapSesiList || []).forEach(s => {
+              const ab = row.sesi && row.sesi[s.colKey || String(s.id)];
+              if (ab) nIsi++;
+            });
+          });
+          let infoTxt = nBaris + ' baris';
+          if (nSesi) infoTxt += ' · ' + nSesi + ' sesi';
+          if (nIsi) infoTxt += ' · ' + nIsi + ' data sesi';
+          const el = document.getElementById('infoRekap');
+          if (el) el.textContent = infoTxt;
+          const iv = document.getElementById('infoRekapView');
+          if (iv) iv.textContent = infoTxt;
+        }
 
         if (!dataRekap.length) {
           tbody.innerHTML = '<tr><td colspan="' + (5 + rekapSesiList.length) + '" style="text-align:center;padding:16px;color:#94a3b8;">Tidak ada data untuk filter ini</td></tr>';
