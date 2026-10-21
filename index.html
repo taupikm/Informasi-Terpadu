@@ -15206,10 +15206,56 @@
       return result;
     }
 
+    function driveIdFromUrl(u) {
+      u = String(u || '');
+      return (u.match(/\/d\/([^/]+)/) || [])[1] ||
+        (u.match(/[?&]id=([^&]+)/) || [])[1] ||
+        (u.match(/thumbnail\?id=([^&]+)/) || [])[1] || null;
+    }
+
+    /** URL Drive yang bisa dipakai di <img src> */
+    function toEmbeddableImageUrl(url, fileId) {
+      const id = fileId || driveIdFromUrl(url);
+      if (id) {
+        // thumbnail biasanya paling andal untuk ditampilkan di browser
+        return 'https://drive.google.com/thumbnail?id=' + encodeURIComponent(id) + '&sz=w1000';
+      }
+      return url;
+    }
+
+    function normalizeSoalImgHtml(html) {
+      return String(html || '').replace(
+        /(<img\b)([^>]*?)(\/?>)/gi,
+        function (_, open, attrs, close) {
+          let a = attrs;
+          // pastikan style tampil
+          if (!/\bstyle\s*=/i.test(a)) {
+            a += ' style="max-width:100%;height:auto;display:block;margin:8px 0;"';
+          }
+          a = a.replace(/\bsrc\s*=\s*(["'])([^"']*)\1/i, function (m2, q, src) {
+            let s = src;
+            if (/drive\.google\.com/i.test(s)) {
+              s = toEmbeddableImageUrl(s);
+            }
+            return 'src=' + q + s + q;
+          });
+          if (!/\breferrerPolicy\b/i.test(a) && !/\breferrerpolicy\b/i.test(a)) {
+            a += ' referrerpolicy="no-referrer"';
+          }
+          if (!/\bloading\s*=/i.test(a)) a += ' loading="lazy"';
+          return open + a + close;
+        }
+      );
+    }
+
     async function uploadSoalImageDataUrl(dataUrl, nameHint) {
       const m = String(dataUrl || '').match(/^data:([^;]+);base64,(.+)$/i);
       if (!m) return dataUrl;
       const mime = m[1];
+      // Format yang browser tidak bisa tampilkan — biarkan apa adanya
+      if (!/^image\/(png|jpe?g|gif|webp|bmp|svg\+xml)$/i.test(mime)) {
+        return dataUrl;
+      }
       if (/^image\/svg/i.test(mime) && (m[2].length < 8000)) return dataUrl;
       const b64 = m[2];
       let bin;
@@ -15220,58 +15266,48 @@
       } catch (e) {
         return dataUrl;
       }
-      let ext = (mime.split('/')[1] || 'bin').toLowerCase().replace('jpeg', 'jpg');
+      let ext = (mime.split('/')[1] || 'bin').toLowerCase().replace('jpeg', 'jpg').replace('svg+xml', 'svg');
       if (ext.includes('+')) ext = ext.split('+')[0];
       const fname = (nameHint || ('soal_' + Date.now())) + '.' + ext;
       const file = new File([bin], fname, { type: mime });
       const result = await uploadSoalImageFile(file, nameHint || 'soal');
-      let url = result.url || dataUrl;
-      // Pastikan URL bisa dipakai di <img src> (bukan halaman /view)
-      const id = result.id || (String(url).match(/\/d\/([^/]+)/) || [])[1] ||
-        (String(url).match(/[?&]id=([^&]+)/) || [])[1];
-      if (id && /drive\.google\.com/i.test(String(url))) {
-        url = 'https://drive.google.com/uc?export=view&id=' + id;
-      }
-      return url || dataUrl;
-    }
-
-    function normalizeSoalImgSrc(html) {
-      return String(html || '').replace(
-        /(<img\b[^>]*?\bsrc\s*=\s*["'])([^"']+)(["'])/gi,
-        function (_, a, src, c) {
-          let u = src;
-          const id = (u.match(/\/d\/([^/]+)/) || [])[1] || (u.match(/[?&]id=([^&]+)/) || [])[1];
-          if (id && /drive\.google\.com/i.test(u) && !/uc\?export=view/i.test(u) && !/thumbnail\?/i.test(u)) {
-            u = 'https://drive.google.com/uc?export=view&id=' + id;
-          }
-          return a + u + c;
-        }
-      );
+      if (!result) return dataUrl;
+      const embed = toEmbeddableImageUrl(result.url, result.id);
+      return embed || result.url || dataUrl;
     }
 
     async function replaceDataImagesWithGdrive(html, progressCb) {
       html = String(html || '');
+      // Hanya unggah jika endpoint GDrive aktif; jika tidak, biarkan base64 (gambar tetap tampil)
+      if (!GDRIVE_UPLOAD_ENDPOINT) {
+        try { loadGdriveSettingsSync(); } catch (e) {}
+      }
+      if (!GDRIVE_UPLOAD_ENDPOINT) {
+        return normalizeSoalImgHtml(html);
+      }
       const re2 = /src\s*=\s*(["'])(data:image\/[^;]+;base64,[^"']+)\1/gi;
       const found = [];
       let m;
       while ((m = re2.exec(html)) !== null) {
         found.push(m[2]);
       }
-      if (!found.length) return normalizeSoalImgSrc(html);
+      if (!found.length) return normalizeSoalImgHtml(html);
       const uniq = [...new Set(found)];
       let out = html;
       for (let i = 0; i < uniq.length; i++) {
         if (progressCb) progressCb(i + 1, uniq.length);
         try {
           const url = await uploadSoalImageDataUrl(uniq[i], 'soal_img_' + (i + 1));
-          if (url && url !== uniq[i]) {
+          // Hanya ganti jika dapat URL non-data yang masuk akal
+          if (url && url !== uniq[i] && !/^data:/i.test(url)) {
             out = out.split(uniq[i]).join(url);
           }
         } catch (e) {
           console.warn('GDrive gambar soal gagal, tetap base64', e);
+          // biarkan data:image asli — jangan hapus
         }
       }
-      return normalizeSoalImgSrc(out);
+      return normalizeSoalImgHtml(out);
     }
 
     const _tuSoalFullCache = {};
@@ -15331,7 +15367,9 @@
       html += '<span style="background:#f1f5f9;padding:2px 8px;border-radius:6px;">' +
         esc(s.jenis || 'Pilihan Ganda') + '</span>';
       html += '<span style="margin-left:auto;">Skor: ' + (s.skor || 1) + '</span></div>';
-      let _qHtml = (typeof renderMathInHtml === 'function' ? renderMathInHtml(s.pertanyaan) : (s.pertanyaan || ''));
+      let _qRaw = s.pertanyaan || '';
+      if (typeof normalizeSoalImgHtml === 'function') _qRaw = normalizeSoalImgHtml(_qRaw);
+      let _qHtml = (typeof renderMathInHtml === 'function' ? renderMathInHtml(_qRaw) : _qRaw);
       _qHtml = String(_qHtml).replace(/<img(?![^>]*loading=)/gi, '<img loading="lazy" decoding="async"');
       html += '<div class="bs-soal-card-body">' + _qHtml + '</div>';
 
@@ -16087,8 +16125,21 @@ document.getElementById('btnBsContohFormat')?.addEventListener('click', () => {
           {
             convertImage: mammoth.images.imgElement(function (image) {
               return image.read('base64').then(function (imageBuffer) {
+                var ct = String(image.contentType || 'image/png').toLowerCase();
+                // Browser hanya andal menampilkan png/jpeg/gif/webp
+                if (!/^image\/(png|jpe?g|gif|webp|bmp|svg\+xml)/i.test(ct)) {
+                  // coba paksa sebagai png data url tetap sering gagal — tampilkan placeholder teks
+                  return {
+                    src: 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(
+                      '<svg xmlns="http://www.w3.org/2000/svg" width="240" height="120">' +
+                      '<rect width="100%" height="100%" fill="#f1f5f9"/>' +
+                      '<text x="50%" y="50%" dominant-baseline="middle" text-anchor="middle" fill="#64748b" font-size="12">' +
+                      'Gambar (' + ct + ') tidak didukung</text></svg>'
+                    )
+                  };
+                }
                 return {
-                  src: 'data:' + image.contentType + ';base64,' + imageBuffer
+                  src: 'data:' + ct + ';base64,' + imageBuffer
                 };
               });
             })
@@ -16107,7 +16158,16 @@ document.getElementById('btnBsContohFormat')?.addEventListener('click', () => {
           }
         }
         const messages = (result.messages || []).map(m => m.message).join('; ');
+        // Normalisasi <img> (spasi/style/URL Drive) sebelum & sesudah parse
+        html = typeof normalizeSoalImgHtml === 'function' ? normalizeSoalImgHtml(html) : html;
         _importWordSoals = parseSoalFromWordHtml(html);
+        _importWordSoals.forEach(s => {
+          if (s.pertanyaan && typeof normalizeSoalImgHtml === 'function') s.pertanyaan = normalizeSoalImgHtml(s.pertanyaan);
+          ['a','b','c','d','e'].forEach(L => {
+            const k = 'opsi_' + L;
+            if (s[k] && typeof normalizeSoalImgHtml === 'function') s[k] = normalizeSoalImgHtml(s[k]);
+          });
+        });
 
         const prev = document.getElementById('iwPreview');
         if (!_importWordSoals.length) {
@@ -16175,6 +16235,7 @@ document.getElementById('btnBsContohFormat')?.addEventListener('click', () => {
         return b.replace(/<[^>]+>/g, ' ').replace(/&nbsp;/g, ' ').replace(/\s+/g, ' ').trim();
       }
       function restoreTables(s) {
+        // JANGAN ganti spasi biasa — dulu bug ini membuat semua huruf menyatu
         return String(s || '').replace(/<!--IWTABLE_(\d+)-->/g, (_, i) => tables[Number(i)] || '');
       }
       function stripKunci(s) {
@@ -17808,7 +17869,8 @@ document.getElementById('btnBsContohFormat')?.addEventListener('click', () => {
       tbody.innerHTML = rows.map((r, i) => {
         const no = r.nomor || (i + 1);
         const jenis = r.jenis || 'Pilihan Ganda';
-        const qHtml = cleanSoalHtml(r.pertanyaan, no);
+        let qHtml = cleanSoalHtml(r.pertanyaan, no);
+        if (typeof normalizeSoalImgHtml === 'function') qHtml = normalizeSoalImgHtml(qHtml);
         let body = '<div class="bs-soal-card-body">' + renderMathInHtml(qHtml) + '</div>';
 
         if (jenis === 'Pilihan Ganda' || jenis === 'Checkbox') {
