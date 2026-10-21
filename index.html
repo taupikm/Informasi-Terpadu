@@ -2698,12 +2698,8 @@
     </div><!-- /.dash-top-row -->
 
     <div id="dashSesiInfo" style="background:#e0f7fa;border:1px solid #67e8f9;border-radius:12px;padding:12px 14px;text-align:center;margin-bottom:12px;">
-      <div style="display:flex;align-items:center;justify-content:center;gap:10px;flex-wrap:wrap;">
-        <div style="font-size:12px;font-weight:600;color:#0e7490;">Informasi Sesi</div>
-        <button type="button" class="btn btn-outline" id="btnDashRefresh" title="Muat ulang data dashboard" style="padding:4px 10px;font-size:11px;border-color:#67e8f9;color:#0e7490;background:#fff;">↻ Refresh</button>
-      </div>
+      <div style="font-size:12px;font-weight:600;color:#0e7490;">Informasi Sesi</div>
       <div id="dashSesiDetail" style="font-size:13px;font-weight:700;color:#155e75;margin-top:4px;">Memuat...</div>
-      <div style="font-size:10px;color:#64748b;margin-top:4px;">Data tidak real-time — tekan Refresh untuk memperbarui</div>
     </div>
     <div id="dashRekapWrap">
       <div class="section-title">Rekap Kehadiran Guru</div>
@@ -2962,7 +2958,7 @@
     </section>
     <section class="page" id="page-validasi-lulusan">
       <div class="page-title">Validasi Data Lulusan</div>
-      <div class="card" style="padding:14px;margin-bottom:14px;">
+      <div class="card" id="vlSearchCard" style="padding:14px;margin-bottom:14px;">
         <div class="rekap-filter-row" style="align-items:flex-start;">
           <label style="padding-top:10px;">NISN / Nama</label>
           <div style="flex:1;min-width:0;position:relative;">
@@ -2990,6 +2986,7 @@
           <div style="display:flex;gap:8px;"><span style="min-width:150px;color:#64748b;">Lama Belajar</span><span>: <b id="vlLama">-</b></span></div>
           <div style="display:flex;gap:8px;"><span style="min-width:150px;color:#64748b;">Tanggal Lulus</span><span>: <b id="vlTglLulus">-</b></span></div>
           <div style="display:flex;gap:8px;align-items:center;"><span style="min-width:150px;color:#64748b;">Status Kelulusan</span><span>: <b id="vlStatusLulus">-</b></span></div>
+          <div style="display:flex;gap:8px;align-items:center;"><span style="min-width:150px;color:#64748b;">Predikat Kelulusan</span><span>: <b id="vlPredikat">-</b></span></div>
         </div>
       </div>
     </section>
@@ -7159,8 +7156,15 @@
       lulusan: {
         title: 'Import Data Lulusan',
         filename: 'contoh_lulusan.xlsx',
-        headers: ['nisn','nama','lp','tmp_lahir','tgl_lahir','tgl_mulai_sekolah','tanggal_lulus','tahun_lulus','lama_belajar','status_awal','asal_sekolah'],
-        sample: ['0012345678','Ahmad Rizki','L','Bandung','2008-03-12','2021-07-15','2024-06-20','2024','3 Tahun','Baru','SDN 1 Bandung']
+        headers: [
+          'nisn','nama','lp','tmp_lahir','tgl_lahir','tgl_mulai_sekolah','tanggal_lulus','tahun_lulus',
+          'lama_belajar','status_awal','asal_sekolah','status_kelulusan','predikat'
+        ],
+        sample: [
+          '0012345678','Ahmad Rizki','L','Bandung','2008-03-12','2021-07-15','2024-06-20','2024',
+          '3 Tahun','Siswa Baru','SDN 1 Bandung','Lulus','BAIK'
+        ],
+        desc: 'Kolom sesuai tabel lulusan. Wajib: nama. Tanggal YYYY-MM-DD. status_awal: Siswa Baru / Pindahan. status_kelulusan: Lulus / Ditangguhkan / Tidak Lulus. predikat: MEMUASKAN / BAIK / CUKUP (opsional).'
       }
     };
 
@@ -8193,6 +8197,15 @@
         const nama = emptyToNull(c[1]);
         if (!nama) continue;
         const tahun = emptyToNull(c[7]);
+        let stAwal = emptyToNull(c[9]);
+        if (stAwal && typeof normStatusAwal === 'function') stAwal = normStatusAwal(stAwal) || stAwal;
+        let stKel = emptyToNull(c[11]) || 'Lulus';
+        const stKelU = String(stKel).trim().toLowerCase();
+        if (stKelU === 'lulus') stKel = 'Lulus';
+        else if (stKelU.indexOf('tangguh') >= 0) stKel = 'Ditangguhkan';
+        else if (stKelU.indexOf('tidak') >= 0) stKel = 'Tidak Lulus';
+        let pred = emptyToNull(c[12]);
+        if (pred) pred = String(pred).trim().toUpperCase();
         rows.push({
           nisn: emptyToNull(c[0]),
           nama: nama,
@@ -8203,8 +8216,10 @@
           tanggal_lulus: emptyToNull(c[6]),
           tahun_lulus: tahun ? parseInt(tahun) : null,
           lama_belajar: emptyToNull(c[8]),
-          status_awal: emptyToNull(c[9]),
-          asal_sekolah: emptyToNull(c[10])
+          status_awal: stAwal,
+          asal_sekolah: emptyToNull(c[10]),
+          status_kelulusan: stKel,
+          predikat: pred
         });
       }
       if (!rows.length) { alert('Tidak ada baris valid (nama wajib)'); return; }
@@ -11669,10 +11684,7 @@
     });
 
 
-    async function loadDashboard(opts) {
-      opts = opts || {};
-      // materialize hanya saat refresh manual — bukan otomatis/real-time
-      const doMaterialize = !!opts.materialize;
+    async function loadDashboard() {
       try { await updateDashProfile(); } catch (e) { console.warn(e); }
 
       const tbG = document.getElementById('tbodyDashGuru');
@@ -11684,10 +11696,10 @@
         await loadLiburMap();
         const today = todayLocal();
         const liburHariIni = isTanggalLibur(today);
-        if (doMaterialize && !liburHariIni) {
-          try {
-            await materializeAbsensiForDate(today, true);
-          } catch (e) { console.warn('materialize', e); }
+        if (!liburHariIni) {
+          Promise.resolve()
+            .then(() => materializeAbsensiForDate(today))
+            .catch(e => console.warn('materialize', e));
         }
         const sesiList = (typeof dataSesi !== 'undefined' && dataSesi ? dataSesi : [])
           .filter(s => s.aktif !== false)
@@ -11969,16 +11981,6 @@
       // Panel publik (guest): identitas sekolah + struktur org + mirror statistik
       try { await refreshPublicDashboard(); } catch (e2) { console.warn(e2); }
     }
-
-    document.getElementById('btnDashRefresh')?.addEventListener('click', async () => {
-      const btn = document.getElementById('btnDashRefresh');
-      if (btn) { btn.disabled = true; btn.textContent = '↻ Memuat...'; }
-      try {
-        await loadDashboard({ materialize: true });
-      } finally {
-        if (btn) { btn.disabled = false; btn.textContent = '↻ Refresh'; }
-      }
-    });
 
     let dataSesi = [];
     let sesiAktif = null;
@@ -15486,17 +15488,13 @@
             return;
           }
           if (st) st.textContent = 'Mengunggah ' + f.name + '...';
-          showUploadProgress('Mengunggah jawaban', 'Menyiapkan file ' + (f.name || '') + '...', 8);
           try {
             const prevAns = _tuAnswers[s.id];
             const oldId = extractGdriveFileId(prevAns);
             if (oldId) {
               if (st) st.textContent = 'Mengganti file (menghapus unggahan lama)...';
-              setUploadProgress(15, 'Menghapus unggahan lama...');
               await deleteGdriveFile(oldId);
             }
-            setUploadProgress(25, 'Mengunggah ke Google Drive / penyimpanan...');
-            startFakeUploadProgress(25, 88, Math.min(18000, 4000 + Math.round((f.size || 0) / 500)));
             const result = await uploadJawabanFile(f, {
               folderId: s.opsi_c || GDRIVE_DEFAULT_FOLDER_ID || '',
               bankId: _tuBankId,
@@ -15505,9 +15503,6 @@
               nisn: currentUserKode,
               replaceFileId: oldId || null
             });
-            if (_upProgTimer) { clearInterval(_upProgTimer); _upProgTimer = null; }
-            setUploadProgress(100, 'Selesai');
-            await new Promise(r => setTimeout(r, 250));
             _tuAnswers[s.id] = result;
             if (st) st.innerHTML = '<span style="color:#166534;">✓ ' +
               (oldId ? 'File diganti: ' : 'Terunggah: ') + esc(result.name) +
@@ -15518,8 +15513,6 @@
           } catch (err) {
             console.error(err);
             if (st) st.innerHTML = '<span style="color:#b91c1c;">Gagal unggah: ' + esc(String(err.message || err)) + '</span>';
-          } finally {
-            hideUploadProgress();
           }
         });
       }
@@ -20225,21 +20218,15 @@ document.getElementById('btnBsContohFormat')?.addEventListener('click', () => {
       if (st) st.innerHTML = '<span style="color:#0369a1;">Mengunggah ke Google Drive...</span>';
       const btn = document.getElementById('btnJmKelasUpload');
       if (btn) btn.disabled = true;
-      showUploadProgress('Mengunggah jadwal kelas', 'Menyiapkan file ' + (file.name || '') + '...', 8);
       try {
-        setUploadProgress(15, 'Menghapus jadwal kelas lama (jika ada)...');
         await deleteJadwalByKelas(kelas);
-        setUploadProgress(25, 'Mengunggah ke Google Drive...');
-        startFakeUploadProgress(25, 85, Math.min(15000, 4000 + Math.round((file.size || 0) / 600)));
         const up = await uploadJawabanFile(file, {
           folderId: GDRIVE_DEFAULT_FOLDER_ID || '',
           bankId: 'jadwal-kelas',
           soalId: 'kelas',
           nisn: String(kelas).replace(/\s+/g, '')
         });
-        if (_upProgTimer) { clearInterval(_upProgTimer); _upProgTimer = null; }
         if (!up || (!up.url && !up.id)) throw new Error('Upload gagal');
-        setUploadProgress(90, 'Menyimpan data jadwal...');
         const row = {
           guru_id: null,
           guru_nama: null,
@@ -20254,8 +20241,6 @@ document.getElementById('btnBsContohFormat')?.addEventListener('click', () => {
           created_at: new Date().toISOString()
         };
         await insertJadwalMapel(row);
-        setUploadProgress(100, 'Selesai');
-        await new Promise(r => setTimeout(r, 280));
         if (st) st.innerHTML = '<span style="color:#16a34a;">✓ Jadwal kelas <b>' + esc(kelas) + '</b> tersimpan.</span>';
         if (fileInput) fileInput.value = '';
         const jEl = document.getElementById('jmKelasJudul');
@@ -20266,7 +20251,6 @@ document.getElementById('btnBsContohFormat')?.addEventListener('click', () => {
         if (st) st.innerHTML = '<span style="color:#ef4444;">Gagal: ' + esc(String(e.message || e)) + '</span>';
         alert('Gagal upload: ' + (e.message || e));
       } finally {
-        hideUploadProgress();
         if (btn) btn.disabled = false;
       }
     });
@@ -20305,23 +20289,18 @@ document.getElementById('btnBsContohFormat')?.addEventListener('click', () => {
       if (st) st.innerHTML = '<span style="color:#0369a1;">Mengunggah ke Google Drive (jadwal lama diganti)...</span>';
       const btn = document.getElementById('btnJmUpload');
       if (btn) btn.disabled = true;
-      showUploadProgress('Mengunggah jadwal mapel', 'Menyiapkan file ' + (file.name || '') + ' untuk ' + guruNama + '...', 8);
       try {
-        setUploadProgress(15, 'Menghapus jadwal lama guru...');
+        // hapus jadwal lama guru ini dulu
         await deleteJadwalByGuruId(guruId);
 
-        setUploadProgress(25, 'Mengunggah ke Google Drive...');
-        startFakeUploadProgress(25, 85, Math.min(15000, 4000 + Math.round((file.size || 0) / 600)));
         const up = await uploadJawabanFile(file, {
           folderId: GDRIVE_DEFAULT_FOLDER_ID || '',
           bankId: 'jadwal',
           soalId: 'guru',
           nisn: String(guruId)
         });
-        if (_upProgTimer) { clearInterval(_upProgTimer); _upProgTimer = null; }
         if (!up || (!up.url && !up.id)) throw new Error('Upload gagal (tidak ada URL/ID)');
 
-        setUploadProgress(90, 'Menyimpan data jadwal...');
         const row = {
           guru_id: Number(guruId),
           guru_nama: guruNama,
@@ -20335,8 +20314,6 @@ document.getElementById('btnBsContohFormat')?.addEventListener('click', () => {
           created_at: new Date().toISOString()
         };
         await insertJadwalMapel(row);
-        setUploadProgress(100, 'Selesai');
-        await new Promise(r => setTimeout(r, 280));
         if (st) st.innerHTML = '<span style="color:#16a34a;">✓ Jadwal untuk <b>' + esc(guruNama) + '</b> berhasil disimpan.</span>';
         if (fileInput) fileInput.value = '';
         const jEl = document.getElementById('jmJudul');
@@ -20347,7 +20324,6 @@ document.getElementById('btnBsContohFormat')?.addEventListener('click', () => {
         if (st) st.innerHTML = '<span style="color:#ef4444;">Gagal: ' + esc(String(e.message || e)) + '</span>';
         alert('Gagal upload: ' + (e.message || e));
       } finally {
-        hideUploadProgress();
         if (btn) btn.disabled = false;
       }
     });
@@ -22207,23 +22183,105 @@ document.getElementById('btnBsContohFormat')?.addEventListener('click', () => {
     }
 
     async function initValidasiLulusanPage() {
-      document.getElementById('vlResult').style.display = 'none';
-      document.getElementById('vlEmpty').style.display = 'block';
-      document.getElementById('vlEmpty').textContent =
-        'Masukkan NISN/Nama (dan opsional Tahun Lulus) lalu Cek Data.';
-      document.getElementById('vlCari').value = '';
-      document.getElementById('vlTahun').value = '';
+      const searchCard = document.getElementById('vlSearchCard');
+      const empty = document.getElementById('vlEmpty');
+      const box = document.getElementById('vlResult');
+      if (box) box.style.display = 'none';
+      if (empty) {
+        empty.style.display = 'block';
+        empty.style.color = '#94a3b8';
+      }
+      const isAdmin = currentRole === 'admin';
+      if (searchCard) searchCard.style.display = isAdmin ? 'block' : 'none';
+
+      if (isAdmin) {
+        if (empty) empty.textContent = 'Masukkan NISN/Nama (dan opsional Tahun Lulus) lalu Cek Data.';
+        const c = document.getElementById('vlCari');
+        const t = document.getElementById('vlTahun');
+        if (c) c.value = '';
+        if (t) t.value = '';
+        return;
+      }
+
+      // Alumni / siswa: NISN sudah diverifikasi saat login — tampilkan data sendiri
+      if (currentRole === 'siswa' || currentUserIsAlumni) {
+        if (empty) empty.textContent = 'Memuat data kelulusan Anda...';
+        await jalankanValidasiLulusan({ autoSelf: true });
+        return;
+      }
+
+      if (empty) empty.textContent = 'Login sebagai alumni/siswa atau admin untuk melihat data.';
     }
 
-    async function jalankanValidasiLulusan() {
-      const q = (document.getElementById('vlCari')?.value || '').trim();
+    function tampilkanHasilValidasiLulusan(found) {
+      const empty = document.getElementById('vlEmpty');
+      const box = document.getElementById('vlResult');
+      if (!found) {
+        if (empty) {
+          empty.style.display = 'block';
+          empty.style.color = '#b91c1c';
+          empty.textContent = 'Data lulusan tidak ditemukan.';
+        }
+        if (box) box.style.display = 'none';
+        return;
+      }
+      if (empty) empty.style.display = 'none';
+      if (box) box.style.display = 'block';
+
+      const ttl = [found.tmp_lahir || '', fmtTglId(found.tgl_lahir)].filter(x => x && x !== '-').join(', ') || '-';
+      const stLulus = found.status_kelulusan || found.status_lulus || 'Lulus';
+      let stHtml = esc(stLulus);
+      if (stLulus === 'Lulus') stHtml = '<span style="background:#dcfce7;color:#166534;padding:2px 8px;border-radius:6px;font-size:12px;">' + esc(stLulus) + '</span>';
+      else if (stLulus === 'Ditangguhkan') stHtml = '<span style="background:#fef3c7;color:#a16207;padding:2px 8px;border-radius:6px;font-size:12px;">' + esc(stLulus) + '</span>';
+      else if (stLulus === 'Tidak Lulus') stHtml = '<span style="background:#fee2e2;color:#b91c1c;padding:2px 8px;border-radius:6px;font-size:12px;">' + esc(stLulus) + '</span>';
+
+      const pred = String(found.predikat || '').trim().toUpperCase();
+      let predHtml = pred ? esc(pred) : '-';
+      if (pred === 'MEMUASKAN') predHtml = '<span style="background:#dbeafe;color:#1d4ed8;padding:2px 8px;border-radius:6px;font-size:12px;font-weight:700;">' + esc(pred) + '</span>';
+      else if (pred === 'BAIK') predHtml = '<span style="background:#dcfce7;color:#166534;padding:2px 8px;border-radius:6px;font-size:12px;font-weight:700;">' + esc(pred) + '</span>';
+      else if (pred === 'CUKUP') predHtml = '<span style="background:#ffedd5;color:#c2410c;padding:2px 8px;border-radius:6px;font-size:12px;font-weight:700;">' + esc(pred) + '</span>';
+
+      const setTxt = (id, v) => { const el = document.getElementById(id); if (el) el.textContent = v; };
+      const setHtml = (id, v) => { const el = document.getElementById(id); if (el) el.innerHTML = v; };
+      setTxt('vlNama', found.nama || '-');
+      setTxt('vlNisn', found.nisn || '-');
+      setTxt('vlTtl', ttl);
+      setTxt('vlMulai', fmtTglId(found.tgl_mulai_sekolah || found.mulai_sekolah));
+      setTxt('vlStatusAwal', found.status_awal || '-');
+      setTxt('vlAsal', found.asal_sekolah || '-');
+      setTxt('vlLama', found.lama_belajar || '-');
+      setTxt('vlTglLulus', fmtTglId(found.tanggal_lulus || found.tgl_lulus));
+      setHtml('vlStatusLulus', stHtml);
+      setHtml('vlPredikat', predHtml);
+    }
+
+    async function jalankanValidasiLulusan(opts) {
+      opts = opts || {};
+      const autoSelf = !!opts.autoSelf;
+      const isAdmin = currentRole === 'admin';
+      let q = (document.getElementById('vlCari')?.value || '').trim();
       const tahun = (document.getElementById('vlTahun')?.value || '').trim();
       const empty = document.getElementById('vlEmpty');
       const box = document.getElementById('vlResult');
-      if (!q) {
-        empty.style.display = 'block';
-        empty.textContent = 'Masukkan NISN atau Nama terlebih dahulu.';
-        box.style.display = 'none';
+
+      if (autoSelf || (!isAdmin && (currentRole === 'siswa' || currentUserIsAlumni))) {
+        q = String(currentUserKode || currentUserNisn || '').trim();
+        if (!q && currentUserName) q = String(currentUserName).trim();
+        if (!q) {
+          if (empty) {
+            empty.style.display = 'block';
+            empty.style.color = '#b91c1c';
+            empty.textContent = 'Sesi login tidak memiliki NISN. Login ulang sebagai alumni.';
+          }
+          if (box) box.style.display = 'none';
+          return;
+        }
+      } else if (!q) {
+        if (empty) {
+          empty.style.display = 'block';
+          empty.textContent = 'Masukkan NISN atau Nama terlebih dahulu.';
+        }
+        if (box) box.style.display = 'none';
         return;
       }
       empty.style.display = 'block';
@@ -22271,33 +22329,20 @@ document.getElementById('btnBsContohFormat')?.addEventListener('click', () => {
         if (!found) {
           empty.style.display = 'block';
           empty.style.color = '#b91c1c';
-          let msg = 'Data dengan NISN / Nama : "' + q + '"';
-          if (tahun) msg += ' · Tahun Lulus ' + tahun;
-          msg += ' tidak ditemukan.';
+          let msg;
+          if (autoSelf || (!isAdmin && (currentRole === 'siswa' || currentUserIsAlumni))) {
+            msg = 'Data kelulusan untuk NISN/Nama login Anda ("' + q + '") belum tersedia di tabel lulusan. Hubungi admin sekolah.';
+          } else {
+            msg = 'Data dengan NISN / Nama : "' + q + '"';
+            if (tahun) msg += ' · Tahun Lulus ' + tahun;
+            msg += ' tidak ditemukan.';
+          }
           empty.textContent = msg;
           box.style.display = 'none';
           return;
         }
 
-        empty.style.display = 'none';
-        box.style.display = 'block';
-
-        const ttl = [found.tmp_lahir || '', fmtTglId(found.tgl_lahir)].filter(x => x && x !== '-').join(', ') || '-';
-        const stLulus = found.status_kelulusan || found.status_lulus || 'Lulus';
-        let stHtml = esc(stLulus);
-        if (stLulus === 'Lulus') stHtml = '<span style="background:#dcfce7;color:#166534;padding:2px 8px;border-radius:6px;font-size:12px;">' + esc(stLulus) + '</span>';
-        else if (stLulus === 'Ditangguhkan') stHtml = '<span style="background:#fef3c7;color:#a16207;padding:2px 8px;border-radius:6px;font-size:12px;">' + esc(stLulus) + '</span>';
-        else if (stLulus === 'Tidak Lulus') stHtml = '<span style="background:#fee2e2;color:#b91c1c;padding:2px 8px;border-radius:6px;font-size:12px;">' + esc(stLulus) + '</span>';
-
-        document.getElementById('vlNama').textContent = found.nama || '-';
-        document.getElementById('vlNisn').textContent = found.nisn || '-';
-        document.getElementById('vlTtl').textContent = ttl;
-        document.getElementById('vlMulai').textContent = fmtTglId(found.tgl_mulai_sekolah || found.mulai_sekolah);
-        document.getElementById('vlStatusAwal').textContent = found.status_awal || '-';
-        document.getElementById('vlAsal').textContent = found.asal_sekolah || '-';
-        document.getElementById('vlLama').textContent = found.lama_belajar || '-';
-        document.getElementById('vlTglLulus').textContent = fmtTglId(found.tanggal_lulus || found.tgl_lulus);
-        document.getElementById('vlStatusLulus').innerHTML = stHtml;
+        tampilkanHasilValidasiLulusan(found);
       } catch (e) {
         console.error(e);
         empty.style.display = 'block';
