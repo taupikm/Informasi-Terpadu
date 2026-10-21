@@ -15225,7 +15225,28 @@
       const fname = (nameHint || ('soal_' + Date.now())) + '.' + ext;
       const file = new File([bin], fname, { type: mime });
       const result = await uploadSoalImageFile(file, nameHint || 'soal');
-      return result.url || dataUrl;
+      let url = result.url || dataUrl;
+      // Pastikan URL bisa dipakai di <img src> (bukan halaman /view)
+      const id = result.id || (String(url).match(/\/d\/([^/]+)/) || [])[1] ||
+        (String(url).match(/[?&]id=([^&]+)/) || [])[1];
+      if (id && /drive\.google\.com/i.test(String(url))) {
+        url = 'https://drive.google.com/uc?export=view&id=' + id;
+      }
+      return url || dataUrl;
+    }
+
+    function normalizeSoalImgSrc(html) {
+      return String(html || '').replace(
+        /(<img\b[^>]*?\bsrc\s*=\s*["'])([^"']+)(["'])/gi,
+        function (_, a, src, c) {
+          let u = src;
+          const id = (u.match(/\/d\/([^/]+)/) || [])[1] || (u.match(/[?&]id=([^&]+)/) || [])[1];
+          if (id && /drive\.google\.com/i.test(u) && !/uc\?export=view/i.test(u) && !/thumbnail\?/i.test(u)) {
+            u = 'https://drive.google.com/uc?export=view&id=' + id;
+          }
+          return a + u + c;
+        }
+      );
     }
 
     async function replaceDataImagesWithGdrive(html, progressCb) {
@@ -15236,7 +15257,7 @@
       while ((m = re2.exec(html)) !== null) {
         found.push(m[2]);
       }
-      if (!found.length) return html;
+      if (!found.length) return normalizeSoalImgSrc(html);
       const uniq = [...new Set(found)];
       let out = html;
       for (let i = 0; i < uniq.length; i++) {
@@ -15250,7 +15271,7 @@
           console.warn('GDrive gambar soal gagal, tetap base64', e);
         }
       }
-      return out;
+      return normalizeSoalImgSrc(out);
     }
 
     const _tuSoalFullCache = {};
@@ -16040,21 +16061,6 @@ document.getElementById('btnBsContohFormat')?.addEventListener('click', () => {
       document.getElementById('fileBsWord')?.click();
     });
 
-    function setIwStatus(msg, kind) {
-      const el = document.getElementById('iwStatus');
-      if (!el) return;
-      el.textContent = msg || '';
-      if (kind === 'ok') {
-        el.style.cssText = 'font-size:13px;font-weight:600;color:#166534;margin:8px 0;padding:8px 10px;background:#dcfce7;border-radius:8px;border:1px solid #86efac;';
-      } else if (kind === 'err') {
-        el.style.cssText = 'font-size:13px;font-weight:600;color:#b91c1c;margin:8px 0;padding:8px 10px;background:#fee2e2;border-radius:8px;border:1px solid #fca5a5;';
-      } else if (kind === 'warn') {
-        el.style.cssText = 'font-size:13px;font-weight:600;color:#a16207;margin:8px 0;padding:8px 10px;background:#fef3c7;border-radius:8px;border:1px solid #fcd34d;';
-      } else {
-        el.style.cssText = 'font-size:13px;font-weight:600;color:#0369a1;margin:8px 0;padding:8px 10px;background:#e0f2fe;border-radius:8px;border:1px solid #7dd3fc;';
-      }
-    }
-
     document.getElementById('fileBsWord')?.addEventListener('change', async function () {
       const file = this.files && this.files[0];
       this.value = '';
@@ -16068,18 +16074,14 @@ document.getElementById('btnBsContohFormat')?.addEventListener('click', () => {
         return;
       }
 
-      setIwStatus('⏳ Membaca file Word: ' + (file.name || '') + ' ...', 'info');
-      document.getElementById('iwPreview').innerHTML = '<div style="text-align:center;padding:16px;color:#64748b;">Sedang memproses, mohon tunggu...</div>';
+      document.getElementById('iwStatus').textContent = 'Membaca file Word...';
+      document.getElementById('iwPreview').innerHTML = '';
       document.getElementById('btnIwSimpan').disabled = true;
       _importWordSoals = [];
       openModal('modalImportWord');
 
-      showUploadProgress('Import soal Word', 'Membaca file ' + (file.name || '') + '...', 5);
       try {
-        setUploadProgress(12, 'Memuat isi dokumen...');
-        startFakeUploadProgress(12, 38, Math.min(12000, 2500 + Math.round((file.size || 0) / 800)));
         const ab = await file.arrayBuffer();
-        setIwStatus('⏳ Mengonversi dokumen Word ke HTML...', 'info');
         const result = await mammoth.convertToHtml(
           { arrayBuffer: ab },
           {
@@ -16092,49 +16094,31 @@ document.getElementById('btnBsContohFormat')?.addEventListener('click', () => {
             })
           }
         );
-        if (_upProgTimer) { clearInterval(_upProgTimer); _upProgTimer = null; }
         let html = result.value || '';
         // Unggah gambar Word ke GDrive agar tidak base64 di DB
         if (/data:image/i.test(html) && GDRIVE_UPLOAD_ENDPOINT) {
-          setIwStatus('⏳ Mengunggah gambar ke Google Drive...', 'info');
-          setUploadProgress(42, 'Mengunggah gambar ke Google Drive...');
+          document.getElementById('iwStatus').textContent = 'Mengunggah gambar ke Google Drive...';
           try {
             html = await replaceDataImagesWithGdrive(html, (i, n) => {
-              const pct = 42 + Math.round((i / Math.max(n, 1)) * 40);
-              const msg = 'Unggah gambar ' + i + '/' + n + '...';
-              setIwStatus('⏳ ' + msg, 'info');
-              setUploadProgress(Math.min(82, pct), msg);
+              document.getElementById('iwStatus').textContent = 'Unggah gambar GDrive ' + i + '/' + n + '...';
             });
           } catch (eImg) {
             console.warn('Import Word GDrive gambar', eImg);
-            setIwStatus('⚠ Gambar gagal diunggah ke Drive (tetap pakai data lokal). Lanjut parsing...', 'warn');
           }
         }
-        setUploadProgress(88, 'Memparsing soal dari dokumen...');
-        setIwStatus('⏳ Memparsing soal dari dokumen...', 'info');
         const messages = (result.messages || []).map(m => m.message).join('; ');
         _importWordSoals = parseSoalFromWordHtml(html);
-        if (!_importWordSoals.length) {
-          // fallback: pecah berdasarkan baris "Kunci:"
-          _importWordSoals = parseSoalFromWordHtmlByKunci(html);
-        }
 
         const prev = document.getElementById('iwPreview');
         if (!_importWordSoals.length) {
-          setIwStatus(
-            '⚠ Selesai memproses — tidak ada soal terdeteksi. Gunakan nomor 1. 2. / No.1 dan opsi A. B. C. D. atau tulis baris Kunci: A di tiap soal.',
-            'warn'
-          );
-          prev.innerHTML = '<div style="font-size:12px;color:#94a3b8;padding:8px;">Preview HTML mentah (tidak bisa disimpan sebelum soal terdeteksi):</div>' +
+          document.getElementById('iwStatus').textContent =
+            'Tidak ada soal terdeteksi. Pastikan nomor soal: 1. 2. atau No.1';
+          prev.innerHTML = '<div style="font-size:12px;color:#94a3b8;padding:8px;">Preview HTML mentah:</div>' +
             '<div style="font-size:12px;max-height:200px;overflow:auto;">' + html + '</div>';
-          document.getElementById('btnIwSimpan').disabled = true;
-          setUploadProgress(100, 'Selesai — 0 soal');
         } else {
-          setIwStatus(
-            '✓ Selesai: ditemukan ' + _importWordSoals.length + ' soal. Periksa preview, lalu klik Simpan ke Bank Soal.' +
-            (messages ? ' Catatan: ' + messages : ''),
-            'ok'
-          );
+          document.getElementById('iwStatus').textContent =
+            'Ditemukan ' + _importWordSoals.length + ' soal.' +
+            (messages ? ' Catatan: ' + messages : '');
           prev.innerHTML = _importWordSoals.map((s, i) =>
             '<div style="background:#fff;border:1px solid #e2e8f0;border-radius:8px;padding:10px;margin-bottom:8px;">' +
             '<div style="font-size:11px;color:#64748b;margin-bottom:4px;"><b>No. ' + s.nomor +
@@ -16148,14 +16132,10 @@ document.getElementById('btnBsContohFormat')?.addEventListener('click', () => {
             '</div>'
           ).join('');
           document.getElementById('btnIwSimpan').disabled = false;
-          setUploadProgress(100, 'Siap: ' + _importWordSoals.length + ' soal');
         }
-        await new Promise(r => setTimeout(r, 300));
       } catch (e) {
-        setIwStatus('❌ Gagal memproses: ' + (e.message || e), 'err');
+        document.getElementById('iwStatus').textContent = 'Gagal: ' + (e.message || e);
         console.error(e);
-      } finally {
-        hideUploadProgress();
       }
     });
 
@@ -16184,8 +16164,9 @@ document.getElementById('btnBsContohFormat')?.addEventListener('click', () => {
 
       const tables = [];
       h = h.replace(/<table[\s\S]*?<\/table>/gi, (m) => {
+        const idx = tables.length;
         tables.push(m);
-        return '<p> </p>';
+        return '<!--IWTABLE_' + idx + '-->';
       });
 
       const rawBlocks = h.split(/(?=<p[\s>])|(?=<h[1-6][\s>])|(?=<li[\s>])/i).filter(b => b.trim());
@@ -16194,7 +16175,7 @@ document.getElementById('btnBsContohFormat')?.addEventListener('click', () => {
         return b.replace(/<[^>]+>/g, ' ').replace(/&nbsp;/g, ' ').replace(/\s+/g, ' ').trim();
       }
       function restoreTables(s) {
-        return s.replace(/ /g, (_, i) => tables[Number(i)] || '');
+        return String(s || '').replace(/<!--IWTABLE_(\d+)-->/g, (_, i) => tables[Number(i)] || '');
       }
       function stripKunci(s) {
         return s
@@ -16288,7 +16269,7 @@ document.getElementById('btnBsContohFormat')?.addEventListener('click', () => {
         if (qm) {
           const after = qm[2] || '';
           const afterLen = after.replace(/\s+/g, ' ').trim().length;
-          const hasMedia = /<!--TABLE_|<img/i.test(block);
+          const hasMedia = /<!--IWTABLE_|<!--TABLE_|<img/i.test(block);
           const looksLikeQuestion = afterLen >= 25 || hasMedia ||
             /berikut|adalah|perhatikan|hasil|jika|dari|tentukan|jelaskan|hitung|yang|pada/i.test(after);
 
@@ -16334,134 +16315,18 @@ document.getElementById('btnBsContohFormat')?.addEventListener('click', () => {
       return soals;
     }
 
-    /** Fallback: pecah soal berdasarkan baris "Kunci:" (untuk Word tanpa nomor 1. 2.) */
-    function parseSoalFromWordHtmlByKunci(html) {
-      const jenisDefault = document.getElementById('iwJenisDefault')?.value || 'Pilihan Ganda';
-      const skorDefault = Number(document.getElementById('iwSkorDefault')?.value) || 1;
-      let h = String(html || '');
-      const tables = [];
-      h = h.replace(/<table[\s\S]*?<\/table>/gi, (m) => {
-        tables.push(m);
-        return '<p> </p>';
-      });
-      const rawBlocks = h.split(/(?=<p[\s>])|(?=<h[1-6][\s>])|(?=<li[\s>])/i).filter(b => b.trim());
-      function blockText(b) {
-        return b.replace(/<[^>]+>/g, ' ').replace(/&nbsp;/g, ' ').replace(/\s+/g, ' ').trim();
-      }
-      function restoreTables(s) {
-        return String(s || '').replace(/ /g, (_, i) => tables[Number(i)] || '');
-      }
-
-      const chunks = [];
-      let buf = [];
-      for (const block of rawBlocks) {
-        const t = blockText(block);
-        if (/^Kunci\s*[:.]/i.test(t)) {
-          const kunci = t.replace(/^Kunci\s*[:.]?\s*/i, '').trim();
-          chunks.push({ blocks: buf.slice(), kunci: kunci });
-          buf = [];
-        } else {
-          buf.push(block);
-        }
-      }
-
-      const soals = [];
-      let nomor = 1;
-      const letters = 'abcde';
-      for (const ch of chunks) {
-        if (!ch.blocks.length) continue;
-        const opsi = { a: null, b: null, c: null, d: null, e: null };
-        let opsiIdx = 0;
-        let seenOpsi = false;
-        const pertanyaanParts = [];
-
-        for (const block of ch.blocks) {
-          const t = blockText(block);
-          if (!t && !/<img|<table|<svg/i.test(block)) continue;
-          const optm = t.match(/^([A-Ea-e])[\.\)]\s+(.+)$/);
-          if (optm && letters.includes(optm[1].toLowerCase())) {
-            seenOpsi = true;
-            const L = optm[1].toLowerCase();
-            opsi[L] = block;
-            opsiIdx = Math.max(opsiIdx, letters.indexOf(L) + 1);
-            continue;
-          }
-          const plainLen = t.length;
-          const looksShortOpt = plainLen > 0 && plainLen <= 80 &&
-            !/[?？]$/.test(t) &&
-            !/berikut|adalah|perhatikan|jelaskan|hitung|tentukan|jika|sebuah|seorang|berapakah|manakah/i.test(t) &&
-            !/<img/i.test(block);
-          if ((seenOpsi || (pertanyaanParts.length && looksShortOpt)) && looksShortOpt && opsiIdx < 5) {
-            seenOpsi = true;
-            opsi[letters[opsiIdx]] = block;
-            opsiIdx++;
-            continue;
-          }
-          if (!seenOpsi) pertanyaanParts.push(block);
-        }
-
-        let pertanyaan = pertanyaanParts.join('');
-        if (!pertanyaan || blockText(pertanyaan).length < 3) {
-          pertanyaan = ch.blocks.filter(b => !blockText(b).match(/^[A-Ea-e][\.\)]\s+/)).join('');
-        }
-        pertanyaan = restoreTables(pertanyaan);
-        if (blockText(pertanyaan).length < 3 && !/<img|<table/i.test(pertanyaan)) continue;
-
-        let kunci = ch.kunci || '';
-        const kunciLetters = kunci.toUpperCase().match(/\b[A-E]\b/g) || [];
-        if (kunciLetters.length === 1) kunci = kunciLetters[0];
-
-        const hasOpts = !!(opsi.a && opsi.b);
-        let jenis = jenisDefault;
-        if (hasOpts && /benar/i.test(blockText(opsi.a || '')) && /salah/i.test(blockText(opsi.b || ''))) {
-          jenis = 'Benar Salah';
-        } else if (hasOpts) {
-          jenis = 'Pilihan Ganda';
-        } else {
-          jenis = 'Esai';
-        }
-
-        soals.push({
-          nomor: nomor++,
-          jenis: jenis,
-          pertanyaan: pertanyaan,
-          opsi_a: opsi.a ? restoreTables(opsi.a) : null,
-          opsi_b: opsi.b ? restoreTables(opsi.b) : null,
-          opsi_c: opsi.c ? restoreTables(opsi.c) : null,
-          opsi_d: opsi.d ? restoreTables(opsi.d) : null,
-          opsi_e: opsi.e ? restoreTables(opsi.e) : null,
-          kunci: kunci || null,
-          skor: skorDefault
-        });
-      }
-      return soals;
-    }
-
     document.getElementById('btnIwSimpan')?.addEventListener('click', async () => {
       const bankId = getCurrentBankId();
       if (!bankId) { alert('Bank soal tidak valid'); return; }
-      if (!_importWordSoals.length) {
-        setIwStatus('⚠ Tidak ada soal untuk disimpan. Perbaiki format Word lalu import ulang.', 'warn');
-        alert('Tidak ada soal terdeteksi. Perbaiki format (nomor 1. 2. atau baris Kunci:) lalu pilih file lagi.');
-        return;
-      }
+      if (!_importWordSoals.length) { alert('Tidak ada soal'); return; }
 
       const btn = document.getElementById('btnIwSimpan');
       btn.disabled = true;
       btn.textContent = 'Menyimpan...';
       let ok = 0, fail = 0;
-      const total = _importWordSoals.length;
-      setIwStatus('⏳ Menyimpan 0/' + total + ' soal ke bank...', 'info');
-      showUploadProgress('Menyimpan soal', 'Menyimpan 0 dari ' + total + ' soal...', 3);
 
       try {
-        for (let i = 0; i < _importWordSoals.length; i++) {
-          const s = _importWordSoals[i];
-          const pct = Math.round((i / total) * 95);
-          const msg = 'Menyimpan soal ' + (i + 1) + ' dari ' + total +
-            (s.nomor != null ? ' (No. ' + s.nomor + ')' : '') + '...';
-          setUploadProgress(pct, msg);
-          setIwStatus('⏳ ' + msg, 'info');
+        for (const s of _importWordSoals) {
           const payload = {
             bank_id: bankId,
             nomor: s.nomor,
@@ -16489,20 +16354,11 @@ document.getElementById('btnBsContohFormat')?.addEventListener('click', () => {
             console.warn(e);
             fail++;
           }
-          await new Promise(r => setTimeout(r, 0));
         }
-        const doneMsg = 'Import selesai: ' + ok + ' soal tersimpan' + (fail ? ', ' + fail + ' gagal' : '');
-        setUploadProgress(100, doneMsg);
-        setIwStatus('✓ ' + doneMsg, fail ? 'warn' : 'ok');
-        await new Promise(r => setTimeout(r, 400));
         closeModal('modalImportWord');
         await loadBsItemTable();
-        alert(doneMsg);
-      } catch (e) {
-        setIwStatus('❌ Gagal menyimpan: ' + (e.message || e), 'err');
-        alert('Gagal menyimpan: ' + (e.message || e));
+        alert('Import selesai: ' + ok + ' soal tersimpan' + (fail ? ', ' + fail + ' gagal' : ''));
       } finally {
-        hideUploadProgress();
         btn.disabled = false;
         btn.textContent = 'Simpan ke Bank Soal';
       }
