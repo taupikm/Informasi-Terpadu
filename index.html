@@ -15399,7 +15399,7 @@
         html += '<div class="form-group" style="margin-top:10px;"><textarea id="tuEsai" rows="4" placeholder="Tulis pasangan, contoh: 1-b, 2-d, 3-a" style="width:100%;padding:10px;border:1px solid #e2e8f0;border-radius:8px;">' +
           esc(ans || '') + '</textarea></div>';
       } else if (jenis === 'Unggah File') {
-        const ext = String(s.opsi_a || 'pdf,doc,docx,jpg,png,zip');
+        const ext = String(s.opsi_a || 'pdf,doc,docx,jpg,jpeg,png,zip');
         const maxMb = Number(s.opsi_b) || 10;
         const accept = ext.split(/[,;\s]+/).map(x => x.trim()).filter(Boolean).map(x => '.' + x.replace(/^\./, '')).join(',');
         let infoAns = '';
@@ -15501,7 +15501,7 @@
           const st = document.getElementById('tuFileStatus');
           if (!f) return;
           const maxMb = Number(s.opsi_b) || 10;
-          const allowed = String(s.opsi_a || 'pdf,doc,docx,jpg,png,zip').split(/[,;\s]+/).map(x => x.trim().toLowerCase().replace(/^\./, '')).filter(Boolean);
+          const allowed = String(s.opsi_a || 'pdf,doc,docx,jpg,jpeg,png,zip').split(/[,;\s]+/).map(x => x.trim().toLowerCase().replace(/^\./, '')).filter(Boolean);
           const ext = (f.name.split('.').pop() || '').toLowerCase();
           if (allowed.length && !allowed.includes(ext)) {
             if (st) st.innerHTML = '<span style="color:#b91c1c;">Ekstensi .' + esc(ext) + ' tidak diizinkan</span>';
@@ -17412,7 +17412,7 @@ document.getElementById('btnBsContohFormat')?.addEventListener('click', () => {
       } else if (j === 'Unggah File') {
         box.innerHTML =
           '<div class="form-group"><label>Ekstensi diizinkan</label>' +
-          '<input type="text" id="bsUfExt" value="' + esc(data.opsi_a || 'pdf,doc,docx,jpg,png,zip') + '" placeholder="pdf,doc,docx,jpg,png,zip"></div>' +
+          '<input type="text" id="bsUfExt" value="' + esc(data.opsi_a || 'pdf,doc,docx,jpg,jpeg,png,zip') + '" placeholder="pdf,doc,docx,jpg,jpeg,png,zip"></div>' +
           '<div class="form-group"><label>Ukuran maks (MB)</label>' +
           '<input type="number" id="bsUfMaxMb" min="1" max="50" value="' + esc(String(data.opsi_b || '10')) + '"></div>' +
           '<div class="form-group"><label>ID Folder Google Drive (opsional)</label>' +
@@ -17987,7 +17987,7 @@ document.getElementById('btnBsContohFormat')?.addEventListener('click', () => {
       let opsiC = document.getElementById('bsEdC') ? getMiniHtml('bsEdC') : null;
       let opsiD = document.getElementById('bsEdD') ? getMiniHtml('bsEdD') : null;
       if (jenis === 'Unggah File') {
-        opsiA = (document.getElementById('bsUfExt')?.value || 'pdf,doc,docx,jpg,png,zip').trim();
+        opsiA = (document.getElementById('bsUfExt')?.value || 'pdf,doc,docx,jpg,jpeg,png,zip').trim();
         opsiB = String(document.getElementById('bsUfMaxMb')?.value || '10').trim();
         opsiC = (document.getElementById('bsUfFolderId')?.value || '').trim() || null;
         opsiD = null;
