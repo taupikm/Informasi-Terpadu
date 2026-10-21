@@ -2698,12 +2698,8 @@
     </div><!-- /.dash-top-row -->
 
     <div id="dashSesiInfo" style="background:#e0f7fa;border:1px solid #67e8f9;border-radius:12px;padding:12px 14px;text-align:center;margin-bottom:12px;">
-      <div style="display:flex;align-items:center;justify-content:center;gap:10px;flex-wrap:wrap;">
-        <div style="font-size:12px;font-weight:600;color:#0e7490;">Informasi Sesi</div>
-        <button type="button" class="btn btn-outline" id="btnDashRefresh" title="Muat ulang data dashboard" style="padding:4px 10px;font-size:11px;border-color:#67e8f9;color:#0e7490;background:#fff;">↻ Refresh</button>
-      </div>
+      <div style="font-size:12px;font-weight:600;color:#0e7490;">Informasi Sesi</div>
       <div id="dashSesiDetail" style="font-size:13px;font-weight:700;color:#155e75;margin-top:4px;">Memuat...</div>
-      <div style="font-size:10px;color:#64748b;margin-top:4px;">Data tidak real-time — tekan Refresh untuk memperbarui</div>
     </div>
     <div id="dashRekapWrap">
       <div class="section-title">Rekap Kehadiran Guru</div>
@@ -2962,7 +2958,7 @@
     </section>
     <section class="page" id="page-validasi-lulusan">
       <div class="page-title">Validasi Data Lulusan</div>
-      <div class="card" id="vlSearchCard" style="padding:14px;margin-bottom:14px;">
+      <div class="card" style="padding:14px;margin-bottom:14px;">
         <div class="rekap-filter-row" style="align-items:flex-start;">
           <label style="padding-top:10px;">NISN / Nama</label>
           <div style="flex:1;min-width:0;position:relative;">
@@ -2990,7 +2986,6 @@
           <div style="display:flex;gap:8px;"><span style="min-width:150px;color:#64748b;">Lama Belajar</span><span>: <b id="vlLama">-</b></span></div>
           <div style="display:flex;gap:8px;"><span style="min-width:150px;color:#64748b;">Tanggal Lulus</span><span>: <b id="vlTglLulus">-</b></span></div>
           <div style="display:flex;gap:8px;align-items:center;"><span style="min-width:150px;color:#64748b;">Status Kelulusan</span><span>: <b id="vlStatusLulus">-</b></span></div>
-          <div style="display:flex;gap:8px;align-items:center;"><span style="min-width:150px;color:#64748b;">Predikat Kelulusan</span><span>: <b id="vlPredikat">-</b></span></div>
         </div>
       </div>
     </section>
@@ -7160,15 +7155,8 @@
       lulusan: {
         title: 'Import Data Lulusan',
         filename: 'contoh_lulusan.xlsx',
-        headers: [
-          'nisn','nama','lp','tmp_lahir','tgl_lahir','tgl_mulai_sekolah','tanggal_lulus','tahun_lulus',
-          'lama_belajar','status_awal','asal_sekolah','status_kelulusan','predikat'
-        ],
-        sample: [
-          '0012345678','Ahmad Rizki','L','Bandung','2008-03-12','2021-07-15','2024-06-20','2024',
-          '3 Tahun','Siswa Baru','SDN 1 Bandung','Lulus','BAIK'
-        ],
-        desc: 'Kolom sesuai tabel lulusan. Wajib: nama. Tanggal YYYY-MM-DD. status_awal: Siswa Baru / Pindahan. status_kelulusan: Lulus / Ditangguhkan / Tidak Lulus. predikat: MEMUASKAN / BAIK / CUKUP (opsional).'
+        headers: ['nisn','nama','lp','tmp_lahir','tgl_lahir','tgl_mulai_sekolah','tanggal_lulus','tahun_lulus','lama_belajar','status_awal','asal_sekolah'],
+        sample: ['0012345678','Ahmad Rizki','L','Bandung','2008-03-12','2021-07-15','2024-06-20','2024','3 Tahun','Baru','SDN 1 Bandung']
       }
     };
 
@@ -8201,15 +8189,6 @@
         const nama = emptyToNull(c[1]);
         if (!nama) continue;
         const tahun = emptyToNull(c[7]);
-        let stAwal = emptyToNull(c[9]);
-        if (stAwal && typeof normStatusAwal === 'function') stAwal = normStatusAwal(stAwal) || stAwal;
-        let stKel = emptyToNull(c[11]) || 'Lulus';
-        const stKelU = String(stKel).trim().toLowerCase();
-        if (stKelU === 'lulus') stKel = 'Lulus';
-        else if (stKelU.indexOf('tangguh') >= 0) stKel = 'Ditangguhkan';
-        else if (stKelU.indexOf('tidak') >= 0) stKel = 'Tidak Lulus';
-        let pred = emptyToNull(c[12]);
-        if (pred) pred = String(pred).trim().toUpperCase();
         rows.push({
           nisn: emptyToNull(c[0]),
           nama: nama,
@@ -8220,10 +8199,8 @@
           tanggal_lulus: emptyToNull(c[6]),
           tahun_lulus: tahun ? parseInt(tahun) : null,
           lama_belajar: emptyToNull(c[8]),
-          status_awal: stAwal,
-          asal_sekolah: emptyToNull(c[10]),
-          status_kelulusan: stKel,
-          predikat: pred
+          status_awal: emptyToNull(c[9]),
+          asal_sekolah: emptyToNull(c[10])
         });
       }
       if (!rows.length) { alert('Tidak ada baris valid (nama wajib)'); return; }
@@ -11688,9 +11665,7 @@
     });
 
 
-    async function loadDashboard(opts) {
-      opts = opts || {};
-      const doMaterialize = !!opts.materialize;
+    async function loadDashboard() {
       try { await updateDashProfile(); } catch (e) { console.warn(e); }
 
       const tbG = document.getElementById('tbodyDashGuru');
@@ -11702,10 +11677,10 @@
         await loadLiburMap();
         const today = todayLocal();
         const liburHariIni = isTanggalLibur(today);
-        if (doMaterialize && !liburHariIni) {
-          try {
-            await materializeAbsensiForDate(today, true);
-          } catch (e) { console.warn('materialize', e); }
+        if (!liburHariIni) {
+          Promise.resolve()
+            .then(() => materializeAbsensiForDate(today))
+            .catch(e => console.warn('materialize', e));
         }
         const sesiList = (typeof dataSesi !== 'undefined' && dataSesi ? dataSesi : [])
           .filter(s => s.aktif !== false)
@@ -11987,16 +11962,6 @@
       // Panel publik (guest): identitas sekolah + struktur org + mirror statistik
       try { await refreshPublicDashboard(); } catch (e2) { console.warn(e2); }
     }
-
-    document.getElementById('btnDashRefresh')?.addEventListener('click', async () => {
-      const btn = document.getElementById('btnDashRefresh');
-      if (btn) { btn.disabled = true; btn.textContent = '↻ Memuat...'; }
-      try {
-        await loadDashboard({ materialize: true });
-      } finally {
-        if (btn) { btn.disabled = false; btn.textContent = '↻ Refresh'; }
-      }
-    });
 
     let dataSesi = [];
     let sesiAktif = null;
@@ -15504,17 +15469,13 @@
             return;
           }
           if (st) st.textContent = 'Mengunggah ' + f.name + '...';
-          showUploadProgress('Mengunggah jawaban', 'Menyiapkan file ' + (f.name || '') + '...', 8);
           try {
             const prevAns = _tuAnswers[s.id];
             const oldId = extractGdriveFileId(prevAns);
             if (oldId) {
               if (st) st.textContent = 'Mengganti file (menghapus unggahan lama)...';
-              setUploadProgress(15, 'Menghapus unggahan lama...');
               await deleteGdriveFile(oldId);
             }
-            setUploadProgress(25, 'Mengunggah ke Google Drive / penyimpanan...');
-            startFakeUploadProgress(25, 88, Math.min(18000, 4000 + Math.round((f.size || 0) / 500)));
             const result = await uploadJawabanFile(f, {
               folderId: s.opsi_c || GDRIVE_DEFAULT_FOLDER_ID || '',
               bankId: _tuBankId,
@@ -15523,9 +15484,6 @@
               nisn: currentUserKode,
               replaceFileId: oldId || null
             });
-            if (_upProgTimer) { clearInterval(_upProgTimer); _upProgTimer = null; }
-            setUploadProgress(100, 'Selesai');
-            await new Promise(r => setTimeout(r, 250));
             _tuAnswers[s.id] = result;
             if (st) st.innerHTML = '<span style="color:#166534;">✓ ' +
               (oldId ? 'File diganti: ' : 'Terunggah: ') + esc(result.name) +
@@ -15536,8 +15494,6 @@
           } catch (err) {
             console.error(err);
             if (st) st.innerHTML = '<span style="color:#b91c1c;">Gagal unggah: ' + esc(String(err.message || err)) + '</span>';
-          } finally {
-            hideUploadProgress();
           }
         });
       }
@@ -16084,6 +16040,21 @@ document.getElementById('btnBsContohFormat')?.addEventListener('click', () => {
       document.getElementById('fileBsWord')?.click();
     });
 
+    function setIwStatus(msg, kind) {
+      const el = document.getElementById('iwStatus');
+      if (!el) return;
+      el.textContent = msg || '';
+      if (kind === 'ok') {
+        el.style.cssText = 'font-size:13px;font-weight:600;color:#166534;margin:8px 0;padding:8px 10px;background:#dcfce7;border-radius:8px;border:1px solid #86efac;';
+      } else if (kind === 'err') {
+        el.style.cssText = 'font-size:13px;font-weight:600;color:#b91c1c;margin:8px 0;padding:8px 10px;background:#fee2e2;border-radius:8px;border:1px solid #fca5a5;';
+      } else if (kind === 'warn') {
+        el.style.cssText = 'font-size:13px;font-weight:600;color:#a16207;margin:8px 0;padding:8px 10px;background:#fef3c7;border-radius:8px;border:1px solid #fcd34d;';
+      } else {
+        el.style.cssText = 'font-size:13px;font-weight:600;color:#0369a1;margin:8px 0;padding:8px 10px;background:#e0f2fe;border-radius:8px;border:1px solid #7dd3fc;';
+      }
+    }
+
     document.getElementById('fileBsWord')?.addEventListener('change', async function () {
       const file = this.files && this.files[0];
       this.value = '';
@@ -16097,8 +16068,8 @@ document.getElementById('btnBsContohFormat')?.addEventListener('click', () => {
         return;
       }
 
-      document.getElementById('iwStatus').textContent = 'Membaca file Word...';
-      document.getElementById('iwPreview').innerHTML = '';
+      setIwStatus('⏳ Membaca file Word: ' + (file.name || '') + ' ...', 'info');
+      document.getElementById('iwPreview').innerHTML = '<div style="text-align:center;padding:16px;color:#64748b;">Sedang memproses, mohon tunggu...</div>';
       document.getElementById('btnIwSimpan').disabled = true;
       _importWordSoals = [];
       openModal('modalImportWord');
@@ -16106,8 +16077,9 @@ document.getElementById('btnBsContohFormat')?.addEventListener('click', () => {
       showUploadProgress('Import soal Word', 'Membaca file ' + (file.name || '') + '...', 5);
       try {
         setUploadProgress(12, 'Memuat isi dokumen...');
-        startFakeUploadProgress(12, 40, Math.min(12000, 2500 + Math.round((file.size || 0) / 800)));
+        startFakeUploadProgress(12, 38, Math.min(12000, 2500 + Math.round((file.size || 0) / 800)));
         const ab = await file.arrayBuffer();
+        setIwStatus('⏳ Mengonversi dokumen Word ke HTML...', 'info');
         const result = await mammoth.convertToHtml(
           { arrayBuffer: ab },
           {
@@ -16124,35 +16096,45 @@ document.getElementById('btnBsContohFormat')?.addEventListener('click', () => {
         let html = result.value || '';
         // Unggah gambar Word ke GDrive agar tidak base64 di DB
         if (/data:image/i.test(html) && GDRIVE_UPLOAD_ENDPOINT) {
-          document.getElementById('iwStatus').textContent = 'Mengunggah gambar ke Google Drive...';
-          setUploadProgress(45, 'Mengunggah gambar ke Google Drive...');
+          setIwStatus('⏳ Mengunggah gambar ke Google Drive...', 'info');
+          setUploadProgress(42, 'Mengunggah gambar ke Google Drive...');
           try {
             html = await replaceDataImagesWithGdrive(html, (i, n) => {
-              const pct = 45 + Math.round((i / Math.max(n, 1)) * 40);
-              const msg = 'Unggah gambar GDrive ' + i + '/' + n + '...';
-              document.getElementById('iwStatus').textContent = msg;
-              setUploadProgress(Math.min(85, pct), msg);
+              const pct = 42 + Math.round((i / Math.max(n, 1)) * 40);
+              const msg = 'Unggah gambar ' + i + '/' + n + '...';
+              setIwStatus('⏳ ' + msg, 'info');
+              setUploadProgress(Math.min(82, pct), msg);
             });
           } catch (eImg) {
             console.warn('Import Word GDrive gambar', eImg);
+            setIwStatus('⚠ Gambar gagal diunggah ke Drive (tetap pakai data lokal). Lanjut parsing...', 'warn');
           }
         }
         setUploadProgress(88, 'Memparsing soal dari dokumen...');
-        document.getElementById('iwStatus').textContent = 'Memparsing soal...';
+        setIwStatus('⏳ Memparsing soal dari dokumen...', 'info');
         const messages = (result.messages || []).map(m => m.message).join('; ');
         _importWordSoals = parseSoalFromWordHtml(html);
+        if (!_importWordSoals.length) {
+          // fallback: pecah berdasarkan baris "Kunci:"
+          _importWordSoals = parseSoalFromWordHtmlByKunci(html);
+        }
 
         const prev = document.getElementById('iwPreview');
         if (!_importWordSoals.length) {
-          document.getElementById('iwStatus').textContent =
-            'Tidak ada soal terdeteksi. Pastikan nomor soal: 1. 2. atau No.1';
-          prev.innerHTML = '<div style="font-size:12px;color:#94a3b8;padding:8px;">Preview HTML mentah:</div>' +
+          setIwStatus(
+            '⚠ Selesai memproses — tidak ada soal terdeteksi. Gunakan nomor 1. 2. / No.1 dan opsi A. B. C. D. atau tulis baris Kunci: A di tiap soal.',
+            'warn'
+          );
+          prev.innerHTML = '<div style="font-size:12px;color:#94a3b8;padding:8px;">Preview HTML mentah (tidak bisa disimpan sebelum soal terdeteksi):</div>' +
             '<div style="font-size:12px;max-height:200px;overflow:auto;">' + html + '</div>';
-          setUploadProgress(100, 'Selesai (tidak ada soal)');
+          document.getElementById('btnIwSimpan').disabled = true;
+          setUploadProgress(100, 'Selesai — 0 soal');
         } else {
-          document.getElementById('iwStatus').textContent =
-            'Ditemukan ' + _importWordSoals.length + ' soal.' +
-            (messages ? ' Catatan: ' + messages : '');
+          setIwStatus(
+            '✓ Selesai: ditemukan ' + _importWordSoals.length + ' soal. Periksa preview, lalu klik Simpan ke Bank Soal.' +
+            (messages ? ' Catatan: ' + messages : ''),
+            'ok'
+          );
           prev.innerHTML = _importWordSoals.map((s, i) =>
             '<div style="background:#fff;border:1px solid #e2e8f0;border-radius:8px;padding:10px;margin-bottom:8px;">' +
             '<div style="font-size:11px;color:#64748b;margin-bottom:4px;"><b>No. ' + s.nomor +
@@ -16168,9 +16150,9 @@ document.getElementById('btnBsContohFormat')?.addEventListener('click', () => {
           document.getElementById('btnIwSimpan').disabled = false;
           setUploadProgress(100, 'Siap: ' + _importWordSoals.length + ' soal');
         }
-        await new Promise(r => setTimeout(r, 280));
+        await new Promise(r => setTimeout(r, 300));
       } catch (e) {
-        document.getElementById('iwStatus').textContent = 'Gagal: ' + (e.message || e);
+        setIwStatus('❌ Gagal memproses: ' + (e.message || e), 'err');
         console.error(e);
       } finally {
         hideUploadProgress();
@@ -16352,27 +16334,134 @@ document.getElementById('btnBsContohFormat')?.addEventListener('click', () => {
       return soals;
     }
 
+    /** Fallback: pecah soal berdasarkan baris "Kunci:" (untuk Word tanpa nomor 1. 2.) */
+    function parseSoalFromWordHtmlByKunci(html) {
+      const jenisDefault = document.getElementById('iwJenisDefault')?.value || 'Pilihan Ganda';
+      const skorDefault = Number(document.getElementById('iwSkorDefault')?.value) || 1;
+      let h = String(html || '');
+      const tables = [];
+      h = h.replace(/<table[\s\S]*?<\/table>/gi, (m) => {
+        tables.push(m);
+        return '<p> </p>';
+      });
+      const rawBlocks = h.split(/(?=<p[\s>])|(?=<h[1-6][\s>])|(?=<li[\s>])/i).filter(b => b.trim());
+      function blockText(b) {
+        return b.replace(/<[^>]+>/g, ' ').replace(/&nbsp;/g, ' ').replace(/\s+/g, ' ').trim();
+      }
+      function restoreTables(s) {
+        return String(s || '').replace(/ /g, (_, i) => tables[Number(i)] || '');
+      }
+
+      const chunks = [];
+      let buf = [];
+      for (const block of rawBlocks) {
+        const t = blockText(block);
+        if (/^Kunci\s*[:.]/i.test(t)) {
+          const kunci = t.replace(/^Kunci\s*[:.]?\s*/i, '').trim();
+          chunks.push({ blocks: buf.slice(), kunci: kunci });
+          buf = [];
+        } else {
+          buf.push(block);
+        }
+      }
+
+      const soals = [];
+      let nomor = 1;
+      const letters = 'abcde';
+      for (const ch of chunks) {
+        if (!ch.blocks.length) continue;
+        const opsi = { a: null, b: null, c: null, d: null, e: null };
+        let opsiIdx = 0;
+        let seenOpsi = false;
+        const pertanyaanParts = [];
+
+        for (const block of ch.blocks) {
+          const t = blockText(block);
+          if (!t && !/<img|<table|<svg/i.test(block)) continue;
+          const optm = t.match(/^([A-Ea-e])[\.\)]\s+(.+)$/);
+          if (optm && letters.includes(optm[1].toLowerCase())) {
+            seenOpsi = true;
+            const L = optm[1].toLowerCase();
+            opsi[L] = block;
+            opsiIdx = Math.max(opsiIdx, letters.indexOf(L) + 1);
+            continue;
+          }
+          const plainLen = t.length;
+          const looksShortOpt = plainLen > 0 && plainLen <= 80 &&
+            !/[?？]$/.test(t) &&
+            !/berikut|adalah|perhatikan|jelaskan|hitung|tentukan|jika|sebuah|seorang|berapakah|manakah/i.test(t) &&
+            !/<img/i.test(block);
+          if ((seenOpsi || (pertanyaanParts.length && looksShortOpt)) && looksShortOpt && opsiIdx < 5) {
+            seenOpsi = true;
+            opsi[letters[opsiIdx]] = block;
+            opsiIdx++;
+            continue;
+          }
+          if (!seenOpsi) pertanyaanParts.push(block);
+        }
+
+        let pertanyaan = pertanyaanParts.join('');
+        if (!pertanyaan || blockText(pertanyaan).length < 3) {
+          pertanyaan = ch.blocks.filter(b => !blockText(b).match(/^[A-Ea-e][\.\)]\s+/)).join('');
+        }
+        pertanyaan = restoreTables(pertanyaan);
+        if (blockText(pertanyaan).length < 3 && !/<img|<table/i.test(pertanyaan)) continue;
+
+        let kunci = ch.kunci || '';
+        const kunciLetters = kunci.toUpperCase().match(/\b[A-E]\b/g) || [];
+        if (kunciLetters.length === 1) kunci = kunciLetters[0];
+
+        const hasOpts = !!(opsi.a && opsi.b);
+        let jenis = jenisDefault;
+        if (hasOpts && /benar/i.test(blockText(opsi.a || '')) && /salah/i.test(blockText(opsi.b || ''))) {
+          jenis = 'Benar Salah';
+        } else if (hasOpts) {
+          jenis = 'Pilihan Ganda';
+        } else {
+          jenis = 'Esai';
+        }
+
+        soals.push({
+          nomor: nomor++,
+          jenis: jenis,
+          pertanyaan: pertanyaan,
+          opsi_a: opsi.a ? restoreTables(opsi.a) : null,
+          opsi_b: opsi.b ? restoreTables(opsi.b) : null,
+          opsi_c: opsi.c ? restoreTables(opsi.c) : null,
+          opsi_d: opsi.d ? restoreTables(opsi.d) : null,
+          opsi_e: opsi.e ? restoreTables(opsi.e) : null,
+          kunci: kunci || null,
+          skor: skorDefault
+        });
+      }
+      return soals;
+    }
+
     document.getElementById('btnIwSimpan')?.addEventListener('click', async () => {
       const bankId = getCurrentBankId();
       if (!bankId) { alert('Bank soal tidak valid'); return; }
-      if (!_importWordSoals.length) { alert('Tidak ada soal'); return; }
+      if (!_importWordSoals.length) {
+        setIwStatus('⚠ Tidak ada soal untuk disimpan. Perbaiki format Word lalu import ulang.', 'warn');
+        alert('Tidak ada soal terdeteksi. Perbaiki format (nomor 1. 2. atau baris Kunci:) lalu pilih file lagi.');
+        return;
+      }
 
       const btn = document.getElementById('btnIwSimpan');
       btn.disabled = true;
       btn.textContent = 'Menyimpan...';
       let ok = 0, fail = 0;
       const total = _importWordSoals.length;
-      const stEl = document.getElementById('iwStatus');
-      if (stEl) stEl.textContent = 'Menyimpan 0/' + total + ' soal...';
-      showUploadProgress('Menyimpan soal', 'Menyimpan 0 dari ' + total + ' soal ke bank...', 3);
+      setIwStatus('⏳ Menyimpan 0/' + total + ' soal ke bank...', 'info');
+      showUploadProgress('Menyimpan soal', 'Menyimpan 0 dari ' + total + ' soal...', 3);
 
       try {
         for (let i = 0; i < _importWordSoals.length; i++) {
           const s = _importWordSoals[i];
-          const pct = Math.round(((i) / total) * 95);
-          const msg = 'Menyimpan soal ' + (i + 1) + ' dari ' + total + (s.nomor != null ? ' (No. ' + s.nomor + ')' : '') + '...';
+          const pct = Math.round((i / total) * 95);
+          const msg = 'Menyimpan soal ' + (i + 1) + ' dari ' + total +
+            (s.nomor != null ? ' (No. ' + s.nomor + ')' : '') + '...';
           setUploadProgress(pct, msg);
-          if (stEl) stEl.textContent = msg;
+          setIwStatus('⏳ ' + msg, 'info');
           const payload = {
             bank_id: bankId,
             nomor: s.nomor,
@@ -16400,15 +16489,18 @@ document.getElementById('btnBsContohFormat')?.addEventListener('click', () => {
             console.warn(e);
             fail++;
           }
-          // yield agar UI progress sempat ter-update
           await new Promise(r => setTimeout(r, 0));
         }
-        setUploadProgress(100, 'Selesai: ' + ok + ' tersimpan' + (fail ? ', ' + fail + ' gagal' : ''));
-        if (stEl) stEl.textContent = 'Import selesai: ' + ok + ' soal tersimpan' + (fail ? ', ' + fail + ' gagal' : '');
-        await new Promise(r => setTimeout(r, 350));
+        const doneMsg = 'Import selesai: ' + ok + ' soal tersimpan' + (fail ? ', ' + fail + ' gagal' : '');
+        setUploadProgress(100, doneMsg);
+        setIwStatus('✓ ' + doneMsg, fail ? 'warn' : 'ok');
+        await new Promise(r => setTimeout(r, 400));
         closeModal('modalImportWord');
         await loadBsItemTable();
-        alert('Import selesai: ' + ok + ' soal tersimpan' + (fail ? ', ' + fail + ' gagal' : ''));
+        alert(doneMsg);
+      } catch (e) {
+        setIwStatus('❌ Gagal menyimpan: ' + (e.message || e), 'err');
+        alert('Gagal menyimpan: ' + (e.message || e));
       } finally {
         hideUploadProgress();
         btn.disabled = false;
@@ -20273,21 +20365,15 @@ document.getElementById('btnBsContohFormat')?.addEventListener('click', () => {
       if (st) st.innerHTML = '<span style="color:#0369a1;">Mengunggah ke Google Drive...</span>';
       const btn = document.getElementById('btnJmKelasUpload');
       if (btn) btn.disabled = true;
-      showUploadProgress('Mengunggah jadwal kelas', 'Menyiapkan file ' + (file.name || '') + '...', 8);
       try {
-        setUploadProgress(15, 'Menghapus jadwal kelas lama (jika ada)...');
         await deleteJadwalByKelas(kelas);
-        setUploadProgress(25, 'Mengunggah ke Google Drive...');
-        startFakeUploadProgress(25, 85, Math.min(15000, 4000 + Math.round((file.size || 0) / 600)));
         const up = await uploadJawabanFile(file, {
           folderId: GDRIVE_DEFAULT_FOLDER_ID || '',
           bankId: 'jadwal-kelas',
           soalId: 'kelas',
           nisn: String(kelas).replace(/\s+/g, '')
         });
-        if (_upProgTimer) { clearInterval(_upProgTimer); _upProgTimer = null; }
         if (!up || (!up.url && !up.id)) throw new Error('Upload gagal');
-        setUploadProgress(90, 'Menyimpan data jadwal...');
         const row = {
           guru_id: null,
           guru_nama: null,
@@ -20302,8 +20388,6 @@ document.getElementById('btnBsContohFormat')?.addEventListener('click', () => {
           created_at: new Date().toISOString()
         };
         await insertJadwalMapel(row);
-        setUploadProgress(100, 'Selesai');
-        await new Promise(r => setTimeout(r, 280));
         if (st) st.innerHTML = '<span style="color:#16a34a;">✓ Jadwal kelas <b>' + esc(kelas) + '</b> tersimpan.</span>';
         if (fileInput) fileInput.value = '';
         const jEl = document.getElementById('jmKelasJudul');
@@ -20314,7 +20398,6 @@ document.getElementById('btnBsContohFormat')?.addEventListener('click', () => {
         if (st) st.innerHTML = '<span style="color:#ef4444;">Gagal: ' + esc(String(e.message || e)) + '</span>';
         alert('Gagal upload: ' + (e.message || e));
       } finally {
-        hideUploadProgress();
         if (btn) btn.disabled = false;
       }
     });
@@ -20353,23 +20436,18 @@ document.getElementById('btnBsContohFormat')?.addEventListener('click', () => {
       if (st) st.innerHTML = '<span style="color:#0369a1;">Mengunggah ke Google Drive (jadwal lama diganti)...</span>';
       const btn = document.getElementById('btnJmUpload');
       if (btn) btn.disabled = true;
-      showUploadProgress('Mengunggah jadwal mapel', 'Menyiapkan file ' + (file.name || '') + ' untuk ' + guruNama + '...', 8);
       try {
-        setUploadProgress(15, 'Menghapus jadwal lama guru...');
+        // hapus jadwal lama guru ini dulu
         await deleteJadwalByGuruId(guruId);
 
-        setUploadProgress(25, 'Mengunggah ke Google Drive...');
-        startFakeUploadProgress(25, 85, Math.min(15000, 4000 + Math.round((file.size || 0) / 600)));
         const up = await uploadJawabanFile(file, {
           folderId: GDRIVE_DEFAULT_FOLDER_ID || '',
           bankId: 'jadwal',
           soalId: 'guru',
           nisn: String(guruId)
         });
-        if (_upProgTimer) { clearInterval(_upProgTimer); _upProgTimer = null; }
         if (!up || (!up.url && !up.id)) throw new Error('Upload gagal (tidak ada URL/ID)');
 
-        setUploadProgress(90, 'Menyimpan data jadwal...');
         const row = {
           guru_id: Number(guruId),
           guru_nama: guruNama,
@@ -20383,8 +20461,6 @@ document.getElementById('btnBsContohFormat')?.addEventListener('click', () => {
           created_at: new Date().toISOString()
         };
         await insertJadwalMapel(row);
-        setUploadProgress(100, 'Selesai');
-        await new Promise(r => setTimeout(r, 280));
         if (st) st.innerHTML = '<span style="color:#16a34a;">✓ Jadwal untuk <b>' + esc(guruNama) + '</b> berhasil disimpan.</span>';
         if (fileInput) fileInput.value = '';
         const jEl = document.getElementById('jmJudul');
@@ -20395,7 +20471,6 @@ document.getElementById('btnBsContohFormat')?.addEventListener('click', () => {
         if (st) st.innerHTML = '<span style="color:#ef4444;">Gagal: ' + esc(String(e.message || e)) + '</span>';
         alert('Gagal upload: ' + (e.message || e));
       } finally {
-        hideUploadProgress();
         if (btn) btn.disabled = false;
       }
     });
@@ -22255,104 +22330,23 @@ document.getElementById('btnBsContohFormat')?.addEventListener('click', () => {
     }
 
     async function initValidasiLulusanPage() {
-      const searchCard = document.getElementById('vlSearchCard');
-      const empty = document.getElementById('vlEmpty');
-      const box = document.getElementById('vlResult');
-      if (box) box.style.display = 'none';
-      if (empty) {
-        empty.style.display = 'block';
-        empty.style.color = '#94a3b8';
-      }
-      const isAdmin = currentRole === 'admin';
-      if (searchCard) searchCard.style.display = isAdmin ? 'block' : 'none';
-
-      if (isAdmin) {
-        if (empty) empty.textContent = 'Masukkan NISN/Nama (dan opsional Tahun Lulus) lalu Cek Data.';
-        const c = document.getElementById('vlCari');
-        const t = document.getElementById('vlTahun');
-        if (c) c.value = '';
-        if (t) t.value = '';
-        return;
-      }
-
-      if (currentRole === 'siswa' || currentUserIsAlumni) {
-        if (empty) empty.textContent = 'Memuat data kelulusan Anda...';
-        await jalankanValidasiLulusan({ autoSelf: true });
-        return;
-      }
-
-      if (empty) empty.textContent = 'Login sebagai alumni/siswa atau admin untuk melihat data.';
+      document.getElementById('vlResult').style.display = 'none';
+      document.getElementById('vlEmpty').style.display = 'block';
+      document.getElementById('vlEmpty').textContent =
+        'Masukkan NISN/Nama (dan opsional Tahun Lulus) lalu Cek Data.';
+      document.getElementById('vlCari').value = '';
+      document.getElementById('vlTahun').value = '';
     }
 
-    function tampilkanHasilValidasiLulusan(found) {
-      const empty = document.getElementById('vlEmpty');
-      const box = document.getElementById('vlResult');
-      if (!found) {
-        if (empty) {
-          empty.style.display = 'block';
-          empty.style.color = '#b91c1c';
-          empty.textContent = 'Data lulusan tidak ditemukan.';
-        }
-        if (box) box.style.display = 'none';
-        return;
-      }
-      if (empty) empty.style.display = 'none';
-      if (box) box.style.display = 'block';
-
-      const ttl = [found.tmp_lahir || '', fmtTglId(found.tgl_lahir)].filter(x => x && x !== '-').join(', ') || '-';
-      const stLulus = found.status_kelulusan || found.status_lulus || 'Lulus';
-      let stHtml = esc(stLulus);
-      if (stLulus === 'Lulus') stHtml = '<span style="background:#dcfce7;color:#166534;padding:2px 8px;border-radius:6px;font-size:12px;">' + esc(stLulus) + '</span>';
-      else if (stLulus === 'Ditangguhkan') stHtml = '<span style="background:#fef3c7;color:#a16207;padding:2px 8px;border-radius:6px;font-size:12px;">' + esc(stLulus) + '</span>';
-      else if (stLulus === 'Tidak Lulus') stHtml = '<span style="background:#fee2e2;color:#b91c1c;padding:2px 8px;border-radius:6px;font-size:12px;">' + esc(stLulus) + '</span>';
-
-      const pred = String(found.predikat || '').trim().toUpperCase();
-      let predHtml = pred ? esc(pred) : '-';
-      if (pred === 'MEMUASKAN') predHtml = '<span style="background:#dbeafe;color:#1d4ed8;padding:2px 8px;border-radius:6px;font-size:12px;font-weight:700;">' + esc(pred) + '</span>';
-      else if (pred === 'BAIK') predHtml = '<span style="background:#dcfce7;color:#166534;padding:2px 8px;border-radius:6px;font-size:12px;font-weight:700;">' + esc(pred) + '</span>';
-      else if (pred === 'CUKUP') predHtml = '<span style="background:#ffedd5;color:#c2410c;padding:2px 8px;border-radius:6px;font-size:12px;font-weight:700;">' + esc(pred) + '</span>';
-
-      const setTxt = (id, v) => { const el = document.getElementById(id); if (el) el.textContent = v; };
-      const setHtml = (id, v) => { const el = document.getElementById(id); if (el) el.innerHTML = v; };
-      setTxt('vlNama', found.nama || '-');
-      setTxt('vlNisn', found.nisn || '-');
-      setTxt('vlTtl', ttl);
-      setTxt('vlMulai', fmtTglId(found.tgl_mulai_sekolah || found.mulai_sekolah));
-      setTxt('vlStatusAwal', found.status_awal || '-');
-      setTxt('vlAsal', found.asal_sekolah || '-');
-      setTxt('vlLama', found.lama_belajar || '-');
-      setTxt('vlTglLulus', fmtTglId(found.tanggal_lulus || found.tgl_lulus));
-      setHtml('vlStatusLulus', stHtml);
-      setHtml('vlPredikat', predHtml);
-    }
-
-    async function jalankanValidasiLulusan(opts) {
-      opts = opts || {};
-      const autoSelf = !!opts.autoSelf;
-      const isAdmin = currentRole === 'admin';
-      let q = (document.getElementById('vlCari')?.value || '').trim();
+    async function jalankanValidasiLulusan() {
+      const q = (document.getElementById('vlCari')?.value || '').trim();
       const tahun = (document.getElementById('vlTahun')?.value || '').trim();
       const empty = document.getElementById('vlEmpty');
       const box = document.getElementById('vlResult');
-
-      if (autoSelf || (!isAdmin && (currentRole === 'siswa' || currentUserIsAlumni))) {
-        q = String(currentUserKode || '').trim();
-        if (!q && currentUserName) q = String(currentUserName).trim();
-        if (!q) {
-          if (empty) {
-            empty.style.display = 'block';
-            empty.style.color = '#b91c1c';
-            empty.textContent = 'Sesi login tidak memiliki NISN. Login ulang sebagai alumni.';
-          }
-          if (box) box.style.display = 'none';
-          return;
-        }
-      } else if (!q) {
-        if (empty) {
-          empty.style.display = 'block';
-          empty.textContent = 'Masukkan NISN atau Nama terlebih dahulu.';
-        }
-        if (box) box.style.display = 'none';
+      if (!q) {
+        empty.style.display = 'block';
+        empty.textContent = 'Masukkan NISN atau Nama terlebih dahulu.';
+        box.style.display = 'none';
         return;
       }
       empty.style.display = 'block';
@@ -22400,20 +22394,33 @@ document.getElementById('btnBsContohFormat')?.addEventListener('click', () => {
         if (!found) {
           empty.style.display = 'block';
           empty.style.color = '#b91c1c';
-          let msg;
-          if (autoSelf || (!isAdmin && (currentRole === 'siswa' || currentUserIsAlumni))) {
-            msg = 'Data kelulusan untuk NISN/Nama login Anda ("' + q + '") belum tersedia di tabel lulusan. Hubungi admin sekolah.';
-          } else {
-            msg = 'Data dengan NISN / Nama : "' + q + '"';
-            if (tahun) msg += ' · Tahun Lulus ' + tahun;
-            msg += ' tidak ditemukan.';
-          }
+          let msg = 'Data dengan NISN / Nama : "' + q + '"';
+          if (tahun) msg += ' · Tahun Lulus ' + tahun;
+          msg += ' tidak ditemukan.';
           empty.textContent = msg;
           box.style.display = 'none';
           return;
         }
 
-        tampilkanHasilValidasiLulusan(found);
+        empty.style.display = 'none';
+        box.style.display = 'block';
+
+        const ttl = [found.tmp_lahir || '', fmtTglId(found.tgl_lahir)].filter(x => x && x !== '-').join(', ') || '-';
+        const stLulus = found.status_kelulusan || found.status_lulus || 'Lulus';
+        let stHtml = esc(stLulus);
+        if (stLulus === 'Lulus') stHtml = '<span style="background:#dcfce7;color:#166534;padding:2px 8px;border-radius:6px;font-size:12px;">' + esc(stLulus) + '</span>';
+        else if (stLulus === 'Ditangguhkan') stHtml = '<span style="background:#fef3c7;color:#a16207;padding:2px 8px;border-radius:6px;font-size:12px;">' + esc(stLulus) + '</span>';
+        else if (stLulus === 'Tidak Lulus') stHtml = '<span style="background:#fee2e2;color:#b91c1c;padding:2px 8px;border-radius:6px;font-size:12px;">' + esc(stLulus) + '</span>';
+
+        document.getElementById('vlNama').textContent = found.nama || '-';
+        document.getElementById('vlNisn').textContent = found.nisn || '-';
+        document.getElementById('vlTtl').textContent = ttl;
+        document.getElementById('vlMulai').textContent = fmtTglId(found.tgl_mulai_sekolah || found.mulai_sekolah);
+        document.getElementById('vlStatusAwal').textContent = found.status_awal || '-';
+        document.getElementById('vlAsal').textContent = found.asal_sekolah || '-';
+        document.getElementById('vlLama').textContent = found.lama_belajar || '-';
+        document.getElementById('vlTglLulus').textContent = fmtTglId(found.tanggal_lulus || found.tgl_lulus);
+        document.getElementById('vlStatusLulus').innerHTML = stHtml;
       } catch (e) {
         console.error(e);
         empty.style.display = 'block';
