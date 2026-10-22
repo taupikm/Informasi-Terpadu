@@ -1874,7 +1874,7 @@
       display: none;
     }
 
-    /* Panel log login — ~1/3 layar HP, ringkas di desktop */
+    /* Panel log login — diperpanjang ~+1,5 cm vertikal */
     #loginLogPanel {
       position: fixed;
       z-index: 2800;
@@ -1885,11 +1885,12 @@
       box-shadow: 0 12px 40px rgba(15,23,42,.18);
       border-radius: 14px;
       overflow: hidden;
-      /* mobile: sedikit lebih panjang (~+1cm) */
       top: 56px;
       left: 8px;
       right: 8px;
-      max-height: calc(34vh + 38px);
+      /* 34vh + 38px sebelumnya, + ~56px (1,5 cm) */
+      height: calc(34vh + 94px);
+      max-height: calc(34vh + 94px);
     }
     #loginLogPanel.show { display: flex; }
     @media (min-width: 768px) {
@@ -1897,7 +1898,8 @@
         left: auto;
         right: 16px;
         width: min(400px, 42vw);
-        max-height: calc(42vh + 38px);
+        height: calc(42vh + 94px);
+        max-height: calc(42vh + 94px);
         top: 60px;
       }
     }
@@ -2958,7 +2960,7 @@
     </section>
     <section class="page" id="page-validasi-lulusan">
       <div class="page-title">Validasi Data Lulusan</div>
-      <div class="card" id="vlSearchCard" style="padding:14px;margin-bottom:14px;">
+      <div class="card" style="padding:14px;margin-bottom:14px;">
         <div class="rekap-filter-row" style="align-items:flex-start;">
           <label style="padding-top:10px;">NISN / Nama</label>
           <div style="flex:1;min-width:0;position:relative;">
@@ -2986,7 +2988,6 @@
           <div style="display:flex;gap:8px;"><span style="min-width:150px;color:#64748b;">Lama Belajar</span><span>: <b id="vlLama">-</b></span></div>
           <div style="display:flex;gap:8px;"><span style="min-width:150px;color:#64748b;">Tanggal Lulus</span><span>: <b id="vlTglLulus">-</b></span></div>
           <div style="display:flex;gap:8px;align-items:center;"><span style="min-width:150px;color:#64748b;">Status Kelulusan</span><span>: <b id="vlStatusLulus">-</b></span></div>
-          <div style="display:flex;gap:8px;align-items:center;"><span style="min-width:150px;color:#64748b;">Predikat Kelulusan</span><span>: <b id="vlPredikat">-</b></span></div>
         </div>
       </div>
     </section>
@@ -7156,15 +7157,8 @@
       lulusan: {
         title: 'Import Data Lulusan',
         filename: 'contoh_lulusan.xlsx',
-        headers: [
-          'nisn','nama','lp','tmp_lahir','tgl_lahir','tgl_mulai_sekolah','tanggal_lulus','tahun_lulus',
-          'lama_belajar','status_awal','asal_sekolah','status_kelulusan','predikat'
-        ],
-        sample: [
-          '0012345678','Ahmad Rizki','L','Bandung','2008-03-12','2021-07-15','2024-06-20','2024',
-          '3 Tahun','Siswa Baru','SDN 1 Bandung','Lulus','BAIK'
-        ],
-        desc: 'Kolom sesuai tabel lulusan. Wajib: nama. Tanggal YYYY-MM-DD. status_awal: Siswa Baru / Pindahan. status_kelulusan: Lulus / Ditangguhkan / Tidak Lulus. predikat: MEMUASKAN / BAIK / CUKUP (opsional).'
+        headers: ['nisn','nama','lp','tmp_lahir','tgl_lahir','tgl_mulai_sekolah','tanggal_lulus','tahun_lulus','lama_belajar','status_awal','asal_sekolah'],
+        sample: ['0012345678','Ahmad Rizki','L','Bandung','2008-03-12','2021-07-15','2024-06-20','2024','3 Tahun','Baru','SDN 1 Bandung']
       }
     };
 
@@ -8197,15 +8191,6 @@
         const nama = emptyToNull(c[1]);
         if (!nama) continue;
         const tahun = emptyToNull(c[7]);
-        let stAwal = emptyToNull(c[9]);
-        if (stAwal && typeof normStatusAwal === 'function') stAwal = normStatusAwal(stAwal) || stAwal;
-        let stKel = emptyToNull(c[11]) || 'Lulus';
-        const stKelU = String(stKel).trim().toLowerCase();
-        if (stKelU === 'lulus') stKel = 'Lulus';
-        else if (stKelU.indexOf('tangguh') >= 0) stKel = 'Ditangguhkan';
-        else if (stKelU.indexOf('tidak') >= 0) stKel = 'Tidak Lulus';
-        let pred = emptyToNull(c[12]);
-        if (pred) pred = String(pred).trim().toUpperCase();
         rows.push({
           nisn: emptyToNull(c[0]),
           nama: nama,
@@ -8216,10 +8201,8 @@
           tanggal_lulus: emptyToNull(c[6]),
           tahun_lulus: tahun ? parseInt(tahun) : null,
           lama_belajar: emptyToNull(c[8]),
-          status_awal: stAwal,
-          asal_sekolah: emptyToNull(c[10]),
-          status_kelulusan: stKel,
-          predikat: pred
+          status_awal: emptyToNull(c[9]),
+          asal_sekolah: emptyToNull(c[10])
         });
       }
       if (!rows.length) { alert('Tidak ada baris valid (nama wajib)'); return; }
@@ -22183,106 +22166,23 @@ document.getElementById('btnBsContohFormat')?.addEventListener('click', () => {
     }
 
     async function initValidasiLulusanPage() {
-      const searchCard = document.getElementById('vlSearchCard');
-      const empty = document.getElementById('vlEmpty');
-      const box = document.getElementById('vlResult');
-      if (box) box.style.display = 'none';
-      if (empty) {
-        empty.style.display = 'block';
-        empty.style.color = '#94a3b8';
-      }
-      const isAdmin = currentRole === 'admin';
-      if (searchCard) searchCard.style.display = isAdmin ? 'block' : 'none';
-
-      if (isAdmin) {
-        if (empty) empty.textContent = 'Masukkan NISN/Nama (dan opsional Tahun Lulus) lalu Cek Data.';
-        const c = document.getElementById('vlCari');
-        const t = document.getElementById('vlTahun');
-        if (c) c.value = '';
-        if (t) t.value = '';
-        return;
-      }
-
-      // Alumni / siswa: NISN sudah diverifikasi saat login — tampilkan langsung
-      if (currentRole === 'siswa' || currentUserIsAlumni) {
-        if (empty) empty.textContent = 'Memuat data kelulusan Anda...';
-        await jalankanValidasiLulusan({ autoSelf: true });
-        return;
-      }
-
-      if (empty) empty.textContent = 'Login sebagai alumni/siswa atau admin untuk melihat data.';
+      document.getElementById('vlResult').style.display = 'none';
+      document.getElementById('vlEmpty').style.display = 'block';
+      document.getElementById('vlEmpty').textContent =
+        'Masukkan NISN/Nama (dan opsional Tahun Lulus) lalu Cek Data.';
+      document.getElementById('vlCari').value = '';
+      document.getElementById('vlTahun').value = '';
     }
 
-    function tampilkanHasilValidasiLulusan(found) {
-      const empty = document.getElementById('vlEmpty');
-      const box = document.getElementById('vlResult');
-      if (!found) {
-        if (empty) {
-          empty.style.display = 'block';
-          empty.style.color = '#b91c1c';
-          empty.textContent = 'Data lulusan tidak ditemukan.';
-        }
-        if (box) box.style.display = 'none';
-        return;
-      }
-      if (empty) empty.style.display = 'none';
-      if (box) box.style.display = 'block';
-
-      const ttl = [found.tmp_lahir || '', fmtTglId(found.tgl_lahir)].filter(x => x && x !== '-').join(', ') || '-';
-      const stLulus = found.status_kelulusan || found.status_lulus || 'Lulus';
-      let stHtml = esc(stLulus);
-      if (stLulus === 'Lulus') stHtml = '<span style="background:#dcfce7;color:#166534;padding:2px 8px;border-radius:6px;font-size:12px;">' + esc(stLulus) + '</span>';
-      else if (stLulus === 'Ditangguhkan') stHtml = '<span style="background:#fef3c7;color:#a16207;padding:2px 8px;border-radius:6px;font-size:12px;">' + esc(stLulus) + '</span>';
-      else if (stLulus === 'Tidak Lulus') stHtml = '<span style="background:#fee2e2;color:#b91c1c;padding:2px 8px;border-radius:6px;font-size:12px;">' + esc(stLulus) + '</span>';
-
-      const pred = String(found.predikat || '').trim().toUpperCase();
-      let predHtml = pred ? esc(pred) : '-';
-      if (pred === 'MEMUASKAN') predHtml = '<span style="background:#dbeafe;color:#1d4ed8;padding:2px 8px;border-radius:6px;font-size:12px;font-weight:700;">' + esc(pred) + '</span>';
-      else if (pred === 'BAIK') predHtml = '<span style="background:#dcfce7;color:#166534;padding:2px 8px;border-radius:6px;font-size:12px;font-weight:700;">' + esc(pred) + '</span>';
-      else if (pred === 'CUKUP') predHtml = '<span style="background:#ffedd5;color:#c2410c;padding:2px 8px;border-radius:6px;font-size:12px;font-weight:700;">' + esc(pred) + '</span>';
-      else if (pred) predHtml = '<span style="background:#f1f5f9;color:#334155;padding:2px 8px;border-radius:6px;font-size:12px;font-weight:700;">' + esc(pred) + '</span>';
-
-      const setTxt = (id, v) => { const el = document.getElementById(id); if (el) el.textContent = v; };
-      const setHtml = (id, v) => { const el = document.getElementById(id); if (el) el.innerHTML = v; };
-      setTxt('vlNama', found.nama || '-');
-      setTxt('vlNisn', found.nisn || '-');
-      setTxt('vlTtl', ttl);
-      setTxt('vlMulai', fmtTglId(found.tgl_mulai_sekolah || found.mulai_sekolah));
-      setTxt('vlStatusAwal', found.status_awal || '-');
-      setTxt('vlAsal', found.asal_sekolah || '-');
-      setTxt('vlLama', found.lama_belajar || '-');
-      setTxt('vlTglLulus', fmtTglId(found.tanggal_lulus || found.tgl_lulus));
-      setHtml('vlStatusLulus', stHtml);
-      setHtml('vlPredikat', predHtml);
-    }
-
-    async function jalankanValidasiLulusan(opts) {
-      opts = opts || {};
-      const autoSelf = !!opts.autoSelf;
-      const isAdmin = currentRole === 'admin';
-      let q = (document.getElementById('vlCari')?.value || '').trim();
+    async function jalankanValidasiLulusan() {
+      const q = (document.getElementById('vlCari')?.value || '').trim();
       const tahun = (document.getElementById('vlTahun')?.value || '').trim();
       const empty = document.getElementById('vlEmpty');
       const box = document.getElementById('vlResult');
-
-      if (autoSelf || (!isAdmin && (currentRole === 'siswa' || currentUserIsAlumni))) {
-        q = String(currentUserKode || '').trim();
-        if (!q && currentUserName) q = String(currentUserName).trim();
-        if (!q) {
-          if (empty) {
-            empty.style.display = 'block';
-            empty.style.color = '#b91c1c';
-            empty.textContent = 'Sesi login tidak memiliki NISN. Login ulang sebagai alumni.';
-          }
-          if (box) box.style.display = 'none';
-          return;
-        }
-      } else if (!q) {
-        if (empty) {
-          empty.style.display = 'block';
-          empty.textContent = 'Masukkan NISN atau Nama terlebih dahulu.';
-        }
-        if (box) box.style.display = 'none';
+      if (!q) {
+        empty.style.display = 'block';
+        empty.textContent = 'Masukkan NISN atau Nama terlebih dahulu.';
+        box.style.display = 'none';
         return;
       }
       empty.style.display = 'block';
@@ -22330,20 +22230,33 @@ document.getElementById('btnBsContohFormat')?.addEventListener('click', () => {
         if (!found) {
           empty.style.display = 'block';
           empty.style.color = '#b91c1c';
-          let msg;
-          if (autoSelf || (!isAdmin && (currentRole === 'siswa' || currentUserIsAlumni))) {
-            msg = 'Data kelulusan untuk NISN/Nama login Anda ("' + q + '") belum tersedia di tabel lulusan. Hubungi admin sekolah.';
-          } else {
-            msg = 'Data dengan NISN / Nama : "' + q + '"';
-            if (tahun) msg += ' · Tahun Lulus ' + tahun;
-            msg += ' tidak ditemukan.';
-          }
+          let msg = 'Data dengan NISN / Nama : "' + q + '"';
+          if (tahun) msg += ' · Tahun Lulus ' + tahun;
+          msg += ' tidak ditemukan.';
           empty.textContent = msg;
           box.style.display = 'none';
           return;
         }
 
-        tampilkanHasilValidasiLulusan(found);
+        empty.style.display = 'none';
+        box.style.display = 'block';
+
+        const ttl = [found.tmp_lahir || '', fmtTglId(found.tgl_lahir)].filter(x => x && x !== '-').join(', ') || '-';
+        const stLulus = found.status_kelulusan || found.status_lulus || 'Lulus';
+        let stHtml = esc(stLulus);
+        if (stLulus === 'Lulus') stHtml = '<span style="background:#dcfce7;color:#166534;padding:2px 8px;border-radius:6px;font-size:12px;">' + esc(stLulus) + '</span>';
+        else if (stLulus === 'Ditangguhkan') stHtml = '<span style="background:#fef3c7;color:#a16207;padding:2px 8px;border-radius:6px;font-size:12px;">' + esc(stLulus) + '</span>';
+        else if (stLulus === 'Tidak Lulus') stHtml = '<span style="background:#fee2e2;color:#b91c1c;padding:2px 8px;border-radius:6px;font-size:12px;">' + esc(stLulus) + '</span>';
+
+        document.getElementById('vlNama').textContent = found.nama || '-';
+        document.getElementById('vlNisn').textContent = found.nisn || '-';
+        document.getElementById('vlTtl').textContent = ttl;
+        document.getElementById('vlMulai').textContent = fmtTglId(found.tgl_mulai_sekolah || found.mulai_sekolah);
+        document.getElementById('vlStatusAwal').textContent = found.status_awal || '-';
+        document.getElementById('vlAsal').textContent = found.asal_sekolah || '-';
+        document.getElementById('vlLama').textContent = found.lama_belajar || '-';
+        document.getElementById('vlTglLulus').textContent = fmtTglId(found.tanggal_lulus || found.tgl_lulus);
+        document.getElementById('vlStatusLulus').innerHTML = stHtml;
       } catch (e) {
         console.error(e);
         empty.style.display = 'block';
