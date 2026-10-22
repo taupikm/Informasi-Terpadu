@@ -1885,19 +1885,20 @@
       box-shadow: 0 12px 40px rgba(15,23,42,.18);
       border-radius: 14px;
       overflow: hidden;
-      /* mobile: sedikit lebih panjang (~+1cm) */
       top: 56px;
       left: 8px;
       right: 8px;
-      max-height: calc(34vh + 38px);
+      height: 50vh;
+      max-height: 50vh;
     }
     #loginLogPanel.show { display: flex; }
     @media (min-width: 768px) {
       #loginLogPanel {
         left: auto;
         right: 16px;
-        width: min(400px, 42vw);
-        max-height: calc(42vh + 38px);
+        width: min(420px, 44vw);
+        height: min(560px, 62vh);
+        max-height: 62vh;
         top: 60px;
       }
     }
@@ -6407,15 +6408,14 @@
         // background tasks (HP tetap responsif)
         (async () => {
           try {
-            if (role !== 'admin') {
-              await recordLoginLog({
-                user_id: userId,
-                role: role,
-                nama: userName || ROLE_DATA[role]?.name || '',
-                kode: currentUserKode || kode,
-                kelas: currentUserKelas || null
-              });
-            }
+            await recordLoginLog({
+              user_id: userId,
+              role: role,
+              nama: userName || ROLE_DATA[role]?.name || '',
+              kode: currentUserKode || kode,
+              kelas: currentUserKelas || null,
+              keterangan: role === 'admin' ? 'Admin' : (currentUserIsAlumni ? 'Alumni' : '')
+            });
           } catch (e) { console.warn('login log', e); }
           try { await loadGdriveSettingsFromDb(); } catch (e) {}
           try {
@@ -10950,28 +10950,57 @@
       try { localStorage.setItem(LOGIN_LOG_KEY, JSON.stringify(rows || [])); } catch (e) {}
     }
 
+    function loginAtLocalYmd(iso) {
+      if (!iso) return '';
+      try {
+        const d = new Date(iso);
+        if (isNaN(d.getTime())) return String(iso).slice(0, 10);
+        const y = d.getFullYear();
+        const m = String(d.getMonth() + 1).padStart(2, '0');
+        const day = String(d.getDate()).padStart(2, '0');
+        return y + '-' + m + '-' + day;
+      } catch (e) {
+        return String(iso).slice(0, 10);
+      }
+    }
+
     async function recordLoginLog(info) {
       const row = {
         user_id: info.user_id != null ? Number(info.user_id) : null,
-        role: info.role || '',
-        nama: info.nama || '',
-        kode: info.kode || '',
-        kelas: info.kelas || null,
-        keterangan: info.keterangan || '',
-        login_at: new Date().toISOString(),
-        user_agent: (typeof navigator !== 'undefined' ? String(navigator.userAgent || '').slice(0, 180) : '')
+        role: String(info.role || ''),
+        nama: String(info.nama || ''),
+        kode: String(info.kode || ''),
+        kelas: info.kelas ? String(info.kelas) : null,
+        keterangan: String(info.keterangan || ''),
+        login_at: new Date().toISOString()
       };
+      let savedRemote = false;
       if (supabaseClient) {
-        try {
-          const { error } = await supabaseClient.from('login_log').insert([row]);
-          if (!error) return;
-          console.warn('login_log insert', error);
-        } catch (e) { console.warn(e); }
+        // Coba beberapa bentuk payload (skema tabel bisa beda antar instalasi)
+        const variants = [
+          row,
+          { user_id: row.user_id, role: row.role, nama: row.nama, kode: row.kode, login_at: row.login_at },
+          { role: row.role, nama: row.nama, kode: row.kode, login_at: row.login_at },
+          Object.assign({}, row, {
+            user_agent: (typeof navigator !== 'undefined' ? String(navigator.userAgent || '').slice(0, 180) : '')
+          })
+        ];
+        for (const payload of variants) {
+          try {
+            const { error } = await supabaseClient.from('login_log').insert([payload]);
+            if (!error) { savedRemote = true; break; }
+            console.warn('login_log insert', error && (error.message || error));
+          } catch (e) {
+            console.warn('login_log insert', e);
+          }
+        }
       }
+      // Selalu simpan lokal sebagai cadangan (digabung saat admin membuka log)
       const list = loginLogLocalLoad();
-      list.unshift(Object.assign({ id: 'L' + Date.now() }, row));
-      if (list.length > 2000) list.length = 2000;
+      list.unshift(Object.assign({ id: 'L' + Date.now() + '_' + Math.random().toString(36).slice(2, 6), _local: true }, row));
+      if (list.length > 3000) list.length = 3000;
       loginLogLocalSave(list);
+      return savedRemote;
     }
 
     async function fetchLoginLogs(filters) {
@@ -10979,40 +11008,76 @@
       const dari = filters.dari || '';
       const sampai = filters.sampai || '';
       const q = String(filters.q || '').trim().toLowerCase();
-      let rows = [];
+      let remote = [];
+      let local = loginLogLocalLoad();
+
       if (supabaseClient) {
         try {
-          let query = supabaseClient.from('login_log').select('*').order('login_at', { ascending: false }).limit(500);
-          if (dari) query = query.gte('login_at', dari + 'T00:00:00');
-          if (sampai) query = query.lte('login_at', sampai + 'T23:59:59.999');
+          // Ambil lebih longgar di server (±1 hari) lalu filter pakai tanggal lokal
+          // agar tidak hilang karena perbedaan timezone UTC vs WIB
+          let query = supabaseClient.from('login_log').select('*').order('login_at', { ascending: false }).limit(1000);
+          if (dari) {
+            const d0 = new Date(dari + 'T00:00:00');
+            d0.setDate(d0.getDate() - 1);
+            query = query.gte('login_at', d0.toISOString());
+          }
+          if (sampai) {
+            const d1 = new Date(sampai + 'T23:59:59.999');
+            d1.setDate(d1.getDate() + 1);
+            query = query.lte('login_at', d1.toISOString());
+          }
           const { data, error } = await query;
           if (error) throw error;
-          rows = data || [];
+          remote = data || [];
         } catch (e) {
           console.warn('fetchLoginLogs', e);
-          rows = loginLogLocalLoad();
+          remote = [];
         }
-      } else {
-        rows = loginLogLocalLoad();
       }
+
+      // Gabungkan remote + lokal, hindari duplikat (id sama atau user+role+menit yang sama)
+      const seen = new Set();
+      const rows = [];
+      function addRow(r) {
+        if (!r) return;
+        const idKey = r.id != null ? 'id:' + String(r.id) : '';
+        const t = r.login_at ? new Date(r.login_at).getTime() : 0;
+        const minKey = [r.user_id || '', r.role || '', r.kode || '', Math.floor(t / 60000)].join('|');
+        if (idKey && seen.has(idKey)) return;
+        if (seen.has('m:' + minKey)) return;
+        if (idKey) seen.add(idKey);
+        seen.add('m:' + minKey);
+        rows.push(r);
+      }
+      remote.forEach(addRow);
+      local.forEach(addRow);
+
+      rows.sort((a, b) => {
+        const ta = new Date(a.login_at || 0).getTime();
+        const tb = new Date(b.login_at || 0).getTime();
+        return tb - ta;
+      });
+
+      let out = rows;
       if (dari || sampai) {
-        rows = rows.filter(r => {
-          const t = String(r.login_at || '').slice(0, 10);
+        out = out.filter(r => {
+          const t = loginAtLocalYmd(r.login_at);
           if (dari && t < dari) return false;
           if (sampai && t > sampai) return false;
           return true;
         });
       }
       if (q) {
-        rows = rows.filter(r =>
+        out = out.filter(r =>
           String(r.nama || '').toLowerCase().includes(q) ||
           String(r.kode || '').toLowerCase().includes(q) ||
           String(r.role || '').toLowerCase().includes(q) ||
-          String(r.kelas || '').toLowerCase().includes(q)
+          String(r.kelas || '').toLowerCase().includes(q) ||
+          String(r.keterangan || '').toLowerCase().includes(q)
         );
       }
-      _loginLogCache = rows;
-      return rows;
+      _loginLogCache = out;
+      return out;
     }
 
     async function deleteLoginLogs(ids) {
@@ -15354,12 +15419,9 @@
         html += '<div class="form-group" style="margin-top:10px;"><textarea id="tuEsai" rows="4" placeholder="Tulis pasangan, contoh: 1-b, 2-d, 3-a" style="width:100%;padding:10px;border:1px solid #e2e8f0;border-radius:8px;">' +
           esc(ans || '') + '</textarea></div>';
       } else if (jenis === 'Unggah File') {
-        const ext = String(s.opsi_a || 'pdf,doc,docx,jpg,jpeg,png,zip');
+        const ext = String(s.opsi_a || 'pdf,doc,docx,jpg,png,zip');
         const maxMb = Number(s.opsi_b) || 10;
-        let _extParts = ext.split(/[,;\s]+/).map(x => x.trim().toLowerCase().replace(/^\./, '')).filter(Boolean);
-        if (_extParts.includes('jpg') && !_extParts.includes('jpeg')) _extParts.push('jpeg');
-        if (_extParts.includes('jpeg') && !_extParts.includes('jpg')) _extParts.push('jpg');
-        const accept = _extParts.map(x => '.' + x).join(',');
+        const accept = ext.split(/[,;\s]+/).map(x => x.trim()).filter(Boolean).map(x => '.' + x.replace(/^\./, '')).join(',');
         let infoAns = '';
         if (ans && typeof ans === 'object' && ans.name) {
           infoAns = '<div style="margin-top:8px;padding:8px 10px;background:#f0fdf4;border:1px solid #86efac;border-radius:8px;font-size:12px;">' +
@@ -15459,18 +15521,10 @@
           const st = document.getElementById('tuFileStatus');
           if (!f) return;
           const maxMb = Number(s.opsi_b) || 10;
-          const allowed = String(s.opsi_a || 'pdf,doc,docx,jpg,jpeg,png,zip').split(/[,;\s]+/).map(x => x.trim().toLowerCase().replace(/^\./, '')).filter(Boolean);
+          const allowed = String(s.opsi_a || 'pdf,doc,docx,jpg,png,zip').split(/[,;\s]+/).map(x => x.trim().toLowerCase().replace(/^\./, '')).filter(Boolean);
           const ext = (f.name.split('.').pop() || '').toLowerCase();
-          // jpg dan jpeg sama (image/jpeg); perluas daftar agar sinonim diterima
-          const allowedSet = new Set(allowed);
-          if (allowedSet.has('jpg')) allowedSet.add('jpeg');
-          if (allowedSet.has('jpeg')) allowedSet.add('jpg');
-          if (allowedSet.has('tif')) allowedSet.add('tiff');
-          if (allowedSet.has('tiff')) allowedSet.add('tif');
-          if (allowedSet.has('htm')) allowedSet.add('html');
-          if (allowedSet.has('html')) allowedSet.add('htm');
-          if (allowedSet.size && !allowedSet.has(ext)) {
-            if (st) st.innerHTML = '<span style="color:#b91c1c;">Ekstensi .' + esc(ext) + ' tidak diizinkan. Izinkan: ' + esc(allowed.join(', ')) + '</span>';
+          if (allowed.length && !allowed.includes(ext)) {
+            if (st) st.innerHTML = '<span style="color:#b91c1c;">Ekstensi .' + esc(ext) + ' tidak diizinkan</span>';
             fileInp.value = '';
             return;
           }
@@ -17361,7 +17415,7 @@ document.getElementById('btnBsContohFormat')?.addEventListener('click', () => {
       } else if (j === 'Unggah File') {
         box.innerHTML =
           '<div class="form-group"><label>Ekstensi diizinkan</label>' +
-          '<input type="text" id="bsUfExt" value="' + esc(data.opsi_a || 'pdf,doc,docx,jpg,jpeg,png,zip') + '" placeholder="pdf,doc,docx,jpg,png,zip"></div>' +
+          '<input type="text" id="bsUfExt" value="' + esc(data.opsi_a || 'pdf,doc,docx,jpg,png,zip') + '" placeholder="pdf,doc,docx,jpg,png,zip"></div>' +
           '<div class="form-group"><label>Ukuran maks (MB)</label>' +
           '<input type="number" id="bsUfMaxMb" min="1" max="50" value="' + esc(String(data.opsi_b || '10')) + '"></div>' +
           '<div class="form-group"><label>ID Folder Google Drive (opsional)</label>' +
@@ -17936,7 +17990,7 @@ document.getElementById('btnBsContohFormat')?.addEventListener('click', () => {
       let opsiC = document.getElementById('bsEdC') ? getMiniHtml('bsEdC') : null;
       let opsiD = document.getElementById('bsEdD') ? getMiniHtml('bsEdD') : null;
       if (jenis === 'Unggah File') {
-        opsiA = (document.getElementById('bsUfExt')?.value || 'pdf,doc,docx,jpg,jpeg,png,zip').trim();
+        opsiA = (document.getElementById('bsUfExt')?.value || 'pdf,doc,docx,jpg,png,zip').trim();
         opsiB = String(document.getElementById('bsUfMaxMb')?.value || '10').trim();
         opsiC = (document.getElementById('bsUfFolderId')?.value || '').trim() || null;
         opsiD = null;
