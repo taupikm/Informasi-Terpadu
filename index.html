@@ -15064,51 +15064,6 @@
       }
     }
 
-    /** Ambil semua fileId Google Drive dari HTML soal (img src, link, dsb.) */
-    function extractGdriveIdsFromHtml(html) {
-      const s = String(html || '');
-      const ids = new Set();
-      const patterns = [
-        /drive\.google\.com\/(?:file\/d\/|thumbnail\?id=|uc\?(?:export=(?:view|download)&)?id=|open\?id=)([a-zA-Z0-9_-]{20,})/gi,
-        /lh3\.googleusercontent\.com\/d\/([a-zA-Z0-9_-]{20,})/gi,
-        /[?&]id=([a-zA-Z0-9_-]{20,})/gi
-      ];
-      patterns.forEach(re => {
-        let m;
-        while ((m = re.exec(s)) !== null) {
-          if (m[1]) ids.add(m[1]);
-        }
-      });
-      return [...ids];
-    }
-
-    function collectGdriveIdsFromSoalRow(row) {
-      if (!row) return [];
-      const parts = [
-        row.pertanyaan, row.opsi_a, row.opsi_b, row.opsi_c, row.opsi_d, row.opsi_e, row.kunci
-      ];
-      const ids = new Set();
-      parts.forEach(p => {
-        extractGdriveIdsFromHtml(p).forEach(id => ids.add(id));
-      });
-      return [...ids];
-    }
-
-    async function deleteGdriveFilesFromSoalRows(rows) {
-      const ids = new Set();
-      (rows || []).forEach(r => collectGdriveIdsFromSoalRow(r).forEach(id => ids.add(id)));
-      if (!ids.size) return { tried: 0, ok: 0 };
-      let ok = 0;
-      for (const id of ids) {
-        try {
-          if (await deleteGdriveFile(id)) ok++;
-        } catch (e) {
-          console.warn('hapus gambar GDrive', id, e);
-        }
-      }
-      return { tried: ids.size, ok: ok };
-    }
-
     function extractGdriveFileId(ans) {
       if (!ans || typeof ans !== 'object') return null;
       if (ans.provider === 'gdrive' && ans.id) return String(ans.id);
@@ -15401,7 +15356,10 @@
       } else if (jenis === 'Unggah File') {
         const ext = String(s.opsi_a || 'pdf,doc,docx,jpg,jpeg,png,zip');
         const maxMb = Number(s.opsi_b) || 10;
-        const accept = ext.split(/[,;\s]+/).map(x => x.trim()).filter(Boolean).map(x => '.' + x.replace(/^\./, '')).join(',');
+        let _extParts = ext.split(/[,;\s]+/).map(x => x.trim().toLowerCase().replace(/^\./, '')).filter(Boolean);
+        if (_extParts.includes('jpg') && !_extParts.includes('jpeg')) _extParts.push('jpeg');
+        if (_extParts.includes('jpeg') && !_extParts.includes('jpg')) _extParts.push('jpg');
+        const accept = _extParts.map(x => '.' + x).join(',');
         let infoAns = '';
         if (ans && typeof ans === 'object' && ans.name) {
           infoAns = '<div style="margin-top:8px;padding:8px 10px;background:#f0fdf4;border:1px solid #86efac;border-radius:8px;font-size:12px;">' +
@@ -15503,8 +15461,16 @@
           const maxMb = Number(s.opsi_b) || 10;
           const allowed = String(s.opsi_a || 'pdf,doc,docx,jpg,jpeg,png,zip').split(/[,;\s]+/).map(x => x.trim().toLowerCase().replace(/^\./, '')).filter(Boolean);
           const ext = (f.name.split('.').pop() || '').toLowerCase();
-          if (allowed.length && !allowed.includes(ext)) {
-            if (st) st.innerHTML = '<span style="color:#b91c1c;">Ekstensi .' + esc(ext) + ' tidak diizinkan</span>';
+          // jpg dan jpeg sama (image/jpeg); perluas daftar agar sinonim diterima
+          const allowedSet = new Set(allowed);
+          if (allowedSet.has('jpg')) allowedSet.add('jpeg');
+          if (allowedSet.has('jpeg')) allowedSet.add('jpg');
+          if (allowedSet.has('tif')) allowedSet.add('tiff');
+          if (allowedSet.has('tiff')) allowedSet.add('tif');
+          if (allowedSet.has('htm')) allowedSet.add('html');
+          if (allowedSet.has('html')) allowedSet.add('htm');
+          if (allowedSet.size && !allowedSet.has(ext)) {
+            if (st) st.innerHTML = '<span style="color:#b91c1c;">Ekstensi .' + esc(ext) + ' tidak diizinkan. Izinkan: ' + esc(allowed.join(', ')) + '</span>';
             fileInp.value = '';
             return;
           }
@@ -17122,23 +17088,8 @@ document.getElementById('btnBsContohFormat')?.addEventListener('click', () => {
           return;
         }
       }
-      if (!(await showConfirm(
-        'Hapus ' + ids.length + ' bank soal beserta soalnya?\n\nGambar di Google Drive yang tertanam di soal juga akan dicoba dihapus.',
-        'Hapus', '🗑️'
-      ))) return;
+      if (!(await showConfirm('Hapus ' + ids.length + ' bank soal beserta soalnya?', 'Hapus', '🗑️'))) return;
       try {
-        let rows = [];
-        if (supabaseClient) {
-          const { data } = await supabaseClient.from('bank_soal_item')
-            .select('id, bank_id, pertanyaan, opsi_a, opsi_b, opsi_c, opsi_d, kunci')
-            .in('bank_id', ids.map(Number));
-          rows = data || [];
-        } else {
-          const items = JSON.parse(localStorage.getItem('bank_soal_item') || '[]');
-          rows = items.filter(x => ids.includes(String(x.bank_id)));
-        }
-        const gd = await deleteGdriveFilesFromSoalRows(rows);
-
         if (supabaseClient) {
           await supabaseClient.from('bank_soal_item').delete().in('bank_id', ids.map(Number));
           const { error } = await supabaseClient.from('bank_soal').delete().in('id', ids.map(Number));
@@ -17152,9 +17103,7 @@ document.getElementById('btnBsContohFormat')?.addEventListener('click', () => {
           localStorage.setItem('bank_soal_item', JSON.stringify(items));
         }
         await loadBankSoalTable();
-        let msg = 'Data dihapus';
-        if (gd.tried) msg += '\nGambar GDrive: ' + gd.ok + '/' + gd.tried + ' file dihapus';
-        alert(msg);
+        alert('Data dihapus');
       } catch (e) {
         alert('Gagal hapus: ' + (e.message || e));
       }
@@ -17412,7 +17361,7 @@ document.getElementById('btnBsContohFormat')?.addEventListener('click', () => {
       } else if (j === 'Unggah File') {
         box.innerHTML =
           '<div class="form-group"><label>Ekstensi diizinkan</label>' +
-          '<input type="text" id="bsUfExt" value="' + esc(data.opsi_a || 'pdf,doc,docx,jpg,jpeg,png,zip') + '" placeholder="pdf,doc,docx,jpg,jpeg,png,zip"></div>' +
+          '<input type="text" id="bsUfExt" value="' + esc(data.opsi_a || 'pdf,doc,docx,jpg,jpeg,png,zip') + '" placeholder="pdf,doc,docx,jpg,png,zip"></div>' +
           '<div class="form-group"><label>Ukuran maks (MB)</label>' +
           '<input type="number" id="bsUfMaxMb" min="1" max="50" value="' + esc(String(data.opsi_b || '10')) + '"></div>' +
           '<div class="form-group"><label>ID Folder Google Drive (opsional)</label>' +
@@ -18059,23 +18008,8 @@ document.getElementById('btnBsContohFormat')?.addEventListener('click', () => {
     document.getElementById('btnBsItemHapus')?.addEventListener('click', async () => {
       const ids = [...document.querySelectorAll('.cb-bs-item:checked')].map(c => c.value);
       if (!ids.length) { alert('Centang soal yang dihapus'); return; }
-      if (!(await showConfirm(
-        'Hapus ' + ids.length + ' soal?\n\nGambar yang terhubung di Google Drive (jika ada) juga akan dicoba dihapus.',
-        'Hapus', '🗑️'
-      ))) return;
+      if (!(await showConfirm('Hapus ' + ids.length + ' soal?', 'Hapus', '🗑️'))) return;
       try {
-        let rows = [];
-        if (supabaseClient) {
-          const { data } = await supabaseClient.from('bank_soal_item')
-            .select('id, pertanyaan, opsi_a, opsi_b, opsi_c, opsi_d, kunci')
-            .in('id', ids.map(Number));
-          rows = data || [];
-        } else {
-          const list = JSON.parse(localStorage.getItem('bank_soal_item') || '[]');
-          rows = list.filter(x => ids.includes(String(x.id)));
-        }
-        const gd = await deleteGdriveFilesFromSoalRows(rows);
-
         if (supabaseClient) {
           const { error } = await supabaseClient.from('bank_soal_item').delete().in('id', ids.map(Number));
           if (error) throw error;
@@ -18085,9 +18019,7 @@ document.getElementById('btnBsContohFormat')?.addEventListener('click', () => {
           localStorage.setItem('bank_soal_item', JSON.stringify(list));
         }
         await loadBsItemTable();
-        let msg = 'Soal dihapus';
-        if (gd.tried) msg += '\nGambar GDrive: ' + gd.ok + '/' + gd.tried + ' file dihapus';
-        alert(msg);
+        alert('Soal dihapus');
       } catch (e) {
         alert('Gagal: ' + (e.message || e));
       }
