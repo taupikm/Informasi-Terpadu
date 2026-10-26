@@ -1714,8 +1714,7 @@
 
     /* ===== Dashboard publik =====
        - Tamu (semua ukuran): layout publik
-       - Login + HP (max 767px): tetap layout publik
-       - Login + desktop: layout lama (statistik + profil)
+       - Login (HP + desktop): kartu legend (logo/foto + rekap)
     */
     #dashPublicView { display: none; margin-bottom: 12px; width: 100%; }
 
@@ -1723,10 +1722,12 @@
     body:not(.dash-logged-in) #dashPublicView { display: block; }
     body:not(.dash-logged-in) .dash-top-row { display: none !important; }
 
-    /* Desktop login: sembunyikan publik, pakai layout lama */
+    /* Login: sembunyikan publik, tampilkan kartu legend */
+    body.dash-logged-in #dashPublicView { display: none !important; }
+    body.dash-logged-in .dash-top-row { display: block !important; }
+
+    /* Desktop login: layout lebar */
     @media (min-width: 768px) {
-      body.dash-logged-in #dashPublicView { display: none !important; }
-      body.dash-logged-in .dash-top-row { display: block; }
       body:not(.dash-logged-in) #page-dashboard {
         max-width: 1280px !important;
         width: 100%;
@@ -1742,10 +1743,12 @@
       }
     }
 
-    /* HP: SELALU layout publik (tamu maupun login) */
+    /* HP: full width; login pakai legend, tamu pakai publik */
     @media (max-width: 767px) {
-      #dashPublicView { display: block !important; }
-      .dash-top-row { display: none !important; }
+      body:not(.dash-logged-in) #dashPublicView { display: block !important; }
+      body:not(.dash-logged-in) .dash-top-row { display: none !important; }
+      body.dash-logged-in #dashPublicView { display: none !important; }
+      body.dash-logged-in .dash-top-row { display: block !important; }
       #page-dashboard {
         max-width: none !important;
         width: 100%;
