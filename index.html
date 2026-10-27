@@ -1207,8 +1207,8 @@
       display: flex !important;
       flex-direction: row !important;
       align-items: stretch;
-      gap: 10px;
-      padding: 12px 10px;
+      gap: 8px;
+      padding: 10px 6px;
       margin-bottom: 12px;
       background: #fff;
       border: 1px solid #e2e8f0;
@@ -1227,7 +1227,7 @@
       border-right: 1px solid #f1f5f9;
     }
     .dash-legend-logo {
-      width: 72px; height: 72px;
+      width: 84px; height: 84px;
       margin: 0 auto 8px;
       display: flex; align-items: center; justify-content: center;
       overflow: hidden; flex-shrink: 0;
@@ -1253,11 +1253,16 @@
 
     .dash-legend-user { border-right: 1px solid #f1f5f9; }
     .dash-legend-photo {
-      width: 88px; height: 88px; border-radius: 50%;
+      width: 96px; height: 96px; border-radius: 50%;
       background: #e0e7ff; border: 3px solid #c7d2fe;
       overflow: hidden; display: flex; align-items: center; justify-content: center;
-      font-weight: 800; font-size: 28px; color: var(--primary);
-      flex-shrink: 0; margin: 0 auto 10px;
+      font-weight: 800; font-size: 30px; color: var(--primary);
+      flex-shrink: 0; margin: 0 auto 8px;
+    }
+    .dash-legend-user-name {
+      font-size: 13px; font-weight: 800; color: #1e3a8a;
+      line-height: 1.3; margin-bottom: 8px;
+      max-width: 100%; word-break: break-word;
     }
     .dash-legend-photo img {
       width: 100%; height: 100%; object-fit: cover; object-position: center 20%; display: block;
@@ -1330,9 +1335,10 @@
 
     @media (min-width: 768px) {
       .dash-legend-card { padding: 16px 14px; gap: 16px; }
-      .dash-legend-logo { width: 80px; height: 80px; }
-      .dash-legend-photo { width: 96px; height: 96px; font-size: 30px; }
+      .dash-legend-logo { width: 92px; height: 92px; }
+      .dash-legend-photo { width: 100px; height: 100px; font-size: 32px; }
       .dash-legend-school-name { font-size: 14px; }
+      .dash-legend-user-name { font-size: 14px; }
       .dash-legend-role-title { font-size: 15px; }
       .dash-legend-meta { font-size: 12.5px; }
       .dash-legend-grid { max-width: 240px; gap: 10px; }
@@ -1364,9 +1370,10 @@
         min-width: 0;
         padding: 0 0 0 2px;
       }
-      .dash-legend-logo { width: 52px; height: 52px; margin-bottom: 4px; }
-      .dash-legend-photo { width: 56px; height: 56px; font-size: 20px; margin-bottom: 4px; border-width: 2px; }
+      .dash-legend-logo { width: 68px; height: 68px; margin-bottom: 4px; }
+      .dash-legend-photo { width: 72px; height: 72px; font-size: 22px; margin-bottom: 4px; border-width: 2px; }
       .dash-legend-school-name { font-size: 11px; margin-bottom: 4px; line-height: 1.25; }
+      .dash-legend-user-name { font-size: 11px; margin-bottom: 4px; line-height: 1.25; }
       .dash-legend-role-title { font-size: 11px; margin-bottom: 4px; }
       .dash-legend-meta { font-size: 9.5px; line-height: 1.4; }
       .dash-legend-meta .row { grid-template-columns: 58px 6px 1fr; gap: 1px; margin-bottom: 1px; }
@@ -1380,10 +1387,10 @@
       .dash-legend-count { font-size: 11px; padding: 2px 8px; }
     }
     @media (max-width: 380px) {
-      .dash-legend-card { gap: 4px; padding: 8px 6px; }
-      .dash-legend-logo { width: 44px; height: 44px; }
-      .dash-legend-photo { width: 48px; height: 48px; font-size: 18px; }
-      .dash-legend-school-name, .dash-legend-role-title { font-size: 10px; }
+      .dash-legend-card { gap: 4px; padding: 8px 4px; }
+      .dash-legend-logo { width: 58px; height: 58px; }
+      .dash-legend-photo { width: 60px; height: 60px; font-size: 18px; }
+      .dash-legend-school-name, .dash-legend-user-name, .dash-legend-role-title { font-size: 10px; }
       .dash-legend-meta { font-size: 9px; }
       .dash-legend-meta .row { grid-template-columns: 52px 4px 1fr; }
       .dash-legend-user-meta .row { grid-template-columns: 42px 4px 1fr; }
@@ -2879,10 +2886,10 @@
         <div class="card dash-legend-card dash-legend-siswa">
           <div class="dash-legend-left dash-legend-user">
             <div class="dash-legend-photo" id="dashLegendPhoto">?</div>
-            <div class="dash-legend-role-title" id="dashLegendRoleTitle">ADMINISTRATOR</div>
-            <div class="dash-legend-meta dash-legend-user-meta">
-              <div class="row"><span class="lbl">Jabatan</span><span class="sep">:</span><span class="val" id="dashLegendJabatan">-</span></div>
-              <div class="row"><span class="lbl">Akses</span><span class="sep">:</span><span class="val" id="dashLegendAkses">-</span></div>
+            <div class="dash-legend-user-name" id="dashLegendUserName">-</div>
+            <div class="dash-legend-meta dash-legend-user-meta" id="dashLegendUserMeta">
+              <div class="row"><span class="lbl">Jabatan</span><span class="sep">:</span><span class="val">-</span></div>
+              <div class="row"><span class="lbl">Akses</span><span class="sep">:</span><span class="val">-</span></div>
             </div>
           </div>
           <div class="dash-legend-right">
@@ -11409,20 +11416,19 @@
       else if (photoEl) photoEl.textContent = (nama || '?').charAt(0).toUpperCase();
       // Sinkron ke kartu legend statistik
       const legPhoto = document.getElementById('dashLegendPhoto');
-      const legRole = document.getElementById('dashLegendRoleTitle');
-      const legJab = document.getElementById('dashLegendJabatan');
-      const legAks = document.getElementById('dashLegendAkses');
+      const legName = document.getElementById('dashLegendUserName');
+      const legMeta = document.getElementById('dashLegendUserMeta');
       if (legPhoto && typeof setAvatarEl === 'function') setAvatarEl(legPhoto, currentUserFoto, nama);
       else if (legPhoto) legPhoto.textContent = (nama || '?').charAt(0).toUpperCase();
-      if (legRole) {
-        legRole.textContent = (currentRole === 'admin') ? 'ADMINISTRATOR'
-          : (currentRole === 'guru') ? 'GURU'
-          : (currentRole === 'siswa' && currentUserIsAlumni) ? 'ALUMNI'
-          : (currentRole === 'siswa') ? 'SISWA'
-          : String(roleLabel || '').toUpperCase();
+      if (legName) legName.textContent = nama || '-';
+      function fillLegendUserMeta(rows) {
+        const box = document.getElementById('dashLegendUserMeta');
+        if (!box) return;
+        box.innerHTML = (rows || []).map(function (r) {
+          return '<div class="row"><span class="lbl">' + esc(r.lbl) + '</span><span class="sep">:</span><span class="val">' + esc(r.val == null || r.val === '' ? '-' : String(r.val)) + '</span></div>';
+        }).join('');
       }
-      if (legJab) legJab.textContent = '-';
-      if (legAks) legAks.textContent = '-';
+      fillLegendUserMeta([{ lbl: '…', val: 'Memuat' }]);
       if (metaEl) metaEl.innerHTML = '<span style="color:#94a3b8;">Memuat...</span>';
       if (extraEl) extraEl.innerHTML = '';
       if (badgeEl) { badgeEl.style.display = 'none'; badgeEl.textContent = ''; }
@@ -11444,8 +11450,11 @@
               '<div><span style="color:#64748b;">Username</span> : <b>' + esc(username) + '</b></div>' +
               '<div><span style="color:#64748b;">Peran</span> : <b>Administrator</b></div>';
           }
-          if (legJab) legJab.textContent = 'Administrator Sistem';
-          if (legAks) legAks.textContent = 'Penuh (Admin)';
+          if (legName && nameEl) legName.textContent = nameEl.textContent || nama;
+          fillLegendUserMeta([
+            { lbl: 'Jabatan', val: 'Administrator Sistem' },
+            { lbl: 'Akses', val: 'Penuh (Admin)' }
+          ]);
         } else if (currentRole === 'guru') {
           let nip = currentUserKode || '-';
           let jabatanStr = '-';
@@ -11512,10 +11521,56 @@
               '<div><span style="color:#64748b;">Jabatan Fungsional</span> : <b>' + esc(jabatanFung || '-') + '</b></div>';
           }
           {
-            const legJab2 = document.getElementById('dashLegendJabatan');
-            const legAks2 = document.getElementById('dashLegendAkses');
-            if (legJab2) legJab2.textContent = jabatanStr || jabatanFung || 'Guru';
-            if (legAks2) legAks2.textContent = 'Guru';
+            if (legName && nameEl) legName.textContent = nameEl.textContent || nama;
+            let mapelKode = '-';
+            let kelasList = '-';
+            try {
+              if (typeof loadMasterMapelKelas === 'function') await loadMasterMapelKelas();
+              if (typeof getGuruAmpuPairs === 'function' && currentUserId) {
+                const pairs = await getGuruAmpuPairs(currentUserId);
+                const idToMapel = {};
+                (masterMapel || []).forEach(function (m) {
+                  idToMapel[Number(m.id)] = m.kode || m.mapel || m.nama || ('#' + m.id);
+                });
+                const idToKelas = {};
+                (masterKelas || []).forEach(function (k) {
+                  idToKelas[Number(k.id)] = k.kelas || ('#' + k.id);
+                });
+                const kodes = [];
+                const kelasArr = [];
+                (pairs || []).forEach(function (p) {
+                  const mk = idToMapel[Number(p.mapel_id)];
+                  if (mk && kodes.indexOf(mk) < 0) kodes.push(mk);
+                  const kk = idToKelas[Number(p.kelas_id)];
+                  if (kk && kelasArr.indexOf(kk) < 0) kelasArr.push(kk);
+                });
+                // fallback: separate lists
+                if (!kodes.length && typeof getGuruMapelIds === 'function') {
+                  const mids = await getGuruMapelIds(currentUserId);
+                  (mids || []).forEach(function (mid) {
+                    const mk = idToMapel[Number(mid)];
+                    if (mk && kodes.indexOf(mk) < 0) kodes.push(mk);
+                  });
+                }
+                if (!kelasArr.length && typeof getGuruKelasIds === 'function') {
+                  const kids = await getGuruKelasIds(currentUserId);
+                  (kids || []).forEach(function (kid) {
+                    const kk = idToKelas[Number(kid)];
+                    if (kk && kelasArr.indexOf(kk) < 0) kelasArr.push(kk);
+                  });
+                }
+                if (kodes.length) mapelKode = kodes.join(', ');
+                if (kelasArr.length) {
+                  kelasArr.sort();
+                  kelasList = kelasArr.join(', ');
+                }
+              }
+            } catch (eLeg) { console.warn('legend guru mapel/kelas', eLeg); }
+            fillLegendUserMeta([
+              { lbl: 'NIP', val: nip || '-' },
+              { lbl: 'Mapel', val: mapelKode },
+              { lbl: 'Kelas', val: kelasList }
+            ]);
           }
           if (extraEl && supabaseClient && currentUserId) {
             try {
@@ -11568,18 +11623,52 @@
         } else if (currentRole === 'siswa') {
           let nisn = currentUserKode || '-';
           let kelas = currentUserKelas || '-';
+          let alamatSiswa = '-';
           if (supabaseClient && currentUserId && !currentUserIsAlumni) {
             try {
-              const { data } = await supabaseClient.from('siswa').select('nama, nisn, kelas').eq('id', currentUserId).maybeSingle();
+              const { data } = await supabaseClient.from('siswa').select('nama, nisn, kelas, alamat').eq('id', currentUserId).maybeSingle();
               if (data) {
                 if (data.nama && nameEl) nameEl.textContent = data.nama;
                 nisn = data.nisn || nisn;
                 kelas = data.kelas || kelas;
+                alamatSiswa = data.alamat || '-';
                 currentUserKelas = kelas;
                 currentUserKode = nisn;
               }
+            } catch (e) {
+              try {
+                const { data } = await supabaseClient.from('siswa').select('nama, nisn, kelas').eq('id', currentUserId).maybeSingle();
+                if (data) {
+                  if (data.nama && nameEl) nameEl.textContent = data.nama;
+                  nisn = data.nisn || nisn;
+                  kelas = data.kelas || kelas;
+                  currentUserKelas = kelas;
+                  currentUserKode = nisn;
+                }
+              } catch (e2) {}
+            }
+          } else if (currentUserIsAlumni && supabaseClient && currentUserId) {
+            try {
+              const { data } = await supabaseClient.from('lulusan').select('nama, nisn, alamat').eq('id', currentUserId).maybeSingle();
+              if (data) {
+                if (data.nama && nameEl) nameEl.textContent = data.nama;
+                nisn = data.nisn || nisn;
+                alamatSiswa = data.alamat || '-';
+              }
             } catch (e) {}
           }
+          // fallback cache lokal
+          try {
+            if ((alamatSiswa === '-' || !alamatSiswa) && typeof dataSiswa !== 'undefined') {
+              const s = (dataSiswa || []).find(function (x) { return String(x.id) === String(currentUserId); });
+              if (s) {
+                if (s.alamat) alamatSiswa = s.alamat;
+                if (s.nisn) nisn = s.nisn;
+                if (s.kelas) kelas = s.kelas;
+                if (s.nama && nameEl) nameEl.textContent = s.nama;
+              }
+            }
+          } catch (e) {}
           if (metaEl) {
             metaEl.innerHTML =
               '<div><span style="color:#64748b;">NISN</span> : <b>' + esc(nisn) + '</b></div>' +
@@ -11587,10 +11676,20 @@
               (currentUserIsAlumni ? '<div><span style="color:#64748b;">Status</span> : <b>Alumni</b></div>' : '');
           }
           {
-            const legJab3 = document.getElementById('dashLegendJabatan');
-            const legAks3 = document.getElementById('dashLegendAkses');
-            if (legJab3) legJab3.textContent = currentUserIsAlumni ? 'Alumni' : ('Kelas ' + (kelas || '-'));
-            if (legAks3) legAks3.textContent = currentUserIsAlumni ? 'Alumni' : 'Siswa';
+            if (legName && nameEl) legName.textContent = nameEl.textContent || nama;
+            if (currentUserIsAlumni) {
+              fillLegendUserMeta([
+                { lbl: 'NISN', val: nisn },
+                { lbl: 'Status', val: 'Alumni' },
+                { lbl: 'Alamat', val: alamatSiswa }
+              ]);
+            } else {
+              fillLegendUserMeta([
+                { lbl: 'NISN', val: nisn },
+                { lbl: 'Kelas', val: kelas },
+                { lbl: 'Alamat', val: alamatSiswa }
+              ]);
+            }
           }
           if (badgeEl && !currentUserIsAlumni && supabaseClient && currentUserId &&
               typeof loadAbsenSettings === 'function' && typeof fetchAbsensiRange === 'function' &&
