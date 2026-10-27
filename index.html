@@ -7,6 +7,7 @@
   <meta http-equiv="Pragma" content="no-cache" />
   <meta http-equiv="Expires" content="0" />
   <title>SMP NEGERI 1 SOBANG</title>
+<!-- build: v2026.10.27-ujian-fix | resume jawaban, autosave, poll deadline, buka-kembali aman -->
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="https://cdn.jsdelivr.net/npm/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
@@ -1203,15 +1204,11 @@
     }
 
     /* ===== Kartu legend statistik (logo/foto + grid) ===== */
-    /* Kartu legend statistik — layout seperti screenshot:
-       kartu1: logo sekolah | Rekap Guru
-       kartu2: foto user    | Rekap Siswa */
     .dash-legend-card {
       display: flex;
-      flex-direction: row;
       align-items: stretch;
-      gap: 10px;
-      padding: 12px;
+      gap: 12px;
+      padding: 14px 14px;
       margin-bottom: 12px;
       background: #fff;
       border: 1px solid #e2e8f0;
@@ -1220,13 +1217,12 @@
     }
     .dash-legend-card:last-child { margin-bottom: 0; }
     .dash-legend-left {
-      flex: 0 0 40%;
-      max-width: 46%;
+      flex: 0 0 42%;
+      max-width: 48%;
       min-width: 0;
       display: flex;
       flex-direction: column;
       align-items: center;
-      justify-content: center;
       text-align: center;
       padding-right: 8px;
       border-right: 1px solid #f1f5f9;
@@ -1236,12 +1232,11 @@
       min-width: 0;
       display: flex;
       flex-direction: column;
-      gap: 8px;
-      align-items: stretch;
+      gap: 10px;
     }
     .dash-legend-logo {
-      width: 68px; height: 68px;
-      margin: 0 auto 6px;
+      width: 72px; height: 72px;
+      margin: 0 auto 8px;
       display: flex; align-items: center; justify-content: center;
       overflow: hidden; flex-shrink: 0;
     }
@@ -1253,23 +1248,22 @@
     }
     .dash-legend-school-name {
       font-size: 12px; font-weight: 800; color: #1e3a8a;
-      line-height: 1.3; margin-bottom: 6px;
+      line-height: 1.3; margin-bottom: 8px;
       letter-spacing: 0.2px;
     }
     .dash-legend-photo {
-      width: 68px; height: 68px; border-radius: 50%;
-      margin: 0 auto 6px;
+      width: 72px; height: 72px; border-radius: 50%;
+      margin: 0 auto 8px;
       background: #e0e7ff; border: 3px solid #c7d2fe;
       overflow: hidden; display: flex; align-items: center; justify-content: center;
-      font-weight: 800; font-size: 24px; color: var(--primary); flex-shrink: 0;
+      font-weight: 800; font-size: 26px; color: var(--primary); flex-shrink: 0;
     }
-    .dash-legend-photo.no-foto { display: none !important; }
     .dash-legend-photo img {
       width: 100%; height: 100%; object-fit: cover; object-position: center 20%; display: block;
     }
     .dash-legend-role-name {
       font-size: 13px; font-weight: 800; color: #1e3a8a;
-      letter-spacing: 0.4px; margin-bottom: 6px;
+      letter-spacing: 0.4px; margin-bottom: 8px;
       text-transform: uppercase;
     }
     .dash-legend-meta {
@@ -1286,13 +1280,12 @@
 
     .dash-legend-title {
       display: inline-flex; align-items: center; gap: 8px;
-      align-self: center;
+      align-self: flex-end;
       padding: 5px 12px;
       border-radius: 10px;
       font-size: 13px; font-weight: 800;
       border: 2px solid;
       background: #fff;
-      margin: 0 auto 2px;
     }
     .dash-legend-title-guru {
       color: #1d4ed8;
@@ -1321,8 +1314,8 @@
     }
     .dash-legend-grid .dash-stat {
       border-radius: 12px;
-      padding: 8px 4px 6px;
-      min-height: 54px;
+      padding: 10px 6px 8px;
+      min-height: 56px;
       display: flex;
       flex-direction: column;
       align-items: center;
@@ -1330,39 +1323,57 @@
       border: none;
     }
     .dash-legend-grid .ds-val {
-      font-size: 14px; font-weight: 800; line-height: 1.25;
+      font-size: 15px; font-weight: 800; line-height: 1.2;
       min-height: 1.2em;
     }
     .dash-legend-grid .ds-lbl {
-      font-size: 11px; font-weight: 700; margin-top: 3px;
+      font-size: 11px; font-weight: 700; margin-top: 4px;
     }
-    .dash-legend-grid .ds-tw { background: #bfdbfe; }
+    /* Warna kotak sesuai gambar referensi */
+    .dash-legend-grid .ds-tw {
+      background: #bfdbfe;
+    }
     .dash-legend-grid .ds-tw .ds-val,
     .dash-legend-grid .ds-tw .ds-lbl { color: #1e40af; }
-    .dash-legend-grid .ds-tl { background: #bbf7d0; }
+
+    .dash-legend-grid .ds-tl {
+      background: #bbf7d0;
+    }
     .dash-legend-grid .ds-tl .ds-val,
     .dash-legend-grid .ds-tl .ds-lbl { color: #166534; }
-    .dash-legend-grid .ds-sakit { background: #fed7aa; }
+
+    .dash-legend-grid .ds-sakit {
+      background: #fed7aa;
+    }
     .dash-legend-grid .ds-sakit .ds-val,
     .dash-legend-grid .ds-sakit .ds-lbl { color: #c2410c; }
-    .dash-legend-grid .ds-izin { background: #fef08a; }
+
+    .dash-legend-grid .ds-izin {
+      background: #fef08a;
+    }
     .dash-legend-grid .ds-izin .ds-val,
     .dash-legend-grid .ds-izin .ds-lbl { color: #a16207; }
-    .dash-legend-grid .ds-alpa { background: #fbcfe8; }
+
+    .dash-legend-grid .ds-alpa {
+      background: #fbcfe8;
+    }
     .dash-legend-grid .ds-alpa .ds-val,
     .dash-legend-grid .ds-alpa .ds-lbl { color: #9d174d; }
-    .dash-legend-grid .ds-bolos { background: #fecaca; }
+
+    .dash-legend-grid .ds-bolos {
+      background: #fecaca;
+    }
     .dash-legend-grid .ds-bolos .ds-val,
     .dash-legend-grid .ds-bolos .ds-lbl { color: #b91c1c; }
 
-    /* Side-by-side seperti screenshot; stack hanya di layar sangat sempit */
-    @media (max-width: 340px) {
-      .dash-legend-card { flex-direction: column; gap: 10px; }
+    @media (max-width: 420px) {
+      .dash-legend-card { flex-direction: column; gap: 12px; }
       .dash-legend-left {
         flex: none; max-width: none; width: 100%;
         border-right: none; border-bottom: 1px solid #f1f5f9;
-        padding-right: 0; padding-bottom: 8px;
+        padding-right: 0; padding-bottom: 10px;
       }
+      .dash-legend-title { align-self: center; }
     }
     @media (min-width: 768px) {
       .dash-legend-left { flex: 0 0 38%; }
@@ -11381,22 +11392,13 @@
       if (extraEl) extraEl.innerHTML = '';
       if (badgeEl) { badgeEl.style.display = 'none'; badgeEl.textContent = ''; }
 
-      // Sinkron kartu legend siswa: foto user | Rekap Siswa (v2026.10.26-legend)
+      // Sinkron kartu legend (Rekap Siswa)
       const legPhoto = document.getElementById('dashLegendPhoto');
       const legRole = document.getElementById('dashLegendRoleName');
       const legJab = document.getElementById('dashLegendJabatan');
       const legAkses = document.getElementById('dashLegendAkses');
-      if (legPhoto) {
-        if (currentUserFoto) {
-          legPhoto.classList.remove('no-foto');
-          if (typeof setAvatarEl === 'function') setAvatarEl(legPhoto, currentUserFoto, nama);
-          else legPhoto.textContent = (nama || '?').charAt(0).toUpperCase();
-        } else {
-          legPhoto.classList.add('no-foto');
-          legPhoto.innerHTML = '';
-          legPhoto.textContent = '';
-        }
-      }
+      if (legPhoto && typeof setAvatarEl === 'function') setAvatarEl(legPhoto, currentUserFoto, nama);
+      else if (legPhoto) legPhoto.textContent = (nama || '?').charAt(0).toUpperCase();
       if (legRole) {
         if (currentRole === 'admin') legRole.textContent = 'ADMINISTRATOR';
         else if (currentRole === 'guru') legRole.textContent = 'GURU';
@@ -15025,7 +15027,7 @@
         let hasil = [];
         if (!isAdminTu && supabaseClient && currentUserId) {
           const { data } = await supabaseClient.from('bank_soal_hasil')
-            .select('bank_id, skor, submitted_at').eq('siswa_id', currentUserId);
+            .select('id, bank_id, skor, status, submitted_at, deadline_at, detail').eq('siswa_id', currentUserId);
           hasil = data || [];
         }
         _tuBanks = banks;
@@ -15034,12 +15036,18 @@
           return;
         }
         list.innerHTML = banks.map(b => {
-          const attempts = hasil.filter(h => Number(h.bank_id) === Number(b.id)).length;
+          const rowsB = hasil.filter(h => Number(h.bank_id) === Number(b.id));
+          // Hanya status final yang menghitung attempt; "sedang" = boleh lanjut
+          const attempts = rowsB.filter(h => {
+            const st = String(h.status || '').toLowerCase();
+            return st === 'selesai' || st === 'timeout' || (!!h.submitted_at && st !== 'sedang');
+          }).length;
+          const ongoing = rowsB.find(h => String(h.status || '').toLowerCase() === 'sedang');
           const maxA = b.max_attempt != null ? b.max_attempt : 1;
-          const sisa = (currentRole === 'admin') ? 99 : Math.max(0, maxA - attempts);
-          const last = hasil.filter(h => Number(h.bank_id) === Number(b.id)).sort((a,c) =>
-            String(c.submitted_at).localeCompare(String(a.submitted_at)))[0];
-          const disabled = currentRole === 'admin' ? false : (sisa <= 0);
+          const sisa = (currentRole === 'admin') ? 99 : (ongoing ? 1 : Math.max(0, maxA - attempts));
+          const last = rowsB.slice().sort((a,c) =>
+            String(c.submitted_at || '').localeCompare(String(a.submitted_at || '')))[0];
+          const disabled = currentRole === 'admin' ? false : (sisa <= 0 && !ongoing);
           let waktuInfo = '';
           if (b.waktu_mulai || b.waktu_selesai) {
             waktuInfo = '<div style="font-size:11px;color:#64748b;margin-top:4px;">';
@@ -15059,7 +15067,7 @@
             '<button class="btn ' + (disabled ? 'btn-outline' : 'btn-primary') +
             '" style="width:100%;margin-top:10px;" data-tu-start="' + b.id + '"' +
             (disabled ? ' disabled' : '') + '>' +
-            (disabled ? 'Kesempatan habis' : 'Kerjakan') + '</button></div>';
+            (disabled ? 'Kesempatan habis' : (ongoing ? 'Lanjutkan' : 'Kerjakan')) + '</button></div>';
         }).join('');
 
         list.querySelectorAll('[data-tu-start]').forEach(btn => {
@@ -15153,16 +15161,69 @@
       _tuIdx = 0;
       try { Object.keys(_tuSoalFullCache).forEach(k => delete _tuSoalFullCache[k]); } catch (e) {}
 
-      if (_tuTimerIv) clearInterval(_tuTimerIv);
+      // --- Lanjutkan sesi yang ada (Buka Kembali / refresh) ---
+      let existingSes = null;
+      try {
+        existingSes = await loadExistingTuSession(bankId);
+      } catch (e) { console.warn('loadExistingTuSession', e); }
+
+      if (existingSes && existingSes.detail) {
+        try {
+          const det = typeof existingSes.detail === 'string'
+            ? JSON.parse(existingSes.detail) : existingSes.detail;
+          if (Array.isArray(det)) {
+            det.forEach(d => {
+              if (d && d.soal_id != null && d.jawaban != null && d.jawaban !== '') {
+                _tuAnswers[d.soal_id] = d.jawaban;
+              }
+            });
+          }
+        } catch (e) { console.warn('restore detail', e); }
+      }
+      // Cadangan lokal (jika server detail kosong)
+      try {
+        const lsKey = tuLocalAnswersKey(bankId);
+        const raw = localStorage.getItem(lsKey);
+        if (raw) {
+          const obj = JSON.parse(raw);
+          if (obj && typeof obj === 'object') {
+            Object.keys(obj).forEach(k => {
+              if (_tuAnswers[k] == null || _tuAnswers[k] === '') _tuAnswers[k] = obj[k];
+            });
+          }
+        }
+      } catch (e) {}
+
+      if (_tuTimerIv) { clearInterval(_tuTimerIv); _tuTimerIv = null; }
+      if (window._tuDeadlinePollIv) { clearInterval(window._tuDeadlinePollIv); window._tuDeadlinePollIv = null; }
+      if (window._tuAutosaveIv) { clearInterval(window._tuAutosaveIv); window._tuAutosaveIv = null; }
+
       const durMin = Number(bank.durasi) || 60;
       let end = Date.now() + durMin * 60 * 1000;
-      if (bank.waktu_selesai) {
+      // Pakai deadline tersimpan jika masih valid (Perpanjang / lanjut sesi)
+      if (existingSes && existingSes.deadline_at) {
+        const ed = new Date(existingSes.deadline_at).getTime();
+        if (!isNaN(ed) && ed > Date.now() + 3000) {
+          end = ed;
+        } else if (!isNaN(ed) && ed <= Date.now()) {
+          // deadline lama sudah lewat tapi status sedang (baru dibuka kembali tanpa perpanjang)
+          end = Date.now() + Math.min(durMin, 15) * 60 * 1000;
+        }
+      } else if (bank.waktu_selesai) {
         const ws = new Date(bank.waktu_selesai).getTime();
-        if (ws < end) end = ws;
+        if (!isNaN(ws) && ws < end) end = ws;
+      }
+      // Hard stop bank.waktu_selesai hanya jika belum ada perpanjang di sesi
+      if (bank.waktu_selesai && !(existingSes && existingSes.deadline_at)) {
+        const ws = new Date(bank.waktu_selesai).getTime();
+        if (!isNaN(ws) && ws < end) end = ws;
       }
       _tuDeadline = end;
       _tuTimerIv = setInterval(updateTuTimer, 1000);
       updateTuTimer();
+      // Poll deadline dari server agar Perpanjang langsung terasa di HP siswa
+      window._tuDeadlinePollIv = setInterval(() => { pollTuDeadlineFromServer(); }, 12000);
+      window._tuAutosaveIv = setInterval(() => { autosaveTuProgress(false); }, 20000);
 
       document.getElementById('tuJudulKerjakan').textContent = bank.judul || 'Ujian';
       showPage('kerjakan-ujian', true);
@@ -15173,14 +15234,133 @@
         disableTuAntiCurang();
       }
       try {
-        await createTuSession(bank, end);
+        await createTuSession(bank, end, existingSes);
       } catch (e) { console.warn('session', e); }
+      try { await autosaveTuProgress(true); } catch (e) {}
     }
 
-    async function createTuSession(bank, deadlineMs) {
+    function tuLocalAnswersKey(bankId) {
+      return 'tu_ans_' + String(bankId) + '_' + String(currentUserId || currentUserKode || 'x');
+    }
+
+    async function loadExistingTuSession(bankId) {
+      const isAdminTu = currentRole === 'admin';
+      if (isAdminTu || !currentUserId) return null;
+      if (supabaseClient) {
+        // Prioritas: status sedang (termasuk setelah Buka Kembali)
+        let { data, error } = await supabaseClient.from('bank_soal_hasil')
+          .select('id, bank_id, status, deadline_at, detail, submitted_at, cheat_count')
+          .eq('bank_id', bankId).eq('siswa_id', currentUserId).eq('status', 'sedang')
+          .order('id', { ascending: false }).limit(1);
+        if (error) {
+          const r = await supabaseClient.from('bank_soal_hasil')
+            .select('*').eq('bank_id', bankId).eq('siswa_id', currentUserId).eq('status', 'sedang')
+            .order('id', { ascending: false }).limit(1);
+          data = r.data; error = r.error;
+        }
+        if (!error && data && data.length) return data[0];
+        return null;
+      }
+      try {
+        const list = JSON.parse(localStorage.getItem('bank_soal_hasil') || '[]');
+        return list.filter(x => Number(x.bank_id) === Number(bankId) && String(x.siswa_id) === String(currentUserId) && x.status === 'sedang')
+          .sort((a, b) => (Number(b.id) || 0) - (Number(a.id) || 0))[0] || null;
+      } catch (e) { return null; }
+    }
+
+    function buildTuDetailSnapshot() {
+      saveCurrentTuAnswer();
+      return _tuSoals.map(s => ({
+        soal_id: s.id,
+        nomor: s.nomor,
+        jenis: s.jenis,
+        jawaban: (_tuAnswers[s.id] != null ? _tuAnswers[s.id] : null),
+        kunci: null,
+        benar: null,
+        skor: null
+      }));
+    }
+
+    async function autosaveTuProgress(force) {
+      if (!_tuExam || currentRole === 'admin') return;
+      if (!window._tuSessionId && !currentUserId) return;
+      try {
+        saveCurrentTuAnswer();
+        // Cadangan lokal selalu
+        try {
+          localStorage.setItem(tuLocalAnswersKey(_tuExam.id), JSON.stringify(_tuAnswers || {}));
+        } catch (e) {}
+        const detail = buildTuDetailSnapshot();
+        const patch = {
+          status: 'sedang',
+          detail: detail,
+          submitted_at: null
+        };
+        if (_tuDeadline) patch.deadline_at = new Date(_tuDeadline).toISOString();
+        if (supabaseClient && window._tuSessionId) {
+          const { error } = await supabaseClient.from('bank_soal_hasil')
+            .update(patch).eq('id', window._tuSessionId);
+          if (error) console.warn('autosave', error.message || error);
+        } else if (!supabaseClient && window._tuSessionId) {
+          let list = JSON.parse(localStorage.getItem('bank_soal_hasil') || '[]');
+          list = list.map(x => String(x.id) === String(window._tuSessionId) ? Object.assign({}, x, patch) : x);
+          localStorage.setItem('bank_soal_hasil', JSON.stringify(list));
+        }
+      } catch (e) {
+        if (force) console.warn('autosaveTuProgress', e);
+      }
+    }
+
+    window.addEventListener('pagehide', () => { try { autosaveTuProgress(true); } catch (e) {} });
+    document.addEventListener('visibilitychange', () => {
+      if (document.hidden && _tuExam) { try { autosaveTuProgress(true); } catch (e) {} }
+    });
+
+    async function pollTuDeadlineFromServer() {
+      if (!_tuExam || !window._tuSessionId || !supabaseClient) return;
+      if (document.hidden) return;
+      try {
+        const { data, error } = await supabaseClient.from('bank_soal_hasil')
+          .select('deadline_at, status').eq('id', window._tuSessionId).maybeSingle();
+        if (error || !data) return;
+        const st = String(data.status || '').toLowerCase();
+        if (st === 'selesai' || st === 'timeout') {
+          // Admin menandai selesai di monitor
+          return;
+        }
+        if (data.deadline_at) {
+          const ed = new Date(data.deadline_at).getTime();
+          if (!isNaN(ed) && Math.abs(ed - (_tuDeadline || 0)) > 2000) {
+            _tuDeadline = ed;
+            updateTuTimer();
+          }
+        }
+      } catch (e) {}
+    }
+
+    async function createTuSession(bank, deadlineMs, existingSes) {
       const isAdminTu = currentRole === 'admin';
       if (!isAdminTu) {
         try { await ensureSiswaKelas(); } catch (e) {}
+      }
+      // JANGAN hapus baris sedang — itu menghapus jawaban tersimpan
+      if (existingSes && existingSes.id) {
+        window._tuSessionId = existingSes.id;
+        const patch = {
+          status: 'sedang',
+          submitted_at: null,
+          deadline_at: deadlineMs ? new Date(deadlineMs).toISOString() : (existingSes.deadline_at || null)
+        };
+        try {
+          if (supabaseClient) {
+            await supabaseClient.from('bank_soal_hasil').update(patch).eq('id', existingSes.id);
+          } else {
+            let list = JSON.parse(localStorage.getItem('bank_soal_hasil') || '[]');
+            list = list.map(x => String(x.id) === String(existingSes.id) ? Object.assign({}, x, patch) : x);
+            localStorage.setItem('bank_soal_hasil', JSON.stringify(list));
+          }
+        } catch (e) { console.warn('update existing session', e); }
+        return;
       }
       const payload = {
         bank_id: Number(bank.id),
@@ -15192,16 +15372,12 @@
         skor: null,
         benar: null,
         total: null,
-        detail: [],
+        detail: buildTuDetailSnapshot(),
         deadline_at: deadlineMs ? new Date(deadlineMs).toISOString() : null,
         submitted_at: null,
         cheat_count: 0
       };
       if (supabaseClient) {
-        if (!isAdminTu && currentUserId) {
-          await supabaseClient.from('bank_soal_hasil')
-            .delete().eq('bank_id', payload.bank_id).eq('siswa_id', currentUserId).eq('status', 'sedang');
-        }
         let p = Object.assign({}, payload);
         let lastErr = null;
         for (let i = 0; i < 10; i++) {
@@ -15227,10 +15403,10 @@
         if (lastErr) console.warn('createTuSession', lastErr);
       } else {
         const list = JSON.parse(localStorage.getItem('bank_soal_hasil') || '[]');
-        const filtered = list.filter(x => !(Number(x.bank_id) === payload.bank_id && x.siswa_id === currentUserId && x.status === 'sedang'));
+        // Jangan hapus sesi sedang lain tanpa perlu
         payload.id = Date.now();
-        filtered.push(payload);
-        localStorage.setItem('bank_soal_hasil', JSON.stringify(filtered));
+        list.push(payload);
+        localStorage.setItem('bank_soal_hasil', JSON.stringify(list));
         window._tuSessionId = payload.id;
       }
     }
@@ -15243,8 +15419,11 @@
       const s = String(sisa % 60).padStart(2, '0');
       el.textContent = m + ':' + s;
       if (sisa <= 0) {
-        clearInterval(_tuTimerIv);
-        _tuTimerIv = null;
+        if (_tuTimerIv) { clearInterval(_tuTimerIv); _tuTimerIv = null; }
+        if (window._tuDeadlinePollIv) { clearInterval(window._tuDeadlinePollIv); window._tuDeadlinePollIv = null; }
+        if (window._tuAutosaveIv) { clearInterval(window._tuAutosaveIv); window._tuAutosaveIv = null; }
+        // Guard: cegah double-submit
+        if (window._tuSubmitting) return;
         alert('Waktu habis. Jawaban akan dikirim otomatis.');
         submitTuJawaban(true);
       }
@@ -16030,7 +16209,7 @@
 
     let _tuAntiOn = false;
     let _tuCheatCount = 0;
-    let _tuCheatMax = 3;
+    let _tuCheatMax = 5;
     let _tuAntiHandlers = [];
 
     function tuRequestFullscreen() {
@@ -16050,6 +16229,11 @@
 
     function onTuCheatViolation(reason) {
       if (!_tuAntiOn || !_tuExam) return;
+      // Debounce: abaikan pelanggaran beruntun dalam 4 detik (notifikasi HP sering memicu blur)
+      const now = Date.now();
+      if (window._tuCheatLastAt && (now - window._tuCheatLastAt) < 4000) return;
+      window._tuCheatLastAt = now;
+      try { autosaveTuProgress(true); } catch (e) {}
       _tuCheatCount++;
       const sisa = Math.max(0, _tuCheatMax - _tuCheatCount);
       if (_tuCheatCount >= _tuCheatMax) {
@@ -16069,20 +16253,18 @@
       _tuCheatCount = 0;
       tuRequestFullscreen();
 
+      // HP sering memicu blur/fullscreen palsu (notifikasi, keyboard, split-screen).
+      // Hanya hitung jika tab benar-benar hidden > 1.2s. Blur jendela diabaikan.
       const onVis = () => {
-        if (document.hidden) onTuCheatViolation('pindah tab / minimize');
-      };
-      const onBlur = () => {
+        if (!document.hidden) return;
         setTimeout(() => {
-          if (_tuAntiOn && document.hidden) return;
-          if (_tuAntiOn && !document.hasFocus()) onTuCheatViolation('keluar fokus jendela ujian');
-        }, 200);
+          if (_tuAntiOn && document.hidden) onTuCheatViolation('pindah tab / minimize');
+        }, 1200);
       };
+      const onBlur = () => { /* no-op di mobile: terlalu banyak false positive */ };
       const onFs = () => {
         if (!_tuAntiOn) return;
-        if (!document.fullscreenElement && !document.webkitFullscreenElement) {
-          onTuCheatViolation('keluar dari mode layar penuh');
-        }
+        // Jangan auto-hukum keluar fullscreen (banyak browser mobile memaksa exit)
       };
       const onCtx = (e) => { e.preventDefault(); };
       const onCopy = (e) => { e.preventDefault(); };
@@ -16139,6 +16321,7 @@
     }
 
     async function submitTuJawaban(auto) {
+      if (window._tuSubmitting) return;
       saveCurrentTuAnswer();
       if (!auto) {
         const unanswered = _tuSoals.filter(s => !isTuAnswered(s)).length;
@@ -16147,7 +16330,13 @@
           : 'Kirim semua jawaban sekarang?';
         if (!(await showConfirm(msg, 'Kirim Jawaban', '📤'))) return;
       }
+      window._tuSubmitting = true;
       if (_tuTimerIv) { clearInterval(_tuTimerIv); _tuTimerIv = null; }
+      if (window._tuDeadlinePollIv) { clearInterval(window._tuDeadlinePollIv); window._tuDeadlinePollIv = null; }
+      if (window._tuAutosaveIv) { clearInterval(window._tuAutosaveIv); window._tuAutosaveIv = null; }
+      try {
+        if (_tuExam) localStorage.removeItem(tuLocalAnswersKey(_tuExam.id));
+      } catch (e) {}
 
       let totalSkor = 0, maxSkor = 0, benar = 0, total = _tuSoals.length;
       const detail = [];
@@ -16268,6 +16457,8 @@
         initTugasSiswaPage();
       } catch (e) {
         alert('Gagal kirim: ' + (e.message || e));
+      } finally {
+        window._tuSubmitting = false;
       }
     }
 
@@ -18595,8 +18786,18 @@ document.getElementById('btnBsContohFormat')?.addEventListener('click', () => {
       if (!ids.length) { alert('Centang siswa dulu'); return; }
       if (!(await showConfirm('Buka kembali ujian untuk ' + ids.length + ' siswa?\nJawaban yang ada tetap tersimpan.', 'Buka Kembali', '🔓'))) return;
       try {
-        await updateMonRows(ids, { status: 'sedang', submitted_at: null });
-        alert('Ujian dibuka kembali. Siswa dapat melanjutkan/mengubah jawaban.');
+        for (const id of ids) {
+          const r = (dataMonHasil || []).find(x => String(x.id) === String(id));
+          const patch = { status: 'sedang', submitted_at: null };
+          // Jika deadline sudah lewat, beri waktu default 15 menit agar siswa bisa masuk lagi
+          let dl = r && r.deadline_at ? new Date(r.deadline_at).getTime() : 0;
+          if (!dl || dl <= Date.now()) {
+            patch.deadline_at = new Date(Date.now() + 15 * 60 * 1000).toISOString();
+          }
+          // Jangan sentuh kolom detail — jawaban tetap
+          await updateMonRows([id], patch);
+        }
+        alert('Ujian dibuka kembali.\nJawaban sebelumnya tetap ada.\nSiswa buka lagi menu Tugas/Ujian lalu kerjakan untuk melanjutkan.');
         await loadBsHasilTable();
       } catch (e) { alert('Gagal: ' + (e.message || e)); }
     });
@@ -18627,7 +18828,7 @@ document.getElementById('btnBsContohFormat')?.addEventListener('click', () => {
           const deadline = new Date(base + addMs).toISOString();
           await updateMonRows([id], { deadline_at: deadline, status: 'sedang' });
         }
-        alert('Waktu diperpanjang ' + mnt + ' menit.');
+        alert('Waktu diperpanjang ' + mnt + ' menit.\nSiswa yang sedang mengerjakan: timer akan update otomatis dalam ±12 detik (pastikan koneksi aktif).');
         await loadBsHasilTable();
       } catch (e) { alert('Gagal: ' + (e.message || e)); }
     });
