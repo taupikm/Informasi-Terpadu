@@ -1204,11 +1204,11 @@
 
     /* ===== Kartu Legend Statistik (logo + foto | rekap) ===== */
     .dash-legend-card {
-      display: flex;
-      flex-direction: row;
+      display: flex !important;
+      flex-direction: row !important;
       align-items: stretch;
-      gap: 12px;
-      padding: 14px 12px;
+      gap: 10px;
+      padding: 12px 10px;
       margin-bottom: 12px;
       background: #fff;
       border: 1px solid #e2e8f0;
@@ -1328,14 +1328,6 @@
     .leg-alpa { background: #fce7f3; color: #be185d; }
     .leg-bolos { background: #fecaca; color: #b91c1c; }
 
-    @media (max-width: 420px) {
-      .dash-legend-card { flex-direction: column; gap: 10px; }
-      .dash-legend-left, .dash-legend-user {
-        border-right: none; border-bottom: 1px solid #f1f5f9; padding-bottom: 12px;
-      }
-      .dash-legend-right { padding: 0; }
-      .dash-legend-grid { max-width: 100%; }
-    }
     @media (min-width: 768px) {
       .dash-legend-card { padding: 16px 14px; gap: 16px; }
       .dash-legend-logo { width: 80px; height: 80px; }
@@ -1349,45 +1341,57 @@
       .dash-leg-box .leg-lbl { font-size: 12px; }
     }
 
-    /* Legend cards — mobile full width seperti screenshot */
+    /* Legend cards — selalu kiri-kanan (logo/foto | rekap), ringkas di HP */
     @media (max-width: 767px) {
       .dash-legend-card {
-        flex-direction: row;
-        gap: 8px;
-        padding: 12px 10px;
-        margin-bottom: 12px;
+        display: flex !important;
+        flex-direction: row !important;
+        align-items: stretch;
+        gap: 6px;
+        padding: 10px 8px;
+        margin-bottom: 10px;
       }
       .dash-legend-left,
       .dash-legend-user {
+        flex: 0 1 46%;
+        min-width: 0;
         border-right: 1px solid #f1f5f9;
-        border-bottom: none;
-        padding-bottom: 0;
-        flex: 1 1 50%;
+        border-bottom: none !important;
+        padding: 2px 6px 2px 0;
       }
       .dash-legend-right {
-        flex: 1 1 50%;
-        padding: 0;
+        flex: 0 1 54%;
+        min-width: 0;
+        padding: 0 0 0 2px;
       }
-      .dash-legend-logo { width: 64px; height: 64px; }
-      .dash-legend-photo { width: 72px; height: 72px; font-size: 24px; margin-bottom: 8px; }
-      .dash-legend-school-name { font-size: 12px; }
-      .dash-legend-role-title { font-size: 12px; }
-      .dash-legend-meta { font-size: 10.5px; }
-      .dash-legend-meta .row { grid-template-columns: 70px 8px 1fr; }
-      .dash-legend-user-meta .row { grid-template-columns: 56px 8px 1fr; }
-      .dash-legend-grid { max-width: 100%; gap: 6px; }
-      .dash-leg-box { min-height: 52px; padding: 8px 4px; border-radius: 10px; }
-      .dash-leg-box .leg-val { font-size: 14px; }
-      .dash-leg-box .leg-lbl { font-size: 10px; }
-      .dash-legend-badge { padding: 3px 4px 3px 10px; margin-bottom: 8px; }
-      .dash-legend-title { font-size: 12px; }
-      .dash-legend-count { font-size: 12px; padding: 2px 10px; }
+      .dash-legend-logo { width: 52px; height: 52px; margin-bottom: 4px; }
+      .dash-legend-photo { width: 56px; height: 56px; font-size: 20px; margin-bottom: 4px; border-width: 2px; }
+      .dash-legend-school-name { font-size: 11px; margin-bottom: 4px; line-height: 1.25; }
+      .dash-legend-role-title { font-size: 11px; margin-bottom: 4px; }
+      .dash-legend-meta { font-size: 9.5px; line-height: 1.4; }
+      .dash-legend-meta .row { grid-template-columns: 58px 6px 1fr; gap: 1px; margin-bottom: 1px; }
+      .dash-legend-user-meta .row { grid-template-columns: 48px 6px 1fr; }
+      .dash-legend-grid { max-width: 100%; gap: 5px; }
+      .dash-leg-box { min-height: 44px; padding: 6px 2px 5px; border-radius: 8px; }
+      .dash-leg-box .leg-val { font-size: 12px; }
+      .dash-leg-box .leg-lbl { font-size: 9px; }
+      .dash-legend-badge { padding: 2px 3px 2px 8px; margin-bottom: 6px; gap: 5px; border-width: 1.5px; }
+      .dash-legend-title { font-size: 11px; }
+      .dash-legend-count { font-size: 11px; padding: 2px 8px; }
     }
-    @media (max-width: 360px) {
-      .dash-legend-card { flex-direction: column; }
-      .dash-legend-left, .dash-legend-user {
-        border-right: none; border-bottom: 1px solid #f1f5f9; padding-bottom: 10px;
-      }
+    @media (max-width: 380px) {
+      .dash-legend-card { gap: 4px; padding: 8px 6px; }
+      .dash-legend-logo { width: 44px; height: 44px; }
+      .dash-legend-photo { width: 48px; height: 48px; font-size: 18px; }
+      .dash-legend-school-name, .dash-legend-role-title { font-size: 10px; }
+      .dash-legend-meta { font-size: 9px; }
+      .dash-legend-meta .row { grid-template-columns: 52px 4px 1fr; }
+      .dash-legend-user-meta .row { grid-template-columns: 42px 4px 1fr; }
+      .dash-leg-box { min-height: 40px; padding: 5px 1px; }
+      .dash-leg-box .leg-val { font-size: 11px; }
+      .dash-leg-box .leg-lbl { font-size: 8px; }
+      .dash-legend-title { font-size: 10px; }
+      .dash-legend-count { font-size: 10px; padding: 1px 6px; }
     }
 
     .dash-top-row { display: block; }
