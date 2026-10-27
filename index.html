@@ -1349,6 +1349,47 @@
       .dash-leg-box .leg-lbl { font-size: 12px; }
     }
 
+    /* Legend cards — mobile full width seperti screenshot */
+    @media (max-width: 767px) {
+      .dash-legend-card {
+        flex-direction: row;
+        gap: 8px;
+        padding: 12px 10px;
+        margin-bottom: 12px;
+      }
+      .dash-legend-left,
+      .dash-legend-user {
+        border-right: 1px solid #f1f5f9;
+        border-bottom: none;
+        padding-bottom: 0;
+        flex: 1 1 50%;
+      }
+      .dash-legend-right {
+        flex: 1 1 50%;
+        padding: 0;
+      }
+      .dash-legend-logo { width: 64px; height: 64px; }
+      .dash-legend-photo { width: 72px; height: 72px; font-size: 24px; margin-bottom: 8px; }
+      .dash-legend-school-name { font-size: 12px; }
+      .dash-legend-role-title { font-size: 12px; }
+      .dash-legend-meta { font-size: 10.5px; }
+      .dash-legend-meta .row { grid-template-columns: 70px 8px 1fr; }
+      .dash-legend-user-meta .row { grid-template-columns: 56px 8px 1fr; }
+      .dash-legend-grid { max-width: 100%; gap: 6px; }
+      .dash-leg-box { min-height: 52px; padding: 8px 4px; border-radius: 10px; }
+      .dash-leg-box .leg-val { font-size: 14px; }
+      .dash-leg-box .leg-lbl { font-size: 10px; }
+      .dash-legend-badge { padding: 3px 4px 3px 10px; margin-bottom: 8px; }
+      .dash-legend-title { font-size: 12px; }
+      .dash-legend-count { font-size: 12px; padding: 2px 10px; }
+    }
+    @media (max-width: 360px) {
+      .dash-legend-card { flex-direction: column; }
+      .dash-legend-left, .dash-legend-user {
+        border-right: none; border-bottom: 1px solid #f1f5f9; padding-bottom: 10px;
+      }
+    }
+
     .dash-top-row { display: block; }
     .app-shell { display: block; width: 100%; }
     .app-content { min-width: 0; width: 100%; }
@@ -1706,10 +1747,12 @@
       }
     }
 
-    /* HP: SELALU layout publik (tamu maupun login) */
+    /* HP tamu: layout publik. HP login: kartu legend (logo+foto | rekap) */
     @media (max-width: 767px) {
-      #dashPublicView { display: block !important; }
-      .dash-top-row { display: none !important; }
+      body:not(.dash-logged-in) #dashPublicView { display: block !important; }
+      body:not(.dash-logged-in) .dash-top-row { display: none !important; }
+      body.dash-logged-in #dashPublicView { display: none !important; }
+      body.dash-logged-in .dash-top-row { display: block !important; }
       #page-dashboard {
         max-width: none !important;
         width: 100%;
