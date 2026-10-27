@@ -1201,6 +1201,154 @@
       gap: 6px;
       text-align: center;
     }
+
+    /* ===== Kartu Legend Statistik (logo + foto | rekap) ===== */
+    .dash-legend-card {
+      display: flex;
+      flex-direction: row;
+      align-items: stretch;
+      gap: 12px;
+      padding: 14px 12px;
+      margin-bottom: 12px;
+      background: #fff;
+      border: 1px solid #e2e8f0;
+      border-radius: 16px;
+      box-shadow: 0 2px 12px rgba(15, 23, 42, 0.06);
+      overflow: hidden;
+    }
+    .dash-legend-left {
+      flex: 1 1 48%;
+      min-width: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      text-align: center;
+      padding: 4px 6px 4px 2px;
+      border-right: 1px solid #f1f5f9;
+    }
+    .dash-legend-logo {
+      width: 72px; height: 72px;
+      margin: 0 auto 8px;
+      display: flex; align-items: center; justify-content: center;
+      overflow: hidden; flex-shrink: 0;
+    }
+    .dash-legend-logo img {
+      width: 100%; height: 100%; object-fit: contain; display: block;
+    }
+    .dash-legend-school-name {
+      font-size: 13px; font-weight: 800; color: #1e3a8a;
+      line-height: 1.3; margin-bottom: 8px;
+    }
+    .dash-legend-meta {
+      width: 100%;
+      font-size: 11.5px; line-height: 1.55; color: #334155; text-align: left;
+    }
+    .dash-legend-meta .row {
+      display: grid; grid-template-columns: 78px 10px 1fr;
+      gap: 2px; margin-bottom: 2px; align-items: start;
+    }
+    .dash-legend-meta .lbl { color: #64748b; font-weight: 600; }
+    .dash-legend-meta .sep { color: #94a3b8; }
+    .dash-legend-meta .val { color: #0f172a; word-break: break-word; font-weight: 500; }
+
+    .dash-legend-user { border-right: 1px solid #f1f5f9; }
+    .dash-legend-photo {
+      width: 88px; height: 88px; border-radius: 50%;
+      background: #e0e7ff; border: 3px solid #c7d2fe;
+      overflow: hidden; display: flex; align-items: center; justify-content: center;
+      font-weight: 800; font-size: 28px; color: var(--primary);
+      flex-shrink: 0; margin: 0 auto 10px;
+    }
+    .dash-legend-photo img {
+      width: 100%; height: 100%; object-fit: cover; object-position: center 20%; display: block;
+    }
+    .dash-legend-role-title {
+      font-size: 14px; font-weight: 800; color: #1e3a8a;
+      letter-spacing: 0.3px; margin-bottom: 8px;
+    }
+    .dash-legend-user-meta .row {
+      grid-template-columns: 62px 10px 1fr;
+    }
+
+    .dash-legend-right {
+      flex: 1 1 48%;
+      min-width: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: flex-start;
+      padding: 2px 2px 2px 4px;
+    }
+    .dash-legend-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 4px 6px 4px 12px;
+      border-radius: 999px;
+      border: 2px solid;
+      margin-bottom: 10px;
+      background: #fff;
+    }
+    .dash-badge-guru { border-color: #3b82f6; }
+    .dash-badge-guru .dash-legend-title { color: #1e40af; }
+    .dash-badge-guru .dash-legend-count { background: #bfdbfe; color: #1e3a8a; }
+    .dash-badge-siswa { border-color: #22c55e; }
+    .dash-badge-siswa .dash-legend-title { color: #15803d; }
+    .dash-badge-siswa .dash-legend-count { background: #bbf7d0; color: #14532d; }
+    .dash-legend-title { font-size: 13px; font-weight: 700; }
+    .dash-legend-count {
+      font-size: 13px; font-weight: 800;
+      padding: 3px 12px; border-radius: 999px;
+      min-width: 28px; text-align: center;
+    }
+    .dash-legend-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 8px;
+      width: 100%;
+      max-width: 220px;
+    }
+    .dash-leg-box {
+      border-radius: 12px;
+      padding: 10px 6px 8px;
+      text-align: center;
+      min-height: 58px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 2px;
+    }
+    .dash-leg-box .leg-val { font-size: 15px; font-weight: 800; line-height: 1.15; color: inherit; }
+    .dash-leg-box .leg-lbl { font-size: 11px; font-weight: 700; margin-top: 2px; }
+    .leg-tw { background: #dbeafe; color: #1d4ed8; }
+    .leg-tl { background: #dcfce7; color: #15803d; }
+    .leg-sakit { background: #ffedd5; color: #c2410c; }
+    .leg-izin { background: #fef9c3; color: #a16207; }
+    .leg-alpa { background: #fce7f3; color: #be185d; }
+    .leg-bolos { background: #fecaca; color: #b91c1c; }
+
+    @media (max-width: 420px) {
+      .dash-legend-card { flex-direction: column; gap: 10px; }
+      .dash-legend-left, .dash-legend-user {
+        border-right: none; border-bottom: 1px solid #f1f5f9; padding-bottom: 12px;
+      }
+      .dash-legend-right { padding: 0; }
+      .dash-legend-grid { max-width: 100%; }
+    }
+    @media (min-width: 768px) {
+      .dash-legend-card { padding: 16px 14px; gap: 16px; }
+      .dash-legend-logo { width: 80px; height: 80px; }
+      .dash-legend-photo { width: 96px; height: 96px; font-size: 30px; }
+      .dash-legend-school-name { font-size: 14px; }
+      .dash-legend-role-title { font-size: 15px; }
+      .dash-legend-meta { font-size: 12.5px; }
+      .dash-legend-grid { max-width: 240px; gap: 10px; }
+      .dash-leg-box { min-height: 64px; padding: 12px 8px; }
+      .dash-leg-box .leg-val { font-size: 17px; }
+      .dash-leg-box .leg-lbl { font-size: 12px; }
+    }
+
     .dash-top-row { display: block; }
     .app-shell { display: block; width: 100%; }
     .app-content { min-width: 0; width: 100%; }
@@ -2632,67 +2780,94 @@
     <!-- Desktop login: profil kiri | statistik kanan. HP: hanya statistik -->
     <div class="dash-top-row">
       <div class="dash-stats-block">
-        <div class="card dash-stat-card" style="padding:12px;margin-bottom:10px;">
-          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
-            <div style="font-size:13px;font-weight:700;">Statistik Guru</div>
-            <div id="dashTotalGuru" style="background:#e0f2fe;color:#0369a1;font-size:12px;font-weight:700;padding:2px 10px;border-radius:8px;">0</div>
+        <!-- Kartu Rekap Guru: logo + data sekolah | legend -->
+        <div class="card dash-legend-card dash-legend-guru">
+          <div class="dash-legend-left">
+            <div class="dash-legend-logo" id="dashLegendLogo">
+              <span style="font-size:11px;color:#94a3b8;">Logo</span>
+            </div>
+            <div class="dash-legend-school-name" id="dashLegendSchoolName">SMP NEGERI 1 SOBANG</div>
+            <div class="dash-legend-meta">
+              <div class="row"><span class="lbl">NSS</span><span class="sep">:</span><span class="val" id="dashLegendNss">-</span></div>
+              <div class="row"><span class="lbl">NPSN</span><span class="sep">:</span><span class="val" id="dashLegendNpsn">-</span></div>
+              <div class="row"><span class="lbl">Th Berdiri</span><span class="sep">:</span><span class="val" id="dashLegendTahun">-</span></div>
+              <div class="row"><span class="lbl">Alamat</span><span class="sep">:</span><span class="val" id="dashLegendAlamat">-</span></div>
+            </div>
           </div>
-          <div class="dash-stat-grid">
-            <div class="dash-stat" style="background:#dcfce7;border:1px solid #86efac;border-radius:8px;padding:8px 2px;">
-              <div style="font-weight:700;color:#166534;font-size:10px;">TW</div>
-              <div id="stGuruTW" style="font-weight:500;margin-top:3px;color:#166534;font-size:12px;">-</div>
+          <div class="dash-legend-right">
+            <div class="dash-legend-badge dash-badge-guru">
+              <span class="dash-legend-title">Rekap Guru</span>
+              <span class="dash-legend-count" id="dashTotalGuru">0</span>
             </div>
-            <div class="dash-stat" style="background:#fef3c7;border:1px solid #fcd34d;border-radius:8px;padding:8px 2px;">
-              <div style="font-weight:700;color:#a16207;font-size:10px;">TL</div>
-              <div id="stGuruTL" style="font-weight:500;margin-top:3px;color:#a16207;font-size:12px;">-</div>
-            </div>
-            <div class="dash-stat" style="background:#f3e8ff;border:1px solid #d8b4fe;border-radius:8px;padding:8px 2px;">
-              <div style="font-weight:700;color:#7e22ce;font-size:10px;">Sakit</div>
-              <div id="stGuruSakit" style="font-weight:500;margin-top:3px;color:#7e22ce;font-size:12px;">-</div>
-            </div>
-            <div class="dash-stat" style="background:#dbeafe;border:1px solid #93c5fd;border-radius:8px;padding:8px 2px;">
-              <div style="font-weight:700;color:#1d4ed8;font-size:10px;">Izin</div>
-              <div id="stGuruIzin" style="font-weight:500;margin-top:3px;color:#1d4ed8;font-size:12px;">-</div>
-            </div>
-            <div class="dash-stat" style="background:#fee2e2;border:1px solid #fca5a5;border-radius:8px;padding:8px 2px;">
-              <div style="font-weight:700;color:#dc2626;font-size:10px;">Alpa</div>
-              <div id="stGuruAlpa" style="font-weight:500;margin-top:3px;color:#dc2626;font-size:12px;">-</div>
-            </div>
-            <div class="dash-stat" style="background:#fecaca;border:1px solid #f87171;border-radius:8px;padding:8px 2px;">
-              <div style="font-weight:700;color:#991b1b;font-size:10px;">Bolos</div>
-              <div id="stGuruBolos" style="font-weight:500;margin-top:3px;color:#991b1b;font-size:12px;">-</div>
+            <div class="dash-legend-grid">
+              <div class="dash-leg-box leg-tw">
+                <div class="leg-val" id="stGuruTW">-</div>
+                <div class="leg-lbl">TW</div>
+              </div>
+              <div class="dash-leg-box leg-tl">
+                <div class="leg-val" id="stGuruTL">-</div>
+                <div class="leg-lbl">TL</div>
+              </div>
+              <div class="dash-leg-box leg-sakit">
+                <div class="leg-val" id="stGuruSakit">-</div>
+                <div class="leg-lbl">Sakit</div>
+              </div>
+              <div class="dash-leg-box leg-izin">
+                <div class="leg-val" id="stGuruIzin">-</div>
+                <div class="leg-lbl">Izin</div>
+              </div>
+              <div class="dash-leg-box leg-alpa">
+                <div class="leg-val" id="stGuruAlpa">-</div>
+                <div class="leg-lbl">Alpa</div>
+              </div>
+              <div class="dash-leg-box leg-bolos">
+                <div class="leg-val" id="stGuruBolos">-</div>
+                <div class="leg-lbl">Bolos</div>
+              </div>
             </div>
           </div>
         </div>
-        <div class="card dash-stat-card" style="padding:12px;margin-bottom:10px;">
-          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
-            <div style="font-size:13px;font-weight:700;">Statistik Siswa</div>
-            <div id="dashTotalSiswa" style="background:#e0f2fe;color:#0369a1;font-size:12px;font-weight:700;padding:2px 10px;border-radius:8px;">0</div>
+
+        <!-- Kartu Rekap Siswa: foto user + profil | legend -->
+        <div class="card dash-legend-card dash-legend-siswa">
+          <div class="dash-legend-left dash-legend-user">
+            <div class="dash-legend-photo" id="dashLegendPhoto">?</div>
+            <div class="dash-legend-role-title" id="dashLegendRoleTitle">ADMINISTRATOR</div>
+            <div class="dash-legend-meta dash-legend-user-meta">
+              <div class="row"><span class="lbl">Jabatan</span><span class="sep">:</span><span class="val" id="dashLegendJabatan">-</span></div>
+              <div class="row"><span class="lbl">Akses</span><span class="sep">:</span><span class="val" id="dashLegendAkses">-</span></div>
+            </div>
           </div>
-          <div class="dash-stat-grid">
-            <div class="dash-stat" style="background:#dcfce7;border:1px solid #86efac;border-radius:8px;padding:8px 2px;">
-              <div style="font-weight:700;color:#166534;font-size:10px;">TW</div>
-              <div id="stSiswaTW" style="font-weight:500;margin-top:3px;color:#166534;font-size:12px;">-</div>
+          <div class="dash-legend-right">
+            <div class="dash-legend-badge dash-badge-siswa">
+              <span class="dash-legend-title">Rekap Siswa</span>
+              <span class="dash-legend-count" id="dashTotalSiswa">0</span>
             </div>
-            <div class="dash-stat" style="background:#fef3c7;border:1px solid #fcd34d;border-radius:8px;padding:8px 2px;">
-              <div style="font-weight:700;color:#a16207;font-size:10px;">TL</div>
-              <div id="stSiswaTL" style="font-weight:500;margin-top:3px;color:#a16207;font-size:12px;">-</div>
-            </div>
-            <div class="dash-stat" style="background:#f3e8ff;border:1px solid #d8b4fe;border-radius:8px;padding:8px 2px;">
-              <div style="font-weight:700;color:#7e22ce;font-size:10px;">Sakit</div>
-              <div id="stSiswaSakit" style="font-weight:500;margin-top:3px;color:#7e22ce;font-size:12px;">-</div>
-            </div>
-            <div class="dash-stat" style="background:#dbeafe;border:1px solid #93c5fd;border-radius:8px;padding:8px 2px;">
-              <div style="font-weight:700;color:#1d4ed8;font-size:10px;">Izin</div>
-              <div id="stSiswaIzin" style="font-weight:500;margin-top:3px;color:#1d4ed8;font-size:12px;">-</div>
-            </div>
-            <div class="dash-stat" style="background:#fee2e2;border:1px solid #fca5a5;border-radius:8px;padding:8px 2px;">
-              <div style="font-weight:700;color:#dc2626;font-size:10px;">Alpa</div>
-              <div id="stSiswaAlpa" style="font-weight:500;margin-top:3px;color:#dc2626;font-size:12px;">-</div>
-            </div>
-            <div class="dash-stat" style="background:#fecaca;border:1px solid #f87171;border-radius:8px;padding:8px 2px;">
-              <div style="font-weight:700;color:#991b1b;font-size:10px;">Bolos</div>
-              <div id="stSiswaBolos" style="font-weight:500;margin-top:3px;color:#991b1b;font-size:12px;">-</div>
+            <div class="dash-legend-grid">
+              <div class="dash-leg-box leg-tw">
+                <div class="leg-val" id="stSiswaTW">-</div>
+                <div class="leg-lbl">TW</div>
+              </div>
+              <div class="dash-leg-box leg-tl">
+                <div class="leg-val" id="stSiswaTL">-</div>
+                <div class="leg-lbl">TL</div>
+              </div>
+              <div class="dash-leg-box leg-sakit">
+                <div class="leg-val" id="stSiswaSakit">-</div>
+                <div class="leg-lbl">Sakit</div>
+              </div>
+              <div class="dash-leg-box leg-izin">
+                <div class="leg-val" id="stSiswaIzin">-</div>
+                <div class="leg-lbl">Izin</div>
+              </div>
+              <div class="dash-leg-box leg-alpa">
+                <div class="leg-val" id="stSiswaAlpa">-</div>
+                <div class="leg-lbl">Alpa</div>
+              </div>
+              <div class="dash-leg-box leg-bolos">
+                <div class="leg-val" id="stSiswaBolos">-</div>
+                <div class="leg-lbl">Bolos</div>
+              </div>
             </div>
           </div>
         </div>
@@ -5609,6 +5784,10 @@
       const L = (letter || '?').toString().charAt(0).toUpperCase();
       setImgWithDriveFallback(el, fotoUrl, L);
     }
+    function syncLegendUserPhoto(fotoUrl, letter) {
+      const el = document.getElementById('dashLegendPhoto');
+      if (el) setAvatarEl(el, fotoUrl, letter);
+    }
 
     function setSchoolLogoDisplay(url, dataUrl) {
       const targets = [];
@@ -5616,6 +5795,10 @@
       if (el) targets.push(el);
       const pub = document.getElementById('dashPublicLogo');
       if (pub) targets.push(pub);
+      const side = document.getElementById('dashSideLogo');
+      if (side) targets.push(side);
+      const leg = document.getElementById('dashLegendLogo');
+      if (leg) targets.push(leg);
       if (!targets.length) return;
       const du = (dataUrl || schoolLogoDataUrl || '').toString();
       const u = url || schoolLogoUrl || null;
@@ -5887,6 +6070,7 @@
         document.getElementById('username').textContent = d.name + ' (' + d.label + ')';
         setAvatarEl(document.getElementById('profileBtn'), currentUserFoto, d.avatar || d.name);
         setAvatarEl(document.getElementById('sidebarAvatar'), currentUserFoto, d.avatar || d.name);
+        syncLegendUserPhoto(currentUserFoto, d.avatar || d.name);
         document.getElementById('sidebarName').textContent = d.name;
         document.getElementById('sidebarRole').textContent = d.label;
       } else {
@@ -5894,6 +6078,7 @@
         document.getElementById('username').textContent = currentUserName;
         setAvatarEl(document.getElementById('profileBtn'), null, '?');
         setAvatarEl(document.getElementById('sidebarAvatar'), null, '?');
+        syncLegendUserPhoto(null, '?');
         document.getElementById('sidebarName').textContent = 'Tamu';
         document.getElementById('sidebarRole').textContent = 'Belum Login';
         closeSidebar();
@@ -6391,6 +6576,7 @@
               currentUserFotoId = meta.id || null;
               setAvatarEl(document.getElementById('profileBtn'), currentUserFoto, userName || '?');
               setAvatarEl(document.getElementById('sidebarAvatar'), currentUserFoto, userName || '?');
+              syncLegendUserPhoto(currentUserFoto, userName || '?');
               saveSession();
             }
           } catch (e) { console.warn('load foto login', e); }
@@ -6636,6 +6822,7 @@
         }
         setAvatarEl(document.getElementById('profileBtn'), currentUserFoto, currentUserName || '?');
         setAvatarEl(document.getElementById('sidebarAvatar'), currentUserFoto, currentUserName || '?');
+        syncLegendUserPhoto(currentUserFoto, currentUserName || '?');
         saveSession();
 
         closeModal('modalEditProfil');
@@ -11173,6 +11360,22 @@
       if (roleEl) roleEl.textContent = roleLabel;
       if (photoEl && typeof setAvatarEl === 'function') setAvatarEl(photoEl, currentUserFoto, nama);
       else if (photoEl) photoEl.textContent = (nama || '?').charAt(0).toUpperCase();
+      // Sinkron ke kartu legend statistik
+      const legPhoto = document.getElementById('dashLegendPhoto');
+      const legRole = document.getElementById('dashLegendRoleTitle');
+      const legJab = document.getElementById('dashLegendJabatan');
+      const legAks = document.getElementById('dashLegendAkses');
+      if (legPhoto && typeof setAvatarEl === 'function') setAvatarEl(legPhoto, currentUserFoto, nama);
+      else if (legPhoto) legPhoto.textContent = (nama || '?').charAt(0).toUpperCase();
+      if (legRole) {
+        legRole.textContent = (currentRole === 'admin') ? 'ADMINISTRATOR'
+          : (currentRole === 'guru') ? 'GURU'
+          : (currentRole === 'siswa' && currentUserIsAlumni) ? 'ALUMNI'
+          : (currentRole === 'siswa') ? 'SISWA'
+          : String(roleLabel || '').toUpperCase();
+      }
+      if (legJab) legJab.textContent = '-';
+      if (legAks) legAks.textContent = '-';
       if (metaEl) metaEl.innerHTML = '<span style="color:#94a3b8;">Memuat...</span>';
       if (extraEl) extraEl.innerHTML = '';
       if (badgeEl) { badgeEl.style.display = 'none'; badgeEl.textContent = ''; }
@@ -11194,6 +11397,8 @@
               '<div><span style="color:#64748b;">Username</span> : <b>' + esc(username) + '</b></div>' +
               '<div><span style="color:#64748b;">Peran</span> : <b>Administrator</b></div>';
           }
+          if (legJab) legJab.textContent = 'Administrator Sistem';
+          if (legAks) legAks.textContent = 'Penuh (Admin)';
         } else if (currentRole === 'guru') {
           let nip = currentUserKode || '-';
           let jabatanStr = '-';
@@ -11258,6 +11463,12 @@
               '<div><span style="color:#64748b;">NIP / Kode</span> : <b>' + esc(nip || '-') + '</b></div>' +
               '<div><span style="color:#64748b;">Jabatan Struktural</span> : <b>' + esc(jabatanStr || '-') + '</b></div>' +
               '<div><span style="color:#64748b;">Jabatan Fungsional</span> : <b>' + esc(jabatanFung || '-') + '</b></div>';
+          }
+          {
+            const legJab2 = document.getElementById('dashLegendJabatan');
+            const legAks2 = document.getElementById('dashLegendAkses');
+            if (legJab2) legJab2.textContent = jabatanStr || jabatanFung || 'Guru';
+            if (legAks2) legAks2.textContent = 'Guru';
           }
           if (extraEl && supabaseClient && currentUserId) {
             try {
@@ -11327,6 +11538,12 @@
               '<div><span style="color:#64748b;">NISN</span> : <b>' + esc(nisn) + '</b></div>' +
               '<div><span style="color:#64748b;">Kelas</span> : <b>' + esc(kelas) + '</b></div>' +
               (currentUserIsAlumni ? '<div><span style="color:#64748b;">Status</span> : <b>Alumni</b></div>' : '');
+          }
+          {
+            const legJab3 = document.getElementById('dashLegendJabatan');
+            const legAks3 = document.getElementById('dashLegendAkses');
+            if (legJab3) legJab3.textContent = currentUserIsAlumni ? 'Alumni' : ('Kelas ' + (kelas || '-'));
+            if (legAks3) legAks3.textContent = currentUserIsAlumni ? 'Alumni' : 'Siswa';
           }
           if (badgeEl && !currentUserIsAlumni && supabaseClient && currentUserId &&
               typeof loadAbsenSettings === 'function' && typeof fetchAbsensiRange === 'function' &&
@@ -11438,6 +11655,13 @@
       set('dashSideAlamat', d.alamat);
       set('dashSideVisi', d.visi);
       set('dashSideMotto', d.motto);
+      // kartu legend statistik (login)
+      set('dashLegendSchoolName', d.nama || 'SMP NEGERI 1 SOBANG');
+      set('dashLegendNss', d.nss);
+      set('dashLegendNpsn', d.npsn);
+      set('dashLegendTahun', d.tahun_berdiri);
+      set('dashLegendAlamat', d.alamat);
+
 
       const fillLogo = (logoBox) => {
         if (!logoBox) return;
@@ -11455,6 +11679,7 @@
       };
       fillLogo(document.getElementById('dashPublicLogo'));
       fillLogo(document.getElementById('dashSideLogo'));
+      fillLogo(document.getElementById('dashLegendLogo'));
     }
 
     async function loadStrukturOrganisasi() {
@@ -23182,6 +23407,7 @@ async function initResetPinPage() {
             currentUserFotoId = meta.id || null;
             setAvatarEl(document.getElementById('profileBtn'), currentUserFoto, ses.name || '?');
             setAvatarEl(document.getElementById('sidebarAvatar'), currentUserFoto, ses.name || '?');
+            syncLegendUserPhoto(currentUserFoto, ses.name || '?');
             saveSession();
           }
         }).catch(() => {});
