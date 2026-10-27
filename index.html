@@ -7,7 +7,7 @@
   <meta http-equiv="Pragma" content="no-cache" />
   <meta http-equiv="Expires" content="0" />
   <title>SMP NEGERI 1 SOBANG</title>
-<!-- build: v2026.10.27-ujian-fix | resume jawaban, autosave, poll deadline, buka-kembali aman -->
+<!-- build: v2026.10.27-ujian-fix2 | resume+autosave+poll deadline+admin preview aman -->
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="https://cdn.jsdelivr.net/npm/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
@@ -15199,26 +15199,34 @@
       if (window._tuAutosaveIv) { clearInterval(window._tuAutosaveIv); window._tuAutosaveIv = null; }
 
       const durMin = Number(bank.durasi) || 60;
+      const isAdminPreview = (currentRole === 'admin');
       let end = Date.now() + durMin * 60 * 1000;
       // Pakai deadline tersimpan jika masih valid (Perpanjang / lanjut sesi)
-      if (existingSes && existingSes.deadline_at) {
+      if (!isAdminPreview && existingSes && existingSes.deadline_at) {
         const ed = new Date(existingSes.deadline_at).getTime();
         if (!isNaN(ed) && ed > Date.now() + 3000) {
           end = ed;
         } else if (!isNaN(ed) && ed <= Date.now()) {
-          // deadline lama sudah lewat tapi status sedang (baru dibuka kembali tanpa perpanjang)
+          // deadline lama sudah lewat tapi status sedang (baru dibuka kembali)
           end = Date.now() + Math.min(durMin, 15) * 60 * 1000;
         }
-      } else if (bank.waktu_selesai) {
+      }
+      // Batas waktu bank hanya untuk siswa — admin preview selalu dapat durasi penuh
+      if (!isAdminPreview && bank.waktu_selesai && !(existingSes && existingSes.deadline_at)) {
         const ws = new Date(bank.waktu_selesai).getTime();
         if (!isNaN(ws) && ws < end) end = ws;
       }
-      // Hard stop bank.waktu_selesai hanya jika belum ada perpanjang di sesi
-      if (bank.waktu_selesai && !(existingSes && existingSes.deadline_at)) {
-        const ws = new Date(bank.waktu_selesai).getTime();
-        if (!isNaN(ws) && ws < end) end = ws;
+      // Jika tetap sudah lewat (mis. waktu_selesai lampau), jangan auto-submit segera
+      if (end <= Date.now() + 2000) {
+        if (isAdminPreview) {
+          end = Date.now() + durMin * 60 * 1000;
+        } else {
+          // Siswa: beri sisa minimal 1 menit agar bisa lihat, atau biarkan timer 0 setelah konfirmasi
+          end = Date.now() + 60 * 1000;
+        }
       }
       _tuDeadline = end;
+      window._tuAdminPreview = isAdminPreview;
       _tuTimerIv = setInterval(updateTuTimer, 1000);
       updateTuTimer();
       // Poll deadline dari server agar Perpanjang langsung terasa di HP siswa
@@ -15340,6 +15348,12 @@
 
     async function createTuSession(bank, deadlineMs, existingSes) {
       const isAdminTu = currentRole === 'admin';
+      if (isAdminTu) {
+        // Preview: tidak membuat baris hasil di database
+        window._tuSessionId = null;
+        window._tuAdminPreview = true;
+        return;
+      }
       if (!isAdminTu) {
         try { await ensureSiswaKelas(); } catch (e) {}
       }
@@ -15422,7 +15436,11 @@
         if (_tuTimerIv) { clearInterval(_tuTimerIv); _tuTimerIv = null; }
         if (window._tuDeadlinePollIv) { clearInterval(window._tuDeadlinePollIv); window._tuDeadlinePollIv = null; }
         if (window._tuAutosaveIv) { clearInterval(window._tuAutosaveIv); window._tuAutosaveIv = null; }
-        // Guard: cegah double-submit
+        if (window._tuAdminPreview || currentRole === 'admin') {
+          el.textContent = '00:00';
+          el.title = 'Preview admin — tidak auto-kirim';
+          return;
+        }
         if (window._tuSubmitting) return;
         alert('Waktu habis. Jawaban akan dikirim otomatis.');
         submitTuJawaban(true);
@@ -16323,19 +16341,26 @@
     async function submitTuJawaban(auto) {
       if (window._tuSubmitting) return;
       saveCurrentTuAnswer();
+      const isAdminPreview = (window._tuAdminPreview || currentRole === 'admin');
       if (!auto) {
         const unanswered = _tuSoals.filter(s => !isTuAnswered(s)).length;
-        const msg = unanswered
-          ? 'Masih ada ' + unanswered + ' soal belum dijawab. Kirim sekarang?'
-          : 'Kirim semua jawaban sekarang?';
-        if (!(await showConfirm(msg, 'Kirim Jawaban', '📤'))) return;
+        const msg = isAdminPreview
+          ? ('Preview admin' + (unanswered ? ' — masih ' + unanswered + ' soal kosong. ' : '. ') + 'Hitung skor simulasi?')
+          : (unanswered
+            ? 'Masih ada ' + unanswered + ' soal belum dijawab. Kirim sekarang?'
+            : 'Kirim semua jawaban sekarang?');
+        if (!(await showConfirm(msg, isAdminPreview ? 'Preview Skor' : 'Kirim Jawaban', '📤'))) return;
+      }
+      // Admin preview: jangan auto-submit diam-diam saat timer 0
+      if (auto && isAdminPreview) {
+        return;
       }
       window._tuSubmitting = true;
       if (_tuTimerIv) { clearInterval(_tuTimerIv); _tuTimerIv = null; }
       if (window._tuDeadlinePollIv) { clearInterval(window._tuDeadlinePollIv); window._tuDeadlinePollIv = null; }
       if (window._tuAutosaveIv) { clearInterval(window._tuAutosaveIv); window._tuAutosaveIv = null; }
       try {
-        if (_tuExam) localStorage.removeItem(tuLocalAnswersKey(_tuExam.id));
+        if (_tuExam && !isAdminPreview) localStorage.removeItem(tuLocalAnswersKey(_tuExam.id));
       } catch (e) {}
 
       let totalSkor = 0, maxSkor = 0, benar = 0, total = _tuSoals.length;
@@ -16450,9 +16475,15 @@
           localStorage.setItem('bank_soal_hasil', JSON.stringify(list));
           window._tuSessionId = null;
         }
-        alert('Jawaban terkirim!\n\nSkor otomatis: ' + totalSkor + ' / ' + maxSkor +
-          '\nBenar: ' + benar + ' / ' + total +
-          '\n(Esai dinilai manual oleh guru bila ada)');
+        if (isAdminPreview) {
+          alert('Preview admin (tidak dihitung sebagai hasil siswa).\n\nSkor simulasi: ' + totalSkor + ' / ' + maxSkor +
+            '\nBenar: ' + benar + ' / ' + total +
+            '\n\nAnda bisa klik Kerjakan lagi untuk mencoba ulang.');
+        } else {
+          alert('Jawaban terkirim!\n\nSkor otomatis: ' + totalSkor + ' / ' + maxSkor +
+            '\nBenar: ' + benar + ' / ' + total +
+            '\n(Esai dinilai manual oleh guru bila ada)');
+        }
         showPage('tugas-ujian', true);
         initTugasSiswaPage();
       } catch (e) {
