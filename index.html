@@ -1,27 +1,18 @@
 <!DOCTYPE html>
 <html lang="id">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Memindahkan Halaman...</title>
-    
-    <!-- Metode 1: Meta Refresh (Sebagai cadangan jika JavaScript mati) -->
-    <meta http-equiv="refresh" content="0;url=https://github.io">
+  <meta charset="UTF-8" />
+  <title>Dialihkan…</title>
+  <meta http-equiv="refresh" content="0; url=https://mtaupik-arch.github.io/InformasiDigital/" />
+  <link rel="canonical" href="https://mtaupik-arch.github.io/InformasiDigital/" />
+  <script>
+    // Hapus hash lama (#dashboard dll), arahkan ke app baru
+    location.replace('https://mtaupik-arch.github.io/InformasiDigital/');
+  </script>
 </head>
 <body>
-    <script>
-        // Tentukan tautan baru tujuan Anda
-        const targetNewLink = "https://github.io";
-        
-        // Metode 2: JavaScript Redirect (Mampu membaca bagian '#' atau parameter link lama)
-        // Jika link lama mengandung '#dashboard', kode ini akan otomatis mengarahkannya ke link baru
-        window.location.href = targetNewLink + window.location.hash;
-    </script>
-
-    <div style="text-align: center; margin-top: 50px; font-family: Arial, sans-serif;">
-        <p>Halaman telah berpindah. Jika Anda tidak diarahkan secara otomatis, 
-           <a href="https://github.io">klik di sini</a>.
-        </p>
-    </div>
+  <p>Aplikasi dipindah. Mengalihkan ke
+    <a href="https://mtaupik-arch.github.io/InformasiDigital/">Informasi Digital</a>…
+  </p>
 </body>
 </html>
